@@ -2,11 +2,16 @@ import { useRef, useCallback, useState } from 'react'
 import { X, Download, Clock } from 'lucide-react'
 import type { JSONContent } from '@tiptap/react'
 import { exportToMarkdown, exportToHtml, exportToPdf, downloadFile } from '../utils/export'
-import { generateDocx, generateProjectDocx } from '../utils/exportDocx'
 import { useI18n } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { useExportHistory } from '../hooks/useExportHistory'
 import { useAppStore } from '../stores/appStore'
+
+// Lazy-loaded docx export — ~150KB, only needed when user exports to docx
+async function getDocxExporter() {
+  const { generateDocx, generateProjectDocx } = await import('../utils/exportDocx')
+  return { generateDocx, generateProjectDocx }
+}
 
 type ExportFormat = 'md' | 'html' | 'pdf' | 'docx'
 type ExportScope = 'current' | 'project'
@@ -41,18 +46,19 @@ export function ExportDialog({ editorJson, title, onClose }: ExportDialogProps) 
 
   const handleExport = useCallback(async () => {
     const finalFilename = scope === 'project' ? currentProjectName : filename
-    
+
     switch (format) {
-      case 'md': 
+      case 'md':
         exportToMarkdown(editorJson, finalFilename)
         break
-      case 'html': 
+      case 'html':
         exportToHtml(editorJson, finalFilename)
         break
-      case 'pdf': 
+      case 'pdf':
         exportToPdf()
         break
-      case 'docx':
+      case 'docx': {
+        const { generateDocx, generateProjectDocx } = await getDocxExporter()
         if (scope === 'current') {
             const blob = await generateDocx(editorJson, finalFilename)
             downloadFile(blob, `${finalFilename}.docx`)
@@ -61,6 +67,7 @@ export function ExportDialog({ editorJson, title, onClose }: ExportDialogProps) 
             downloadFile(blob, `${finalFilename}.docx`)
         }
         break
+      }
     }
     recordExport(format, finalFilename, 0)
     onClose()

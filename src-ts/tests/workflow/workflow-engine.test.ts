@@ -21,7 +21,7 @@ import {
 describe('WorkflowEngine constants', () => {
   it('ENGINE_PUBLIC_ENTRY_API exposes the five standard entry methods', () => {
     expect(WorkflowEngine.publicEntryApi()).toEqual(
-      expect.arrayContaining(['route', 'plan', 'execute', 'run', 'run_stream']),
+      expect.arrayContaining(['route', 'plan', 'execute', 'run', 'runStream']),
     );
   });
 

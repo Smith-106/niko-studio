@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { WritingHelperMode } from '../api/client'
 
 export type RightPanelType = 'none' | 'knowledge' | 'evaluation' | 'automation' | 'mcpStatus' | 'writingHelper' | 'textOptimizer' | 'foreshadowingTracker' | 'patternDashboard' | 'sessionAnalytics' | 'evaluationDrillDown' | 'characterRelationships' | 'analysis' | 'templateBrowser' | 'workflowEditor' | 'narrativeVisualization'
@@ -263,53 +263,30 @@ export function useAppUiPersistence() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  // 合并6个独立 useEffect 为单一防抖写入，减少 localStorage 频繁写入开销
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    try {
-      localStorage.setItem(WRITING_HELPER_DRAFT_STORAGE_KEY, JSON.stringify(writingHelperDraft))
-    } catch {
-      // ignore localStorage write failures
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current)
     }
-  }, [writingHelperDraft])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, sidebarCollapsed ? 'true' : 'false')
-    } catch {
-      // ignore localStorage write failures
+    debounceTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(WRITING_HELPER_DRAFT_STORAGE_KEY, JSON.stringify(writingHelperDraft))
+        localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, sidebarCollapsed ? 'true' : 'false')
+        localStorage.setItem(ACTIVE_RIGHT_PANEL_STORAGE_KEY, activeRightPanel)
+        localStorage.setItem(CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY, chatSidebarCollapsed ? 'true' : 'false')
+        localStorage.setItem(SESSION_INTELLIGENCE_STORAGE_KEY, JSON.stringify(sessionIntelligenceState))
+        localStorage.setItem(PERSONALIZED_CRAFT_STORAGE_KEY, JSON.stringify(personalizedCraftState))
+      } catch {
+        // ignore localStorage write failures
+      }
+    }, 300)
+    return () => {
+      if (debounceTimerRef.current !== null) {
+        clearTimeout(debounceTimerRef.current)
+      }
     }
-  }, [sidebarCollapsed])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(ACTIVE_RIGHT_PANEL_STORAGE_KEY, activeRightPanel)
-    } catch {
-      // ignore localStorage write failures
-    }
-  }, [activeRightPanel])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY, chatSidebarCollapsed ? 'true' : 'false')
-    } catch {
-      // ignore localStorage write failures
-    }
-  }, [chatSidebarCollapsed])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SESSION_INTELLIGENCE_STORAGE_KEY, JSON.stringify(sessionIntelligenceState))
-    } catch {
-      // ignore localStorage write failures
-    }
-  }, [sessionIntelligenceState])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PERSONALIZED_CRAFT_STORAGE_KEY, JSON.stringify(personalizedCraftState))
-    } catch {
-      // ignore localStorage write failures
-    }
-  }, [personalizedCraftState])
+  }, [writingHelperDraft, sidebarCollapsed, activeRightPanel, chatSidebarCollapsed, sessionIntelligenceState, personalizedCraftState])
 
   const clearWritingHelperDraft = useCallback(() => {
     clearWritingHelperDraftStorage()

@@ -36,6 +36,15 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           const normalizedId = id.replace(/\\/g, '/')
+          if (normalizedId.includes('/node_modules/@sentry/')) {
+            return 'vendor-sentry'
+          }
+          if (normalizedId.includes('/node_modules/katex/')) {
+            return 'vendor-katex'
+          }
+          if (normalizedId.includes('/node_modules/docx/')) {
+            return 'vendor-docx'
+          }
           if (normalizedId.includes('/node_modules/@tiptap/pm/')) {
             return 'vendor-editor-pm'
           }

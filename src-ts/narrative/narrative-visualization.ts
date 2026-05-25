@@ -1,94 +1,26 @@
+export type {
+  NarrativeVisualizationChapterInput,
+  NarrativeVisualizationTimelineEvent,
+  NarrativeVisualizationTimelineData,
+  NarrativeVisualizationTensionPoint,
+  NarrativeVisualizationTensionData,
+  NarrativeVisualizationCharacterData,
+  NarrativeVisualizationBundle,
+} from './types/visualization-types.js';
+
 import { analyzeEmotionalArc } from './emotional-arc.js';
+import { analyzeReaderImmersion } from './reader-immersion-engine.js';
 import type { TimelineReport } from './timeline-consistency-checker.js';
 import type { CrossChapterCharacterReport } from './cross-chapter-character-tracker.js';
-
-export interface NarrativeVisualizationChapterInput {
-  content: string;
-  chapterIndex: number;
-  chapterNumber?: number;
-  title?: string;
-}
-
-export interface NarrativeVisualizationTimelineEvent {
-  id: string;
-  label: string;
-  chapterIndex: number;
-  chapterNumber: number;
-  type: 'turning_point' | 'conflict' | 'warning';
-  severity: 'critical' | 'major' | 'minor' | 'info';
-  description: string;
-}
-
-export interface NarrativeVisualizationTimelineData {
-  chapters: Array<{
-    chapterId: string;
-    chapterIndex: number;
-    chapterNumber: number;
-    title: string;
-    label: string;
-    arcPosition: number;
-    tension: number;
-    eventCount: number;
-  }>;
-  events: NarrativeVisualizationTimelineEvent[];
-  summary: string;
-  empty: boolean;
-}
-
-export interface NarrativeVisualizationTensionPoint {
-  chapterId: string;
-  chapterIndex: number;
-  chapterNumber: number;
-  title: string;
-  tension: number;
-  engagement: number;
-  dominantEmotion: string;
-  label: string;
-}
-
-export interface NarrativeVisualizationTensionData {
-  points: NarrativeVisualizationTensionPoint[];
-  deserts: Array<{
-    startChapter: number;
-    endChapter: number;
-    length: number;
-    severity: 'low' | 'medium' | 'high';
-  }>;
-  overallArcScore: number;
-  summary: string;
-  empty: boolean;
-}
-
-export interface NarrativeVisualizationCharacterData {
-  nodes: Array<{
-    id: string;
-    name: string;
-    role: string;
-    importance: number;
-    chapterCount: number;
-  }>;
-  edges: Array<{
-    source: string;
-    target: string;
-    type: string;
-    weight: number;
-    label: string;
-  }>;
-  summary: string;
-  empty: boolean;
-}
-
-export interface NarrativeVisualizationBundle {
-  timeline: NarrativeVisualizationTimelineData;
-  tension: NarrativeVisualizationTensionData;
-  characterGraph: NarrativeVisualizationCharacterData;
-  meta: {
-    chapterCount: number;
-    generatedAt: string;
-    hasData: boolean;
-    source: 'existing-analysis';
-  };
-}
+import type {
+  NarrativeVisualizationChapterInput,
+  NarrativeVisualizationTimelineEvent,
+  NarrativeVisualizationTimelineData,
+  NarrativeVisualizationTensionPoint,
+  NarrativeVisualizationTensionData,
+  NarrativeVisualizationCharacterData,
+  NarrativeVisualizationBundle,
+} from './types/visualization-types.js';
 
 function chapterLabel(index: number, chapterNumber?: number, title?: string): string {
   const numberLabel = chapterNumber ?? index + 1;
@@ -135,6 +67,17 @@ export function buildNarrativeVisualizationBundle(input: {
       content: chapter.content,
       chapterIndex: chapter.chapterIndex,
     })),
+  );
+
+  const immersionResult = analyzeReaderImmersion(
+    chapters.map((chapter) => ({
+      content: chapter.content,
+      chapterIndex: chapter.chapterIndex,
+    })),
+  );
+
+  const immersionByIndex = new Map(
+    immersionResult.chapterStates.map((cs) => [cs.chapterIndex, cs]),
   );
 
   const chapterMap = chapters.map((chapter) => {
@@ -185,6 +128,7 @@ export function buildNarrativeVisualizationBundle(input: {
     const chapter = chapters.find((entry) => entry.chapterIndex === point.chapterIndex);
     const chapterNumber = chapter ? normalizeChapterNumber(chapter) : point.chapterIndex + 1;
     const label = chapterLabel(point.chapterIndex, chapterNumber, chapter?.title);
+    const readerStateEntry = immersionByIndex.get(point.chapterIndex);
     return {
       chapterId: `chapter-${chapterNumber}`,
       chapterIndex: point.chapterIndex,
@@ -194,6 +138,15 @@ export function buildNarrativeVisualizationBundle(input: {
       engagement: point.emotionScore / 10,
       dominantEmotion: point.dominantEmotion,
       label,
+      ...(readerStateEntry ? {
+        readerState: {
+          engagement: (readerStateEntry.state.curiosity + readerStateEntry.state.emotionalInvestment + readerStateEntry.state.immersion + readerStateEntry.state.suspenseTension) / 4,
+          immersion: readerStateEntry.state.immersion,
+          suspenseTension: readerStateEntry.state.suspenseTension,
+          cognitiveLoad: readerStateEntry.state.cognitiveLoad,
+          curiosity: readerStateEntry.state.curiosity,
+        },
+      } : {}),
     };
   });
 
@@ -207,6 +160,12 @@ export function buildNarrativeVisualizationBundle(input: {
       tensionPoints[0]?.dominantEmotion,
     ),
     empty: tensionPoints.length === 0,
+    highRiskChapters: tensionPoints
+      .filter((tp) => {
+        const cs = immersionByIndex.get(tp.chapterIndex);
+        return cs != null && cs.dropoutRisk > 0.6;
+      })
+      .map((tp) => tp.chapterId),
   };
 
   const chapterCounts = new Map<string, number>();

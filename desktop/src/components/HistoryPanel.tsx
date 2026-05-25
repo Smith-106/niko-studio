@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { History, X, RotateCcw, GitCompare } from 'lucide-react'
-import { useAppStore } from '../stores/appStore'
+import { useHistoryPanelState } from '../stores/selectors'
 import { listSnapshots, diffSnapshots, restoreSnapshot } from '../services/versionService'
 import type { Snapshot, DiffResult } from '../types/project'
 
@@ -96,20 +96,22 @@ function RestoreConfirmDialog({ snapshot, onConfirm, onCancel }: {
 }
 
 export function HistoryPanel() {
-  const currentProjectId = useAppStore((s) => s.currentProjectId)
-  const currentChapterId = useAppStore((s) => s.currentChapterId)
-  const historyPanelOpen = useAppStore((s) => s.historyPanelOpen)
-  const toggleHistoryPanel = useAppStore((s) => s.toggleHistoryPanel)
-  const sessionIntelligenceEnabled = useAppStore((s) => s.sessionIntelligenceEnabled)
-  const sessionIntelligenceSummary = useAppStore((s) => s.sessionIntelligenceSummary)
-  const sessionIntelligenceInsights = useAppStore((s) => s.sessionIntelligenceInsights)
-  const sessionIntelligenceSessionId = useAppStore((s) => s.sessionIntelligenceSessionId)
-  const setSessionIntelligenceEnabled = useAppStore((s) => s.setSessionIntelligenceEnabled)
-  const personalizedCraftEnabled = useAppStore((s) => s.personalizedCraftEnabled)
-  const personalizedCraftSummary = useAppStore((s) => s.personalizedCraftSummary)
-  const personalizedCraftTrajectory = useAppStore((s) => s.personalizedCraftTrajectory)
-  const personalizedCraftRecommendations = useAppStore((s) => s.personalizedCraftRecommendations)
-  const setPersonalizedCraftEnabled = useAppStore((s) => s.setPersonalizedCraftEnabled)
+  const {
+    currentProjectId,
+    currentChapterId,
+    historyPanelOpen,
+    toggleHistoryPanel,
+    sessionIntelligenceEnabled,
+    sessionIntelligenceSummary,
+    sessionIntelligenceInsights,
+    sessionIntelligenceSessionId,
+    setSessionIntelligenceEnabled,
+    personalizedCraftEnabled,
+    personalizedCraftSummary,
+    personalizedCraftTrajectory,
+    personalizedCraftRecommendations,
+    setPersonalizedCraftEnabled,
+  } = useHistoryPanelState()
 
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())

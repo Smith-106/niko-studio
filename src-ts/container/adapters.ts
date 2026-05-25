@@ -27,6 +27,7 @@ import type {
   SyncResult,
 } from './types';
 import { AgentType } from './types';
+import { stableStringify } from '../search/stableKey';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 import { UnifiedMemoryEngine } from '../memory/unified-memory';
 import { GraphEngine } from '../graph/graph-engine';
@@ -322,7 +323,8 @@ export class SearchEngineAdapter implements ISearchEngine {
 
     for (const document of this.indexedDocuments.values()) {
       if (filterType && document.metadata?.['type'] !== filterType) continue;
-      const haystack = `${document.id} ${document.content} ${JSON.stringify(document.metadata ?? {})}`.toLowerCase();
+      const metaStr = document.metadata ? stableStringify(document.metadata) : '';
+      const haystack = `${document.id} ${document.content} ${metaStr}`.toLowerCase();
       const matchedTerms = terms.filter(term => haystack.includes(term)).length;
       if (matchedTerms === 0) continue;
 

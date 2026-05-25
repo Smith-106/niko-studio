@@ -357,11 +357,121 @@
       "completed_at": "2026-05-17T05:00:00+08:00",
       "description": "Plan: 6 tasks in 3 waves — console收口+as-any, translations+catalog, panels+workflow-engine.",
       "harvested": false
+    },
+    {
+      "id": "EXC-20260517-P1-tech-debt-cleanup",
+      "type": "execute",
+      "milestone": "M24",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260517-plan-P1-tech-debt-cleanup",
+      "status": "completed",
+      "depends_on": "PLN-20260517-P1-tech-debt-cleanup",
+      "created_at": "2026-05-17T05:30:00+08:00",
+      "completed_at": "2026-05-25T18:27:00+08:00",
+      "description": "Execute: completed 7 tasks — console收口, as-any加固, craft-catalog外置, panels/i18n拆分验证, src-ts环境恢复, workflow API契约统一.",
+      "harvested": false
+    },
+    {
+      "id": "VRF-20260525-P1-tech-debt-cleanup",
+      "type": "verify",
+      "milestone": "M24",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260517-plan-P1-tech-debt-cleanup",
+      "status": "completed",
+      "depends_on": "EXC-20260517-P1-tech-debt-cleanup",
+      "created_at": "2026-05-25T18:30:00+08:00",
+      "completed_at": "2026-05-25T18:30:00+08:00",
+      "description": "Verify: 7/7 truths verified, 6/6 artifacts verified, 5/5 key links wired. No gaps, no blockers.",
+      "harvested": false
+    },
+    {
+      "id": "REV-20260525-P1-tech-debt-cleanup",
+      "type": "review",
+      "milestone": "M24",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260525-review-P1-tech-debt-cleanup",
+      "status": "completed",
+      "depends_on": "VRF-20260525-P1-tech-debt-cleanup",
+      "created_at": "2026-05-25T20:00:00+08:00",
+      "completed_at": "2026-05-25T20:30:00+08:00",
+      "description": "Review: WARN — 11 high, 16 medium, 8 low findings across 6 dimensions. All findings are pre-existing tech debt except REV-016 (logger content leakage regression). No blockers.",
+      "harvested": false
+    },
+    {
+      "id": "TST-20260525-P1-tech-debt-cleanup",
+      "type": "test",
+      "milestone": "M24",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260525-test-P1-tech-debt-cleanup",
+      "status": "completed",
+      "depends_on": "REV-20260525-P1-tech-debt-cleanup",
+      "created_at": "2026-05-25T20:35:00+08:00",
+      "completed_at": "2026-05-25T22:00:00+08:00",
+      "description": "UAT: 12/12 pass, 0 issues, confidence 0.97. All automated tests pass, filesystem structure verified, logger usage confirmed.",
+      "harvested": false
+    },
+    {
+      "id": "EXC-20260525-P2-narrative-visualization-mvp",
+      "type": "execute",
+      "milestone": "M24",
+      "phase": 2,
+      "scope": "phase",
+      "path": "scratch/20260525-plan-P2-narrative-visualization-mvp",
+      "status": "completed",
+      "depends_on": "PLN-20260525-P2-narrative-visualization-mvp",
+      "description": "P2 execute: 5 tasks — shared types, TimelineView zoom+filter, ReaderState+TensionCurveView, CharacterGraphView interaction, test coverage ≥80%",
+      "harvested": false,
+      "created_at": "2026-05-25T22:00:00+08:00",
+      "completed_at": "2026-05-25T14:09:23.325Z"
+    },
+    {
+      "id": "VRF-20260525-P2-narrative-visualization-mvp",
+      "type": "verify",
+      "milestone": "M24",
+      "phase": 2,
+      "scope": "phase",
+      "path": "scratch/20260525-plan-P2-narrative-visualization-mvp",
+      "status": "completed",
+      "depends_on": "EXC-20260525-P2-narrative-visualization-mvp",
+      "harvested": false,
+      "created_at": "2026-05-25T22:25:00+08:00",
+      "completed_at": "2026-05-25T14:21:29.067Z"
+    },
+    {
+      "id": "REV-20260525-P2-narrative-visualization-mvp",
+      "type": "review",
+      "milestone": "M24",
+      "phase": 2,
+      "scope": "phase",
+      "path": "scratch/20260525-plan-P2-narrative-visualization-mvp",
+      "status": "completed",
+      "depends_on": "EXC-20260525-P2-narrative-visualization-mvp",
+      "verdict": "PASS",
+      "harvested": false,
+      "created_at": "2026-05-25T22:28:00+08:00",
+      "completed_at": "2026-05-25T14:26:03.047Z"
+    },
+    {
+      "id": "TST-20260525-P2-narrative-visualization-mvp",
+      "type": "test",
+      "milestone": "M24",
+      "phase": 2,
+      "scope": "phase",
+      "path": "scratch/20260525-plan-P2-narrative-visualization-mvp",
+      "status": "completed",
+      "depends_on": "REV-20260525-P2-narrative-visualization-mvp",
+      "harvested": false,
+      "created_at": "2026-05-25T22:30:00+08:00",
+      "completed_at": "2026-05-25T14:28:48.945Z"
     }
   ],
   "current_milestone": "M24",
   "initialized": true,
-  "last_updated": "2026-05-17T05:00:00+08:00",
+  "last_updated": "2026-05-25T14:30:12.648Z",
   "milestone_history": [
     {
       "archive_path": "milestones/M13/",
@@ -553,7 +663,8 @@
         1,
         2
       ],
-      "status": "active"
+      "status": "completed",
+      "completed_at": "2026-05-25T14:30:12.647Z"
     }
   ],
   "project": "niko-studio",

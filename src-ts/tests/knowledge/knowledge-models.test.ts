@@ -227,7 +227,7 @@ describe('createServiceConfig', () => {
     expect(config.defaultEmbeddingProvider).toBe(ProviderType.LOCAL);
     expect(config.embeddingCacheEnabled).toBe(true);
     expect(config.embeddingCacheTTL).toBe(86400);
-    expect(config.embeddingCacheMaxSize).toBe(10000);
+    expect(config.embeddingCacheMaxSize).toBe(2000);
     expect(config.retryMaxAttempts).toBe(3);
     expect(config.retryInitialDelay).toBe(1.0);
     expect(config.retryMaxDelay).toBe(60.0);

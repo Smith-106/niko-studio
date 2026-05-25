@@ -7,6 +7,10 @@ import type { QualityGoalsSettings, RetrievalSettings } from '../stores/settings
 const DEFAULT_HISTORY_BUDGET_CHARS = 96_000
 const DEFAULT_MAX_MESSAGE_CHARS = 24_000
 
+// 旧消息截断：超过此距离的消息只保留前 TRUNCATED_CONTENT_CHARS 字符
+const TRUNCATION_THRESHOLD = 10
+const TRUNCATED_CONTENT_CHARS = 200
+
 const approxTokensFromChars = (chars: number): number => Math.ceil(chars / 4)
 
 type ChatMessage = NonNullable<ChatRequest['messages']>[number]
@@ -20,6 +24,20 @@ interface BudgetResult {
     clippedCount: number
     totalOriginalMessages: number
   }
+}
+
+// 旧消息截断：距离末尾超过阈值的消息，内容截断到 TRUNCATED_CONTENT_CHARS 字符
+// 服务端仍持有完整历史，截断仅减少网络传输量
+const truncateOldMessages = (messages: ChatMessage[]): ChatMessage[] => {
+  if (messages.length <= TRUNCATION_THRESHOLD) return messages
+
+  return messages.map((msg, i) => {
+    const distanceFromEnd = messages.length - 1 - i
+    if (distanceFromEnd >= TRUNCATION_THRESHOLD && msg.content.length > TRUNCATED_CONTENT_CHARS) {
+      return { ...msg, content: msg.content.slice(0, TRUNCATED_CONTENT_CHARS) + '...' }
+    }
+    return msg
+  })
 }
 
 const clipMessageContent = (content: string, maxChars: number): { content: string; clipped: boolean } => {
@@ -52,10 +70,13 @@ const applyHistoryBudget = (
 
   const originalMessages = [...baseMessages, nextUserMessage]
 
+  // 先截断旧消息，减少后续处理和传输量
+  const truncated = truncateOldMessages(originalMessages)
+
   let droppedCount = 0
   let clippedCount = 0
 
-  const clipped = originalMessages.map((msg) => {
+  const clipped = truncated.map((msg) => {
     const { content, clipped } = clipMessageContent(msg.content, maxMessageChars)
     if (clipped) clippedCount += 1
     return { ...msg, content }

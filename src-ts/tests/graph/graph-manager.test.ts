@@ -711,15 +711,15 @@ describe('graph/graph-manager', () => {
         ['dup-l-leaf', 'dup-r-l', 'dup-r-leaf', 'dup-r-r'].sort(),
       );
 
-      const rowToEntity = (manager as unknown as {
+      const managerPrivate = manager as unknown as {
         _rowToEntity: (row: Record<string, unknown>) => Entity;
-      })._rowToEntity;
+      };
       const throwingDate = {
         toString(): string {
           throw new Error('invalid date coercion');
         },
       };
-      const invalidDateEntity = rowToEntity({
+      const invalidDateEntity = managerPrivate._rowToEntity({
         id: 'invalid-date',
         name: 'Invalid Date',
         type: 'character',

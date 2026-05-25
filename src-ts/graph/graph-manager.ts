@@ -312,6 +312,23 @@ export class CypherParser {
 }
 
 // ---------------------------------------------------------------------------
+// Hot-path safe JSON parse — 避免 try-catch 导致 V8 JIT 退优化
+// ---------------------------------------------------------------------------
+
+/**
+ * 无 try-catch 的安全 JSON 解析。热路径中 try-catch 会触发 V8 JIT 退优化，
+ * 因此先用快速校验过滤非 JSON 字符串，再直接调用 JSON.parse。
+ * 校验逻辑：null/undefined/空字符串直接返回默认值；首字符非 { 或 [ 也返回默认值。
+ */
+function safeParseJson(raw: string | null | undefined): Record<string, unknown> {
+  if (!raw || raw.length === 0) return {};
+  // 快速校验：合法 JSON 对象或数组必须以 { 或 [ 开头
+  const first = raw[0];
+  if (first !== '{' && first !== '[') return {};
+  return JSON.parse(raw);
+}
+
+// ---------------------------------------------------------------------------
 // GraphManager
 // ---------------------------------------------------------------------------
 
@@ -327,6 +344,10 @@ export class GraphManager {
   private _conn: Database.Database | null = null;
   private _lock = { locked: false };
   private _vectorSearch: IEntityVectorSearch | null = null;
+
+  // 属性解析缓存：同一 node/edge ID 在多次查询中重复出现时避免重复解析
+  // 写操作时清除对应缓存条目以保持一致性
+  private _propsCache = new Map<string, Record<string, unknown>>();
 
   constructor(dbPath?: string | null) {
     const resolved = dbPath ?? join(homedir(), '.niko', 'graph_manager.db');
@@ -482,11 +503,12 @@ export class GraphManager {
 
   /** Convert a database row to an Entity object */
   private _rowToEntity(row: Record<string, unknown>): Entity {
-    let props: Record<string, unknown> = {};
-    try {
-      props = typeof row.properties === 'string' ? JSON.parse(row.properties) : {};
-    } catch {
-      // corrupted properties in DB
+    // 使用缓存避免重复解析同一实体的 properties
+    const entityId = row.id as string;
+    let props = this._propsCache.get(entityId);
+    if (props === undefined) {
+      props = typeof row.properties === 'string' ? safeParseJson(row.properties) : {};
+      this._propsCache.set(entityId, props);
     }
 
     let createdAt: Date | null = null;
@@ -509,7 +531,7 @@ export class GraphManager {
     }
 
     return new Entity({
-      id: row.id as string,
+      id: entityId,
       name: row.name as string,
       type: (EntityType[(row.type as string).toUpperCase() as keyof typeof EntityType] ?? EntityType.CONCEPT) as EntityType,
       properties: props,
@@ -520,11 +542,16 @@ export class GraphManager {
 
   /** Convert a database row to a Relationship object */
   private _rowToRelationship(row: Record<string, unknown>): Relationship {
-    const props =
-      typeof row.properties === 'string' ? JSON.parse(row.properties) : {};
+    // 使用缓存避免重复解析同一关系的 properties
+    const relId = row.id as string;
+    let props = this._propsCache.get(relId);
+    if (props === undefined) {
+      props = typeof row.properties === 'string' ? safeParseJson(row.properties) : {};
+      this._propsCache.set(relId, props);
+    }
 
     return new Relationship({
-      id: row.id as string,
+      id: relId,
       source_id: row.source_id as string,
       target_id: row.target_id as string,
       type: RelationType[row.type as keyof typeof RelationType] ?? RelationType.RELATED_TO,
@@ -680,12 +707,29 @@ export class GraphManager {
 
     const rows = this._conn!.prepare(sql).all(...params) as Record<string, unknown>[];
     for (const row of rows) {
-      let sourceProps: Record<string, unknown> = {};
-      try { sourceProps = typeof row.source_props === 'string' ? JSON.parse(row.source_props) : {}; } catch { /* corrupted */ }
-      let relProps: Record<string, unknown> = {};
-      try { relProps = typeof row.rel_props === 'string' ? JSON.parse(row.rel_props) : {}; } catch { /* corrupted */ }
-      let targetProps: Record<string, unknown> = {};
-      try { targetProps = typeof row.target_props === 'string' ? JSON.parse(row.target_props) : {}; } catch { /* corrupted */ }
+      // 使用缓存 + safeParseJson 替代三个 try-catch JSON.parse，
+      // 避免 V8 JIT 退优化；同一 entity/relation ID 只解析一次
+      const sourceId = row.source_id as string;
+      let sourceProps = this._propsCache.get(sourceId);
+      if (sourceProps === undefined) {
+        sourceProps = typeof row.source_props === 'string' ? safeParseJson(row.source_props) : {};
+        this._propsCache.set(sourceId, sourceProps);
+      }
+
+      const relId = row.rel_id as string;
+      let relProps = this._propsCache.get(relId);
+      if (relProps === undefined) {
+        relProps = typeof row.rel_props === 'string' ? safeParseJson(row.rel_props) : {};
+        this._propsCache.set(relId, relProps);
+      }
+
+      const targetId = row.target_id as string;
+      let targetProps = this._propsCache.get(targetId);
+      if (targetProps === undefined) {
+        targetProps = typeof row.target_props === 'string' ? safeParseJson(row.target_props) : {};
+        this._propsCache.set(targetId, targetProps);
+      }
+
       results.push({
         source: {
           id: row.source_id,
@@ -934,6 +978,9 @@ export class GraphManager {
       now
     );
 
+    // 写操作后清除该实体的属性缓存，确保后续读取拿到最新数据
+    this._propsCache.delete(entity.id);
+
     console.info(`Created entity: ${entity.type}/${entity.name} (${entity.id})`);
 
     // Fire-and-forget semantic embedding (no await — keeps CRUD synchronous).
@@ -965,6 +1012,9 @@ export class GraphManager {
 
     const success = info.changes > 0;
     if (success) {
+      // 写操作后清除该实体的属性缓存，确保后续读取拿到最新数据
+      this._propsCache.delete(entity.id);
+
       console.info(`Updated entity: ${entity.id}`);
       // Re-embed on update so semantic search reflects the new content.
       this._embedEntity(entity);
@@ -986,6 +1036,9 @@ export class GraphManager {
 
     const success = info.changes > 0;
     if (success) {
+      // 删除操作后清除该实体及其关联关系的属性缓存
+      this._propsCache.delete(entityId);
+
       console.info(`Deleted entity: ${entityId}`);
       // Drop the corresponding embedding so stale vectors don't surface.
       this._removeEntityEmbedding(entityId);
@@ -1020,6 +1073,9 @@ export class GraphManager {
         relationship.weight,
         now
       );
+
+    // 写操作后清除该关系的属性缓存
+    this._propsCache.delete(relationship.id);
 
     console.info(
       `Created relationship: ${relationship.source_id} -[${relationship.type}]-> ${relationship.target_id}`
@@ -1058,6 +1114,9 @@ export class GraphManager {
 
     const success = info.changes > 0;
     if (success) {
+      // 删除操作后清除该关系的属性缓存
+      this._propsCache.delete(relationshipId);
+
       console.info(`Deleted relationship: ${relationshipId}`);
     }
     return success;
@@ -1266,6 +1325,7 @@ export class GraphManager {
     if (this._conn) {
       this._conn.close();
       this._conn = null;
+      this._propsCache.clear();
       console.info('GraphManager closed');
     }
   }

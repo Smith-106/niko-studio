@@ -18,7 +18,7 @@ import {
   ProviderType,
   createServiceConfig,
 } from './models';
-import { InMemoryEmbeddingCache } from './cache';
+import { TieredEmbeddingCache } from './cache';
 import { LLMServiceImpl } from './llm-service';
 import { EmbeddingServiceImpl } from './embedding-service';
 import {
@@ -130,9 +130,11 @@ export class ServiceManager {
   private readonly _embeddingProviders: Map<string, EmbeddingServiceProviderContract>;
   private _llmService: LLMServiceImpl | null = null;
   private _embeddingService: EmbeddingServiceImpl | null = null;
-  private _cache: InMemoryEmbeddingCache | null = null;
+  private _cache: TieredEmbeddingCache | null = null;
   private _healthStatus: Record<string, boolean> = {};
-  private _healthCheckTimer: ReturnType<typeof setInterval> | null = null;
+  // 按需健康检查：不再用 setInterval 轮询，仅在请求失败时触发
+  private _lastHealthCheckMs: number = 0;
+  private readonly _minHealthCheckIntervalMs: number = 60_000; // 最小 60s 间隔防抖
   private _initialized: boolean = false;
 
   private constructor(config?: ServiceConfig | null) {
@@ -169,7 +171,7 @@ export class ServiceManager {
 
     // Initialize cache
     if (this._config.embeddingCacheEnabled) {
-      this._cache = new InMemoryEmbeddingCache(
+      this._cache = new TieredEmbeddingCache(
         this._config.embeddingCacheMaxSize,
         this._config.embeddingCacheTTL,
       );
@@ -205,12 +207,10 @@ export class ServiceManager {
       cache: this._cache,
     });
 
-    // Start health check loop
-    this._healthCheckTimer = setInterval(() => {
-      this.checkHealth().catch(() => {
-        // Health check failures are logged but don't crash
-      });
-    }, this._config.healthCheckInterval * 1000);
+    // 初始化时执行一次健康检查，之后仅在请求失败时按需触发
+    this.checkHealth().catch(() => {
+      // 初始化阶段的健康检查失败不影响启动
+    });
 
     this._initialized = true;
   }
@@ -266,13 +266,9 @@ export class ServiceManager {
    * Shutdown all services
    */
   shutdown(): void {
-    if (this._healthCheckTimer) {
-      clearInterval(this._healthCheckTimer);
-      this._healthCheckTimer = null;
-    }
-
     if (this._cache) {
       this._cache.clear().catch(() => {});
+      this._cache.close();
     }
 
     this._llmProviders.clear();
@@ -318,6 +314,7 @@ export class ServiceManager {
     }
 
     this._healthStatus = checks;
+    this._lastHealthCheckMs = Date.now();
     return checks;
   }
 
@@ -333,6 +330,19 @@ export class ServiceManager {
    */
   getHealthStatus(): Record<string, boolean> {
     return { ...this._healthStatus };
+  }
+
+  /**
+   * 请求失败时触发按需健康检查（带最小间隔防抖）
+   * 外部调用方在 catch 块中调用此方法即可
+   */
+  triggerOnDemandHealthCheck(): void {
+    const now = Date.now();
+    if (now - this._lastHealthCheckMs < this._minHealthCheckIntervalMs) return;
+    this._lastHealthCheckMs = now;
+    this.checkHealth().catch(() => {
+      // 按需健康检查失败仅记录日志，不中断流程
+    });
   }
 
   /**

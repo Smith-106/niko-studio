@@ -4,6 +4,7 @@ export const TAURI_GATEWAY_COMMANDS = {
   startBackend: 'start_backend',
   checkBackendHealth: 'check_backend_health',
   callApi: 'call_api',
+  fetchChunk: 'fetch_chunk',
 } as const
 
 export type GatewayRequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'

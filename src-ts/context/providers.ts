@@ -8,6 +8,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
 import { createLogger } from '../logger/index.js';
+import { stableStringify } from '../search/stableKey';
 
 const log = createLogger('context-providers');
 
@@ -255,7 +256,7 @@ export class ProjectContextProvider extends BaseContextProvider {
           value: config,
           source: this.name,
           priority: ContextPriority.HIGH,
-          tokenEstimate: this._estimateTokens(JSON.stringify(config)),
+          tokenEstimate: this._estimateTokens(stableStringify(config)),
         }));
       }
 
@@ -274,7 +275,7 @@ export class ProjectContextProvider extends BaseContextProvider {
               source: this.name,
               priority: ContextPriority.NORMAL,
               metadata: { count: characters.length },
-              tokenEstimate: this._estimateTokens(JSON.stringify(characters)),
+              tokenEstimate: this._estimateTokens(stableStringify(characters)),
             }));
           }
         }
@@ -289,7 +290,7 @@ export class ProjectContextProvider extends BaseContextProvider {
             value: world,
             source: this.name,
             priority: ContextPriority.NORMAL,
-            tokenEstimate: this._estimateTokens(JSON.stringify(world)),
+            tokenEstimate: this._estimateTokens(stableStringify(world)),
           }));
         }
       }
@@ -303,7 +304,7 @@ export class ProjectContextProvider extends BaseContextProvider {
             value: outline,
             source: this.name,
             priority: ContextPriority.HIGH,
-            tokenEstimate: this._estimateTokens(JSON.stringify(outline)),
+            tokenEstimate: this._estimateTokens(stableStringify(outline)),
           }));
         }
       }

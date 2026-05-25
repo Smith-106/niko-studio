@@ -2,7 +2,7 @@
  * Database Pool Tests
  *
  * Tests AsyncConnectionPool: initialization, acquire/release,
- * connection management, and singleton factory.
+ * connection management, request queuing, and singleton factory.
  */
 
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
@@ -92,10 +92,10 @@ describe('AsyncConnectionPool', () => {
       pool.close();
     });
 
-    it('sets WAL journal mode', () => {
+    it('sets WAL journal mode', async () => {
       const pool = new AsyncConnectionPool(dbPath, 2);
       pool.initialize();
-      const conn = pool.acquire();
+      const conn = await pool.acquire();
       const result = conn.pragma('journal_mode') as { journal_mode: string }[];
       expect(result[0].journal_mode).toBe('wal');
       pool.release(conn);
@@ -113,18 +113,18 @@ describe('AsyncConnectionPool', () => {
   });
 
   describe('acquire', () => {
-    it('auto-initializes if not initialized', () => {
+    it('auto-initializes if not initialized', async () => {
       const pool = new AsyncConnectionPool(dbPath, 2);
-      const conn = pool.acquire();
+      const conn = await pool.acquire();
       expect(conn).toBeDefined();
       pool.release(conn);
       pool.close();
     });
 
-    it('returns a database connection', () => {
+    it('returns a database connection', async () => {
       const pool = new AsyncConnectionPool(dbPath, 2);
       pool.initialize();
-      const conn = pool.acquire();
+      const conn = await pool.acquire();
       // Verify it's a working connection
       const result = conn.prepare('SELECT 1 + 1 AS sum').get() as { sum: number };
       expect(result.sum).toBe(2);
@@ -132,65 +132,145 @@ describe('AsyncConnectionPool', () => {
       pool.close();
     });
 
-    it('reduces available connections', () => {
+    it('reduces available connections', async () => {
       const pool = new AsyncConnectionPool(dbPath, 2);
       pool.initialize();
       expect(pool.availableConnections).toBe(2);
-      const conn1 = pool.acquire();
+      const conn1 = await pool.acquire();
       expect(pool.availableConnections).toBe(1);
-      const conn2 = pool.acquire();
+      const conn2 = await pool.acquire();
       expect(pool.availableConnections).toBe(0);
       pool.release(conn1);
       pool.release(conn2);
       pool.close();
     });
 
-    it('creates new connection when pool exhausted', () => {
+    it('queues requests when pool exhausted and resolves on release', async () => {
       const pool = new AsyncConnectionPool(dbPath, 1);
       pool.initialize();
-      const conn1 = pool.acquire(); // pool is now empty
-      const conn2 = pool.acquire(); // creates new connection
+      const conn1 = await pool.acquire(); // 池耗尽
+
+      // acquire 应该排队等待而不是创建临时连接
+      const acquirePromise = pool.acquire();
+      expect(pool.pendingCount).toBe(1);
+
+      // 释放连接后，排队的请求应该获得该连接
+      pool.release(conn1);
+      const conn2 = await acquirePromise;
       expect(conn2).toBeDefined();
-      // conn2 should still work
       const result = conn2.prepare('SELECT 1').get();
       expect(result).toBeDefined();
-      pool.release(conn1);
       pool.release(conn2);
       pool.close();
+    });
+
+    it('rejects queued request after timeout', async () => {
+      // 使用极短的超时来测试超时逻辑
+      vi.useFakeTimers();
+      const pool = new AsyncConnectionPool(dbPath, 1);
+      pool.initialize();
+      const conn1 = await pool.acquire();
+
+      const acquirePromise = pool.acquire();
+      expect(pool.pendingCount).toBe(1);
+
+      // 推进时间超过 30 秒
+      vi.advanceTimersByTime(31_000);
+
+      await expect(acquirePromise).rejects.toThrow('Pool acquire timeout');
+
+      pool.release(conn1);
+      pool.close();
+      vi.useRealTimers();
     });
   });
 
   describe('release', () => {
-    it('returns connection to pool', () => {
+    it('returns connection to pool', async () => {
       const pool = new AsyncConnectionPool(dbPath, 2);
       pool.initialize();
-      const conn = pool.acquire();
+      const conn = await pool.acquire();
       expect(pool.availableConnections).toBe(1);
       pool.release(conn);
       expect(pool.availableConnections).toBe(2);
       pool.close();
     });
 
-    it('closes connection when pool is full', () => {
+    it('closes excess connection when pool is full and no waiters', async () => {
+      // 池大小为 1：获取 -> 释放 -> 再获取 -> 释放
+      // 连接始终在池内流转，不会产生溢出
       const pool = new AsyncConnectionPool(dbPath, 1);
       pool.initialize();
-      const conn1 = pool.acquire();
-      const conn2 = pool.acquire(); // creates overflow
-      pool.release(conn1); // returns to pool
-      pool.release(conn2); // pool is full, should close
+      const conn1 = await pool.acquire();
+      pool.release(conn1); // 归还到池
+      expect(pool.availableConnections).toBe(1);
+      const conn2 = await pool.acquire(); // 从池中再次获取
+      pool.release(conn2);
       expect(pool.availableConnections).toBe(1);
       pool.close();
     });
 
-    it('handles close errors gracefully', () => {
+    it('transfers connection to queued waiter instead of returning to pool', async () => {
       const pool = new AsyncConnectionPool(dbPath, 1);
       pool.initialize();
-      const conn = pool.acquire();
-      const overflow = pool.acquire();
-      // Force close the overflow connection to cause error on release
+      const conn1 = await pool.acquire();
+
+      // 排队一个请求
+      const waiterPromise = pool.acquire();
+      expect(pool.pendingCount).toBe(1);
+      expect(pool.availableConnections).toBe(0);
+
+      // 释放 conn1 应该直接转给等待者，不归还到池
+      pool.release(conn1);
+      const conn2 = await waiterPromise;
+      expect(conn2).toBe(conn1); // 应该是同一个连接对象
+      expect(pool.availableConnections).toBe(0); // 没有归还到池
+      expect(pool.pendingCount).toBe(0);
+      pool.release(conn2);
+      pool.close();
+    });
+
+    it('handles close errors gracefully', async () => {
+      const pool = new AsyncConnectionPool(dbPath, 1);
+      pool.initialize();
+      const conn = await pool.acquire();
+      // 强制关闭连接以制造 release 时的错误
       try { conn.close(); } catch { /* ignore */ }
-      // Release overflow - should try to close but not throw
-      pool.release(overflow);
+      // release 不应该抛出异常
+      pool.release(conn);
+      pool.close();
+    });
+  });
+
+  describe('pendingCount', () => {
+    it('returns 0 when no pending requests', () => {
+      const pool = new AsyncConnectionPool(dbPath, 2);
+      pool.initialize();
+      expect(pool.pendingCount).toBe(0);
+      pool.close();
+    });
+
+    it('tracks number of queued requests', async () => {
+      const pool = new AsyncConnectionPool(dbPath, 1);
+      pool.initialize();
+      const conn1 = await pool.acquire();
+
+      // 多个排队请求
+      const p2 = pool.acquire();
+      const p3 = pool.acquire();
+      expect(pool.pendingCount).toBe(2);
+
+      // 释放连接应该依次处理排队
+      pool.release(conn1);
+      // p2 应该已获得连接，p3 还在等待
+      expect(pool.pendingCount).toBe(1);
+
+      const conn2 = await p2;
+      pool.release(conn2);
+      const conn3 = await p3;
+      expect(pool.pendingCount).toBe(0);
+
+      pool.release(conn3);
       pool.close();
     });
   });
@@ -212,13 +292,26 @@ describe('AsyncConnectionPool', () => {
       pool.close(); // Should not throw
     });
 
-    it('handles errors when closing individual connections', () => {
+    it('handles errors when closing individual connections', async () => {
       const pool = new AsyncConnectionPool(dbPath, 1);
       pool.initialize();
-      const conn = pool.acquire();
+      const conn = await pool.acquire();
       try { conn.close(); } catch { /* already closed */ }
       pool.release(conn); // puts broken conn back in pool
       pool.close(); // should not throw
+    });
+
+    it('drains pending queue on close', async () => {
+      const pool = new AsyncConnectionPool(dbPath, 1);
+      pool.initialize();
+      const conn1 = await pool.acquire();
+      const pendingPromise = pool.acquire();
+      expect(pool.pendingCount).toBe(1);
+
+      // close 应该清空等待队列
+      pool.close();
+      expect(pool.pendingCount).toBe(0);
+      pool.close();
     });
   });
 

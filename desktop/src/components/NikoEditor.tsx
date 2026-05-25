@@ -29,7 +29,7 @@ import { BubbleToolbar, type RewriteOption } from './editor/BubbleToolbar'
 import { insertPlainText, replaceRange } from './editor/streamToEditor'
 import { useEditorAI } from '../hooks/useEditorAI'
 import { useI18n, type Language } from '../i18n'
-import { setEditorHandle, type EditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
+import { setEditorHandle, notifyGeneratingChange, type EditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
 import { getPersistedStyleRequirements } from './editor/WritingStyle'
 import { useAppStore } from '../stores/appStore'
 import {
@@ -442,9 +442,10 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
     return () => document.removeEventListener('mousedown', handleClick)
   }, [bubbleState.active])
 
-  // Sync isGenerating to the shared handle
+  // 同步 isGenerating 到共享 handle，并通知 DocumentEditor（替代轮询）
   useEffect(() => {
     handleRef.current.isGenerating = ai.isGenerating
+    notifyGeneratingChange(ai.isGenerating)
   }, [ai.isGenerating])
 
   useEffect(() => {

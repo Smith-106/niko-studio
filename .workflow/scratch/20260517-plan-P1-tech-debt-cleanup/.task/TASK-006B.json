@@ -1,0 +1,120 @@
+{
+  "id": "TASK-006B",
+  "title": "统一 workflow-engine 公共 API 契约与测试断言",
+  "description": "在 `src-ts` 测试环境恢复后，修复 `WorkflowEngine.publicEntryApi()` 与 `workflow-engine.test.ts` 之间的命名契约不一致，明确 `runStream` / `run_stream` 的唯一标准，并复跑 workflow 定向测试。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "fix",
+  "priority": "high",
+  "effort": "medium",
+  "action": "1）以 `src-ts/workflow/workflow-engine-core.ts` 中 `ENGINE_PUBLIC_ENTRY_API` 为源码权威，确认公共 API 是否正式定为 `runStream`；2）若该常量是权威契约，则更新 `src-ts/tests/workflow/workflow-engine.test.ts` 的断言为 `runStream`；3）若必须兼容旧的 `run_stream`，则在 `workflow-engine-core.ts` 或兼容层中恢复明确支持，并同步更新测试；4）在修复后重跑 workflow 相关定向测试，确认不再出现 API 契约失败。",
+  "status": "completed",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src-ts/workflow",
+  "focus_paths": [
+    "src-ts/workflow/workflow-engine-core.ts",
+    "src-ts/workflow/workflow-engine.ts",
+    "src-ts/tests/workflow/workflow-engine.test.ts"
+  ],
+  "read_first": [
+    "src-ts/workflow/workflow-engine-core.ts",
+    "src-ts/workflow/workflow-engine.ts",
+    "src-ts/tests/workflow/workflow-engine.test.ts",
+    ".workflow/scratch/20260517-plan-P1-tech-debt-cleanup/.debug/task-006/understanding.md"
+  ],
+  "depends_on": [
+    "TASK-006A"
+  ],
+  "wave": 2,
+  "parallel_group": "wave-2",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src-ts/workflow/workflow-engine-core.ts contains \"ENGINE_PUBLIC_ENTRY_API = ['route', 'plan', 'execute', 'run',\"",
+      "src-ts/tests/workflow/workflow-engine.test.ts contains either 'runStream' assertion or explicit backward-compatibility expectation matching source",
+      "cd src-ts && npm run test -- tests/workflow/workflow-engine.test.ts exits 0",
+      "cd src-ts && npm run test -- tests/container/workflow-engine-adapter.test.ts exits 0 or fails only for unrelated pre-existing issues",
+      "cd src-ts && npm run typecheck exits 0"
+    ],
+    "verification": "在 `src-ts` 子包上下文运行 `npm run typecheck`、`npm run test -- tests/workflow/workflow-engine.test.ts`，并按需要追加 `tests/container/workflow-engine-adapter.test.ts`，确认不再出现 `run_stream` vs `runStream` 断言失败。",
+    "definition_of_done": "workflow-engine 公共 API 命名契约与测试断言一致，相关 workflow 定向测试通过。"
+  },
+  "files": [
+    {
+      "path": "src-ts/workflow/workflow-engine-core.ts",
+      "action": "modify",
+      "target": "ENGINE_PUBLIC_ENTRY_API 或兼容层",
+      "change": "以最小改动统一公共 API 命名契约。"
+    },
+    {
+      "path": "src-ts/tests/workflow/workflow-engine.test.ts",
+      "action": "modify",
+      "target": "public entry API assertion",
+      "change": "使测试断言与最终公共 API 契约一致。"
+    }
+  ],
+  "implementation": [
+    "读取 `src-ts/workflow/workflow-engine-core.ts` 中 `ENGINE_PUBLIC_ENTRY_API` 与 `publicEntryApi()`，确认当前源码权威契约。",
+    "读取 `src-ts/tests/workflow/workflow-engine.test.ts`，定位 `run_stream` 断言并判断是测试过期还是需要兼容层。",
+    "在最小改动原则下，优先修正测试或补充兼容层，但必须与源码契约保持一致，不能同时保留互相矛盾的标准。",
+    "在 `src-ts` 子包上下文重跑 typecheck 与 workflow 定向测试，确认契约失败消失。"
+  ],
+  "test": {
+    "commands": [
+      "cd src-ts && npm run typecheck",
+      "cd src-ts && npm run test -- tests/workflow/workflow-engine.test.ts",
+      "cd src-ts && npm run test -- tests/container/workflow-engine-adapter.test.ts"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": [
+      "publicEntryApi 契约唯一且明确",
+      "workflow-engine.test.ts 通过",
+      "adapter test 无 API 命名相关失败",
+      "typecheck 通过"
+    ]
+  },
+  "reference": {
+    "pattern": "源码常量是公共 API 权威，测试应围绕该权威而非历史命名残留",
+    "files": [
+      "src-ts/workflow/workflow-engine-core.ts",
+      "src-ts/tests/workflow/workflow-engine.test.ts",
+      ".workflow/scratch/20260517-plan-P1-tech-debt-cleanup/.debug/task-006/understanding.md"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "debug 已确认真实代码契约与测试不一致，因此第二步直接围绕源码权威与测试断言做最小统一。",
+    "decision_factors": [
+      "避免继续在错误命名上消耗时间",
+      "接口冻结要求公共 API 有单一定义",
+      "定向测试可直接验证修复结果"
+    ],
+    "tradeoffs": "如果外部调用者仍依赖 `run_stream`，可能需要兼容层而不只是改单测。"
+  },
+  "risks": [
+    "若仓库其他位置仍引用旧命名，统一契约后可能暴露额外兼容问题。"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "workflow-engine public API"
+    ],
+    "affected_components": [
+      "src-ts/workflow",
+      "src-ts/tests/workflow"
+    ],
+    "affected_requirements": [
+      "F-006"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "20-45min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": true
+  }
+}

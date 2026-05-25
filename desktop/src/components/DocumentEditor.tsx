@@ -5,10 +5,10 @@ const StoryBiblePanel = React.lazy(() => import('./StoryBiblePanel').then(m => (
 import { NikoEditor } from './NikoEditor'
 import { HistoryPanel } from './HistoryPanel'
 import { ExportDialog } from './ExportDialog'
-import { getEditorHandle } from '../utils/editorHandle'
+import { setGeneratingListener } from '../utils/editorHandle'
 import { readChapterContent, writeChapterContent } from '../services/projectFileService'
 import { autoSaveSnapshot } from '../services/versionService'
-import { useAppStore } from '../stores/appStore'
+import { useDocumentEditorState } from '../stores/selectors'
 import type { JSONContent } from '@tiptap/react'
 import {
   applyTelemetryEvent,
@@ -27,23 +27,23 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const { t, language } = useI18n()
-  const currentChapterId = useAppStore((state) => state.currentChapterId)
-  const currentProjectId = useAppStore((state) => state.currentProjectId)
-  const currentConversationId = useAppStore((state) => state.currentConversationId)
-  const currentConversationTitle = useAppStore((state) => (
-    state.currentConversationId ? state.conversationsById[state.currentConversationId]?.title ?? null : null
-  ))
-  const updateConversationTitle = useAppStore((state) => state.updateConversationTitle)
-  const historyPanelOpen = useAppStore((state) => state.historyPanelOpen)
-  const toggleHistoryPanel = useAppStore((state) => state.toggleHistoryPanel)
-  const sessionIntelligenceEnabled = useAppStore((state) => state.sessionIntelligenceEnabled)
-  const setSessionIntelligenceSummary = useAppStore((state) => state.setSessionIntelligenceSummary)
-  const setSessionIntelligenceInsights = useAppStore((state) => state.setSessionIntelligenceInsights)
-  const setSessionIntelligenceSessionId = useAppStore((state) => state.setSessionIntelligenceSessionId)
-  const personalizedCraftEnabled = useAppStore((state) => state.personalizedCraftEnabled)
-  const setPersonalizedCraftSummary = useAppStore((state) => state.setPersonalizedCraftSummary)
-  const setPersonalizedCraftTrajectory = useAppStore((state) => state.setPersonalizedCraftTrajectory)
-  const setPersonalizedCraftRecommendations = useAppStore((state) => state.setPersonalizedCraftRecommendations)
+  const {
+    currentChapterId,
+    currentProjectId,
+    currentConversationId,
+    currentConversationTitle,
+    updateConversationTitle,
+    historyPanelOpen,
+    toggleHistoryPanel,
+    sessionIntelligenceEnabled,
+    setSessionIntelligenceSummary,
+    setSessionIntelligenceInsights,
+    setSessionIntelligenceSessionId,
+    personalizedCraftEnabled,
+    setPersonalizedCraftSummary,
+    setPersonalizedCraftTrajectory,
+    setPersonalizedCraftRecommendations,
+  } = useDocumentEditorState()
   const [chapterContent, setChapterContent] = useState<string>('')
   const [contentLoaded, setContentLoaded] = useState(false)
   const fallbackTitle = currentConversationTitle ?? t.appTitle ?? '未命名文档'
@@ -55,6 +55,8 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const [aiGenerating, setAiGenerating] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const craftProfileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editorTextRef = useRef<string>('')
   const telemetryRef = useRef<WritingSessionTelemetry | null>(null)
   const titleFieldLabel = language === 'zh' ? '文档标题' : 'Document title'
 
@@ -83,17 +85,30 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
     }
 
     if (personalizedCraftEnabled) {
-      const telemetry = telemetryRef.current
-      const profile = buildPersonalizedCraftProfile({
-        sessionIntelligence: telemetry ? [summarizeWritingSessionTelemetry(telemetry)] : [],
-      })
-      setPersonalizedCraftSummary(profile.dominantWeaknesses[0]
-        ? `近期重点：${profile.dominantWeaknesses[0].dimensionId} · ${profile.dominantWeaknesses[0].latestStatus}`
-        : '个性化画像数据不足，先继续积累真实写作与修订行为。')
-      setPersonalizedCraftTrajectory(profile.growthTrajectory.summary)
-      setPersonalizedCraftRecommendations(
-        profile.recommendations.map((item: PersonalizedCraftRecommendation) => item.summary).slice(0, 3),
-      )
+      // 每次按键都调用 buildPersonalizedCraftProfile 会导致输入卡顿，
+      // 用 3 秒防抖延迟执行，首次加载（内容为空）时立即执行
+      const runCraftProfile = () => {
+        const telemetry = telemetryRef.current
+        const profile = buildPersonalizedCraftProfile({
+          sessionIntelligence: telemetry ? [summarizeWritingSessionTelemetry(telemetry)] : [],
+        })
+        setPersonalizedCraftSummary(profile.dominantWeaknesses[0]
+          ? `近期重点：${profile.dominantWeaknesses[0].dimensionId} · ${profile.dominantWeaknesses[0].latestStatus}`
+          : '个性化画像数据不足，先继续积累真实写作与修订行为。')
+        setPersonalizedCraftTrajectory(profile.growthTrajectory.summary)
+        setPersonalizedCraftRecommendations(
+          profile.recommendations.map((item: PersonalizedCraftRecommendation) => item.summary).slice(0, 3),
+        )
+      }
+
+      if (event.type === 'editor_update' && editorTextRef.current.length > 0) {
+        // 非首次输入时防抖，避免每次按键触发重计算
+        if (craftProfileTimerRef.current) clearTimeout(craftProfileTimerRef.current)
+        craftProfileTimerRef.current = setTimeout(runCraftProfile, 3000)
+      } else {
+        // 保存事件或首次输入（editorText 为空）时立即执行
+        runCraftProfile()
+      }
     }
   }, [
     currentChapterId,
@@ -132,6 +147,7 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const handleEditorUpdate = useCallback((json: JSONContent, text: string) => {
     setEditorJson(json)
     setEditorText(text)
+    editorTextRef.current = text
     setSaveStatus('saving')
     updateSessionTelemetry({
       type: 'editor_update',
@@ -167,18 +183,16 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
     }
   }, [currentConversationId, updateConversationTitle])
 
-  // Poll editor AI generating state
+  // AI generating 状态：由 NikoEditor 通过回调直接通知，替代 500ms 轮询
   useEffect(() => {
-    const id = setInterval(() => {
-      const handle = getEditorHandle()
-      setAiGenerating(handle?.isGenerating ?? false)
-    }, 500)
-    return () => clearInterval(id)
+    setGeneratingListener(setAiGenerating)
+    return () => setGeneratingListener(null)
   }, [])
 
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (craftProfileTimerRef.current) clearTimeout(craftProfileTimerRef.current)
     }
   }, [])
 
@@ -188,8 +202,13 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
 
   useEffect(() => {
     setEditorText('')
+    editorTextRef.current = ''
     setEditorJson(null)
     setSaveStatus('idle')
+    if (craftProfileTimerRef.current) {
+      clearTimeout(craftProfileTimerRef.current)
+      craftProfileTimerRef.current = null
+    }
   }, [currentChapterId])
 
   return (

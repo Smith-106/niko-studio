@@ -7,6 +7,7 @@ const mockFs = vi.hoisted(() => ({
   exists: vi.fn(),
   readDir: vi.fn(),
   remove: vi.fn(),
+  stat: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => mockFs)
@@ -25,6 +26,8 @@ import {
   restoreSnapshot,
   shouldAutoSave,
   enforceRetentionPolicy,
+  clearChapterContentCache,
+  getChapterContentCacheSize,
 } from './projectFileService'
 
 beforeEach(() => {
@@ -90,12 +93,13 @@ describe('projectFileService', () => {
 
   describe('chapter content', () => {
     it('reads chapter content', async () => {
+      mockFs.stat.mockResolvedValue({ mtime: new Date(1000) })
       mockFs.readTextFile.mockResolvedValue('hello')
       await expect(readChapterContent('p1', 'c1')).resolves.toBe('hello')
     })
 
     it('returns empty string on failure', async () => {
-      mockFs.readTextFile.mockRejectedValue(new Error('fail'))
+      mockFs.stat.mockRejectedValue(new Error('fail'))
       await expect(readChapterContent('p1', 'c1')).resolves.toBe('')
     })
 
@@ -207,6 +211,138 @@ describe('projectFileService', () => {
 
       const removed = await enforceRetentionPolicy('p1', 'c1', 50)
       expect(removed).toBe(0)
+    })
+  })
+
+  describe('章节内容缓存', () => {
+    // 每个测试前清空缓存
+    beforeEach(() => {
+      clearChapterContentCache()
+    })
+
+    it('首次读取后应缓存内容，第二次读取不调用 readTextFile', async () => {
+      const mtime = new Date(1000)
+      mockFs.stat.mockResolvedValue({ mtime })
+      mockFs.readTextFile.mockResolvedValue('缓存测试内容')
+
+      // 首次读取 — 缓存未命中
+      const content1 = await readChapterContent('proj1', 'ch1')
+      expect(content1).toBe('缓存测试内容')
+      expect(mockFs.readTextFile).toHaveBeenCalledTimes(1)
+
+      // 第二次读取 — 缓存命中（mtime 相同）
+      mockFs.readTextFile.mockClear()
+      const content2 = await readChapterContent('proj1', 'ch1')
+      expect(content2).toBe('缓存测试内容')
+      expect(mockFs.readTextFile).toHaveBeenCalledTimes(0) // 不再读文件
+    })
+
+    it('mtime 变化后缓存应失效', async () => {
+      const mtime1 = new Date(1000)
+      const mtime2 = new Date(2000)
+      mockFs.stat.mockResolvedValue({ mtime: mtime1 })
+      mockFs.readTextFile.mockResolvedValue('原始内容')
+
+      // 首次读取并缓存
+      await readChapterContent('proj1', 'ch1')
+
+      // mtime 变化 → 缓存失效
+      mockFs.stat.mockResolvedValue({ mtime: mtime2 })
+      mockFs.readTextFile.mockResolvedValue('更新后内容')
+
+      const content = await readChapterContent('proj1', 'ch1')
+      expect(content).toBe('更新后内容')
+      expect(mockFs.readTextFile).toHaveBeenCalledTimes(2) // 重新读取文件
+    })
+
+    it('writeChapterContent 后缓存应失效', async () => {
+      const mtime = new Date(1000)
+      mockFs.stat.mockResolvedValue({ mtime })
+      mockFs.readTextFile.mockResolvedValue('旧内容')
+
+      // 首次读取并缓存
+      await readChapterContent('proj1', 'ch1')
+      expect(getChapterContentCacheSize()).toBe(1)
+
+      // 写入后缓存失效
+      await writeChapterContent('proj1', 'ch1', '新内容')
+
+      // 缓存已被 invalidate 清除，下次读取需重新从文件加载
+      mockFs.readTextFile.mockClear()
+      await readChapterContent('proj1', 'ch1')
+      expect(mockFs.readTextFile).toHaveBeenCalledTimes(1)
+    })
+
+    it('deleteChapterDir 后缓存应失效', async () => {
+      const mtime = new Date(1000)
+      mockFs.stat.mockResolvedValue({ mtime })
+      mockFs.readTextFile.mockResolvedValue('待删除内容')
+      mockFs.exists.mockResolvedValue(false)
+
+      // 首次读取并缓存
+      await readChapterContent('proj1', 'ch1')
+      expect(getChapterContentCacheSize()).toBe(1)
+
+      // 删除章节目录
+      await deleteChapterDir('proj1', 'ch1')
+
+      // 缓存已被清除
+      expect(getChapterContentCacheSize()).toBe(0)
+    })
+
+    it('不同 projectId/chapterId 应独立缓存', async () => {
+      const mtime = new Date(1000)
+      mockFs.stat.mockResolvedValue({ mtime })
+      mockFs.readTextFile
+        .mockResolvedValueOnce('项目1内容')
+        .mockResolvedValueOnce('项目2内容')
+
+      await readChapterContent('proj1', 'ch1')
+      await readChapterContent('proj2', 'ch1')
+
+      expect(getChapterContentCacheSize()).toBe(2)
+    })
+
+    it('clearChapterContentCache 应清空全部缓存', async () => {
+      const mtime = new Date(1000)
+      mockFs.stat.mockResolvedValue({ mtime })
+      mockFs.readTextFile.mockResolvedValue('内容')
+
+      await readChapterContent('proj1', 'ch1')
+      await readChapterContent('proj1', 'ch2')
+      expect(getChapterContentCacheSize()).toBe(2)
+
+      clearChapterContentCache()
+      expect(getChapterContentCacheSize()).toBe(0)
+    })
+
+    it('文件不存在时应返回空字符串且不缓存', async () => {
+      mockFs.stat.mockRejectedValue(new Error('file not found'))
+
+      const content = await readChapterContent('proj1', 'missing')
+      expect(content).toBe('')
+      expect(getChapterContentCacheSize()).toBe(0)
+    })
+
+    it('LRU 淘汰：超过上限时淘汰最久未使用的条目', async () => {
+      const mtime = new Date(1000)
+      mockFs.stat.mockResolvedValue({ mtime })
+      mockFs.readTextFile.mockResolvedValue('内容')
+
+      // 填充缓存到 500 条
+      for (let i = 0; i < 500; i++) {
+        await readChapterContent('proj1', `ch${i}`)
+      }
+      expect(getChapterContentCacheSize()).toBe(500)
+
+      // 再添加一条，应淘汰 ch0（最久未使用）
+      await readChapterContent('proj1', 'ch500')
+      expect(getChapterContentCacheSize()).toBe(500)
+
+      // ch0 应已被淘汰 — 需要重新读取
+      mockFs.readTextFile.mockClear()
+      await readChapterContent('proj1', 'ch0')
+      expect(mockFs.readTextFile).toHaveBeenCalledTimes(1) // 缓存未命中
     })
   })
 })

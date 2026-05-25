@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, BarChart3, CheckCircle } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
+import { AlertCircle, BarChart3, CheckCircle, type LucideIcon } from 'lucide-react'
 
 import { runConsistencyCheck, type ConsistencyCheckResult, type RecommendationPayload } from '../../api/client'
 import { processWritingHelper } from '../../api/writing'
@@ -15,6 +15,7 @@ import { useI18n } from '../../i18n'
 import { RevisionOrchestrator } from '../../services/revisionOrchestrator'
 import { useAppStore } from '../../stores/appStore'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useEvaluationSettings } from '../../stores/selectors'
 import { type EvaluationSourceDescriptor, useAddMessage } from '../../stores/selectors'
 import { applyRevisionCandidateToEditor, captureMatchedSelectionSnapshot, getRevisionCopy, insertRevisionAlternativeToEditor, undoLastRevisionApplyInEditor, type RevisionCandidate } from '../../utils/revisionLoop'
 import { RevisionPreviewCard } from '../RevisionPreviewCard'
@@ -24,6 +25,83 @@ import { EvaluationSourceSection } from './EvaluationSourceSection'
 import { EvaluationSupportToolsSection } from './EvaluationSupportToolsSection'
 import { buildDimensions, buildSuggestionActionTemplate, buildWritingHelperPreset, detectSuggestionFocus, normalizeSuggestionPayloads } from './suggestionUtils'
 import type { EvaluationWorkflowPreset } from './EvaluationWorkflowSection'
+
+// ============================================================
+// 模块级辅助函数（从组件内提取，避免每次渲染重建）
+// ============================================================
+
+/** 根据 score 返回对应颜色 class */
+function getScoreColor(score: number): string {
+  return score >= 8
+    ? 'text-green-700 bg-green-100 dark:bg-green-900/20 dark:text-green-400'
+    : score >= 6
+      ? 'text-amber-800 bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300'
+      : 'text-red-700 bg-red-100 dark:bg-red-900/20 dark:text-red-400'
+}
+
+interface DecisionStyle {
+  icon: LucideIcon
+  color: string
+  bg: string
+  label: string
+}
+
+/** 根据 decision 返回图标/颜色/文案 */
+function getDecisionStyle(
+  decision: string,
+  labels: { passed: string; revise: string; rewrite: string; unknown: string },
+): DecisionStyle {
+  if (decision === 'APPROVED') {
+    return { icon: CheckCircle, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/20', label: labels.passed }
+  }
+  if (decision === 'REVISE') {
+    return { icon: AlertCircle, color: 'text-amber-800 dark:text-amber-300', bg: 'bg-amber-100 dark:bg-amber-900/20', label: labels.revise }
+  }
+  if (decision === 'REWRITE') {
+    return { icon: AlertCircle, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/20', label: labels.rewrite }
+  }
+  return { icon: AlertCircle, color: 'text-gray-600 dark:text-dark-text-secondary', bg: 'bg-gray-50 dark:bg-dark-bg', label: labels.unknown }
+}
+
+/** 构建修订指令（纯函数，isZh 由参数传入） */
+function buildRevisionInstruction(suggestion: RecommendationPayload, isZh: boolean): string {
+  return isZh
+    ? `请根据下面的评估建议直接重写文本，并只输出修改后的完整版本，不要解释。\n\n评估建议：${suggestion.title}\n原因：${suggestion.reason}`
+    : `Rewrite the text according to the evaluation guidance below. Return only the revised full text with no explanation.\n\nSuggestion: ${suggestion.title}\nReason: ${suggestion.reason}`
+}
+
+/** 构建写作助手引导语（纯函数，isZh 由参数传入） */
+function buildWritingHelperGuidance(suggestion: RecommendationPayload, isZh: boolean): string {
+  return isZh
+    ? `优先处理这条评估建议：${suggestion.title}\n原因：${suggestion.reason}\n\n${buildSuggestionActionTemplate(detectSuggestionFocus(suggestion), true)}`
+    : `Prioritize this evaluation guidance: ${suggestion.title}\nReason: ${suggestion.reason}\n\n${buildSuggestionActionTemplate(detectSuggestionFocus(suggestion), false)}`
+}
+
+/** 格式化写作助手预设摘要 */
+function formatWritingHelperPresetSummary(
+  preset: ReturnType<typeof buildWritingHelperPreset>,
+  modeLabelMap: Record<string, string>,
+  isZh: boolean,
+): string {
+  return isZh
+    ? `${modeLabelMap[preset.mode]} · ${preset.maxSentences} 句 · ${preset.maxItems} 条`
+    : `${modeLabelMap[preset.mode]} · ${preset.maxSentences} sentences · ${preset.maxItems} items`
+}
+
+/** "继续到写作助手" 按钮文案 */
+function getContinueInWritingHelperLabel(
+  carriedContent: WritingHelperEvaluationHandoff['carriedContent'],
+  isZh: boolean,
+): string {
+  return isZh
+    ? (carriedContent === 'revision-preview' ? '带着修改预览继续到写作助手' : '带着原始回复继续到写作助手')
+    : (carriedContent === 'revision-preview' ? 'Continue to Writing Helper with the revision preview' : 'Continue to Writing Helper with the original reply')
+}
+
+/** "更多建议" 提示文案 */
+function moreSuggestionsHint(count: number, isZh: boolean): string {
+  return isZh ? `还有 ${count} 条建议，展开"详细评估"后可继续查看。` : `${count} more suggestions are available in detailed review.`
+}
 
 export interface EvaluationPanelProps {
   content?: string
@@ -52,8 +130,7 @@ export function EvaluationPanel({ content: fallbackContent = '', evaluationSourc
   const [multiPassMaxIter, setMultiPassMaxIter] = useState(5)
   const [multiPassRunning, setMultiPassRunning] = useState(false)
   const [multiPassResult, setMultiPassResult] = useState<{ iterations: number; initialScore: number; finalScore: number; reason: string; sessionId?: string | null; revisionSession?: { id?: string | null; chapterId: string; state: string; iteration: number; comparisonSummary?: string | null } | null } | null>(null)
-  const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
-  const detectionEvasionGuardEnabled = useSettingsStore((state) => state.settings.detectionEvasionGuardEnabled)
+  const { qualityGoals, detectionEvasionGuardEnabled } = useEvaluationSettings()
   const workspaceSummary = useWriterWorkspaceSummary()
   const availableEvaluationSources = useMemo(() => (evaluationSources?.length ? evaluationSources : [{ kind: 'latestAssistantReply', label: isZh ? '最近一次助手回复' : 'Latest assistant reply', content: fallbackContent } satisfies EvaluationSourceDescriptor])
     .map((source) => ({ ...source, content: source.content.trim() }))
@@ -118,28 +195,15 @@ export function EvaluationPanel({ content: fallbackContent = '', evaluationSourc
     const provider = settings.llmProviders.find((item) => item.id === settings.primaryProvider && item.enabled && item.apiKey)
     return provider ? { api_key: provider.apiKey, base_url: provider.baseUrl, model: provider.defaultModel, provider: provider.id } : {}
   }
-  const getScoreColor = (score: number) => score >= 8 ? 'text-green-700 bg-green-100 dark:bg-green-900/20 dark:text-green-400' : score >= 6 ? 'text-amber-800 bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300' : 'text-red-700 bg-red-100 dark:bg-red-900/20 dark:text-red-400'
-  const getDecisionStyle = (decision: string) => decision === 'APPROVED'
-    ? { icon: CheckCircle, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/20', label: t.evaluationPassed }
-    : decision === 'REVISE'
-      ? { icon: AlertCircle, color: 'text-amber-800 dark:text-amber-300', bg: 'bg-amber-100 dark:bg-amber-900/20', label: t.evaluationNeedRevise }
-      : decision === 'REWRITE'
-        ? { icon: AlertCircle, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/20', label: t.evaluationNeedRewrite }
-        : { icon: AlertCircle, color: 'text-gray-600 dark:text-dark-text-secondary', bg: 'bg-gray-50 dark:bg-dark-bg', label: t.evaluationUnknown }
-  const buildRevisionInstruction = (suggestion: RecommendationPayload) => isZh
-    ? `请根据下面的评估建议直接重写文本，并只输出修改后的完整版本，不要解释。\n\n评估建议：${suggestion.title}\n原因：${suggestion.reason}`
-    : `Rewrite the text according to the evaluation guidance below. Return only the revised full text with no explanation.\n\nSuggestion: ${suggestion.title}\nReason: ${suggestion.reason}`
-  const buildWritingHelperGuidance = (suggestion: RecommendationPayload) => isZh
-    ? `优先处理这条评估建议：${suggestion.title}\n原因：${suggestion.reason}\n\n${buildSuggestionActionTemplate(detectSuggestionFocus(suggestion), true)}`
-    : `Prioritize this evaluation guidance: ${suggestion.title}\nReason: ${suggestion.reason}\n\n${buildSuggestionActionTemplate(detectSuggestionFocus(suggestion), false)}`
-  const formatWritingHelperPresetSummary = (preset: ReturnType<typeof buildWritingHelperPreset>) => isZh ? `${writingHelperModeLabelMap[preset.mode]} · ${preset.maxSentences} 句 · ${preset.maxItems} 条` : `${writingHelperModeLabelMap[preset.mode]} · ${preset.maxSentences} sentences · ${preset.maxItems} items`
-  const getContinueInWritingHelperLabel = (carriedContent: WritingHelperEvaluationHandoff['carriedContent']) => isZh ? (carriedContent === 'revision-preview' ? '带着修改预览继续到写作助手' : '带着原始回复继续到写作助手') : (carriedContent === 'revision-preview' ? 'Continue to Writing Helper with the revision preview' : 'Continue to Writing Helper with the original reply')
-  const getWritingHelperContinueState = (suggestion: RecommendationPayload) => {
+  // ---- 模块级辅助函数（已提取到文件顶部） ----
+  // ---- 已提取到模块级的辅助函数，此处只保留依赖组件 state 的逻辑 ----
+  const getWritingHelperContinueState = useCallback((suggestion: RecommendationPayload) => {
     const preset = buildWritingHelperPreset(detectSuggestionFocus(suggestion))
     const carriedContent: WritingHelperEvaluationHandoff['carriedContent'] = revisionCandidate?.suggestionId === suggestion.id ? 'revision-preview' : 'original-reply'
-    return { preset, carriedContent, continueLabel: getContinueInWritingHelperLabel(carriedContent), presetInlineLabel: isZh ? `写作助手预设：${formatWritingHelperPresetSummary(preset)}` : `Writing Helper preset: ${formatWritingHelperPresetSummary(preset)}` }
-  }
-  const moreSuggestionsHint = (count: number) => isZh ? `还有 ${count} 条建议，展开“详细评估”后可继续查看。` : `${count} more suggestions are available in detailed review.`
+    const presetLabel = formatWritingHelperPresetSummary(preset, writingHelperModeLabelMap, isZh)
+    const continueLabel = getContinueInWritingHelperLabel(carriedContent, isZh)
+    return { preset, carriedContent, continueLabel, presetInlineLabel: isZh ? `写作助手预设：${presetLabel}` : `Writing Helper preset: ${presetLabel}` }
+  }, [isZh, revisionCandidate, writingHelperModeLabelMap])
 
   const runWorkspaceConsistencyCheck = async () => {
     const activeWorkspace = workspaceSummary.meaningfulWorkspace
@@ -178,7 +242,7 @@ export function EvaluationPanel({ content: fallbackContent = '', evaluationSourc
     setRevisionLoadingId(suggestion.id)
     setRevisionMessage(null)
     try {
-      const response = await processWritingHelper({ content, mode: 'rewrite', instruction: buildRevisionInstruction(suggestion), detection_evasion_guard_enabled: detectionEvasionGuardEnabled, ...(workspaceSummary.meaningfulWorkspace ? { workspace: workspaceSummary.meaningfulWorkspace } : {}), ...getProviderFields() })
+      const response = await processWritingHelper({ content, mode: 'rewrite', instruction: buildRevisionInstruction(suggestion, isZh), detection_evasion_guard_enabled: detectionEvasionGuardEnabled, ...(workspaceSummary.meaningfulWorkspace ? { workspace: workspaceSummary.meaningfulWorkspace } : {}), ...getProviderFields() })
       const candidateText = response.success && response.data?.processed_text ? response.data.processed_text.trim() : ''
       if (!response.success || !candidateText) { setRevisionCandidate(null); setRevisionMessage({ suggestionId: suggestion.id, tone: 'error', text: response.error || t.evaluationFailed }); return }
       setRevisionCandidate({ suggestionId: suggestion.id, sourceText: content, candidateText, selectionSnapshot: captureMatchedSelectionSnapshot(content), surface })
@@ -203,7 +267,7 @@ export function EvaluationPanel({ content: fallbackContent = '', evaluationSourc
   const handleOpenWritingHelper = (suggestion: RecommendationPayload) => {
     if (!onOpenWritingHelper) return
     const { preset, carriedContent } = getWritingHelperContinueState(suggestion)
-    const guidance = buildWritingHelperGuidance(suggestion)
+    const guidance = buildWritingHelperGuidance(suggestion, isZh)
     onOpenWritingHelper({
       content: carriedContent === 'revision-preview' ? revisionCandidate!.candidateText : content,
       guidance,
@@ -236,7 +300,7 @@ export function EvaluationPanel({ content: fallbackContent = '', evaluationSourc
 
   useEffect(() => { resetRecommendationStates(result?.suggestions ?? []); setRevisionCandidate(null); setRevisionLoadingId(null); setRevisionMessage(null) }, [result?.suggestions, resetRecommendationStates])
 
-  const decisionStyle = result ? getDecisionStyle(result.decision) : null
+  const decisionStyle = result ? getDecisionStyle(result.decision, { passed: t.evaluationPassed, revise: t.evaluationNeedRevise, rewrite: t.evaluationNeedRewrite, unknown: t.evaluationUnknown }) : null
   const primaryFeedback = result?.dimensions.find((dimension) => dimension.feedback && dimension.feedback !== t.evaluationNoFeedback)?.feedback ?? t.evaluationNoFeedback
   const previewSuggestions = result?.suggestions.slice(0, 2) ?? []
   const remainingSuggestionCount = Math.max(0, (result?.suggestions.length ?? 0) - previewSuggestions.length)
@@ -296,7 +360,7 @@ export function EvaluationPanel({ content: fallbackContent = '', evaluationSourc
           suggestionsTitle={t.evaluationSuggestions}
           previewSuggestions={previewSuggestions}
           remainingSuggestionCount={remainingSuggestionCount}
-          moreSuggestionsHint={moreSuggestionsHint}
+          moreSuggestionsHint={(count: number) => moreSuggestionsHint(count, isZh)}
           renderPreviewSuggestionItem={(suggestion: RecommendationPayload) => renderSuggestionCard(suggestion, 'compact')}
         />
         <EvaluationDetailedReviewSection title={detailedReviewTitle} hint={detailedReviewHint} open={showDetailedReview} onToggle={() => setShowDetailedReview((prev) => !prev)} dimensionAnalysisTitle={t.evaluationDimensionAnalysis} dimensions={result.dimensions} moduleBreakdownTitle={t.evaluationModuleBreakdown} modules={result.modules} suggestionsTitle={t.evaluationSuggestions} suggestions={result.suggestions} renderSuggestionItem={(suggestion) => renderSuggestionCard(suggestion, 'detailed')} refreshSuggestionsLabel={t.evaluationSuggestionsRefresh} refreshingSuggestionsLabel={t.evaluationSuggestionsRefreshing} batchApplyLabel={t.evaluationBatchApply} batchUndoLabel={t.evaluationBatchUndo} onRefreshSuggestions={() => { void refreshSuggestions() }} onBatchApply={() => { void handleBatchApply() }} onBatchUndo={() => { void handleBatchUndo() }} suggestionsRefreshing={suggestionsRefreshing} batchProcessing={batchState.mode === 'processing'} canBatchUndo={batchState.lastAppliedIds.length > 0} suggestionsRefreshError={suggestionsRefreshError} batchMessage={batchState.message ?? null} batchStatus={batchState.status} />

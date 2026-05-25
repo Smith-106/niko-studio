@@ -1,89 +1,79 @@
 {
-  "summary": "M24 Phase 1 Tech Debt Cleanup: 6项技术债清理分3波次执行。Wave 1 基础清理（console收口+类型加固），Wave 2 模块拆分（translations+craft-catalog），Wave 3 深度重构（巨型组件拆分+workflow-engine Strategy模式）。全程接口冻结，公共API不变。",
-  "approach": "接口冻结策略：所有重构保持公共API签名不变，内部实现自由调整。Wave 1 建立模式（logger工具+类型修复），Wave 2 数据层重组（JSON外置+模块化），Wave 3 复杂重构（组件拆分+Strategy模式）。每个task独立可验证，wave内任务可并行。",
-  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
-  "task_count": 6,
-  "complexity": "high",
-  "estimated_time": "4-6h",
+  "summary": "M24 Phase 1 现已收敛到 TASK-006 根因修复：一是 workflow-engine 公共 API 测试仍断言旧的 `run_stream`；二是 `src-ts` 作为独立子包未安装本地依赖，导致 `better-sqlite3` 与 `vitest` 无法在正确包上下文中解析。",
+  "approach": "将原验证型 TASK-006 重写为根因修复计划，只保留 2 个最小任务：先修正 `src-ts` 测试/依赖执行环境，再统一 workflow-engine 公共 API 契约与测试断言。两个任务按依赖顺序串行，先恢复 `src-ts` 包测试环境，再处理 API 契约不一致并复跑定向测试。",
+  "task_ids": [
+    "TASK-006A",
+    "TASK-006B"
+  ],
+  "task_count": 2,
+  "complexity": "medium",
+  "estimated_time": "45-90min",
   "recommended_execution": "Agent",
-
   "waves": [
     {
       "wave": 1,
-      "label": "基础清理",
-      "tasks": ["TASK-001", "TASK-003"]
+      "label": "恢复 src-ts 测试环境",
+      "tasks": [
+        "TASK-006A"
+      ]
     },
     {
       "wave": 2,
-      "label": "模块拆分",
-      "tasks": ["TASK-004", "TASK-005"]
-    },
-    {
-      "wave": 3,
-      "label": "深度重构",
-      "tasks": ["TASK-002", "TASK-006"]
+      "label": "统一 workflow-engine API 契约",
+      "tasks": [
+        "TASK-006B"
+      ]
     }
   ],
-
   "data_flow": {
-    "diagram": "Wave1(logger+types) → Wave2(translations+catalog) → Wave3(components+engine)",
+    "diagram": "Wave1(src-ts package dependency restoration) -> Wave2(API contract/test alignment)",
     "stages": [
-      "Wave 1: 建立 frontend logger 工具 + 修复 4 个 as-any",
-      "Wave 2: translations.ts 按模块拆分 + craft-catalog 外置为 JSON",
-      "Wave 3: EvaluationPanel/StoryBiblePanel 拆分 + workflow-engine Strategy 模式"
+      "Wave 1: 在 src-ts 子包上下文安装并验证 vitest/typescript/better-sqlite3 依赖可用",
+      "Wave 2: 统一 WorkflowEngine.publicEntryApi() 与 workflow-engine.test.ts 的命名契约，并复跑 workflow 定向测试"
     ]
   },
-
   "design_decisions": [
-    "F-001: 创建 desktop/src/utils/logger.ts 作为前端结构化日志工具，生产环境自动静默",
-    "F-004: translations.ts 按 Translations interface 的注释分组拆分为独立模块文件",
-    "F-005: craft-catalog 数据提取为 JSON，保留 TypeScript loader + 类型定义",
-    "F-006: workflow-engine 按职责拆分为 Strategy 接口 + 具体策略实现类"
+    "先修测试环境，再修 API 契约，避免把环境噪音误判为代码缺陷。",
+    "保留 workflow-engine 现有 barrel/strategy 结构，不重新规划已验证存在的目录。",
+    "优先最小修复：只针对 TASK-006 暴露出的两个已证实根因。"
   ],
-
   "shared_context": {
     "patterns": [
-      "src-ts 已有 logger 模式（config/index.ts, context/providers.ts 等）",
-      "i18n 已有 locales/*.json 模式可参考",
-      "workflow-engine 已有 engine/authority.ts 子模块拆分先例"
+      "src-ts/package.json 已定义独立 scripts 与依赖，应在 src-ts 目录执行测试命令",
+      "workflow-engine-core.ts 公开常量 ENGINE_PUBLIC_ENTRY_API，测试应与此处契约一致",
+      "debug 证据已确认 better-sqlite3 失败来自独立子包依赖缺失与错误执行上下文"
     ],
     "conventions": [
-      "接口冻结：公共 export 签名不变",
-      "向后兼容：现有测试必须全部通过",
-      "渐进式：每个 task 独立编译通过"
+      "以 debug 证据为准，不重复调查已确认根因",
+      "每个任务的验证命令必须在 src-ts 子包上下文执行",
+      "只修改与 TASK-006 根因直接相关的文件和环境"
     ],
     "dependencies": [
-      "F-001 无依赖（创建新工具）",
-      "F-003 无依赖（类型修复）",
-      "F-004 无依赖（纯拆分）",
-      "F-005 无依赖（数据外置）",
-      "F-002 无依赖（组件拆分）",
-      "F-006 无依赖（内部重构）"
+      "TASK-006A 完成后，TASK-006B 才能得到无噪音的测试结果",
+      "TASK-006B 依赖 TASK-006A 提供可运行的 src-ts typecheck/test 环境"
     ]
   },
-
   "confidence": {
-    "overall": 0.88,
+    "overall": 0.89,
     "dimensions": {
-      "requirements_coverage": 0.95,
-      "task_quality": 0.90,
-      "dependency_correctness": 0.92,
-      "estimation_accuracy": 0.80,
-      "collision_safety": 0.85
+      "requirements_coverage": 0.9,
+      "task_quality": 0.88,
+      "dependency_correctness": 0.94,
+      "estimation_accuracy": 0.8,
+      "collision_safety": 0.92
     },
     "pressure_pass": {
-      "target_task": "TASK-006",
+      "target_task": "TASK-006B",
       "result": "pass",
-      "notes": "workflow-engine 已有 engine/ 子目录和 types.js 分离先例，Strategy 模式可行"
+      "notes": "debug 证据已把代码契约问题缩小到 workflow-engine-core.ts 常量与 workflow-engine.test.ts 断言之间的不一致。"
     }
   },
-
   "_metadata": {
-    "timestamp": "2026-05-17T05:00:00+08:00",
-    "source": "workflow-planner",
-    "planning_mode": "full",
-    "plan_type": "tech-debt",
+    "timestamp": "2026-05-25T00:30:00+08:00",
+    "source": "claude-code",
+    "planning_mode": "gap-revise",
+    "plan_type": "root-cause-fix",
     "schema_version": "2.0",
-    "git_commit": "1b989ab"
+    "git_commit": null
   }
 }

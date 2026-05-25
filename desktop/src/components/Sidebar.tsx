@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain } from 'lucide-react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 import { useConversationList, useCurrentConversationId, useCreateConversation, useSelectConversation } from '../stores/selectors'
 import { useI18n } from '../i18n'
@@ -68,6 +69,18 @@ export const Sidebar = React.memo(function Sidebar({
     maxWidth: 480,
     storageKey: 'niko.left-sidebar-width-v1',
     direction: 'rtl',
+  })
+
+  // 对话数量超过阈值时启用虚拟滚动，减少 DOM 节点开销
+  const VIRTUAL_THRESHOLD = 50
+  const convListRef = useRef<HTMLDivElement>(null)
+  const shouldVirtualize = conversations.length > VIRTUAL_THRESHOLD
+  const virtualizer = useVirtualizer({
+    count: conversations.length,
+    getScrollElement: () => convListRef.current,
+    estimateSize: () => 40,
+    overscan: 5,
+    enabled: shouldVirtualize,
   })
 
   return (
@@ -163,37 +176,83 @@ export const Sidebar = React.memo(function Sidebar({
       )}
 
       {/* Document List */}
-      <div className="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">
+      <div
+        className="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar"
+        ref={convListRef}
+      >
         {!collapsed && (
           <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-3 mt-1">{t.sidebarDocuments}</div>
         )}
-        {conversations.map((conv) => (
-          <button
-            key={conv.id}
-            onClick={() => selectConversation(conv.id)}
-            className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
-              currentConversationId === conv.id
-                ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
-                : 'hover:bg-dark-surface text-dark-text-secondary hover:text-dark-text'
-            } ${collapsed ? 'justify-center' : 'text-left'}`}
-            title={collapsed ? conv.title : undefined}
-          >
-            {collapsed ? (
-              <span
-                className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold transition-colors ${
-                  currentConversationId === conv.id
-                    ? 'bg-primary-600/20 text-primary-300 ring-1 ring-primary-500/40'
-                    : 'bg-dark-surface2 text-dark-text-muted group-hover:text-dark-text-secondary'
-                }`}
-                aria-hidden="true"
-              >
-                {(conv.title || '?').trim().charAt(0).toUpperCase()}
-              </span>
-            ) : (
-              <span className="text-sm truncate block">{conv.title}</span>
-            )}
-          </button>
-        ))}
+        {shouldVirtualize ? (
+          <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const conv = conversations[virtualItem.index]
+              return (
+                <button
+                  key={conv.id}
+                  data-index={virtualItem.index}
+                  onClick={() => selectConversation(conv.id)}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+                    currentConversationId === conv.id
+                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
+                      : 'hover:bg-dark-surface text-dark-text-secondary hover:text-dark-text'
+                  } ${collapsed ? 'justify-center' : 'text-left'}`}
+                  title={collapsed ? conv.title : undefined}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  {collapsed ? (
+                    <span
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold transition-colors ${
+                        currentConversationId === conv.id
+                          ? 'bg-primary-600/20 text-primary-300 ring-1 ring-primary-500/40'
+                          : 'bg-dark-surface2 text-dark-text-muted group-hover:text-dark-text-secondary'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {(conv.title || '?').trim().charAt(0).toUpperCase()}
+                    </span>
+                  ) : (
+                    <span className="text-sm truncate block">{conv.title}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          conversations.map((conv) => (
+            <button
+              key={conv.id}
+              onClick={() => selectConversation(conv.id)}
+              className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+                currentConversationId === conv.id
+                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
+                  : 'hover:bg-dark-surface text-dark-text-secondary hover:text-dark-text'
+              } ${collapsed ? 'justify-center' : 'text-left'}`}
+              title={collapsed ? conv.title : undefined}
+            >
+              {collapsed ? (
+                <span
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold transition-colors ${
+                    currentConversationId === conv.id
+                      ? 'bg-primary-600/20 text-primary-300 ring-1 ring-primary-500/40'
+                      : 'bg-dark-surface2 text-dark-text-muted group-hover:text-dark-text-secondary'
+                  }`}
+                  aria-hidden="true"
+                >
+                  {(conv.title || '?').trim().charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <span className="text-sm truncate block">{conv.title}</span>
+              )}
+            </button>
+          ))
+        )}
       </div>
 
       {/* Primary Navigation */}

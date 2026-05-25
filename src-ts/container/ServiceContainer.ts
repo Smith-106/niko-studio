@@ -50,6 +50,8 @@ export class ServiceContainer {
   private initialized: boolean = false;
   private initPromises: Map<symbol, Promise<void>> = new Map();
   private readonly integrationAdapters: IntegrationAdapterBundle;
+  // 并发初始化守卫：多个调用者共享同一个 promise，失败时允许重试
+  private _initPromise: Promise<void> | null = null;
 
   constructor() {
     this.container = new Container();
@@ -314,12 +316,24 @@ export class ServiceContainer {
 
   /**
    * Pre-warm critical engines (parallel initialization)
+   * 并发调用者共享同一个 promise；失败时释放以允许重试
    */
   async initializeAll(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
+    if (this.initialized) return;
+    if (this._initPromise) return this._initPromise;
 
+    this._initPromise = this._doInitialize();
+    try {
+      await this._initPromise;
+    } finally {
+      this._initPromise = null;
+    }
+  }
+
+  /**
+   * 实际初始化逻辑，与并发守卫分离
+   */
+  private async _doInitialize(): Promise<void> {
     log.info('Pre-warming engines...');
     const startTime = Date.now();
 
@@ -359,6 +373,7 @@ export class ServiceContainer {
     this.mocks.clear();
     this.initPromises.clear();
     this.initialized = false;
+    this._initPromise = null;
   }
 }
 

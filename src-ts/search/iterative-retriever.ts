@@ -22,6 +22,7 @@ import { RerankerFactory } from '../services/reranker/factory'
 import type { RankedDocument } from '../services/reranker/models'
 
 import { rrfMerge, heatDecayScore, type RrfSource, DEFAULT_RRF_K } from './utils/rrf-fusion'
+import { stableStringify } from './stableKey'
 
 import type {
   CollectStageTrace,
@@ -477,7 +478,8 @@ export class IterativeRetriever {
       const entities = await this.searchGraph(query, limit)
       for (const e of entities) {
         const baseScore = Number(e.score ?? 0.5)
-        const graphContent = `${e.type}: ${e.name} - ${JSON.stringify(e.properties ?? {})}`
+        const propsStr = e.properties ? stableStringify(e.properties) : ''
+        const graphContent = `${e.type}: ${e.name} - ${propsStr}`
         const fusedScore = this.fuseScore(
           baseScore,
           'graph',
@@ -968,7 +970,7 @@ export class IterativeRetriever {
           const char = await this.graphEngine.getCharacter(refValue)
           if (!('error' in char)) {
             const props = (char.properties ?? {}) as Record<string, unknown>
-            return `\u540d\u79f0: ${char.name}\n\u5c5e\u6027: ${JSON.stringify(props)}`
+            return `\u540d\u79f0: ${char.name}\n\u5c5e\u6027: ${stableStringify(props)}`
           }
           return null
         }

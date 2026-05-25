@@ -56,8 +56,70 @@ export async function checkTauriBackendHealth(): Promise<boolean> {
   return invoke<boolean>(TAURI_GATEWAY_COMMANDS.checkBackendHealth)
 }
 
+// ─── 分片信封类型 ──────────────────────────────────────────
+
+/** Rust 端大载荷分片信封的 JSON 结构 */
+interface ChunkedEnvelope {
+  __chunked: true
+  statusCode: number
+  channelId: string
+  totalChunks: number
+  chunkIndex: number
+  data: string
+}
+
+function isChunkedEnvelope(value: unknown): value is ChunkedEnvelope {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Record<string, unknown>
+  return record.__chunked === true
+}
+
+/**
+ * 从分片信封中逐步获取所有分片，重组为完整响应
+ *
+ * Rust 端对超过 100KB 的响应自动拆分，首次 call_api 返回信封 + 第一块，
+ * 后续分片通过 fetch_chunk 命令逐块获取。
+ * 这样渲染端每次 invoke 只处理 ~64KB，避免单次传输超大 JSON 的 GC 压力
+ */
+async function reassembleFromChunks(envelope: ChunkedEnvelope): Promise<TauriGatewayApiResponse> {
+  const { statusCode, channelId, totalChunks, data: firstChunk } = envelope
+
+  // 收集所有分片（第一块已内联在信封中）
+  const chunks: string[] = new Array(totalChunks)
+  chunks[0] = firstChunk
+
+  // 从 index=1 开始逐块获取
+  for (let i = 1; i < totalChunks; i++) {
+    const chunkData = await invoke<string>(TAURI_GATEWAY_COMMANDS.fetchChunk, {
+      channelId,
+      chunkIndex: i,
+    })
+    chunks[i] = chunkData
+  }
+
+  // 拼接所有分片为完整 body
+  const fullBody = chunks.join('')
+
+  return {
+    statusCode,
+    body: fullBody,
+  }
+}
+
+// ─── 核心 IPC 调用 ──────────────────────────────────────────
+
 export async function callTauriApi(
   request: TauriGatewayApiRequest,
 ): Promise<TauriGatewayApiResponse> {
-  return invoke<TauriGatewayApiResponse>(TAURI_GATEWAY_COMMANDS.callApi, request)
+  const result = await invoke<string>(TAURI_GATEWAY_COMMANDS.callApi, request)
+
+  const parsed: unknown = JSON.parse(result)
+
+  // 检测分片信封：Rust 端对大载荷返回 __chunked 标记
+  if (isChunkedEnvelope(parsed)) {
+    return reassembleFromChunks(parsed)
+  }
+
+  // 普通响应，直接返回
+  return parsed as TauriGatewayApiResponse
 }

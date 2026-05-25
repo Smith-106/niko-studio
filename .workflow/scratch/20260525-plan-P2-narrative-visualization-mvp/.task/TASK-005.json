@@ -1,0 +1,103 @@
+{
+  "id": "TASK-005",
+  "title": "为叙事可视化模块补充测试覆盖 ≥ 80%",
+  "description": "当前叙事可视化模块无任何测试文件。需要为所有组件、hooks、API contract 补充 unit test 和 integration test，覆盖率 ≥ 80%。",
+  "type": "testing",
+  "priority": "high",
+  "effort": "medium",
+  "action": "1）创建 desktop/src/components/narrative-visualization/__tests__/ 目录；2）为 TimelineView, TensionCurveView, CharacterGraphView 各写 rendering test（默认 props 渲染不崩溃、关键元素存在）；3）为 useVisualizationData hook 写 test（mock API response, 验证 data loading + error handling）；4）为 useVisualizationState hook 写 test（zoom, filter, selectedChapter state transitions）；5）为 getNarrativeVisualization API 写 contract test（mock fetch, 验证 request/response）；6）验证覆盖率 ≥ 80%",
+  "status": "completed",
+  "completed_at": "2026-05-25T22:30:00+08:00",
+  "actual_duration": "45min",
+  "scope": "testing/narrative-visualization",
+  "focus_paths": [
+    "desktop/src/components/narrative-visualization/__tests__/"
+  ],
+  "read_first": [
+    "desktop/src/components/narrative-visualization/TimelineView.tsx",
+    "desktop/src/components/narrative-visualization/TensionCurveView.tsx",
+    "desktop/src/components/narrative-visualization/CharacterGraphView.tsx",
+    "desktop/src/components/narrative-visualization/useVisualizationData.ts",
+    "desktop/src/components/narrative-visualization/useVisualizationState.ts",
+    "desktop/src/api/narrative-visualization.ts",
+    "desktop/src/components/intelligence/__tests__/"
+  ],
+  "depends_on": [
+    "TASK-002",
+    "TASK-003",
+    "TASK-004"
+  ],
+  "wave": 3,
+  "parallel_group": "wave-3",
+  "convergence": {
+    "criteria": [
+      "desktop/src/components/narrative-visualization/__tests__/ contains at least 5 .test.tsx files",
+      "npx vitest run --coverage for narrative-visualization directory exits 0",
+      "coverage report shows ≥ 80% line coverage for narrative-visualization/",
+      "All existing desktop tests still pass (npx vitest run exits 0)"
+    ],
+    "verification": "运行 vitest coverage 报告验证 ≥ 80%。",
+    "definition_of_done": "所有组件有 unit test，数据 hook 有 test，API contract 有 integration test，覆盖率 ≥ 80%。"
+  },
+  "files": [
+    {
+      "path": "desktop/src/components/narrative-visualization/__tests__/TimelineView.test.tsx",
+      "action": "create",
+      "target": "TimelineView 测试",
+      "change": "渲染测试 + 交互测试（缩放、筛选）"
+    },
+    {
+      "path": "desktop/src/components/narrative-visualization/__tests__/TensionCurveView.test.tsx",
+      "action": "create",
+      "target": "TensionCurveView 测试",
+      "change": "渲染测试 + ReaderState 数据展示测试"
+    },
+    {
+      "path": "desktop/src/components/narrative-visualization/__tests__/CharacterGraphView.test.tsx",
+      "action": "create",
+      "target": "CharacterGraphView 测试",
+      "change": "渲染测试 + 互动频率编码测试 + hover 测试"
+    },
+    {
+      "path": "desktop/src/components/narrative-visualization/__tests__/useVisualizationData.test.ts",
+      "action": "create",
+      "target": "数据 hook 测试",
+      "change": "mock API + loading/error 状态测试"
+    },
+    {
+      "path": "desktop/src/components/narrative-visualization/__tests__/useVisualizationState.test.ts",
+      "action": "create",
+      "target": "状态 hook 测试",
+      "change": "zoom/filter/selectedChapter 状态转换测试"
+    },
+    {
+      "path": "desktop/src/components/narrative-visualization/__tests__/api-contract.test.ts",
+      "action": "create",
+      "target": "API 契约测试",
+      "change": "mock fetch + request/response 验证"
+    }
+  ],
+  "implementation": [
+    "读取现有测试模式（desktop/src/components/intelligence/__tests__/）了解测试约定",
+    "创建 __tests__/ 目录",
+    "为每个组件写 rendering test：render with mockProps, expect no crash, expect key SVG elements",
+    "为 useVisualizationData 写 hook test：mock getNarrativeVisualization, test loading/data/error states",
+    "为 useVisualizationState 写 hook test：test setZoomScale, setEventFilters, setSelectedChapter",
+    "为 API 写 contract test：mock fetch, verify POST body and response parsing",
+    "运行 npx vitest run --coverage 验证 ≥ 80%",
+    "运行全量 vitest 验证无回归"
+  ],
+  "issue_id": null,
+  "issue_refs": [],
+  "reference": {
+    "pattern": "intelligence/__tests__/ 测试模式",
+    "files": [
+      "desktop/src/components/intelligence/__tests__/"
+    ]
+  },
+  "meta": {
+    "estimated_time": "50min",
+    "risk": "low",
+    "autonomous": true
+  }
+}

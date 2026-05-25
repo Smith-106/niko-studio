@@ -1,5 +1,4 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { randomUUID } from 'node:crypto';
 
 import type { GatewayRoute } from './gateway-route-types';
 import { recordRequestMetrics } from './metrics';
@@ -21,6 +20,17 @@ rateLimiter.start();
 
 const DEFAULT_RATE_LIMIT = 120;
 const DEFAULT_RATE_WINDOW_SECONDS = 60;
+
+// 轻量级请求 ID 生成器，替代 randomUUID() 降低开销
+let _requestCounter = 0;
+function lightweightRequestId(): string {
+  return Date.now().toString(36) + '-' + (++_requestCounter);
+}
+
+/** SSE 流式路径下的内部 chunk 不需要 trace ID */
+function isSSEStreamChunk(path: string): boolean {
+  return path.includes('/stream') || path.includes('/chunk') || path.includes('/events');
+}
 
 export function createGatewayRequestHandler(routes: readonly GatewayRoute[]) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
@@ -62,7 +72,8 @@ export function createGatewayRequestHandler(routes: readonly GatewayRoute[]) {
 
     const startedAt = Date.now();
     const routePattern = matched.route.pattern.source;
-    const requestId = randomUUID();
+    // SSE 流式内部 chunk 不需要 trace ID，仅外部请求生成轻量级 ID
+    const requestId = isSSEStreamChunk(path) ? undefined : lightweightRequestId();
 
     try {
       let body: unknown;
@@ -78,12 +89,15 @@ export function createGatewayRequestHandler(routes: readonly GatewayRoute[]) {
       }
 
       const httpRequest = toHttpRequest(req, body, query, matched.params);
-      httpRequest.traceContext = {
-        requestId,
-        route: routePattern,
-        method,
-        startAtMs: startedAt,
-      };
+      // SSE 流式请求跳过 traceContext（内部 chunk 不需要追踪）
+      if (requestId) {
+        httpRequest.traceContext = {
+          requestId,
+          route: routePattern,
+          method,
+          startAtMs: startedAt,
+        };
+      }
       const httpResponse = await matched.route.handler(httpRequest);
       sendHttpResponse(res, httpResponse);
       recordRequestMetrics({
@@ -97,7 +111,7 @@ export function createGatewayRequestHandler(routes: readonly GatewayRoute[]) {
         method,
         path,
         route: routePattern,
-        requestId,
+        requestId: requestId ?? 'no-trace',
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         latencyMs: Date.now() - startedAt,

@@ -55,7 +55,7 @@ export type {
 } from './protocols';
 
 // Cache
-export { InMemoryEmbeddingCache } from './cache';
+export { TieredEmbeddingCache, InMemoryEmbeddingCache } from './cache';
 
 // Configuration
 export { ConfigError, ConfigLoader, loadConfig } from './config';

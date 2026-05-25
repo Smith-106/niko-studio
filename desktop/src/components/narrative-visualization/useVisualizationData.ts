@@ -18,6 +18,7 @@ export function createEmptyVisualizationBundle(): NarrativeVisualizationBundle {
       overallArcScore: 0,
       summary: 'No tension data available.',
       empty: true,
+      highRiskChapters: [],
     },
     characterGraph: {
       nodes: [],

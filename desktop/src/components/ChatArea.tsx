@@ -1,17 +1,18 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { BookOpen, ChevronDown, ChevronRight, Lightbulb, MessageSquareText, PenLine, RefreshCw } from 'lucide-react'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { BookOpen, Lightbulb, MessageSquareText, PenLine, RefreshCw } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
-import { useCreateConversation, useAddMessage, useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAvailableSkills, useAllowLlmFallback, useQualityGoals, useLatestAssistantMessageContent } from '../stores/selectors'
-import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, quickRollbackWorkflow, buildConsistencyGovernanceMetadata, mergeWriterMetadataGovernance } from '../api/client'
+import { useCreateConversation, useAddMessage, useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAvailableSkills, useAllowLlmFallback, useQualityGoals, useLatestAssistantMessageContent, useChatAreaSettings } from '../stores/selectors'
+import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, buildConsistencyGovernanceMetadata, mergeWriterMetadataGovernance } from '../api/client'
 import type { ChatRequest, StreamDonePayload, WriterMetadata } from '../api/client'
-import { MessageBubble } from './MessageBubble'
 import { PromptTemplatePanel, type ApplyTemplatePayload } from './PromptTemplatePanel'
 import { ChatAreaInlineActions } from './ChatAreaInlineActions'
 import { ChatAreaModeControls } from './ChatAreaModeControls'
 import { ChatAreaComposer } from './ChatAreaComposer'
 import { ChatAreaStreamStatus } from './ChatAreaStreamStatus'
+import { ChatMessageList, type StarterAction } from './ChatMessageList'
+import { ChatContextBar } from './ChatContextBar'
+import { QuickRollback } from './QuickRollback'
 import { useI18n } from '../i18n'
 import { useChatRequestBuilder } from '../hooks/useChatRequestBuilder'
 import { useChatStreaming } from '../hooks/useChatStreaming'
@@ -159,17 +160,11 @@ export function ChatArea({
     handleAssistantSelection,
     runDisabled,
   } = useInlineActions({ isLoading })
-  const [quickRollbackPlanId, setQuickRollbackPlanId] = useState('')
-  const [quickRollbackCheckpointId, setQuickRollbackCheckpointId] = useState('')
-  const [quickRollbackReason, setQuickRollbackReason] = useState('')
-  const [showQuickRollbackAdvanced, setShowQuickRollbackAdvanced] = useState(false)
-  const [quickRollbackStatus, setQuickRollbackStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
   const { t, translate } = useI18n()
   const writerWorkspaceSummary = useWriterWorkspaceSummary()
   const writerContextTitle = translate('writerContextTitle')
   const writerContextHint = translate('writerContextHint')
   const voiceInputStatusLabel = translate('voiceInputStatusLabel')
-  const quickRollbackSummary = translate('quickRollbackSummary')
   const currentWritingTarget = writerWorkspaceSummary.chapterLabel
     ?? writerWorkspaceSummary.projectLabel
     ?? translate('currentDocumentFallback')
@@ -197,28 +192,11 @@ export function ChatArea({
   const allowLlmFallback = useAllowLlmFallback()
   const qualityGoals = useQualityGoals()
   const latestAssistantContent = useLatestAssistantMessageContent()
-  const { settings } = useSettingsStore()
+  const { settings, toggleTemplateFavorite, recordTemplateUsage, setTemplateVariablePreset } = useChatAreaSettings()
   const promptTemplateLibrary = settings.promptTemplateLibrary
-  const {
-    toggleTemplateFavorite,
-    recordTemplateUsage,
-    setTemplateVariablePreset,
-  } = useSettingsStore()
 
   const scrollPos = useScrollPosition(currentConversationId ?? 'default')
   const lastRetryPayloadRef = useRef<RetryPayload | null>(null)
-
-  // Virtual scrolling for long conversations
-  const virtualizer = useVirtualizer({
-    count: messages.length,
-    getScrollElement: () => scrollPos.containerRef.current,
-    estimateSize: (index) => {
-      const msg = messages[index]
-      if (!msg) return 80
-      return Math.max(80, Math.min(600, msg.content.length * 0.4 + 60))
-    },
-    overscan: 5,
-  })
 
   const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
 
@@ -331,11 +309,16 @@ export function ChatArea({
     setComparisonModel((prev) => (prev && availableComparisonModels.includes(prev) ? prev : availableComparisonModels[0]))
   }, [availableComparisonModels])
 
+  // 基础消息字符数：仅依赖 messages 变化，流式帧不触发重算
+  const baseMessageChars = useMemo(
+    () => messages.reduce((total, message) => total + message.content.length, 0),
+    [messages],
+  )
+
   useEffect(() => {
     if (!onContextUsageChange) return
 
-    const messageChars = messages.reduce((total, message) => total + message.content.length, 0)
-    const usedChars = messageChars + streamingContent.length
+    const usedChars = baseMessageChars + streamingContent.length
     const usedTokensApprox = Math.max(0, Math.ceil(usedChars / 4))
     const totalTokens = Math.max(contextWindowTokens, 1)
     const totalK = formatContextBudgetK(totalTokens)
@@ -358,7 +341,7 @@ export function ChatArea({
 
     lastContextUsageRef.current = nextUsage
     onContextUsageChange(nextUsage)
-  }, [contextWindowTokens, messages, streamingContent, onContextUsageChange])
+  }, [contextWindowTokens, baseMessageChars, streamingContent, onContextUsageChange])
 
   const { buildChatRequest } = useChatRequestBuilder({
     allowLlmFallback,
@@ -381,14 +364,6 @@ export function ChatArea({
     setStreamingContent('')
     setIsLoading(false)
   }
-
-
-
-  // Auto-scroll to bottom when near bottom and new content arrives
-  useEffect(() => {
-    if (!scrollPos.isNearBottom) return
-    scrollPos.scrollToBottom()
-  }, [messages, streamingContent, scrollPos])
 
   const handleCancelStream = () => {
     cancelStream()
@@ -662,31 +637,6 @@ export function ChatArea({
     await restoreToCheckpoint()
   }
 
-  const handleQuickRollback = async () => {
-    const planId = quickRollbackPlanId.trim()
-    const checkpointId = quickRollbackCheckpointId.trim()
-
-    if (!planId || !checkpointId || isLoading) {
-      setQuickRollbackStatus({ type: 'error', message: t.quickRollbackMissingRequired })
-      return
-    }
-
-    const setQuickRollbackFailed = (message?: string) => {
-      setQuickRollbackStatus({ type: 'error', message: message || t.quickRollbackFailed })
-    }
-
-    try {
-      const response = await quickRollbackWorkflow(planId, checkpointId, quickRollbackReason.trim() || undefined)
-      if (response.success) {
-        setQuickRollbackStatus({ type: 'success', message: t.quickRollbackSuccess })
-      } else {
-        setQuickRollbackFailed(response.error)
-      }
-    } catch {
-      setQuickRollbackFailed()
-    }
-  }
-
   const runAgentAction = async ({
     payloadForSend,
     userMessage,
@@ -906,7 +856,7 @@ export function ChatArea({
     })
   }
 
-  const handleStarterAction = (action: (typeof starterActions)[number]) => {
+  const handleStarterAction = (action: StarterAction) => {
     applyModePreset({
       nextChatMode: action.mode,
       nextEnableModelComparison: false,
@@ -916,8 +866,6 @@ export function ChatArea({
     setInput(action.prompt)
     composerInputRef.current?.focus()
   }
-
-
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const isEnter = e.key === 'Enter' && !e.shiftKey
@@ -968,145 +916,25 @@ export function ChatArea({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-slate-50 dark:bg-dark-bg relative z-0">
-      <div ref={scrollPos.containerRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar scroll-smooth" onScroll={scrollPos.handleScroll}>
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-dark-text-muted mt-10">
-            <div className="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/10 flex items-center justify-center mb-6 shadow-sm border border-primary-100 dark:border-primary-500/20 animate-fade-in">
-              <span className="text-3xl">✨</span>
-            </div>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text mb-3 tracking-wide">{t.startWriting}</h2>
-            <p className="text-sm text-gray-500 dark:text-dark-text-secondary max-w-md text-center leading-relaxed mb-8">
-              {t.startWritingDesc}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-dark-text-secondary max-w-2xl text-center leading-relaxed mb-5">
-              {t.chatStarterHint}
-            </p>
-            {writerWorkspaceSummary.hasMeaningfulScope && (
-              <div className="mb-6 flex flex-wrap items-center justify-center gap-2 max-w-2xl">
-                {writerWorkspaceSummary.scopeChips.map((chip) => (
-                  <span
-                    key={`empty-scope-${chip}`}
-                    className="rounded-full border border-primary-100 bg-white px-3 py-1 text-xs text-gray-600 shadow-sm dark:border-primary-500/20 dark:bg-dark-surface dark:text-dark-text-secondary"
-                  >
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="grid w-full max-w-3xl grid-cols-1 gap-3">
-              {starterActions.map((action) => {
-                const Icon = action.icon
-                return (
-                  <button
-                    key={`starter-${action.id}`}
-                    type="button"
-                    onClick={() => handleStarterAction(action)}
-                    className="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md dark:border-dark-border dark:bg-dark-surface dark:hover:border-primary-500/30"
-                  >
-                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">
-                      <Icon size={18} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-gray-800 dark:text-dark-text">
-                        {action.label}
-                      </span>
-                      <span className="mt-1 block text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
-                        {action.description}
-                      </span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-3 max-w-2xl">
-              {modePresets.map((preset) => (
-                <button
-                  key={`empty-${preset.id}`}
-                  type="button"
-                  onClick={() => handleApplyModePreset(preset.id)}
-                  className="px-4 py-2 text-sm font-medium rounded-full bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 border border-primary-100 dark:border-primary-500/20 transition-all active:scale-[0.98]"
-                >
-                  {preset.label}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={handleOpenTemplateLibrary}
-                className="px-4 py-2 text-sm font-medium rounded-full bg-white dark:bg-dark-surface text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border shadow-sm transition-all active:scale-[0.98]"
-              >
-                {t.templateLibraryEntry}
-              </button>
-              <button
-                type="button"
-                onClick={() => openPicker()}
-                className="px-4 py-2 text-sm font-medium rounded-full bg-white dark:bg-dark-surface text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border shadow-sm transition-all active:scale-[0.98]"
-              >
-                {t.composerUpload}
-              </button>
-            </div>
-          </div>
-        ) : messages.length > 50 ? (
-          <div
-            style={{
-              height: virtualizer.getTotalSize(),
-              width: '100%',
-              position: 'relative',
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const message = messages[virtualRow.index]
-              if (!message) return null
-              return (
-                <div
-                  key={message.id}
-                  data-index={virtualRow.index}
-                  ref={virtualizer.measureElement}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  className="pb-6"
-                >
-                  <MessageBubble
-                    message={message}
-                    onAssistantSelection={handleAssistantSelection}
-                    onComparisonAccept={handleComparisonAccept}
-                  />
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div key={message.id} className="pb-6">
-              <MessageBubble
-                message={message}
-                onAssistantSelection={handleAssistantSelection}
-                onComparisonAccept={handleComparisonAccept}
-              />
-            </div>
-          ))
-        )}
-        {isLoading && streamingContent && (
-          <MessageBubble
-            message={{
-              id: 'streaming-assistant',
-              role: 'assistant',
-              content: streamingContent,
-              timestamp: new Date(),
-              skills: selectedSkills,
-            }}
-          />
-        )}
-        {isLoading && (
-          <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-secondary">
-            <div className="animate-pulse">{streamStatusText}</div>
-          </div>
-        )}
-      </div>
+      <ChatMessageList
+        isLoading={isLoading}
+        streamingContent={streamingContent}
+        streamStatusText={streamStatusText}
+        starterActions={starterActions}
+        modePresets={modePresets}
+        scrollPos={scrollPos}
+        onStarterAction={handleStarterAction}
+        onApplyModePreset={handleApplyModePreset}
+        onOpenTemplateLibrary={handleOpenTemplateLibrary}
+        onOpenFilePicker={openPicker}
+        onAssistantSelection={handleAssistantSelection}
+        onComparisonAccept={handleComparisonAccept}
+        startWritingTitle={t.startWriting}
+        startWritingDesc={t.startWritingDesc}
+        chatStarterHint={t.chatStarterHint}
+        templateLibraryEntry={t.templateLibraryEntry}
+        composerUpload={t.composerUpload}
+      />
 
         <ChatAreaStreamStatus
           recoverStatus={recoverStatus}
@@ -1124,62 +952,19 @@ export function ChatArea({
 
       <div className="border-t border-gray-200 dark:border-dark-border bg-slate-50 dark:bg-dark-bg shrink-0 flex flex-col max-h-[65%]">
         <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 pt-3 md:pt-4 custom-scrollbar">
-          <div className="mb-3">
-            <button
-              type="button"
-              onClick={() => setShowQuickRollbackAdvanced((prev) => !prev)}
-              className="w-full flex items-center justify-between text-xs font-medium text-gray-400 dark:text-dark-text-muted hover:text-gray-600 dark:hover:text-dark-text-secondary transition-colors py-1"
-            >
-              <span>{t.quickRollbackAdvancedToggle}</span>
-              {showQuickRollbackAdvanced ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            </button>
-            {showQuickRollbackAdvanced && (
-              <div className="animate-fade-in mt-2 mb-1">
-                <p className="text-[11px] leading-relaxed text-gray-400 dark:text-dark-text-muted mb-3">
-                  {quickRollbackSummary}
-                </p>
-                <div className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 dark:text-dark-text-muted mb-2">{t.quickRollbackTitle}</div>
-                <div className="grid grid-cols-1 gap-2">
-                  <input
-                    value={quickRollbackPlanId}
-                    onChange={(event) => setQuickRollbackPlanId(event.target.value)}
-                    placeholder={t.quickRollbackPlanIdPlaceholder}
-                    aria-label={t.quickRollbackPlanIdPlaceholder}
-                    className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
-                  />
-                  <input
-                    value={quickRollbackCheckpointId}
-                    onChange={(event) => setQuickRollbackCheckpointId(event.target.value)}
-                    placeholder={t.quickRollbackCheckpointIdPlaceholder}
-                    aria-label={t.quickRollbackCheckpointIdPlaceholder}
-                    className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
-                  />
-                  <input
-                    value={quickRollbackReason}
-                    onChange={(event) => setQuickRollbackReason(event.target.value)}
-                    placeholder={t.quickRollbackReasonPlaceholder}
-                    aria-label={t.quickRollbackReasonPlaceholder}
-                    className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
-                  />
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <button
-                    onClick={handleQuickRollback}
-                    type="button"
-                    className="px-4 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md shadow-sm hover:bg-amber-600 active:scale-[0.98] disabled:opacity-50 transition-all"
-                    disabled={isLoading}
-                  >
-                    {t.quickRollbackAction}
-                  </button>
-                  {quickRollbackStatus && (
-                    <span className={`text-[11px] font-medium px-2 py-1 rounded ${quickRollbackStatus.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
-                      {quickRollbackStatus.message}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <QuickRollback
+            isLoading={isLoading}
+            quickRollbackAdvancedToggle={t.quickRollbackAdvancedToggle}
+            quickRollbackSummary={translate('quickRollbackSummary')}
+            quickRollbackTitle={t.quickRollbackTitle}
+            quickRollbackPlanIdPlaceholder={t.quickRollbackPlanIdPlaceholder}
+            quickRollbackCheckpointIdPlaceholder={t.quickRollbackCheckpointIdPlaceholder}
+            quickRollbackReasonPlaceholder={t.quickRollbackReasonPlaceholder}
+            quickRollbackAction={t.quickRollbackAction}
+            quickRollbackMissingRequired={t.quickRollbackMissingRequired}
+            quickRollbackFailed={t.quickRollbackFailed}
+            quickRollbackSuccess={t.quickRollbackSuccess}
+          />
           {selectionMeta && (
             <ChatAreaInlineActions
               selectedText={selectedText}
@@ -1197,26 +982,10 @@ export function ChatArea({
             />
           )}
 
-          {writerWorkspaceSummary.hasMeaningfulScope && (
-            <div className="mb-4 rounded-2xl border border-primary-100 bg-white/90 p-4 shadow-sm dark:border-primary-500/20 dark:bg-dark-surface/80">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">
-                {writerContextTitle}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {writerWorkspaceSummary.scopeChips.map((chip) => (
-                  <span
-                    key={`writer-scope-${chip}`}
-                    className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
-                  >
-                    {chip}
-                  </span>
-                ))}
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
-                {writerContextHint}
-              </p>
-            </div>
-          )}
+          <ChatContextBar
+            writerContextTitle={writerContextTitle}
+            writerContextHint={writerContextHint}
+          />
 
           <ChatAreaModeControls
             modeLabel={t.chatModeLabel}

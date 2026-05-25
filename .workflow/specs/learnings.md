@@ -1,3 +1,15 @@
+---
+title: "Learnings"
+readMode: optional
+priority: medium
+category: learning
+keywords:
+  - bug
+  - lesson
+  - gotcha
+  - learning
+---
+
 # Learnings
 
 ## Entries

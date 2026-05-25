@@ -166,6 +166,70 @@ export class EmbeddingServiceImpl implements EmbeddingService {
   }
 
   /**
+   * 统一的缓存查询→收集未命中→调用提供商→更新缓存管道
+   * 消除 embedBatch 和 embedWithMetadata 的重复逻辑
+   */
+  private async _executeWithCache(
+    texts: string[],
+    modelName: string,
+    batchSize: number,
+  ): Promise<{
+    results: Record<string, number[]>;
+    cacheHits: number;
+    providerDimensions: number;
+  }> {
+    const provider = this.getProvider();
+    const cacheResults: Record<string, number[] | null> = {};
+    const textsToEmbed: string[] = [];
+    let cacheHits = 0;
+
+    // 查询缓存，收集未命中项
+    if (this.cache) {
+      const cached = await this.cache.getBatch(texts, modelName);
+      for (const text of texts) {
+        if (cached[text]) {
+          cacheResults[text] = cached[text];
+          cacheHits++;
+        } else {
+          textsToEmbed.push(text);
+        }
+      }
+    } else {
+      textsToEmbed.push(...texts);
+    }
+
+    // 批量调用提供商处理未命中项
+    const newEmbeddings: Record<string, number[]> = {};
+    let providerDimensions = 0;
+    for (let i = 0; i < textsToEmbed.length; i += batchSize) {
+      const batch = textsToEmbed.slice(i, Math.min(i + batchSize, textsToEmbed.length));
+      const response = await provider.embed(batch, modelName);
+      providerDimensions = response.dimensions || providerDimensions;
+
+      for (let j = 0; j < batch.length; j++) {
+        newEmbeddings[batch[j]] = response.embeddings[j];
+      }
+    }
+
+    // 更新缓存
+    if (this.cache && Object.keys(newEmbeddings).length > 0) {
+      await this.cache.setBatch(newEmbeddings, modelName);
+    }
+
+    // 合并结果
+    const results: Record<string, number[]> = {};
+    for (const text of texts) {
+      if (text in newEmbeddings) {
+        results[text] = newEmbeddings[text];
+      } else if (cacheResults[text]) {
+        results[text] = cacheResults[text]!;
+      }
+    }
+
+    return { results, cacheHits, providerDimensions };
+  }
+
+  /**
    * Batch generate vector representations for texts
    */
   async embedBatch(
@@ -183,57 +247,10 @@ export class EmbeddingServiceImpl implements EmbeddingService {
     const modelName = options?.model ?? this.getDefaultModel(provider);
     const batchSize = options?.batchSize ?? 100;
 
-    // Check cache
-    const cacheResults: Record<string, number[] | null> = {};
-    const textsToEmbed: string[] = [];
-    const textIndices: Record<string, number> = {};
+    const { results } = await this._executeWithCache(texts, modelName, batchSize);
 
-    if (this.cache) {
-      const cached = await this.cache.getBatch(texts, modelName);
-      for (let i = 0; i < texts.length; i++) {
-        const text = texts[i];
-        textIndices[text] = i;
-        if (!cached[text]) {
-          textsToEmbed.push(text);
-        }
-      }
-      Object.assign(cacheResults, cached);
-    } else {
-      for (let i = 0; i < texts.length; i++) {
-        const text = texts[i];
-        textIndices[text] = i;
-        textsToEmbed.push(text);
-      }
-    }
-
-    // Process uncached texts in batches
-    const newEmbeddings: Record<string, number[]> = {};
-    for (let i = 0; i < textsToEmbed.length; i += batchSize) {
-      const batch = textsToEmbed.slice(i, Math.min(i + batchSize, textsToEmbed.length));
-      const response = await provider.embed(batch, modelName);
-
-      for (let j = 0; j < batch.length; j++) {
-        newEmbeddings[batch[j]] = response.embeddings[j];
-      }
-    }
-
-    // Update cache
-    if (this.cache && Object.keys(newEmbeddings).length > 0) {
-      await this.cache.setBatch(newEmbeddings, modelName);
-    }
-
-    // Merge results in original order
-    const results: number[][] = new Array(texts.length);
-    for (const text of texts) {
-      const idx = textIndices[text];
-      if (text in newEmbeddings) {
-        results[idx] = newEmbeddings[text];
-      } else if (cacheResults[text]) {
-        results[idx] = cacheResults[text]!;
-      }
-    }
-
-    return results;
+    // 按原始顺序排列
+    return texts.map((text) => results[text]);
   }
 
   /**
@@ -243,41 +260,21 @@ export class EmbeddingServiceImpl implements EmbeddingService {
     const provider = this.getProvider();
     const modelName = request.model ?? this.getDefaultModel(provider);
 
-    // Check cache
-    let cacheHits = 0;
-    let embedding: number[];
+    const { results, cacheHits, providerDimensions } = await this._executeWithCache(
+      [request.text],
+      modelName,
+      100,
+    );
 
-    if (this.cache) {
-      const cached = await this.cache.get(request.text, modelName);
-      if (cached) {
-        return {
-          embedding: cached,
-          metadata: {
-            model: modelName,
-            provider: provider.providerType,
-            dimensions: cached.length,
-            cacheHits: 1,
-          },
-        };
-      }
-    }
-
-    // Call provider
-    const response = await provider.embed([request.text], modelName);
-    embedding = response.embeddings[0];
-
-    // Update cache
-    if (this.cache) {
-      await this.cache.set(request.text, modelName, embedding);
-    }
+    const embedding = results[request.text];
 
     return {
       embedding,
       metadata: {
         model: modelName,
         provider: provider.providerType,
-        dimensions: response.dimensions || embedding.length,
-        cacheHits: 0,
+        dimensions: providerDimensions || embedding.length,
+        cacheHits,
       },
     };
   }

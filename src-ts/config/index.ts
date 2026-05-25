@@ -217,7 +217,7 @@ function defaultMemoryConfig(): MemoryConfig {
     embeddingDimension: 384,
     cacheEnabled: true,
     cacheTtl: 86400,
-    cacheMaxSize: 10000,
+    cacheMaxSize: 2000,
     chunkSize: 1000,
     chunkOverlap: 200,
   }
@@ -735,7 +735,7 @@ memory:
   embedding_dimension: 384
   cache_enabled: true
   cache_ttl: 86400
-  cache_max_size: 10000
+  cache_max_size: 2000
   chunk_size: 1000
   chunk_overlap: 200
 

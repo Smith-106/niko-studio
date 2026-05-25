@@ -10,22 +10,25 @@ import {
   PanelLeft,
 } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
+import { useProjectSidebarState } from '../stores/selectors'
 import { writeChapterContent, writeProjectMeta } from '../services/projectFileService'
 
 export const ProjectSidebar = React.memo(function ProjectSidebar() {
-  const projectsById = useAppStore((s) => s.projectsById)
-  const allProjectIds = useAppStore((s) => s.allProjectIds)
-  const currentProjectId = useAppStore((s) => s.currentProjectId)
-  const volumesByProjectId = useAppStore((s) => s.volumesByProjectId)
-  const chaptersByVolumeId = useAppStore((s) => s.chaptersByVolumeId)
-  const currentChapterId = useAppStore((s) => s.currentChapterId)
-  const sidebarExpanded = useAppStore((s) => s.sidebarExpanded)
-  const toggleSidebar = useAppStore((s) => s.toggleSidebar)
-  const selectProject = useAppStore((s) => s.selectProject)
-  const selectChapter = useAppStore((s) => s.selectChapter)
-  const addVolume = useAppStore((s) => s.addVolume)
-  const addChapter = useAppStore((s) => s.addChapter)
-  const createNewProject = useAppStore((s) => s.createNewProject)
+  const {
+    projectsById,
+    allProjectIds,
+    currentProjectId,
+    volumesByProjectId,
+    chaptersByVolumeId,
+    currentChapterId,
+    sidebarExpanded,
+    toggleSidebar,
+    selectProject,
+    selectChapter,
+    addVolume,
+    addChapter,
+    createNewProject,
+  } = useProjectSidebarState()
 
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({})
   const [expandedVolumes, setExpandedVolumes] = useState<Record<string, boolean>>({})

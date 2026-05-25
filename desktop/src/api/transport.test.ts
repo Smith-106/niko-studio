@@ -11,6 +11,7 @@ import {
   isTauriRuntime,
   getRuntimeGatewayBase,
   syncGatewayBaseOverride,
+  callTauriApi,
 } from './transport'
 
 const mockInvoke = vi.mocked(invoke)
@@ -228,5 +229,105 @@ describe('syncGatewayBaseOverride', () => {
     const result = await getRuntimeGatewayBase(() => 'http://fallback:8000')
     expect(result).toBe('http://fresh:7000')
     expect(mockInvoke).toHaveBeenCalledWith('get_gateway_base')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// callTauriApi — 分片响应处理
+// ---------------------------------------------------------------------------
+
+describe('callTauriApi', () => {
+  beforeEach(() => {
+    vi.stubGlobal('__TAURI__', {})
+    mockInvoke.mockReset()
+  })
+
+  afterEach(() => {
+    cleanupTauriGlobal()
+  })
+
+  it('returns normal response when not chunked', async () => {
+    mockInvoke.mockResolvedValue(
+      JSON.stringify({ statusCode: 200, body: '{"result":"ok"}' })
+    )
+
+    const result = await callTauriApi({
+      endpoint: '/test',
+      method: 'GET',
+      body: null,
+    })
+
+    expect(result).toEqual({
+      statusCode: 200,
+      body: '{"result":"ok"}',
+    })
+  })
+
+  it('reassembles chunked response from envelope + fetch_chunk calls', async () => {
+    // 第一个块（内联在信封中）
+    const envelope = {
+      __chunked: true,
+      statusCode: 200,
+      channelId: 'chunk-test-3',
+      totalChunks: 3,
+      chunkIndex: 0,
+      data: 'part-0-',
+    }
+
+    // call_api 返回分片信封
+    mockInvoke
+      .mockResolvedValueOnce(JSON.stringify(envelope))
+      // fetch_chunk 返回后续分片
+      .mockResolvedValueOnce('part-1-')
+      .mockResolvedValueOnce('part-2')
+
+    const result = await callTauriApi({
+      endpoint: '/large-data',
+      method: 'GET',
+      body: null,
+    })
+
+    expect(result).toEqual({
+      statusCode: 200,
+      body: 'part-0-part-1-part-2',
+    })
+
+    // 应调用 call_api 1 次 + fetch_chunk 2 次
+    expect(mockInvoke).toHaveBeenCalledTimes(3)
+    expect(mockInvoke).toHaveBeenNthCalledWith(2, 'fetch_chunk', {
+      channelId: 'chunk-test-3',
+      chunkIndex: 1,
+    })
+    expect(mockInvoke).toHaveBeenNthCalledWith(3, 'fetch_chunk', {
+      channelId: 'chunk-test-3',
+      chunkIndex: 2,
+    })
+  })
+
+  it('handles single chunk envelope (totalChunks=1) without fetch_chunk calls', async () => {
+    const envelope = {
+      __chunked: true,
+      statusCode: 200,
+      channelId: 'chunk-test-1',
+      totalChunks: 1,
+      chunkIndex: 0,
+      data: 'single-chunk-data',
+    }
+
+    mockInvoke.mockResolvedValueOnce(JSON.stringify(envelope))
+
+    const result = await callTauriApi({
+      endpoint: '/single-chunk',
+      method: 'GET',
+      body: null,
+    })
+
+    expect(result).toEqual({
+      statusCode: 200,
+      body: 'single-chunk-data',
+    })
+
+    // 只调用 call_api，不调用 fetch_chunk
+    expect(mockInvoke).toHaveBeenCalledTimes(1)
   })
 })

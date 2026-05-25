@@ -110,6 +110,7 @@ const sampleBundle: NarrativeVisualizationBundle = {
     overallArcScore: 78,
     summary: 'Tension summary',
     empty: false,
+    highRiskChapters: [],
   },
   characterGraph: {
     nodes: [

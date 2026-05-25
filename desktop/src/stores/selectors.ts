@@ -125,3 +125,130 @@ export function useCheckBackend(): AppState['checkBackend'] {
 export function useBackendStatus(): AppState['backendStatus'] {
   return useAppStore((state) => state.backendStatus)
 }
+
+// ── Batched selectors with useShallow ─────────────────────────────
+// Group related selectors into single calls to reduce re-render checks.
+// Object-returning selectors use useShallow for shallow comparison.
+
+/**
+ * Batched selector for project sidebar state.
+ * Returns all project navigation data in a single subscription.
+ */
+export function useProjectSidebarState() {
+  return useAppStore(
+    useShallow((state) => ({
+      projectsById: state.projectsById,
+      allProjectIds: state.allProjectIds,
+      currentProjectId: state.currentProjectId,
+      volumesByProjectId: state.volumesByProjectId,
+      chaptersByVolumeId: state.chaptersByVolumeId,
+      currentChapterId: state.currentChapterId,
+      sidebarExpanded: state.sidebarExpanded,
+      toggleSidebar: state.toggleSidebar,
+      selectProject: state.selectProject,
+      selectChapter: state.selectChapter,
+      addVolume: state.addVolume,
+      addChapter: state.addChapter,
+      createNewProject: state.createNewProject,
+    }))
+  )
+}
+
+/**
+ * Batched selector for document editor state.
+ * Groups primitive values and action references that are used together.
+ */
+export function useDocumentEditorState() {
+  return useAppStore(
+    useShallow((state) => ({
+      currentChapterId: state.currentChapterId,
+      currentProjectId: state.currentProjectId,
+      currentConversationId: state.currentConversationId,
+      currentConversationTitle: state.currentConversationId
+        ? state.conversationsById[state.currentConversationId]?.title ?? null
+        : null,
+      updateConversationTitle: state.updateConversationTitle,
+      historyPanelOpen: state.historyPanelOpen,
+      toggleHistoryPanel: state.toggleHistoryPanel,
+      sessionIntelligenceEnabled: state.sessionIntelligenceEnabled,
+      setSessionIntelligenceSummary: state.setSessionIntelligenceSummary,
+      setSessionIntelligenceInsights: state.setSessionIntelligenceInsights,
+      setSessionIntelligenceSessionId: state.setSessionIntelligenceSessionId,
+      personalizedCraftEnabled: state.personalizedCraftEnabled,
+      setPersonalizedCraftSummary: state.setPersonalizedCraftSummary,
+      setPersonalizedCraftTrajectory: state.setPersonalizedCraftTrajectory,
+      setPersonalizedCraftRecommendations: state.setPersonalizedCraftRecommendations,
+    }))
+  )
+}
+
+/**
+ * Batched selector for history panel state.
+ * Groups intelligence and craft state used in the history panel.
+ */
+export function useHistoryPanelState() {
+  return useAppStore(
+    useShallow((state) => ({
+      currentProjectId: state.currentProjectId,
+      currentChapterId: state.currentChapterId,
+      historyPanelOpen: state.historyPanelOpen,
+      toggleHistoryPanel: state.toggleHistoryPanel,
+      sessionIntelligenceEnabled: state.sessionIntelligenceEnabled,
+      sessionIntelligenceSummary: state.sessionIntelligenceSummary,
+      sessionIntelligenceInsights: state.sessionIntelligenceInsights,
+      sessionIntelligenceSessionId: state.sessionIntelligenceSessionId,
+      setSessionIntelligenceEnabled: state.setSessionIntelligenceEnabled,
+      personalizedCraftEnabled: state.personalizedCraftEnabled,
+      personalizedCraftSummary: state.personalizedCraftSummary,
+      personalizedCraftTrajectory: state.personalizedCraftTrajectory,
+      personalizedCraftRecommendations: state.personalizedCraftRecommendations,
+      setPersonalizedCraftEnabled: state.setPersonalizedCraftEnabled,
+    }))
+  )
+}
+
+/**
+ * Batched selector for writing helper panel skills state.
+ * Uses useShallow for array comparison.
+ */
+export function useWritingHelperSkillsState() {
+  return useAppStore(
+    useShallow((state) => ({
+      selectedSkills: state.selectedSkills,
+      availableSkills: state.availableSkills,
+      toggleSkill: state.toggleSkill,
+      personalizedCraftSummary: state.personalizedCraftSummary,
+      personalizedCraftTrajectory: state.personalizedCraftTrajectory,
+      personalizedCraftRecommendations: Array.isArray(state.personalizedCraftRecommendations)
+        ? state.personalizedCraftRecommendations
+        : [],
+    }))
+  )
+}
+
+/**
+ * Batched selector for ChatArea settings from useSettingsStore.
+ * Groups settings fields that ChatArea reads together.
+ */
+export function useChatAreaSettings() {
+  return useSettingsStore(
+    useShallow((state) => ({
+      settings: state.settings,
+      toggleTemplateFavorite: state.toggleTemplateFavorite,
+      recordTemplateUsage: state.recordTemplateUsage,
+      setTemplateVariablePreset: state.setTemplateVariablePreset,
+    }))
+  )
+}
+
+/**
+ * Batched selector for evaluation panel settings.
+ */
+export function useEvaluationSettings() {
+  return useSettingsStore(
+    useShallow((state) => ({
+      qualityGoals: state.settings.qualityGoals,
+      detectionEvasionGuardEnabled: state.settings.detectionEvasionGuardEnabled,
+    }))
+  )
+}

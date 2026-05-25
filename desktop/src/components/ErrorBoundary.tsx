@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react'
-import * as Sentry from '@sentry/react'
+import { captureException } from '../sentry'
 import { translations } from '../i18n/translations'
 import { useSettingsStore } from '../stores/settingsStore'
 
@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     if (import.meta.env.VITE_SENTRY_DSN) {
-      Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } })
+      void captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } })
     }
   }
 

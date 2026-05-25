@@ -224,7 +224,7 @@ export function createServiceConfig(overrides?: Partial<ServiceConfig>): Service
     defaultEmbeddingProvider: ProviderType.LOCAL,
     embeddingCacheEnabled: true,
     embeddingCacheTTL: 86400,
-    embeddingCacheMaxSize: 10000,
+    embeddingCacheMaxSize: 2000,
     retryMaxAttempts: 3,
     retryInitialDelay: 1.0,
     retryMaxDelay: 60.0,

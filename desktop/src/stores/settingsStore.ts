@@ -1,7 +1,27 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import type { StateStorage } from 'zustand/middleware'
 import type { SecretsResponse } from '@/contracts/backendConfig'
 import { setRuntimePreferences } from '@/runtime/preferences'
+
+// 防抖写入 localStorage：300ms 内多次设置更新只写一次，避免频繁 JSON.stringify + 写盘
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
+const debouncedLocalStorage: StateStorage = {
+  getItem: (name: string) => {
+    return localStorage.getItem(name)
+  },
+  setItem: (name: string, value: string) => {
+    clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      localStorage.setItem(name, value)
+    }, 300)
+  },
+  removeItem: (name: string) => {
+    clearTimeout(debounceTimer)
+    localStorage.removeItem(name)
+  },
+}
 
 import {
   defaultSettings,
@@ -238,6 +258,7 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: 'niko-settings',
+      storage: createJSONStorage(() => debouncedLocalStorage),
       partialize: (state) => ({
         ...state,
         settings: sanitizeSettingsForPersist(state.settings),

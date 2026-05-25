@@ -1,5 +1,5 @@
 import { readRuntimePreferences } from '@/runtime/preferences'
-import { Sentry } from '../sentry'
+import { captureException } from '../sentry'
 import { logger } from '../utils/logger'
 
 import {
@@ -11,7 +11,7 @@ import {
   startTauriBackend,
 } from './transport'
 import type { GatewayRequestMethod } from './tauri-contract'
-
+import { LRUCache, makeCacheKey } from './ipc-chunk'
 const DEFAULT_API_BASE = 'http://127.0.0.1:8000'
 export const GENERIC_API_ERROR_MESSAGE = 'Request failed. Please try again.'
 
@@ -78,14 +78,46 @@ const resolveApiBase = (): string => {
 export const getResolvedApiBase = (): string => resolveApiBase()
 
 /**
+ * 高频 IPC 请求的 LRU 缓存
+ *
+ * 只缓存 GET 请求的成功响应（POST/PUT 有副作用不应缓存）。
+ * 避免短时间内重复发起完全相同的 API 调用（如频繁轮询健康检查、获取 wiki 列表等）。
+ */
+
+/** 缓存生效时间（5 秒）— 同一请求在此窗口内直接返回缓存 */
+const CACHE_TTL_MS = 5_000
+
+interface CacheEntry<T> {
+  value: ApiResponse<T>
+  storedAt: number
+}
+
+const timedCache = new LRUCache<CacheEntry<unknown>>(50)
+
+/** 清除 LRU 缓存（仅用于测试） */
+export function clearApiCache(): void {
+  timedCache.clear()
+}
+
+/**
  * 统一 API 调用方法
  * 在 Tauri 环境中使用 invoke，否则直接 fetch
+ *
+ * 对 GET 请求启用短期 LRU 缓存，减少重复 IPC 调用开销
  */
 export async function callApi<T, E = unknown>(
   endpoint: string,
   method: GatewayRequestMethod = 'GET',
   body?: Record<string, unknown>
 ): Promise<ApiResponse<T, E>> {
+  // 对 GET 请求检查 LRU 缓存，避免重复 IPC 开销
+  if (method === 'GET') {
+    const cacheKey = makeCacheKey(endpoint, method)
+    const cached = timedCache.get(cacheKey) as CacheEntry<T> | undefined
+    if (cached && Date.now() - cached.storedAt < CACHE_TTL_MS) {
+      return cached.value
+    }
+  }
   try {
     let data: T
 
@@ -131,12 +163,21 @@ export async function callApi<T, E = unknown>(
       data = payload as T
     }
 
-    return { success: true, data }
+    const result = { success: true, data } as ApiResponse<T, E>
+
+    // 仅对 GET 请求的成功响应写入 LRU 缓存
+    // 错误响应已在上方 return { success: false } 提前返回，此处一定为成功
+    if (method === 'GET') {
+      const cacheKey = makeCacheKey(endpoint, method)
+      timedCache.set(cacheKey, { value: result, storedAt: Date.now() })
+    }
+
+    return result
   } catch (error) {
     const errorName = error instanceof Error ? error.name : 'UnknownError'
     logger.error(`API call failed: ${endpoint} (${errorName})`)
     if (import.meta.env.VITE_SENTRY_DSN) {
-      Sentry.captureException(error, { tags: { api_endpoint: endpoint, api_method: method } })
+      void captureException(error, { tags: { api_endpoint: endpoint, api_method: method } })
     }
     return { success: false, error: GENERIC_API_ERROR_MESSAGE }
   }

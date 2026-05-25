@@ -7,7 +7,7 @@ import { useI18n, type Translations } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { RevisionPreviewCard } from './RevisionPreviewCard'
 import { getEditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
-import { useAppStore } from '../stores/appStore'
+import { useWritingHelperSkillsState } from '../stores/selectors'
 import {
   applyRevisionCandidateToEditor,
   captureMatchedSelectionSnapshot,
@@ -194,9 +194,14 @@ function CollapsibleGroup({ title, defaultOpen = false, children }: {
 export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraftStateChange, onClearDraft }: WritingHelperPanelProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const detectionEvasionGuardEnabled = useSettingsStore((state) => state.settings.detectionEvasionGuardEnabled)
-  const selectedSkills = useAppStore((state) => state.selectedSkills)
-  const availableSkills = useAppStore((state) => state.availableSkills)
-  const toggleSkill = useAppStore((state) => state.toggleSkill)
+  const {
+    selectedSkills,
+    availableSkills,
+    toggleSkill,
+    personalizedCraftSummary,
+    personalizedCraftTrajectory,
+    personalizedCraftRecommendations,
+  } = useWritingHelperSkillsState()
   const selectedSkillIds = Array.isArray(selectedSkills) ? selectedSkills : []
   const availableSkillIds = Array.isArray(availableSkills) ? availableSkills : []
   const toggleSelectedSkill = typeof toggleSkill === 'function' ? toggleSkill : () => {}
@@ -294,11 +299,6 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
       ? `会话提示：${handoff.revisionSession.comparisonSummary}`
       : `Session note: ${handoff.revisionSession.comparisonSummary}`)
     : ''
-  const personalizedCraftSummary = useAppStore((state) => state.personalizedCraftSummary)
-  const personalizedCraftTrajectory = useAppStore((state) => state.personalizedCraftTrajectory)
-  const personalizedCraftRecommendations = useAppStore((state) => (
-    Array.isArray(state.personalizedCraftRecommendations) ? state.personalizedCraftRecommendations : []
-  ))
   const guidanceTitle = isZh ? '交接说明' : 'Handoff guidance'
   const guidanceHint = isZh
     ? '这段说明会作为本次处理的附加指令，你可以保留它，也可以清除后按自己的思路继续。'
