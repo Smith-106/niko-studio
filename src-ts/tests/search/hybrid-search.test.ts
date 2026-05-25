@@ -166,7 +166,7 @@ describe('HybridSearch', () => {
     }
   });
 
-  it('addStrategy dynamically normalizes weights', async () => {
+  it('addStrategy returns new instance with normalized weights', async () => {
     const keyword = createMockSearch([]);
     const semantic = createMockSearch([]);
     const vector = createMockSearch([]);
@@ -177,16 +177,18 @@ describe('HybridSearch', () => {
       ],
     });
 
-    hs.addStrategy('semantic', semantic, 1.0);
-    hs.addStrategy('vector', vector, 1.0);
+    const hs2 = hs.addStrategy('semantic', semantic, 1.0);
+    expect(hs.getStrategyStats()).toHaveLength(1); // original unchanged
+    expect(hs2.getStrategyStats()).toHaveLength(2);
 
-    const stats = hs.getStrategyStats();
+    const hs3 = hs2.addStrategy('vector', vector, 1.0);
+    const stats = hs3.getStrategyStats();
     expect(stats).toHaveLength(3);
     const totalWeight = stats.reduce((sum, s) => sum + s.weight, 0);
     expect(totalWeight).toBeCloseTo(1.0, 10);
   });
 
-  it('removeStrategy removes and renormalizes weights', () => {
+  it('removeStrategy returns new instance with renormalized weights', () => {
     const s1 = createMockSearch([]);
     const s2 = createMockSearch([]);
     const s3 = createMockSearch([]);
@@ -199,22 +201,23 @@ describe('HybridSearch', () => {
       ],
     });
 
-    const removed = hs.removeStrategy('b');
-    expect(removed).toBe(true);
-    expect(hs.getStrategyStats()).toHaveLength(2);
+    const hs2 = hs.removeStrategy('b');
+    expect(hs2).not.toBeNull();
+    expect(hs.getStrategyStats()).toHaveLength(3); // original unchanged
+    expect(hs2!.getStrategyStats()).toHaveLength(2);
 
-    const totalWeight = hs.getStrategyStats().reduce((sum, s) => sum + s.weight, 0);
+    const totalWeight = hs2!.getStrategyStats().reduce((sum, s) => sum + s.weight, 0);
     expect(totalWeight).toBeCloseTo(1.0, 10);
   });
 
-  it('removeStrategy returns false for unknown strategy', () => {
+  it('removeStrategy returns null for unknown strategy', () => {
     const hs = new HybridSearch({
       strategies: [
         { name: 'a', search: createMockSearch([]), weight: 1 },
       ],
     });
 
-    expect(hs.removeStrategy('nonexistent')).toBe(false);
+    expect(hs.removeStrategy('nonexistent')).toBeNull();
   });
 
   it('indexes documents to all strategies', async () => {

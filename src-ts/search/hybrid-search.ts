@@ -71,7 +71,7 @@ export interface HybridSearchResult {
  * where k is the RRF constant (default 60)
  */
 export class HybridSearch implements SearchInterface {
-  private readonly strategies: StrategyWeight[];
+  private readonly _strategies: readonly StrategyWeight[];
   private readonly rrfK: number;
   private readonly defaultTopK: number;
   private readonly parallelExecution: boolean;
@@ -83,7 +83,7 @@ export class HybridSearch implements SearchInterface {
 
     // Normalize weights to sum to 1.0
     const totalWeight = config.strategies.reduce((sum, s) => sum + s.weight, 0);
-    this.strategies = config.strategies.map(s => ({
+    this._strategies = config.strategies.map(s => ({
       ...s,
       weight: s.weight / totalWeight,
     }));
@@ -132,7 +132,7 @@ export class HybridSearch implements SearchInterface {
     }
   ): Promise<void> {
     // Index to all strategies
-    const indexPromises = this.strategies.map(async ({ name, search }) => {
+    const indexPromises = this._strategies.map(async ({ name, search }) => {
       try {
         await search.index(id, content, options);
       } catch (error) {
@@ -148,7 +148,7 @@ export class HybridSearch implements SearchInterface {
    */
   async delete(id: string): Promise<boolean> {
     // Delete from all strategies
-    const deletePromises = this.strategies.map(async ({ name, search }) => {
+    const deletePromises = this._strategies.map(async ({ name, search }) => {
       try {
         return await search.delete(id);
       } catch (error) {
@@ -172,9 +172,7 @@ export class HybridSearch implements SearchInterface {
     const resultsByStrategy = new Map<string, HybridSearchResult[]>();
 
     if (this.parallelExecution) {
-      // Parallel execution — snapshot strategies to avoid concurrent mutation
-      const currentStrategies = [...this.strategies];
-      const searchPromises = currentStrategies.map(async ({ name, search, weight }) => {
+      const searchPromises = this._strategies.map(async ({ name, search, weight }) => {
         try {
           const searchOptions = {
             topK: options.topK,
@@ -208,7 +206,7 @@ export class HybridSearch implements SearchInterface {
       }
     } else {
       // Sequential execution
-      for (const { name, search, weight } of this.strategies) {
+      for (const { name, search, weight } of this._strategies) {
         try {
           const searchOptions = {
             topK: options.topK,
@@ -249,7 +247,7 @@ export class HybridSearch implements SearchInterface {
     resultsByStrategy: Map<string, HybridSearchResult[]>
   ): HybridSearchResult[] {
     // Convert strategy results to RrfSource format
-    const sources: RrfSource[] = this.strategies.map((strategy) => ({
+    const sources: RrfSource[] = this._strategies.map((strategy) => ({
       name: strategy.name,
       weight: strategy.weight,
       items: (resultsByStrategy.get(strategy.name) ?? []).map((r) => ({
@@ -262,7 +260,7 @@ export class HybridSearch implements SearchInterface {
 
     // Build id→result lookup for enrichment
     const resultMap = new Map<string, HybridSearchResult>();
-    for (const strategy of this.strategies) {
+    for (const strategy of this._strategies) {
       for (const r of resultsByStrategy.get(strategy.name) ?? []) {
         if (!resultMap.has(r.id)) resultMap.set(r.id, r);
       }
@@ -306,51 +304,51 @@ export class HybridSearch implements SearchInterface {
    * Get strategy statistics
    */
   getStrategyStats(): Array<{ name: string; weight: number }> {
-    return this.strategies.map(s => ({
+    return this._strategies.map(s => ({
       name: s.name,
       weight: s.weight,
     }));
   }
 
   /**
-   * Add a new strategy dynamically
+   * Add a new strategy — returns a new HybridSearch instance
    */
-  addStrategy(name: string, search: SearchInterface, weight: number): void {
-    // Normalize weights
-    const totalWeight = this.strategies.reduce((sum, s) => sum + s.weight, 0) + weight;
-    
-    this.strategies.forEach(s => {
-      s.weight = s.weight / totalWeight;
-    });
+  addStrategy(name: string, search: SearchInterface, weight: number): HybridSearch {
+    const newStrategies = [...this._strategies, { name, search, weight }];
+    const totalWeight = newStrategies.reduce((sum, s) => sum + s.weight, 0);
+    const normalized = newStrategies.map(s => ({ ...s, weight: s.weight / totalWeight }));
 
-    this.strategies.push({
-      name,
-      search,
-      weight: weight / totalWeight,
+    return new HybridSearch({
+      strategies: normalized,
+      rrfK: this.rrfK,
+      defaultTopK: this.defaultTopK,
+      parallelExecution: this.parallelExecution,
     });
   }
 
   /**
-   * Remove a strategy by name
+   * Remove a strategy by name — returns a new HybridSearch instance
    */
-  removeStrategy(name: string): boolean {
-    const index = this.strategies.findIndex(s => s.name === name);
-    
-    if (index === -1) {
-      return false;
+  removeStrategy(name: string): HybridSearch | null {
+    const remaining = this._strategies.filter(s => s.name !== name);
+
+    if (remaining.length === this._strategies.length) {
+      return null; // Strategy not found
     }
 
-    this.strategies.splice(index, 1);
-
-    // Renormalize weights
-    if (this.strategies.length > 0) {
-      const totalWeight = this.strategies.reduce((sum, s) => sum + s.weight, 0);
-      this.strategies.forEach(s => {
-        s.weight = s.weight / totalWeight;
-      });
+    if (remaining.length === 0) {
+      return null; // Cannot remove all strategies
     }
 
-    return true;
+    const totalWeight = remaining.reduce((sum, s) => sum + s.weight, 0);
+    const normalized = remaining.map(s => ({ ...s, weight: s.weight / totalWeight }));
+
+    return new HybridSearch({
+      strategies: normalized,
+      rrfK: this.rrfK,
+      defaultTopK: this.defaultTopK,
+      parallelExecution: this.parallelExecution,
+    });
   }
 }
 

@@ -18,6 +18,17 @@ export enum HookType {
   ON_ERROR = 'on_error',
   PRE_EVALUATE = 'pre_evaluate',
   POST_EVALUATE = 'post_evaluate',
+  // Workflow lifecycle
+  BEFORE_WORKFLOW_START = 'before_workflow_start',
+  AFTER_WORKFLOW_STEP = 'after_workflow_step',
+  ON_WORKFLOW_ERROR = 'on_workflow_error',
+  AFTER_WORKFLOW_COMPLETE = 'after_workflow_complete',
+  // Memory lifecycle
+  BEFORE_MEMORY_ADD = 'before_memory_add',
+  AFTER_MEMORY_SEARCH = 'after_memory_search',
+  // LLM lifecycle
+  BEFORE_LLM_CALL = 'before_llm_call',
+  AFTER_LLM_CALL = 'after_llm_call',
 }
 
 export enum HookPriority {
