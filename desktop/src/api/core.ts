@@ -87,8 +87,8 @@ export const getResolvedApiBase = (): string => resolveApiBase()
 /** 缓存生效时间（5 秒）— 同一请求在此窗口内直接返回缓存 */
 const CACHE_TTL_MS = 5_000
 
-interface CacheEntry<T> {
-  value: ApiResponse<T>
+interface CacheEntry<T, E = unknown> {
+  value: ApiResponse<T, E>
   storedAt: number
 }
 
@@ -113,7 +113,7 @@ export async function callApi<T, E = unknown>(
   // 对 GET 请求检查 LRU 缓存，避免重复 IPC 开销
   if (method === 'GET') {
     const cacheKey = makeCacheKey(endpoint, method)
-    const cached = timedCache.get(cacheKey) as CacheEntry<T> | undefined
+    const cached = timedCache.get(cacheKey) as CacheEntry<T, E> | undefined
     if (cached && Date.now() - cached.storedAt < CACHE_TTL_MS) {
       return cached.value
     }

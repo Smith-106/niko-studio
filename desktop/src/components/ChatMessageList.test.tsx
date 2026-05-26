@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { PenLine } from 'lucide-react'
 import { ChatMessageList } from './ChatMessageList'
 
 // Mock store selectors
@@ -129,7 +130,7 @@ describe('ChatMessageList', () => {
       {
         id: 'continueDraft',
         label: '继续写作',
-        icon: () => null,
+        icon: PenLine,
         description: '继续当前内容',
         prompt: '请继续写作',
         mode: 'chat' as const,
