@@ -215,6 +215,7 @@ export const WAVE6_BUDGET_GUARDRAIL = { token_budget: 2400, time_budget_minutes:
 
 export const WORKFLOW_STATE_SCHEMA_VERSION = '2026-02';
 export const WORKFLOW_STATE_SCHEMA_POLICY = { policy: 'frozen', version_format: 'YYYY-MM', non_breaking_change: 'additive_only', breaking_change: 'version_bump_required' };
+/** @deprecated Use canonical phase names ('planned', 'executing', 'done', 'failed') directly. */
 export const WORKFLOW_STATE_PHASE_ALIASES: Record<string, string> = { created: 'planned', running: 'executing', completed: 'done', stopped: 'failed' };
 export const WORKFLOW_STATE_ALLOWED_PHASES = new Set(['planned', 'executing', 'review', 'test', 'done', 'failed', 'recovery']);
 

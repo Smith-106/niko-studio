@@ -1374,7 +1374,7 @@ export class GraphEngine {
       .run(entityId, entityId);
     this.db.prepare('DELETE FROM entities WHERE id = ?').run(entityId);
 
-    console.info(`Deleted entity: ${name}`);
+    log.info(`Deleted entity: ${name}`);
     return { status: 'deleted' };
   }
 

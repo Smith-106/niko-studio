@@ -318,7 +318,7 @@ export class SmartSearch implements SearchInterface {
         snapshot_query: sr.snapshot_query,
       }));
     } catch (error) {
-      console.error('Semantic search failed:', error);
+      _log.error('Semantic search failed', { detail: error });
       return [];
     }
   }
@@ -372,7 +372,7 @@ export class SmartSearch implements SearchInterface {
 
     // Short exact term queries
     if (tokens.length <= 2) {
-      const stopwords = ['the', 'a', 'an', 'is', 'are', 'what', 'how', 'why'];
+      const stopwords = ['the', 'a', 'an', 'is', 'are', 'what', 'how', 'why', '的', '了', '在', '是', '有', '和', '就', '不', '也', '都', '而', '及', '与', '或', '但', '却', '这', '那', '它', '其', '很', '最', '把', '被', '让', '给', '到', '从', '向', '为', '对', '于', '中', '里', '上', '下', '前', '后'];
       const hasStopwords = tokens.some(t => stopwords.includes(t.toLowerCase()));
       if (!hasStopwords) {
         return SearchMode.FUZZY;

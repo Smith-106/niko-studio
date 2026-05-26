@@ -46,3 +46,32 @@ export function jsonResponse(
 export function parseBody<T = Record<string, unknown>>(request: HttpRequest): T {
   return (request.body ?? {}) as T;
 }
+
+// ============================================================
+// API Response Envelope (#56)
+// ============================================================
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: string;
+  meta?: {
+    version: string;
+    timestamp: string;
+  };
+}
+
+export function envelope<T>(data: T, version = '1.0.0'): ApiResponse<T> {
+  return {
+    success: true,
+    data,
+    meta: { version, timestamp: new Date().toISOString() },
+  };
+}
+
+export function errorEnvelope(error: string, statusCode = 500, version = '1.0.0'): HttpResponse {
+  return jsonResponse(
+    { success: false, error, meta: { version, timestamp: new Date().toISOString() } },
+    statusCode,
+  );
+}

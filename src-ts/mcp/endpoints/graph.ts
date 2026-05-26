@@ -15,6 +15,7 @@ import {
   graphAddEntity,
 } from '../services/graph';
 import type { GraphReadScope } from '../services/graph';
+import { getConfigValue } from '../config';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -60,7 +61,7 @@ function resolveGraphScope(body: Record<string, unknown>): GraphReadScope | null
   return {
     workspaceId: workspaceId ? normalizedWorkspace.identity.workspaceId : null,
     projectId: projectId ? normalizedWorkspace.identity.projectId : null,
-    allowLegacy: true,
+    allowLegacy: Boolean(getConfigValue('graph.allowLegacy', true)),
   };
 }
 

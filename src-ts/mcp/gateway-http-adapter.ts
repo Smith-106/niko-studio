@@ -3,6 +3,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolveCorsOrigins } from './config';
 import type { HttpRequest, HttpResponse } from './http-types';
 
+export const API_PROTOCOL_VERSION = '1.0.0';
+
 export function readRequestBody(req: IncomingMessage, timeoutMs: number = 30000): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -98,6 +100,7 @@ export function toHttpRequest(
 export function sendHttpResponse(res: ServerResponse, httpResponse: HttpResponse): void {
   const headers: Record<string, string | number> = {
     'Content-Type': 'application/json',
+    'X-API-Version': API_PROTOCOL_VERSION,
     ...((httpResponse.headers ?? {}) as Record<string, string>),
   };
 

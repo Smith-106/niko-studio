@@ -22,6 +22,8 @@ export const ANALYSIS_SCHEMA_VERSION = '2026-02';
 /**
  * Bounded migration-era compatibility aliases retained for existing clients.
  * Keep this surface minimal and explicitly tested.
+ *
+ * @deprecated Use canonical field names directly. Removal planned for next major version.
  */
 export const LEGACY_CONTRACT_FIELD_MAP: Readonly<Record<string, string>> = Object.freeze({
   contract_version: 'analysis_schema_version',
@@ -30,6 +32,7 @@ export const LEGACY_CONTRACT_FIELD_MAP: Readonly<Record<string, string>> = Objec
   decision_result: 'decision',
 });
 
+/** @deprecated Use WorkflowDecision enum values directly. Removal planned for next major version. */
 export const LEGACY_DECISION_MAP: Readonly<Record<string, string>> = Object.freeze({
   approved: WorkflowDecision.GO,
   pass: WorkflowDecision.GO,

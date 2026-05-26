@@ -517,7 +517,7 @@ export class GraphManager {
     let props = this._propsCache.get(entityId);
     if (props === undefined) {
       props = typeof row.properties === 'string' ? safeParseJson(row.properties) : {};
-      this._propsCache.set(entityId, props);
+      this._setPropsCache(entityId, props);
     }
 
     let createdAt: Date | null = null;
@@ -556,7 +556,7 @@ export class GraphManager {
     let props = this._propsCache.get(relId);
     if (props === undefined) {
       props = typeof row.properties === 'string' ? safeParseJson(row.properties) : {};
-      this._propsCache.set(relId, props);
+      this._setPropsCache(relId, props);
     }
 
     return new Relationship({
@@ -722,7 +722,7 @@ export class GraphManager {
       let sourceProps = this._propsCache.get(sourceId);
       if (sourceProps === undefined) {
         sourceProps = typeof row.source_props === 'string' ? safeParseJson(row.source_props) : {};
-        this._propsCache.set(sourceId, sourceProps);
+        this._setPropsCache(sourceId, sourceProps);
       }
 
       const relId = row.rel_id as string;
@@ -736,7 +736,7 @@ export class GraphManager {
       let targetProps = this._propsCache.get(targetId);
       if (targetProps === undefined) {
         targetProps = typeof row.target_props === 'string' ? safeParseJson(row.target_props) : {};
-        this._propsCache.set(targetId, targetProps);
+        this._setPropsCache(targetId, targetProps);
       }
 
       results.push({

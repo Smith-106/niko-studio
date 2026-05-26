@@ -14,6 +14,7 @@ import {
   resolveReloadEnabled as resolveCanonicalReloadEnabled,
 } from './config';
 import { type GatewayServerStartOptions, startGatewayServer } from './gateway-bootstrap';
+import { API_PROTOCOL_VERSION } from './gateway-http-adapter';
 import { getMetricsSnapshot as getCanonicalMetricsSnapshot } from './metrics';
 import { createLogger } from '../logger/index.js';
 
@@ -125,13 +126,15 @@ export function resolveReloadEnabled(): boolean {
   return resolveCanonicalReloadEnabled();
 }
 
+const MCP_PROTOCOL_VERSION = process.env.MCP_PROTOCOL_VERSION ?? '2024-11-05';
+
 // ============================================================
 // Legacy MCP Contract (compatibility only)
 // ============================================================
 
 export function getMcpContract(): McpContract {
   return {
-    version: '2024-11-05',
+    version: MCP_PROTOCOL_VERSION,
     methods: {
       'tools/list': {
         description: 'List available tools',
@@ -331,7 +334,7 @@ export class McpGateway {
   }
 
   getHealth(): HealthResponse {
-    const version = String(getConfig().version ?? '1.0.0');
+    const version = API_PROTOCOL_VERSION;
     return {
       status: this.server ? 'ok' : 'degraded',
       version,
