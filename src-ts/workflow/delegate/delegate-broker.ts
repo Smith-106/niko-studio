@@ -50,7 +50,7 @@ export interface DelegateCompletion {
   error?: string;
 }
 
-type DelegateExecutor = (task: string, delegate: DelegateHandle) => Promise<unknown>;
+export type DelegateExecutor = (task: string, delegate: DelegateHandle) => Promise<unknown>;
 
 // ─── DelegateHandle — 运行时句柄 ──────────────────────────────────────────
 

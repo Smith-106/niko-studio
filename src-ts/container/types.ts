@@ -757,9 +757,9 @@ export interface IHybridSearch {
   ): void;
 
   /**
-   * Remove search strategy
+   * Remove search strategy — returns new instance or null if not found
    */
-  removeStrategy(name: string): boolean;
+  removeStrategy(name: string): IHybridSearch | null;
 }
 
 /**

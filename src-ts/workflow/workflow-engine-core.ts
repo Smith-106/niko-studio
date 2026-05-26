@@ -18,6 +18,9 @@ import type { LLMService } from '../protocols/llm.js';
 import type { IWorkflowStateStore } from './iworkflow-state-store.js';
 import { HookRegistry, HookType, createHookContext } from '../hooks/writing-hooks.js';
 import { PhaseOrchestrator, TeamPhase, type PhaseGateInput } from './team/index.js';
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('workflow-engine-core');
 
 import { WorkflowLevel, WorkflowDecision, ensureContractPayload } from './types.js';
 import {

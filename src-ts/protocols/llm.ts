@@ -10,6 +10,7 @@ export interface LLMRequest {
 export interface LLMResponse {
   content: string;
   metadata: Record<string, unknown>;
+  usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
 }
 
 export interface StreamChunk {
