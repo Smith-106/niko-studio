@@ -4,6 +4,10 @@
  * Migrated from src/cli/commands/.
  */
 
+const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8000';
+const DEFAULT_GATEWAY_HOST = '127.0.0.1';
+const DEFAULT_GATEWAY_PORT = 8000;
+
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';

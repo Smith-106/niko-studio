@@ -32,7 +32,7 @@ function isSSEStreamChunk(path: string): boolean {
   return path.includes('/stream') || path.includes('/chunk') || path.includes('/events');
 }
 
-export function createGatewayRequestHandler(routes: readonly GatewayRoute[]) {
+export function createGatewayRequestHandler(routes: readonly GatewayRoute[]): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     addCorsHeaders(req, res);
 

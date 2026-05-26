@@ -193,7 +193,7 @@ export function routingRuleMatches(rule: RoutingRule, taskContext: Record<string
 }
 
 // Pre-defined routing rules (L1-L5)
-export const ROUTING_RULES: RoutingRule[] = [
+export const ROUTING_RULES: readonly RoutingRule[] = [
   // L1 fast tasks
   { name: 'typo_fix', description: '错字修正', targetLevel: WorkflowLevel.L1_RAPID, keywords: ['错字', 'typo', '拼写', '修正', '纠错'], minComplexity: 0, maxComplexity: 20, requiresPersistence: false, requiresCollaboration: false, priority: 100 },
   { name: 'format_adjust', description: '格式调整', targetLevel: WorkflowLevel.L1_RAPID, keywords: ['格式', '排版', '缩进', '对齐'], minComplexity: 0, maxComplexity: 30, requiresPersistence: false, requiresCollaboration: false, priority: 90 },
@@ -216,8 +216,8 @@ export const ROUTING_RULES: RoutingRule[] = [
 export class LevelRouter {
   private rules: RoutingRule[];
 
-  constructor(rules?: RoutingRule[]) {
-    this.rules = rules ?? ROUTING_RULES;
+  constructor(rules?: readonly RoutingRule[]) {
+    this.rules = [...(rules ?? ROUTING_RULES)];
     this.rules.sort((a, b) => b.priority - a.priority);
   }
 

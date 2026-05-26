@@ -134,7 +134,7 @@ export function buildGatewayDeps(
     runtimeReconnectAttempts: 0,
     runtimeLastError: null,
     mcpServiceConfigs: mcpConfigs,
-    runtimeServerOrder: RUNTIME_SERVER_ORDER,
+    runtimeServerOrder: [...RUNTIME_SERVER_ORDER],
     refreshServiceHealthCache: (services: Record<string, string>) => {
       refreshSharedServiceHealthCache(services);
       for (const [serviceId, status] of Object.entries(services)) {

@@ -10,6 +10,9 @@
 import { BaseAgent } from './base';
 import type { IAgentGraphEngine, IAgentMemoryEngine } from './base';
 import type { WorldviewSetting } from '../narrative/worldview-extractor.js';
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('agent-worldbuilding');
 
 // ── Interfaces (Pydantic BaseModel -> TS interface) ────────
 
@@ -255,8 +258,8 @@ export class WorldbuildingAgent extends BaseAgent {
           inhabitants: (node['inhabitants'] as string[]) ?? [],
         };
       }
-    } catch {
-      // Silently ignore
+    } catch (e) {
+      _log.warn('Location query failed', { detail: e });
     }
 
     return null;
@@ -279,8 +282,8 @@ export class WorldbuildingAgent extends BaseAgent {
             rules.push((r as Record<string, unknown>)['content'] as string);
           }
         }
-      } catch {
-        // Silently ignore
+      } catch (e) {
+        _log.warn('Location rules query failed', { detail: e });
       }
     }
 
@@ -296,8 +299,8 @@ export class WorldbuildingAgent extends BaseAgent {
             rules.push((r as Record<string, unknown>)['content'] as string);
           }
         }
-      } catch {
-        // Silently ignore
+      } catch (e) {
+        _log.warn('Time-period rules query failed', { detail: e });
       }
     }
 

@@ -21,6 +21,14 @@ import {
   type Branch,
 } from "../agents/sequential-thinking";
 
+// Type that exposes the engine's protected fields for internal access
+type EngineInternals = {
+  _thoughts: Map<string, ThoughtData>;
+  _branches: Map<string, Branch>;
+  _currentBranchId: string;
+  _currentThoughtId: string | null;
+};
+
 // ============================================================
 // Session registry
 // ============================================================
@@ -107,7 +115,7 @@ export function switchBranch(params: {
   return {
     status: "switched",
     branchId: params.branchId,
-    currentThoughtId: (engine as any)._currentThoughtId as string | null,
+    currentThoughtId: (engine as unknown as EngineInternals)._currentThoughtId,
   };
 }
 
@@ -131,8 +139,8 @@ export function backtrack(params: {
   return {
     status: "backtracked",
     to: params.toThoughtId,
-    currentThoughtId: (engine as any)._currentThoughtId as string | null,
-    currentBranchId: (engine as any)._currentBranchId as string,
+    currentThoughtId: (engine as unknown as EngineInternals)._currentThoughtId,
+    currentBranchId: (engine as unknown as EngineInternals)._currentBranchId,
   };
 }
 
@@ -164,18 +172,17 @@ export function getState(params?: {
 }): Record<string, unknown> {
   const engine = getEngine(params?.sessionId);
   const state = engine.toDict();
-  const thoughts = (engine as any)._thoughts as Map<string, ThoughtData>;
-  const branches = (engine as any)._branches as Map<string, Branch>;
+  const internals = engine as unknown as EngineInternals;
 
   return {
     ...state,
     summary: {
-      totalThoughts: thoughts.size,
-      totalBranches: branches.size,
+      totalThoughts: internals._thoughts.size,
+      totalBranches: internals._branches.size,
       activeThoughts: engine.getActiveThoughts().length,
       conclusions: engine.getConclusions().length,
-      currentBranch: (engine as any)._currentBranchId as string,
-      currentThought: (engine as any)._currentThoughtId as string | null,
+      currentBranch: internals._currentBranchId,
+      currentThought: internals._currentThoughtId,
     },
   };
 }
@@ -224,22 +231,20 @@ export function listSessions(): Array<Record<string, unknown>> {
   const sessions: Array<Record<string, unknown>> = [];
 
   if (defaultEngine) {
-    const thoughts = (defaultEngine as any)._thoughts as Map<string, ThoughtData>;
-    const branches = (defaultEngine as any)._branches as Map<string, Branch>;
+    const internals = defaultEngine as unknown as EngineInternals;
     sessions.push({
       id: "default",
-      thoughts: thoughts.size,
-      branches: branches.size,
+      thoughts: internals._thoughts.size,
+      branches: internals._branches.size,
     });
   }
 
   for (const [sid, engine] of engines) {
-    const thoughts = (engine as any)._thoughts as Map<string, ThoughtData>;
-    const branches = (engine as any)._branches as Map<string, Branch>;
+    const internals = engine as unknown as EngineInternals;
     sessions.push({
       id: sid,
-      thoughts: thoughts.size,
-      branches: branches.size,
+      thoughts: internals._thoughts.size,
+      branches: internals._branches.size,
     });
   }
 

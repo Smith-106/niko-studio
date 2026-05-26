@@ -10,6 +10,9 @@ import { BaseAgent } from './base';
 import type { IAgentLLMService } from './base';
 import { SkillRouter } from './skill-router';
 import type { SkillRecommendation } from './skill-router';
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('agent-commander');
 
 // --- Data types ---
 
@@ -171,8 +174,8 @@ Levels:
         };
         return level;
       }
-    } catch {
-      // Fall through to heuristics
+    } catch (e) {
+      _log.warn('LLM routing failed, falling back to heuristics', { detail: e });
     }
 
     return this.routeByHeuristics(taskDescription);

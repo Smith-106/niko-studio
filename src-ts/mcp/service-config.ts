@@ -10,6 +10,8 @@
 // McpServiceConfig Interface
 // ============================================================
 
+export type McpTransport = 'streamable-http' | 'stdio' | 'sse';
+
 export interface McpServiceConfig {
   serviceId: string;
   name: string;
@@ -17,7 +19,7 @@ export interface McpServiceConfig {
   enabled: boolean;
   builtin: boolean;
   healthUrl: string | null;
-  transport: string;
+  transport: McpTransport;
 }
 
 // ============================================================
@@ -57,9 +59,9 @@ export const MCP_SERVICE_HEALTH_CACHE: Record<string, string> = Object.fromEntri
 );
 
 /** Runtime server order for consistent display. */
-export const RUNTIME_SERVER_ORDER: string[] = [
+export const RUNTIME_SERVER_ORDER: readonly string[] = [
   'memory', 'graph', 'search', 'workflow', 'critic', 'agent', 'skills',
-];
+] as const;
 
 // ============================================================
 // Public Functions
@@ -171,7 +173,7 @@ export function updateServiceConfig(
       enabled: payload.enabled as boolean,
       builtin: payload.builtin as boolean,
       healthUrl: payload.health_url as string | null,
-      transport: payload.transport as string,
+      transport: payload.transport as McpTransport,
     };
   } else {
     updated = {
@@ -181,7 +183,7 @@ export function updateServiceConfig(
       enabled: payload.enabled as boolean,
       builtin: current.builtin,
       healthUrl: payload.health_url as string | null,
-      transport: payload.transport as string,
+      transport: payload.transport as McpTransport,
     };
   }
 

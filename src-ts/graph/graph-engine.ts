@@ -509,9 +509,7 @@ export class GraphEngine {
         matchProps: matchProps as Record<string, unknown>,
         setProps: setProps as Record<string, unknown>,
       };
-    } catch {
-      return null;
-    }
+    } catch (e) { log.warn('Entity search failed', { detail: e }); return null; }
   }
 
   private _extractBalancedJsonObject(
@@ -983,9 +981,7 @@ export class GraphEngine {
     if (typeof raw === 'string') {
       try {
         return JSON.parse(raw) as Record<string, unknown>;
-      } catch {
-        return {};
-      }
+      } catch (e) { log.warn('Failed to parse relation props', { detail: e }); return {}; }
     }
 
     if (raw && typeof raw === 'object') {
@@ -1024,9 +1020,7 @@ export class GraphEngine {
     let normalizedLimit: number;
     try {
       normalizedLimit = Math.max(1, Math.min(Number(limit), 200));
-    } catch {
-      normalizedLimit = 50;
-    }
+    } catch (e) { log.warn('Invalid limit parameter, using default', { detail: e }); normalizedLimit = 50; }
 
     const rows = this.db
       .prepare(

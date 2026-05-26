@@ -33,6 +33,20 @@ export function applyWorkflowRecommendationRefresh(
   }
 }
 
+const SUPPORTED_SCHEMA_VERSIONS = new Set(['1', '1.0', '1.0.0']);
+
+export function validateSchemaVersion(workflow: Record<string, unknown>): void {
+  const raw = workflow.schema_version ?? workflow.schemaVersion;
+  if (raw === undefined) return;
+  const version = String(raw).trim();
+  if (!SUPPORTED_SCHEMA_VERSIONS.has(version) && !version.startsWith('1.')) {
+    throw new Error(
+      `Unsupported workflow schema version "${version}". Supported: 1.x. ` +
+      'Update the workflow definition or downgrade the engine.',
+    );
+  }
+}
+
 export function applyWorkflowPreflightExecutionMode(
   plan: WorkflowPlanPreflightState,
   refreshObservability: () => Record<string, unknown>,

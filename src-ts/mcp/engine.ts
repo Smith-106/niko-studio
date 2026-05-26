@@ -7,39 +7,25 @@
  */
 
 import { getContainer } from '../container/ServiceContainer';
+import type { IMemoryEngine, IGraphEngine, ISearchEngine, IWorkflowEngine, ICriticEngine } from '../container/types';
 
-/**
- * Get memory engine (delegates to container).
- */
-export function getMemoryEngine() {
+export function getMemoryEngine(): IMemoryEngine {
   return getContainer().memory;
 }
 
-/**
- * Get graph engine (delegates to container).
- */
-export function getGraphEngine() {
+export function getGraphEngine(): IGraphEngine {
   return getContainer().graph;
 }
 
-/**
- * Get search engine (delegates to container).
- */
-export function getSearchEngine() {
+export function getSearchEngine(): ISearchEngine {
   return getContainer().search;
 }
 
-/**
- * Get workflow engine (delegates to container).
- */
-export function getWorkflowEngine() {
+export function getWorkflowEngine(): IWorkflowEngine {
   return getContainer().workflow;
 }
 
-/**
- * Get critic engine (delegates to container).
- */
-export function getCriticEngine() {
+export function getCriticEngine(): ICriticEngine {
   return getContainer().critic;
 }
 

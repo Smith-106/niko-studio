@@ -371,7 +371,7 @@ export class ConflictResolver implements IConflictResolver {
         const vecB = this._embedder.embed(contentB);
         return this._embedder.similarity(vecA, vecB);
       } catch (e) {
-        // Fall through to Jaccard similarity
+        _log.warn('Embedding similarity failed, falling back to Jaccard', { detail: e });
       }
     }
 

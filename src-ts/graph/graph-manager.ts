@@ -729,7 +729,7 @@ export class GraphManager {
       let relProps = this._propsCache.get(relId);
       if (relProps === undefined) {
         relProps = typeof row.rel_props === 'string' ? safeParseJson(row.rel_props) : {};
-        this._propsCache.set(relId, relProps);
+        this._setPropsCache(relId, relProps);
       }
 
       const targetId = row.target_id as string;

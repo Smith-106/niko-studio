@@ -15,6 +15,16 @@ import type { IWorkflowStateStore } from './iworkflow-state-store.js';
 import { WorkflowPlan, Checkpoint } from './workflow-engine-core.js';
 import type { WorkflowAuthority } from './engine/authority.js';
 
+/** Row shape returned by SELECT data FROM workflow_plans / workflow_authorities / workflow_checkpoints */
+interface DataRow {
+  data: string;
+}
+
+/** Row shape returned by SELECT session_id FROM workflow_sessions */
+interface SessionRow {
+  session_id: string;
+}
+
 export class SqliteWorkflowStateStore implements IWorkflowStateStore {
   private db: Database.Database;
 
@@ -94,12 +104,12 @@ export class SqliteWorkflowStateStore implements IWorkflowStateStore {
   }
 
   async loadPlan(planId: string): Promise<WorkflowPlan | null> {
-    const row = this.db.prepare('SELECT data FROM workflow_plans WHERE id = ?').get(planId) as any;
+    const row = this.db.prepare('SELECT data FROM workflow_plans WHERE id = ?').get(planId) as DataRow | undefined;
     return row ? this._deserializePlan(row.data) : null;
   }
 
   async listPlans(): Promise<WorkflowPlan[]> {
-    const rows = this.db.prepare('SELECT data FROM workflow_plans ORDER BY created_at DESC').all() as any[];
+    const rows = this.db.prepare('SELECT data FROM workflow_plans ORDER BY created_at DESC').all() as DataRow[];
     return rows.map((r) => this._deserializePlan(r.data));
   }
 
@@ -130,7 +140,7 @@ export class SqliteWorkflowStateStore implements IWorkflowStateStore {
   }
 
   async loadPlanSession(planId: string): Promise<string | null> {
-    const row = this.db.prepare('SELECT session_id FROM workflow_sessions WHERE plan_id = ?').get(planId) as any;
+    const row = this.db.prepare('SELECT session_id FROM workflow_sessions WHERE plan_id = ?').get(planId) as SessionRow | undefined;
     return row?.session_id ?? null;
   }
 
@@ -144,7 +154,7 @@ export class SqliteWorkflowStateStore implements IWorkflowStateStore {
   }
 
   async loadPlanAuthority(planId: string): Promise<WorkflowAuthority | null> {
-    const row = this.db.prepare('SELECT data FROM workflow_authorities WHERE plan_id = ?').get(planId) as any;
+    const row = this.db.prepare('SELECT data FROM workflow_authorities WHERE plan_id = ?').get(planId) as DataRow | undefined;
     return row ? JSON.parse(row.data) : null;
   }
 
@@ -160,14 +170,14 @@ export class SqliteWorkflowStateStore implements IWorkflowStateStore {
   async loadCheckpoint(planId: string): Promise<Checkpoint | null> {
     const row = this.db.prepare(
       'SELECT data FROM workflow_checkpoints WHERE plan_id = ? ORDER BY created_at DESC LIMIT 1'
-    ).get(planId) as any;
+    ).get(planId) as DataRow | undefined;
     return row ? this._deserializeCheckpoint(row.data) : null;
   }
 
   async listCheckpoints(planId: string): Promise<Checkpoint[]> {
     const rows = this.db.prepare(
       'SELECT data FROM workflow_checkpoints WHERE plan_id = ? ORDER BY created_at ASC'
-    ).all(planId) as any[];
+    ).all(planId) as DataRow[];
     return rows.map((r) => this._deserializeCheckpoint(r.data));
   }
 

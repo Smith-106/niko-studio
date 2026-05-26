@@ -19,6 +19,10 @@ export interface SyncMeta {
   snapshotVersions: Record<string, number>;
 }
 
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('storage-adapter');
+
 export interface StorageAdapter {
   readonly type: 'local' | 'remote';
 
@@ -91,7 +95,7 @@ export class LocalStorageAdapter implements StorageAdapter {
       if (prefix && !k.slice(STORAGE_PREFIX.length).startsWith(prefix)) continue;
       try {
         results.push(JSON.parse(localStorage.getItem(k)!));
-      } catch {}
+      } catch { _log.warn('Failed to parse stored item', { key: k }); }
     }
     return results;
   }
@@ -99,7 +103,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   async getMeta(): Promise<SyncMeta> {
     const raw = localStorage.getItem(META_KEY);
     if (raw) {
-      try { return JSON.parse(raw); } catch {}
+      try { return JSON.parse(raw); } catch { _log.warn('Failed to parse meta JSON'); }
     }
     return { lastSyncAt: 0, deviceId: this.deviceId, snapshotVersions: {} };
   }

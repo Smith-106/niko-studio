@@ -16,6 +16,28 @@ import Database from 'better-sqlite3';
 import type { IMemoryStore, MemorySearchQuery, MemorySearchResult } from './imemory-store.js';
 import { MemoryEntry } from './memory-manager.js';
 
+/** Row shape returned by SELECT * FROM memories — mirrors the SQL schema */
+interface MemoryRow {
+  id: string;
+  content: string;
+  entity_id: string | null;
+  topics: string;
+  importance: number;
+  source: string;
+  valid_from: string | null;
+  valid_until: string | null;
+  supersedes: string | null;
+  superseded_by: string | null;
+  metadata: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Row shape returned by SELECT COUNT(*) as count FROM memories */
+interface CountRow {
+  count: number;
+}
+
 export class SqliteMemoryStore implements IMemoryStore {
   private db: Database.Database;
   private _insertStmt!: Database.Statement;
@@ -99,7 +121,7 @@ export class SqliteMemoryStore implements IMemoryStore {
     this._countStmt = this.db.prepare('SELECT COUNT(*) as count FROM memories');
   }
 
-  private _rowToEntry(row: any): MemoryEntry {
+  private _rowToEntry(row: MemoryRow): MemoryEntry {
     return new MemoryEntry({
       id: row.id,
       content: row.content,
@@ -139,7 +161,7 @@ export class SqliteMemoryStore implements IMemoryStore {
   }
 
   async get(id: string): Promise<MemoryEntry | null> {
-    const row = this._getStmt.get(id) as any;
+    const row = this._getStmt.get(id) as MemoryRow | undefined;
     return row ? this._rowToEntry(row) : null;
   }
 
@@ -147,13 +169,13 @@ export class SqliteMemoryStore implements IMemoryStore {
     if (ids.length === 0) return [];
     const placeholders = ids.map(() => '?').join(',');
     const stmt = this.db.prepare(`SELECT * FROM memories WHERE id IN (${placeholders})`);
-    const rows = stmt.all(...ids) as any[];
+    const rows = stmt.all(...ids) as MemoryRow[];
     return rows.map((r) => this._rowToEntry(r));
   }
 
   async search(query: MemorySearchQuery): Promise<MemorySearchResult> {
     let sql = 'SELECT * FROM memories WHERE 1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (query.entityId) {
       sql += ' AND entity_id = ?';
@@ -183,7 +205,7 @@ export class SqliteMemoryStore implements IMemoryStore {
         WHERE memories_fts MATCH ?
         ORDER BY rank
       `);
-      const ftsRows = ftsStmt.all(query.query) as any[];
+      const ftsRows = ftsStmt.all(query.query) as MemoryRow[];
       const memories = ftsRows.map((r) => this._rowToEntry(r));
       return { memories, total: memories.length };
     }
@@ -196,7 +218,7 @@ export class SqliteMemoryStore implements IMemoryStore {
     }
 
     const stmt = this.db.prepare(sql);
-    const rows = stmt.all(...params) as any[];
+    const rows = stmt.all(...params) as MemoryRow[];
     const memories = rows.map((r) => this._rowToEntry(r));
     return { memories, total: memories.length };
   }
@@ -222,7 +244,7 @@ export class SqliteMemoryStore implements IMemoryStore {
   }
 
   async count(): Promise<number> {
-    const row = this._countStmt.get() as any;
+    const row = this._countStmt.get() as CountRow | undefined;
     return row?.count ?? 0;
   }
 
