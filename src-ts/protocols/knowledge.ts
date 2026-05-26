@@ -66,6 +66,8 @@ export interface KnowledgeMemoryEngineAdapter {
     confidence?: number;
   }): Promise<Record<string, unknown>>;
   store?(key: string, value: unknown): Promise<void>;
+  addToLibrary?(paths: string[]): Promise<Array<{ id: string; name: string; type: string; summary?: string }>>;
+  searchLibrary?(query: string, options?: { limit?: number }): Promise<Array<{ id: string; name: string; type: string; summary?: string }>>;
 }
 
 /**

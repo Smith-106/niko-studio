@@ -80,12 +80,14 @@ interface DurableKnowledgeSnapshot {
   }>;
   entities: KnowledgeEntity[];
   relations: KnowledgeRelation[];
+  sourceIndex: Array<[string, string]>;
 }
 
 const EMPTY_SNAPSHOT: DurableKnowledgeSnapshot = {
   documents: [],
   entities: [],
   relations: [],
+  sourceIndex: [],
 };
 
 /**
@@ -108,6 +110,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
   private entities: Map<string, KnowledgeEntity> = new Map();
   private relations: Map<string, KnowledgeRelation> = new Map();
   private entityFTSIndex: Map<string, Set<string>> = new Map();
+  private sourceIndex: Map<string, string> = new Map();
   private initialized = false;
 
   constructor(config: KnowledgeServiceConfig) {
@@ -142,6 +145,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     this.relations = new Map(
       snapshot.relations.map((relation) => [relation.id, { ...relation }]),
     );
+    this.sourceIndex = new Map(snapshot.sourceIndex);
     this.rebuildEntityFTSIndex();
 
     this.initialized = true;
@@ -175,6 +179,9 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     };
 
     this.documentChunks.set(docId, chunk);
+    if (metadata?.sourceId) {
+      this.sourceIndex.set(docId, metadata.sourceId);
+    }
 
     await this.persistDocument(docId, chunk);
     await this.persistSnapshot();
@@ -427,6 +434,14 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     this.entityFTSIndex.clear();
   }
 
+  async addToLibrary(paths: string[]): Promise<Array<{ id: string; name: string; type: string; summary?: string }>> {
+    return this.memoryEngine?.addToLibrary?.(paths) ?? [];
+  }
+
+  async searchLibrary(query: string, options?: { limit?: number }): Promise<Array<{ id: string; name: string; type: string; summary?: string }>> {
+    return this.memoryEngine?.searchLibrary?.(query, options) ?? [];
+  }
+
   getEntity(entityId: string): KnowledgeEntity | undefined {
     return this.entities.get(entityId);
   }
@@ -652,6 +667,9 @@ export class KnowledgeServiceImpl implements KnowledgeService {
         relations: Array.isArray(parsed.relations)
           ? parsed.relations.filter((value): value is KnowledgeRelation => typeof value === 'object' && value !== null)
           : [],
+        sourceIndex: Array.isArray(parsed.sourceIndex)
+          ? parsed.sourceIndex.filter((entry): entry is [string, string] => Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string' && typeof entry[1] === 'string')
+          : [],
       };
     } catch (error) {
       _log.warn('Failed to load knowledge snapshot', { error });
@@ -669,6 +687,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
       documents: Array.from(this.documentChunks.values()).map((chunk) => ({ ...chunk })),
       entities: this.listEntities().map((entity) => ({ ...entity })),
       relations: this.listRelations().map((relation) => ({ ...relation })),
+      sourceIndex: Array.from(this.sourceIndex.entries()),
     };
     writeFileSync(this.snapshotPath, JSON.stringify(snapshot, null, 2), 'utf-8');
   }

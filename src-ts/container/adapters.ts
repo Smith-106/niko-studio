@@ -44,6 +44,10 @@ import { createWriterInput } from '../agents/writer';
 import { BackupManager } from '../services/backup-manager';
 import { TokenService } from '../services/token-service';
 import { ObsidianService } from '../services/obsidian-service';
+import { NowledgeMemAdapter } from '../services/nowledge-mem-adapter';
+import type { INowledgeMemService } from '../protocols/nowledge-mem';
+import type { DocumentMetadata } from '../protocols/knowledge';
+import type { IKnowledgeService } from './types';
 
 // ---------------------------------------------------------------------------
 // MemoryEngine Adapter
@@ -701,9 +705,13 @@ export class TokenServiceAdapter implements ITokenService {
 
 export class ObsidianServiceAdapter implements IObsidianService {
   private service: ObsidianService;
+  private knowledgeService?: IKnowledgeService;
+  private readonly syncedFileHashes = new Map<string, string>();
+  private readonly syncedFileMtimes = new Map<string, number>();
 
-  constructor() {
+  constructor(knowledgeService?: IKnowledgeService) {
     this.service = new ObsidianService();
+    this.knowledgeService = knowledgeService;
   }
 
   async export(vaultPath: string, content: string, _options?: ExportOptions): Promise<void> {
@@ -723,15 +731,58 @@ export class ObsidianServiceAdapter implements IObsidianService {
   }
 
   async sync(vaultPath: string): Promise<SyncResult> {
-    const result = this.service.syncToKnowledgeLayer(vaultPath, {
-      syncFile: () => ({ success: true }),
-      addDocument: () => {},
-    });
-    return {
-      added: ((result as Record<string, unknown>).syncedCount as number) ?? 0,
-      modified: 0,
-      deleted: 0,
-    };
+    if (!this.knowledgeService) {
+      return { added: 0, modified: 0, deleted: 0 };
+    }
+
+    const { createHash } = await import('node:crypto');
+    const { readFileSync, statSync } = await import('node:fs');
+    const { relative, resolve } = await import('node:path');
+    const resolvedVault = resolve(vaultPath);
+
+    let added = 0;
+    let modified = 0;
+
+    const files = this.service.getFiles(resolvedVault, '*.md');
+    for (const file of files) {
+      try {
+        const relPath = relative(resolvedVault, file);
+        const docId = `obsidian:${resolvedVault}:${relPath}`;
+
+        // mtime check — skip hash computation if file hasn't changed
+        const mtime = statSync(file).mtimeMs;
+        const prevMtime = this.syncedFileMtimes.get(docId);
+        if (prevMtime === mtime) continue;
+
+        const content = readFileSync(file, 'utf-8');
+        const hash = createHash('sha256').update(content, 'utf-8').digest('hex');
+
+        const prevHash = this.syncedFileHashes.get(docId);
+        // mtime changed but content identical → update mtime, skip addDocument
+        if (prevHash === hash) {
+          this.syncedFileMtimes.set(docId, mtime);
+          continue;
+        }
+
+        await this.knowledgeService.addDocument(docId, content, {
+          sourceId: file,
+          sourceType: 'document',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        } as Partial<DocumentMetadata>);
+
+        if (prevHash) {
+          modified++;
+        } else {
+          added++;
+        }
+        this.syncedFileHashes.set(docId, hash);
+      } catch {
+        // skip problematic files — never throw on individual file errors
+      }
+    }
+
+    return { added, modified, deleted: 0 };
   }
 }
 
@@ -759,4 +810,42 @@ export class MCPGatewayAdapter implements IMCPGateway {
   async close(): Promise<void> {
     this.handlers.clear();
   }
+}
+
+// ---------------------------------------------------------------------------
+// NowledgeMemService Adapter
+// ---------------------------------------------------------------------------
+
+export class NowledgeMemServiceAdapter implements INowledgeMemService {
+  private adapter: NowledgeMemAdapter;
+
+  constructor(config?: { cliPath?: string; apiUrl?: string }) {
+    this.adapter = new NowledgeMemAdapter(config);
+  }
+
+  async status() { return this.adapter.status(); }
+  async addMemory(content: string, options?: { labels?: string[]; importance?: number; id?: string }) {
+    return this.adapter.addMemory(content, options);
+  }
+  async searchMemories(query: string, options?: { labels?: string[]; timeRange?: 'today' | 'week' | 'month' | 'year'; importance?: number; mode?: 'normal' | 'deep'; limit?: number }) {
+    return this.adapter.searchMemories(query, options);
+  }
+  async getMemory(id: string) { return this.adapter.getMemory(id); }
+  async updateMemory(id: string, updates: { content?: string; labels?: string[]; importance?: number }) {
+    return this.adapter.updateMemory(id, updates);
+  }
+  async deleteMemory(id: string) { return this.adapter.deleteMemory(id); }
+  async expandGraph(id: string) { return this.adapter.expandGraph(id); }
+  async addToLibrary(paths: string[]) { return this.adapter.addToLibrary(paths); }
+  async searchLibrary(query: string, options?: { limit?: number }) {
+    return this.adapter.searchLibrary(query, options);
+  }
+  async readArtifact(id: string) { return this.adapter.readArtifact(id); }
+  async getWorkingMemory(date?: string) { return this.adapter.getWorkingMemory(date); }
+  async setWorkingMemory(content: string) { return this.adapter.setWorkingMemory(content); }
+  async listCommunities(limit?: number) { return this.adapter.listCommunities(limit); }
+  async getFeed(days?: number) { return this.adapter.getFeed(days); }
+  async initialize() { return this.adapter.initialize(); }
+  async healthCheck() { return this.adapter.healthCheck(); }
+  async shutdown() { return this.adapter.shutdown(); }
 }

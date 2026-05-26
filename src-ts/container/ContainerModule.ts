@@ -17,6 +17,9 @@ import {
   ITokenService,
   IObsidianService,
   IMCPGateway,
+  IRevisionService,
+  ISessionIntelligence,
+  IPersonalizationService,
 } from './types';
 import { registerCanonicalBindings } from './bindings';
 
@@ -93,6 +96,24 @@ export function bindObsidianService(bind: interfaces.Bind, implementation: new (
 
 export function bindMCPGateway(bind: interfaces.Bind, implementation: new () => IMCPGateway): void {
   bind<IMCPGateway>(ServiceTypes.MCPGateway)
+    .to(implementation)
+    .inSingletonScope();
+}
+
+export function bindRevisionService(bind: interfaces.Bind, implementation: new () => IRevisionService): void {
+  bind<IRevisionService>(ServiceTypes.RevisionService)
+    .to(implementation)
+    .inSingletonScope();
+}
+
+export function bindSessionIntelligenceService(bind: interfaces.Bind, implementation: new () => ISessionIntelligence): void {
+  bind<ISessionIntelligence>(ServiceTypes.SessionIntelligenceService)
+    .to(implementation)
+    .inSingletonScope();
+}
+
+export function bindPersonalizationService(bind: interfaces.Bind, implementation: new () => IPersonalizationService): void {
+  bind<IPersonalizationService>(ServiceTypes.PersonalizationService)
     .to(implementation)
     .inSingletonScope();
 }

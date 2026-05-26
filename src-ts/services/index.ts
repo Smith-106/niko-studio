@@ -117,3 +117,9 @@ export type {
   RerankerRequest,
   RerankerResponse,
 } from './reranker';
+
+export { RevisionServiceImpl } from './revision-service.js';
+
+export { SessionIntelligenceServiceImpl } from './session-intelligence-service.js';
+
+export { PersonalizationServiceImpl } from './personalization-service.js';

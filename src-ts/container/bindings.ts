@@ -20,12 +20,19 @@ import {
   type IHybridSearch,
   type IVectorSearch,
   type ILearningOrchestrator,
+  type INowledgeMemService,
+  type IRevisionService,
+  type ISessionIntelligence,
+  type IPersonalizationService,
 } from './types';
 import {
   DistillationService,
   EmbeddingServiceImpl,
   LLMServiceImpl,
   KnowledgeServiceImpl,
+  RevisionServiceImpl,
+  SessionIntelligenceServiceImpl,
+  PersonalizationServiceImpl,
 } from '../services';
 import { ProviderType as EmbeddingProviderType } from '../services/embedding-service';
 import {
@@ -46,7 +53,10 @@ import {
   TokenServiceAdapter,
   ObsidianServiceAdapter,
   MCPGatewayAdapter,
+  NowledgeMemServiceAdapter,
 } from './adapters';
+import { NowledgeMemKnowledgeBridge } from '../services/nowledge-mem-knowledge-bridge';
+import { CompositeKnowledgeMemoryBridge } from '../services/composite-knowledge-memory-bridge';
 import {
   LearningOrchestrator,
   ImportLearningPipeline,
@@ -151,13 +161,22 @@ export function registerCanonicalBindings(
 
   bindSingleton<IKnowledgeService>(
     ServiceTypes.KnowledgeService,
-    (context) => new KnowledgeServiceImpl({
-      dbPath: '.writing/knowledge.db',
-      enableDistillation: true,
-      embeddingService: context.container.get<IEmbeddingService & VectorEmbeddingService>(ServiceTypes.EmbeddingService),
-      memoryEngine: context.container.get<IMemoryEngine>(ServiceTypes.MemoryEngine),
-      graphEngine: context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
-    }),
+    (context) => {
+      const primaryEngine = context.container.get<IMemoryEngine>(ServiceTypes.MemoryEngine);
+      const nowledgeMemService = context.container.get<INowledgeMemService>(ServiceTypes.NowledgeMemService);
+      const nowledgeBridge = new NowledgeMemKnowledgeBridge(nowledgeMemService);
+      const compositeEngine = new CompositeKnowledgeMemoryBridge(
+        primaryEngine as unknown as import('../protocols/knowledge').KnowledgeMemoryEngineAdapter,
+        nowledgeBridge,
+      );
+      return new KnowledgeServiceImpl({
+        dbPath: '.writing/knowledge.db',
+        enableDistillation: true,
+        embeddingService: context.container.get<IEmbeddingService & VectorEmbeddingService>(ServiceTypes.EmbeddingService),
+        memoryEngine: compositeEngine,
+        graphEngine: context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
+      });
+    },
   );
 
   bindSingleton<ISmartSearch>(
@@ -230,7 +249,9 @@ export function registerCanonicalBindings(
 
   bindSingleton<IObsidianService>(
     ServiceTypes.ObsidianService,
-    () => new ObsidianServiceAdapter(),
+    (context) => new ObsidianServiceAdapter(
+      context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+    ),
   );
 
   bindSingleton<IMCPGateway>(
@@ -283,5 +304,27 @@ export function registerCanonicalBindings(
       const orchestrator = ctx.container.get<ILearningOrchestrator>(ServiceTypes.LearningOrchestrator);
       return orchestrator.getPipeline(LearningCapability.READING)!;
     },
+  );
+
+  bindSingleton<INowledgeMemService>(
+    ServiceTypes.NowledgeMemService,
+    () => new NowledgeMemServiceAdapter(),
+  );
+
+  bindSingleton<IRevisionService>(
+    ServiceTypes.RevisionService,
+    () => new RevisionServiceImpl(),
+  );
+
+  bindSingleton<ISessionIntelligence>(
+    ServiceTypes.SessionIntelligenceService,
+    () => new SessionIntelligenceServiceImpl(),
+  );
+
+  bindSingleton<IPersonalizationService>(
+    ServiceTypes.PersonalizationService,
+    (context) => new PersonalizationServiceImpl({
+      persistenceBridge: context.container.get<IMemoryEngine>(ServiceTypes.MemoryEngine) as unknown as import('../protocols/knowledge').KnowledgeMemoryEngineAdapter,
+    }),
   );
 }

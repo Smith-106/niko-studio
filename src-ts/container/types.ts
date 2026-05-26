@@ -1,9 +1,14 @@
 /**
  * TypeScript Service Interfaces for Dependency Injection
- * 
+ *
  * These interfaces define the contracts for all services registered in the ServiceContainer.
  * Each interface corresponds to a Python service that will be migrated to TypeScript.
  */
+
+export type { INowledgeMemService } from '../protocols/nowledge-mem';
+export type { IRevisionService } from '../protocols/revision';
+export type { ISessionIntelligence } from '../protocols/session-intelligence';
+export type { IPersonalizationService } from '../protocols/personalization';
 
 export const ServiceTypes = {
   MemoryEngine: Symbol.for('MemoryEngine'),
@@ -27,6 +32,10 @@ export const ServiceTypes = {
   ImportLearning: Symbol.for('ImportLearning'),
   SelfEvolvingWriting: Symbol.for('SelfEvolvingWriting'),
   ReadingLearning: Symbol.for('ReadingLearning'),
+  NowledgeMemService: Symbol.for('NowledgeMemService'),
+  RevisionService: Symbol.for('RevisionService'),
+  SessionIntelligenceService: Symbol.for('SessionIntelligenceService'),
+  PersonalizationService: Symbol.for('PersonalizationService'),
 } as const;
 
 export type ServiceIdentifier<T = unknown> = symbol;

@@ -9,7 +9,10 @@
       "M17 bridges M13-M16 knowledge engine to UI via API layer + dashboard components",
       "M22 adopts minimum-phase principle: three capabilities in one phase via shared interfaces",
       "M23 extends WritingCraftDimension with hook/cliffhanger + reader-state model",
-      "M24 scope: F-001~F-006 tech debt + F-007 narrative visualization; F-008 deferred to M25"
+      ""M24 scope: F-001~F-006 tech debt + F-007 narrative visualization; F-008 deferred to M25",
+      "M25 scope: F-008 intelligent revision workflow + F-009 session intelligence + F-010 style personalization",
+      "M25 persistence: write-only via KnowledgeMemoryEngineAdapter.add(), no load-back",
+      "M25 revision: IRevisionService protocol + RevisionServiceImpl + m10-revision MCP endpoint""
     ]
   },
   "artifacts": [
@@ -467,11 +470,53 @@
       "harvested": false,
       "created_at": "2026-05-25T22:30:00+08:00",
       "completed_at": "2026-05-25T14:28:48.945Z"
+    },
+    {
+      "id": "EXC-20260527-P1-intelligent-revision-session-personalization",
+      "type": "execute",
+      "milestone": "M25",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/.maestro/ralph-20260526-190000",
+      "status": "completed",
+      "depends_on": null,
+      "harvested": false,
+      "created_at": "2026-05-26T19:00:00+08:00",
+      "completed_at": "2026-05-27T00:51:00+08:00",
+      "description": "M25 P1 execute: 7 goals (G1-G7) — revision protocol + MCP endpoint, session intelligence service, personalization service, DI bindings, MCP routing, test coverage ≥80%, TypeScript zero errors."
+    },
+    {
+      "id": "VRF-20260527-P1-intelligent-revision-session-personalization",
+      "type": "verify",
+      "milestone": "M25",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/.maestro/ralph-20260526-190000",
+      "status": "completed",
+      "depends_on": "EXC-20260527-P1-intelligent-revision-session-personalization",
+      "harvested": false,
+      "created_at": "2026-05-27T00:40:00+08:00",
+      "completed_at": "2026-05-27T00:51:00+08:00",
+      "description": "M25 P1 verify: 38 tests passed, TypeScript zero errors, 4 review fixes verified."
+    },
+    {
+      "id": "REV-20260527-P1-intelligent-revision-session-personalization",
+      "type": "review",
+      "milestone": "M25",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/.maestro/ralph-20260526-190000",
+      "status": "completed",
+      "depends_on": "EXC-20260527-P1-intelligent-revision-session-personalization",
+      "harvested": false,
+      "created_at": "2026-05-27T00:20:00+08:00",
+      "completed_at": "2026-05-27T00:40:00+08:00",
+      "description": "M25 P1 review: 5 findings (unused import, protocol type violation, broken persistence, quadratic complexity, unsafe cast). 4 fixed, 1 minor (unused import) resolved."
     }
   ],
-  "current_milestone": "M24",
+  "current_milestone": "M25",
   "initialized": true,
-  "last_updated": "2026-05-25T14:30:12.648Z",
+  "last_updated": "2026-05-27T00:51:00+08:00",
   "milestone_history": [
     {
       "archive_path": "milestones/M13/",
@@ -548,6 +593,13 @@
       "completed_at": "2026-05-15T03:35:00+08:00",
       "id": "M23",
       "name": "Novel Quality & Reader Experience Enhancement",
+      "status": "completed"
+    },
+    {
+      "archive_path": "milestones/M25/",
+      "completed_at": "2026-05-27T00:51:00+08:00",
+      "id": "M25",
+      "name": "Intelligent Revision + Session Intelligence + Style Personalization",
       "status": "completed"
     }
   ],
@@ -665,6 +717,15 @@
       ],
       "status": "completed",
       "completed_at": "2026-05-25T14:30:12.647Z"
+    },
+    {
+      "id": "M25",
+      "name": "Intelligent Revision + Session Intelligence + Style Personalization",
+      "phases": [
+        1
+      ],
+      "status": "completed",
+      "completed_at": "2026-05-27T00:51:00+08:00"
     }
   ],
   "project": "niko-studio",

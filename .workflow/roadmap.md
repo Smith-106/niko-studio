@@ -8,8 +8,8 @@ M24 聚焦两大目标：(1) 清理 M10-M23 积累的 6 项技术债（console �
 
 **Minimum-phase principle:** Default 1 phase. Only add phases for hard dependencies (runtime + not parallelizable + full barrier). Wave DAG inside each phase handles task ordering.
 
-- [ ] **Phase 1: Tech Debt Cleanup** — F-001~F-006 技术债清理，3 波次递进执行
-- [ ] **Phase 2: Narrative Visualization MVP** — F-007 叙事结构可视化核心功能
+- [x] **Phase 1: Tech Debt Cleanup** — F-001~F-006 技术债清理，3 波次递进执行 ✅ completed
+- [x] **Phase 2: Narrative Visualization MVP** — F-007 叙事结构可视化核心功能 ✅ completed
 
 ## Phase Details
 
@@ -86,5 +86,5 @@ M24 聚焦两大目标：(1) 清理 M10-M23 积累的 6 项技术债（console �
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Tech Debt Cleanup | In progress (verifying, gaps_found) | TASK-001, TASK-003, TASK-005 |
-| 2. Narrative Visualization MVP | Not started | - |
+| 1. Tech Debt & Integration | ✅ Completed | F-001~F-006, 3-way data integration, mtime detection, sourceIndex persistence, Nowledge Mem library bridge |
+| 2. Narrative Visualization MVP | ✅ Completed | F-007: TimelineView, CharacterGraphView, TensionCurveView, ReaderState integration |
