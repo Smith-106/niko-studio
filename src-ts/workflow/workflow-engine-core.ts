@@ -16,6 +16,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { LLMService } from '../protocols/llm.js';
 import type { IWorkflowStateStore } from './iworkflow-state-store.js';
+import { HookRegistry, HookType, createHookContext } from '../hooks/writing-hooks.js';
 
 import { WorkflowLevel, WorkflowDecision, ensureContractPayload } from './types.js';
 import {
@@ -714,6 +715,11 @@ export class WorkflowEngine {
   // ---- Routing ----
 
   async route(taskOrRequest: string | WorkflowRouteRequest): Promise<WorkflowRouteResult> {
+    const taskStr = typeof taskOrRequest === 'string' ? taskOrRequest : taskOrRequest.task ?? '';
+    if (this._hooks) {
+      const hookCtx = createHookContext({ content: taskStr, metadata: { operation: 'route' } });
+      await this._hooks.execute(HookType.BEFORE_WORKFLOW_START, hookCtx);
+    }
     return this.routingStrategy.route(taskOrRequest);
   }
 
@@ -1229,24 +1235,34 @@ export class WorkflowEngine {
   // ---- Step Execution ----
 
   private async _executeStep(plan: WorkflowPlan, step: WorkflowStep): Promise<unknown> {
+    let result: unknown;
     switch (step.name) {
-      case 'analyze': return this._runAnalyze(plan);
-      case 'match_skills': return this._runMatchSkills(plan);
-      case 'load_context': return this._runLoadContext(plan);
-      case 'plan_structure': return this._runPlanStructure(plan);
-      case 'generate_draft': return this._runGenerateDraft(plan);
-      case 'generate': return this._runGenerate(plan);
-      case 'evaluate': return this._runEvaluate(plan);
-      case 'revise': return this._runRevise(plan);
+      case 'analyze': result = this._runAnalyze(plan); break;
+      case 'match_skills': result = this._runMatchSkills(plan); break;
+      case 'load_context': result = this._runLoadContext(plan); break;
+      case 'plan_structure': result = this._runPlanStructure(plan); break;
+      case 'generate_draft': result = await this._runGenerateDraft(plan); break;
+      case 'generate': result = this._runGenerate(plan); break;
+      case 'evaluate': result = this._runEvaluate(plan); break;
+      case 'revise': result = this._runRevise(plan); break;
       case 'checkpoint': {
         const cp = await this.createCheckpoint(`plan:${plan.id} step:${step.id}`, false, plan.id, step.id, {
           plan_id: plan.id, plan_hash: plan.plan_hash, recommendations: structuredClone(plan.recommendations), recommendations_frozen: plan.recommendations_frozen,
         });
-        return { checkpoint_id: cp['checkpoint_id'], created_at: cp['created_at'], replay_payload: cp['replay_payload'] };
+        result = { checkpoint_id: cp['checkpoint_id'], created_at: cp['created_at'], replay_payload: cp['replay_payload'] };
+        break;
       }
-      case 'answer': return this._runAnswer(plan);
+      case 'answer': result = this._runAnswer(plan); break;
       default: throw new Error(`Unsupported workflow step: ${step.name}`);
     }
+
+    // Hook: AFTER_WORKFLOW_STEP
+    if (this._hooks) {
+      const hookCtx = createHookContext({ content: plan.task, metadata: { stepName: step.name, planId: plan.id } });
+      await this._hooks.execute(HookType.AFTER_WORKFLOW_STEP, hookCtx);
+    }
+
+    return result;
   }
 
   private _getStepOutput(plan: WorkflowPlan, stepName: string): Record<string, unknown> | null {

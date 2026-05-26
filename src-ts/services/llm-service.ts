@@ -14,6 +14,7 @@
  */
 
 import type { LLMService, LLMProvider, LLMRequest, LLMResponse, StreamChunk } from '../protocols/llm';
+import { HookRegistry, HookType, createHookContext, type HookResult } from '../hooks/writing-hooks.js';
 
 import { createLogger } from "../logger/index.js";
 const _log = createLogger("svc-llm");
@@ -110,6 +111,7 @@ export interface RetryConfig {
 export interface LLMServiceConfig {
   defaultProvider?: ProviderType;
   retry?: Partial<RetryConfig>;
+  hooks?: HookRegistry;
 }
 
 /**
@@ -122,6 +124,7 @@ export class LLMServiceImpl implements LLMService {
   private readonly providers: Map<ProviderType, LLMProvider>;
   private readonly defaultProvider: ProviderType;
   private readonly retryConfig: RetryConfig;
+  private readonly _hooks: HookRegistry | null;
 
   constructor(
     providers: Map<ProviderType, LLMProvider> | Record<ProviderType, LLMProvider>,
@@ -133,6 +136,7 @@ export class LLMServiceImpl implements LLMService {
       : new Map(Object.entries(providers) as [ProviderType, LLMProvider][]);
 
     this.defaultProvider = config.defaultProvider ?? ProviderType.OPENAI;
+    this._hooks = config.hooks ?? null;
 
     this.retryConfig = {
       maxRetries: config.retry?.maxRetries ?? 3,
@@ -269,9 +273,15 @@ export class LLMServiceImpl implements LLMService {
     const provider = this.getProvider();
     const modelName = this.resolveModel(request.model, provider);
 
-    return this.withRetry(
+    // Hook: BEFORE_LLM_CALL
+    if (this._hooks) {
+      const hookCtx = createHookContext({ content: request.prompt, metadata: { model: modelName, operation: 'generate' } });
+      await this._hooks.execute(HookType.BEFORE_LLM_CALL, hookCtx);
+    }
+
+    const response = await this.withRetry(
       async () => {
-        const response = await provider.complete(
+        const result = await provider.complete(
           request.prompt,
           modelName,
           {
@@ -282,10 +292,18 @@ export class LLMServiceImpl implements LLMService {
           }
         );
 
-        return response;
+        return result;
       },
       'generateWithMetadata'
     );
+
+    // Hook: AFTER_LLM_CALL
+    if (this._hooks) {
+      const hookCtx = createHookContext({ content: response.content, metadata: { model: modelName, tokens: response.usage?.totalTokens } });
+      await this._hooks.execute(HookType.AFTER_LLM_CALL, hookCtx);
+    }
+
+    return response;
   }
 
   /**
@@ -352,6 +370,12 @@ export class LLMServiceImpl implements LLMService {
     const modelName = this.resolveModel(options?.model, provider);
     const maxStreamRetries = 2;
 
+    // Hook: BEFORE_LLM_CALL (stream)
+    if (this._hooks) {
+      const hookCtx = createHookContext({ content: prompt, metadata: { model: modelName, operation: 'stream' } });
+      await this._hooks.execute(HookType.BEFORE_LLM_CALL, hookCtx);
+    }
+
     for (let attempt = 0; attempt <= maxStreamRetries; attempt++) {
       try {
         const stream = provider.streamComplete(prompt, modelName, {
@@ -363,6 +387,13 @@ export class LLMServiceImpl implements LLMService {
         for await (const chunk of stream) {
           yield chunk;
         }
+
+        // Hook: AFTER_LLM_CALL (stream completed)
+        if (this._hooks) {
+          const hookCtx = createHookContext({ content: '', metadata: { model: modelName, operation: 'stream', status: 'completed' } });
+          await this._hooks.execute(HookType.AFTER_LLM_CALL, hookCtx);
+        }
+
         return; // Stream completed successfully
       } catch (error: any) {
         const isRetryable =
