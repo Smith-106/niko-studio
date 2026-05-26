@@ -92,6 +92,12 @@ export const categories: Category[] = [
     icon: '🏗️',
   },
   {
+    id: 'narrative-viz',
+    name: '叙事可视化',
+    description: '时间线、张力曲线、角色图谱等交互式叙事图表',
+    icon: '📊',
+  },
+  {
     id: 'api',
     name: 'API 参考',
     description: 'MCP 端点、Gateway API、服务接口文档',
@@ -168,6 +174,11 @@ export const docPages: DocPage[] = [
   { id: 'plugin-system', title: '插件系统', category: 'desktop', description: '扩展功能的插件架构', slug: 'plugin-system' },
   { id: 'skill-system', title: '技能系统', category: 'desktop', description: '自定义技能创建、管理和链式调用', slug: 'skill-system' },
   { id: 'wiki-system', title: 'Wiki 系统', category: 'desktop', description: '知识条目管理和 Wiki 页面', slug: 'wiki-system' },
+  { id: 'narrative-visualization', title: '叙事可视化', category: 'desktop', description: 'TimelineView、TensionCurveView、CharacterGraphView 交互式叙事图表', slug: 'narrative-visualization' },
+  { id: 'hook-cliffhanger', title: '钩子与断章检测', category: 'writing', description: '章节钩子强度评分、断章类型分类、读者状态模型', slug: 'hook-cliffhanger' },
+  { id: 'voice-fingerprint', title: '角色声纹', category: 'writing', description: '角色语音一致性分析、修饰标记检测', slug: 'voice-fingerprint' },
+  { id: 'emotional-arc', title: '情感弧线', category: 'writing', description: '情绪轨迹追踪、Show/Tell 比率、沉浸感评分', slug: 'emotional-arc' },
+  { id: 'mystery-analysis', title: '悬疑分析', category: 'writing', description: '推理链分析、本格/社会派/硬汉/惊悚分类', slug: 'mystery-analysis' },
 
   // Sync
   { id: 'sync-overview', title: '同步概览', category: 'sync', description: '云同步架构和工作原理', slug: 'sync-overview' },

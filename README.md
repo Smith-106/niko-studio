@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 9.26.2 (Platform Edition)
+> **Version**: 9.27.0 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -37,13 +37,8 @@ Deprecated release surface (removed)
 
 ## Current Release Snapshot
 
-- Current release tag: `v9.26.2`
-- Current release commit: `7578745ad309db7bb660dfa076ea0244713b77ad`
-- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2`
-- Published Windows assets:
-  - `Niko-Studio_9.26.2_x64-setup.exe`
-  - `Niko-Studio_9.26.2_x64_en-US.msi`
-  - `Niko-Studio_9.26.2_x64_zh-CN.msi`
+- Current release tag: `v9.27.0`
+- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v9.27.0`
 - Current local sign-off status: `GO` on current HEAD
 
 如果你只想下载当前正式发布版，直接进入 GitHub Releases 页面获取 Windows 安装包。
@@ -345,4 +340,4 @@ Built on concepts from:
 
 ---
 
-*Version 9.26.2 Platform Edition | Updated: 2026-05-20*
+*Version 9.27.0 Platform Edition | Updated: 2026-05-26*

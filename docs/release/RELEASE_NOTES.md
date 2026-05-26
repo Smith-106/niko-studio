@@ -1,5 +1,35 @@
 # RELEASE NOTES
 
+## v9.27.0
+
+### 发布结果
+
+- GitHub release：`https://github.com/Smith-106/niko-studio/releases/tag/v9.27.0`
+- Release tag：`v9.27.0`
+- 当前本地发布结论：`GO`
+
+### 本次新增
+
+- **PhaseOrchestrator + Workflow Gate**: 阶段门控系统，支持 soft/hard gate 评估、fix-retry 耗尽自动强制完成
+- **DelegateBroker**: 委托任务代理，支持任务分发、状态追踪、结果收集
+- **WorkflowEventRelay (WebSocket)**: 实时状态推送，客户端可订阅事件类型过滤，支持 ping/pong 心跳
+- **Hook 实战接入**: HookRegistry + HookType 扩展，WorkflowEngine 构造器注入
+- **Lazy 工具类**: 懒加载工具类，减少启动时间
+- **HybridSearch 不可变策略**: 搜索结果不可变，防止意外修改
+- **叙事可视化 MVP**: TimelineView (zoom+filter)、TensionCurveView、CharacterGraphView (interactive)
+- **钩子与断章检测**: Hook 强度评分、Cliffhanger 类型分类、Reader-state 模型
+- **角色声纹**: Voice fingerprint 一致性分析
+- **情感弧线**: Emotion trajectory + Show/Tell ratio + immersion scoring
+- **悬疑分析**: 4 subtype (honkaku/social faction/hardboiled/thriller) + deduction chain
+- **25 项性能优化**: logger 统一、WorkflowEngine 双写、store 安全写入、模块 console 清理等
+
+### Verification
+
+- 47 tests pass (18 phase-orchestrator + 11 delegate-broker + 9 gateway-ws + 9 lazy)
+- M24 P1 UAT: 12/12 pass, confidence 0.97
+- M24 P2 review: PASS
+- No regressions
+
 ## v9.26.2
 
 ### 发布结果

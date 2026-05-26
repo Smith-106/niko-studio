@@ -338,4 +338,28 @@ GET  /wiki/page/:id</code></pre>
   <li>若与旧条目冲突，应提示核对而不是静默覆盖。</li>
 </ul>
   `,
+  'narrative-visualization': `
+<h2>叙事可视化</h2>
+<p>叙事可视化提供三种交互式图表，帮助作者从视觉角度理解故事的节奏、张力变化和角色关系网络。</p>
+<h2>可视化组件</h2>
+<ul>
+  <li><strong>TimelineView</strong> — 故事时间线视图，支持缩放和事件过滤。按时间轴展示章节推进、事件分布和节奏波动。</li>
+  <li><strong>TensionCurveView</strong> — 张力曲线视图，展示情绪和冲突强度的起伏轨迹。帮助判断高潮是否有足够铺垫，低谷是否过长。</li>
+  <li><strong>CharacterGraphView</strong> — 角色关系图谱视图，支持交互式节点点击、关系过滤和角色信息面板。展示角色间的关系类型和强度。</li>
+</ul>
+<h2>使用场景</h2>
+<ul>
+  <li>检查整本书的节奏分布：是否有中段塌陷、高潮堆叠或尾部乏力。</li>
+  <li>定位张力断点：曲线平缓段往往对应需要增加冲突或悬念的区域。</li>
+  <li>可视化角色关系网络：确认核心角色之间的连接是否足够紧密，边缘角色是否孤立。</li>
+</ul>
+<h2>数据来源</h2>
+<p>可视化图表的数据来自 Gateway 的叙事分析结果。TimelineView 使用章节事件数据，TensionCurveView 使用情感弧线分析结果，CharacterGraphView 使用角色关系图谱。</p>
+<h2>Related Endpoints</h2>
+<ul>
+  <li><a href="/api/writing-api">写作 API</a>：触发叙事分析获取可视化数据。</li>
+  <li><a href="/writing/emotional-arc">情感弧线</a>：张力曲线的分析基础。</li>
+  <li><a href="/graph/character-relationships">角色关系</a>：角色图谱的分析基础。</li>
+</ul>
+  `,
 };

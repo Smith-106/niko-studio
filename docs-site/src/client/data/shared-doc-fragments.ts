@@ -12,7 +12,7 @@ export const outputFieldGlossaryMiniSection = `
 
 export const releaseSnapshotMiniSection = `
 <h2>当前发布快照</h2>
-<p><strong>当前推荐版本：</strong><code>v9.26.2</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2">Niko-Studio v9.26.2</a>。</p>
+<p><strong>当前推荐版本：</strong><code>v9.27.0</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.27.0">Niko-Studio v9.27.0</a>。</p>
 <table>
   <thead><tr><th>资产</th><th>用途</th><th>说明</th></tr></thead>
   <tbody>

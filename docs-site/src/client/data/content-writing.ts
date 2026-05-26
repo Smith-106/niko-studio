@@ -168,10 +168,81 @@ const baseWritingContent: Record<string, string> = {
   <li><a href="/guides/outline-to-final-manuscript">从大纲到完稿</a>：放回整本书长链路里看。</li>
 </ul>
   `,
+  'hook-cliffhanger': `
+<h2>钩子与断章检测</h2>
+<p>自动检测章节开头的钩子强度和结尾的断章效果，帮助判断读者是否有足够动力继续阅读。</p>
+<h2>检测维度</h2>
+<ul>
+  <li><strong>钩子强度</strong> — 开头是否在 3 段内建立冲突、悬念或信息差。</li>
+  <li><strong>断章类型</strong> — 悬念断章、情感断章、信息断章、行动断章等分类。</li>
+  <li><strong>读者状态模型</strong> — 追踪读者在每个章节末尾的期待、紧张和好奇程度。</li>
+</ul>
+<h2>使用建议</h2>
+<p>适合在章节完成后检查开头是否"有钩子"、结尾是否"留悬念"。如果连续多章钩子评分低，可能需要重新审视叙事节奏。</p>
+<h2>Related Endpoints</h2>
+<ul>
+  <li><a href="/api/writing-api">写作 API</a>：触发钩子与断章分析。</li>
+  <li><a href="/writing/craft-analysis">写作技法分析</a>：查看更完整的技法维度分析。</li>
+</ul>
+  `,
+  'voice-fingerprint': `
+<h2>角色声纹</h2>
+<p>分析每个角色的语言特征，判断角色之间是否有足够的语音区分度，以及同一角色的语言是否前后一致。</p>
+<h2>分析指标</h2>
+<ul>
+  <li><strong>词汇偏好</strong> — 角色常用词、句长、语气词分布。</li>
+  <li><strong>句式模式</strong> — 长句/短句、陈述/疑问/感叹比例。</li>
+  <li><strong>一致性</strong> — 同一角色在不同章节的语言是否保持稳定。</li>
+  <li><strong>区分度</strong> — 不同角色之间是否可以仅凭语言风格区分。</li>
+</ul>
+<h2>案例：主角和配角说话像同一个人</h2>
+<p>声纹分析会给出低区分度信号，并建议拉开表达习惯差异：例如让冲动型角色用更短句、更直给，让克制型角色保留迟疑和补充解释。</p>
+<h2>Related Endpoints</h2>
+<ul>
+  <li><a href="/api/writing-api">写作 API</a>：触发声纹分析。</li>
+  <li><a href="/writing/dialogue-analysis">对话分析</a>：更细粒度的对话质量评估。</li>
+</ul>
+  `,
+  'emotional-arc': `
+<h2>情感弧线分析</h2>
+<p>追踪文本中情绪的起伏轨迹，评估情感推进是否有效、高潮是否有足够铺垫、结尾是否兑现了情绪承诺。</p>
+<h2>分析维度</h2>
+<ul>
+  <li><strong>情绪轨迹</strong> — 逐段情绪标注和趋势线。</li>
+  <li><strong>Show/Tell 比率</strong> — 情感是直接展示还是间接叙述。</li>
+  <li><strong>沉浸感评分</strong> — 读者是否被拉入场景，还是被叙述推远。</li>
+  <li><strong>高潮兑现</strong> — 前期铺垫的情绪承诺是否在高潮点兑现。</li>
+</ul>
+<h2>使用建议</h2>
+<p>情感弧线适合在章节或全书完成后使用，用来检查情绪推进是否有"塌陷"或"跳变"。</p>
+<h2>Related Endpoints</h2>
+<ul>
+  <li><a href="/api/writing-api">写作 API</a>：触发情感弧线分析。</li>
+  <li><a href="/writing/craft-analysis">写作技法分析</a>：查看完整的技法维度。</li>
+</ul>
+  `,
+  'mystery-analysis': `
+<h2>悬疑分析</h2>
+<p>针对悬疑/推理类文本，分析推理链完整性、线索公平性和类型归属。</p>
+<h2>分析维度</h2>
+<ul>
+  <li><strong>推理链</strong> — 线索→推理→结论的链路是否完整、是否有跳跃。</li>
+  <li><strong>类型分类</strong> — 本格推理、社会派、硬汉派、惊悚四种悬疑子类型。</li>
+  <li><strong>线索公平性</strong> — 读者是否有足够信息推理出真相（本格要求）。</li>
+  <li><strong>设局/解局节奏</strong> — 悬念设置与揭示的节奏是否合理。</li>
+</ul>
+<h2>适用边界</h2>
+<p>悬疑分析最适合有明确推理结构的文本。纯文学或情感向文本的推理链分析结果可能不具参考价值。</p>
+<h2>Related Endpoints</h2>
+<ul>
+  <li><a href="/api/writing-api">写作 API</a>：触发悬疑分析。</li>
+  <li><a href="/writing/narrative-structure">叙事结构</a>：查看更通用的结构识别。</li>
+</ul>
+  `,
 };
 
 export const writingContent = appendSectionToPages(
   baseWritingContent,
-  ['craft-analysis', 'scene-quality', 'dialogue-analysis', 'writing-stream'],
+  ['craft-analysis', 'scene-quality', 'dialogue-analysis', 'writing-stream', 'hook-cliffhanger', 'voice-fingerprint', 'emotional-arc', 'mystery-analysis'],
   outputFieldGlossaryMiniSection
 );

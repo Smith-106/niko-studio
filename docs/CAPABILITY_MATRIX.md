@@ -30,6 +30,17 @@
 | Self-Evolving Writing (CAP-002)         |   ✅    | `src-ts/learning/self-evolving-agent.ts`, `src-ts/learning/rule-evolver.ts` | RuleEvolver + PreferenceTracker + StyleDriftDetector; Generator-Reflector-Curator loop.        |
 | Reading Learning (CAP-003)              |   ✅    | `src-ts/learning/reading-pipeline.ts`, `src-ts/learning/spoiler-gate.ts` | SessionTracker → SpoilerGate (chapter-gated) → Light/HeavyExtractor → InsightDistiller (6-stage). |
 | Learning Orchestrator                   |   ✅    | `src-ts/learning/learning-orchestrator.ts` | Unified pipeline orchestration; register/enable/disable by capability.                          |
+| PhaseOrchestrator + Workflow Gate       |   ✅    | `src-ts/workflow/phase-orchestrator.ts` | Soft/hard gate evaluation; fix-retry exhaustion auto-force-complete.                            |
+| DelegateBroker                          |   ✅    | `src-ts/workflow/delegate-broker.ts` | Task delegation, status tracking, result collection.                                            |
+| WorkflowEventRelay (WebSocket)          |   ✅    | `src-ts/mcp/services/gateway-ws.ts` | Real-time status push; event type filtering; ping/pong heartbeat.                               |
+| HookRegistry + HookType                 |   ✅    | `src-ts/workflow/hook-registry.ts` | WorkflowEngine constructor injection; extensible hook types.                                     |
+| Narrative Visualization (MVP)           |   ✅    | `desktop/src/components/narrative/` | TimelineView (zoom+filter), TensionCurveView, CharacterGraphView (interactive).                 |
+| Hook/Cliffhanger Detection              |   ✅    | `src-ts/narrative/hook-cliffhanger-detector.ts` | Hook strength scoring, cliffhanger type classification, reader-state model.                     |
+| Voice Fingerprint                       |   ✅    | `src-ts/narrative/voice-fingerprint.ts` | Character voice consistency analysis; decoration markers.                                        |
+| Emotional Arc Analysis                  |   ✅    | `src-ts/narrative/emotional-arc.ts` | Emotion trajectory tracking; show/tell ratio; immersion scoring.                                 |
+| Dialogue Quality Analyzer               |   ✅    | `src-ts/narrative/dialogue-analyzer.ts` | 5-dimension dialogue quality: naturalness, distinctness, subtext, functionality, rhythm.        |
+| Scene Quality Assessment                |   ✅    | `src-ts/narrative/scene-quality.ts` | 5-dimension scene quality: pacing, atmosphere, conflict density, info efficiency, change.        |
+| Mystery Subtype Classification           |   ✅    | `src-ts/narrative/mystery-classifier.ts` | 4 types: honkaku, social faction, hardboiled, thriller; deduction chain analysis.               |
 
 ## 2. External Integration Adapters
 

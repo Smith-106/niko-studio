@@ -15,6 +15,7 @@ const tintColors: Record<string, string> = {
   agent: 'bg-[var(--color-tint-purple)]',
   memory: 'bg-[var(--color-tint-gray)]',
   sync: 'bg-[var(--color-tint-yellow)]',
+  'narrative-viz': 'bg-[var(--color-tint-purple)]',
 };
 
 const quickLinks = [
