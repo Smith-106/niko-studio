@@ -17,6 +17,7 @@ import { promisify } from 'util';
 import type { LLMService } from '../protocols/llm.js';
 import type { IWorkflowStateStore } from './iworkflow-state-store.js';
 import { HookRegistry, HookType, createHookContext } from '../hooks/writing-hooks.js';
+import { PhaseOrchestrator, TeamPhase, type PhaseGateInput } from './team/index.js';
 
 import { WorkflowLevel, WorkflowDecision, ensureContractPayload } from './types.js';
 import {
@@ -1262,6 +1263,19 @@ export class WorkflowEngine {
       await this._hooks.execute(HookType.AFTER_WORKFLOW_STEP, hookCtx);
     }
 
+    // Gate check after step execution
+    if (this._phaseOrch && step.name === 'evaluate') {
+      const gateInput = this._buildGateInput(plan);
+      const transition = this._phaseOrch.advance(gateInput);
+      if (!transition.success && transition.gateReasons.length > 0) {
+        _log.warn('Phase gate blocked step advancement', {
+          step: step.name,
+          reasons: transition.gateReasons,
+          overridable: !transition.forcedComplete,
+        });
+      }
+    }
+
     return result;
   }
 
@@ -1806,5 +1820,16 @@ export class WorkflowEngine {
   private _levelFromLabel(label: string): number {
     const map: Record<string, number> = { 'L1': 1, 'L2': 2, 'L3': 3, 'L4': 4, 'L5': 5 };
     return map[label] ?? 3;
+  }
+
+  private _buildGateInput(plan: WorkflowPlan): PhaseGateInput {
+    const evalOutput = this._getStepOutput(plan, 'evaluate');
+    const reviewVerdict = (evalOutput?.verdict as string) ?? (evalOutput?.decision as string);
+    return {
+      review: {
+        verdict: reviewVerdict,
+        findings_count: evalOutput ? Object.keys(evalOutput).length : 0,
+      },
+    };
   }
 }
