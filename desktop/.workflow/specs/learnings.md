@@ -1,3 +1,15 @@
+---
+title: "Learnings"
+readMode: optional
+priority: medium
+category: learning
+keywords:
+  - bug
+  - lesson
+  - gotcha
+  - learning
+---
+
 # Project Learnings
 
 <spec-entry category="learning" keywords="a11y,aria-hidden,tabIndex,wcag,focusable" date="2026-05-02" source="execute/EXC-003/TASK-001">

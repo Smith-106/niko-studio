@@ -1,16 +1,16 @@
 {
   "version": 2,
-  "generatedAt": 1777789783744,
+  "generatedAt": 1779700274476,
   "entries": [
     {
       "id": "project-project",
       "type": "project",
       "title": "Project: Niko-Studio Desktop",
-      "summary": "## What This Is",
+      "summary": "# Project: Niko-Studio Desktop",
       "tags": [],
       "status": "active",
-      "created": "2026-05-02T18:44:28.948Z",
-      "updated": "2026-05-02T18:44:28.950Z",
+      "created": "2026-05-24T19:25:47.725Z",
+      "updated": "2026-05-24T19:25:47.725Z",
       "scope": null,
       "category": null,
       "createdBy": null,
@@ -25,12 +25,12 @@
     {
       "id": "roadmap-roadmap",
       "type": "roadmap",
-      "title": "Roadmap: Niko-Studio Desktop — M2: Intelligence & Extensibility",
-      "summary": "## Overview",
+      "title": "Roadmap: Niko-Studio Desktop — M9: Intelligence & Workflows",
+      "summary": "# Roadmap: Niko-Studio Desktop — M9: Intelligence & Workflows",
       "tags": [],
       "status": "active",
-      "created": "2026-05-02T18:43:46.811Z",
-      "updated": "2026-05-02T18:43:46.811Z",
+      "created": "2026-05-24T19:25:47.725Z",
+      "updated": "2026-05-24T19:25:47.725Z",
       "scope": null,
       "category": null,
       "createdBy": null,
@@ -43,16 +43,101 @@
       }
     },
     {
+      "id": "spec:project:architecture-constraints",
+      "type": "spec",
+      "title": "Architecture Constraints",
+      "summary": "# Architecture Constraints",
+      "tags": [
+        "architecture",
+        "module",
+        "layer",
+        "boundary",
+        "dependency",
+        "structure"
+      ],
+      "status": "active",
+      "created": "2026-05-24T20:18:18.012Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "arch",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions",
+      "type": "spec",
+      "title": "Coding Conventions",
+      "summary": "# Coding Conventions",
+      "tags": [
+        "style",
+        "naming",
+        "import",
+        "pattern",
+        "convention",
+        "formatting"
+      ],
+      "status": "active",
+      "created": "2026-05-24T20:18:18.012Z",
+      "updated": "2026-05-24T20:18:18.012Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:debug-notes",
+      "type": "spec",
+      "title": "Debug Notes",
+      "summary": "# Debug Notes",
+      "tags": [
+        "debug",
+        "issue",
+        "workaround",
+        "root-cause",
+        "gotcha"
+      ],
+      "status": "active",
+      "created": "2026-05-24T20:18:18.015Z",
+      "updated": "2026-05-24T20:18:18.015Z",
+      "scope": "project",
+      "category": "debug",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/debug-notes.md"
+      }
+    },
+    {
       "id": "spec:project:learnings",
       "type": "spec",
-      "title": "Project Learnings",
-      "summary": "<spec-entry category=\"learning\" keywords=\"a11y,aria-hidden,tabIndex,wcag,focusable\" date=\"2026-05-02\" source=\"execute/EXC-003/TASK-001\"> Never use `aria-hidden` on keyboard-focusable interactive elements. Use `tabIndex={condition ? -1 : und",
-      "tags": [],
+      "title": "Learnings",
+      "summary": "# Project Learnings",
+      "tags": [
+        "bug",
+        "lesson",
+        "gotcha",
+        "learning"
+      ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
-      "category": null,
+      "category": "learning",
       "createdBy": null,
       "sourceRef": null,
       "parent": null,
@@ -75,8 +160,8 @@
         "focusable"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -101,8 +186,8 @@
         "announcement"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -127,8 +212,8 @@
         "race-condition"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -152,8 +237,8 @@
         "file-path"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "debug",
       "createdBy": null,
@@ -177,8 +262,8 @@
         "file-write"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "debug",
       "createdBy": null,
@@ -203,8 +288,8 @@
         "test"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "coding",
       "createdBy": null,
@@ -228,8 +313,8 @@
         "removed-props"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "debug",
       "createdBy": null,
@@ -253,8 +338,8 @@
         "plan-vs-reality"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "coding",
       "createdBy": null,
@@ -279,8 +364,8 @@
         "inline-helper"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "coding",
       "createdBy": null,
@@ -305,8 +390,8 @@
         "draft-restore"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "debug",
       "createdBy": null,
@@ -331,8 +416,8 @@
         "conditional-render"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "coding",
       "createdBy": null,
@@ -357,8 +442,8 @@
         "timer"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -383,8 +468,8 @@
         "MERGE"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -408,8 +493,8 @@
         "graph-crud"
       ],
       "status": "active",
-      "created": "2026-05-02T18:27:47.546Z",
-      "updated": "2026-05-02T18:27:47.547Z",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -422,18 +507,686 @@
       }
     },
     {
-      "id": "issue-ISS-20260502-001",
+      "id": "spec:project:learnings-015",
+      "type": "spec",
+      "title": "Sidecar vitest's globalSetup references `tests/globalTeardown.ts`, but the compiled `src-tauri/bin/sidecar/` tree may ship without it (the canonical copy lives in `src-ts/tests/`). When `npx vitest run` from `src-tauri/bin/sidecar/` fails to start with a missing-globalSetup error, recreate the shim by copying from `src-ts/tests/globalTeardown.ts`. A sidecar rebuild can re-introduce the gap.",
+      "summary": "Sidecar vitest's globalSetup references `tests/globalTeardown.ts`, but the compiled `src-tauri/bin/sidecar/` tree may ship without it (the canonical copy lives in `src-ts/tests/`). When `npx vitest run` from `src-tauri/bin/sidecar/` fails t",
+      "tags": [
+        "vitest",
+        "globalSetup",
+        "sidecar",
+        "compiled-tree",
+        "globalTeardown"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-016",
+      "type": "spec",
+      "title": "Inject optional services (VectorSearch) into core components (GraphManager) via method injection (`setVectorSearch()`) rather than constructor coupling. Embedding failures in `_embedEntity` are fire-and-forget — graph CRUD operations continue without blocking on embedding. When VectorSearch is unavailable, all graph operations degrade to non-embedded mode transparently. This pattern lets heavy ML dependencies be optional without complicating core data paths.",
+      "summary": "Inject optional services (VectorSearch) into core components (GraphManager) via method injection (`setVectorSearch()`) rather than constructor coupling. Embedding failures in `_embedEntity` are fire-and-forget — graph CRUD operations contin",
+      "tags": [
+        "vector-search",
+        "DI",
+        "embedding",
+        "fire-and-forget",
+        "graceful-degradation"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-017",
+      "type": "spec",
+      "title": "When upgrading search from keyword-only to hybrid (keyword + vector RRF fusion), keep the API shape identical (`searchEntities()` → ranked entity array) and make the search mode an internal implementation detail. Frontend consumers need zero changes. The async hybrid path falls back to keyword-only when VectorSearch is null, preserving existing behavior. This \"transparent backend upgrade\" pattern avoids breaking API contracts while adding capability.",
+      "summary": "When upgrading search from keyword-only to hybrid (keyword + vector RRF fusion), keep the API shape identical (`searchEntities()` → ranked entity array) and make the search mode an internal implementation detail. Frontend consumers need zer",
+      "tags": [
+        "hybrid-search",
+        "semantic-search",
+        "keyword-fallback",
+        "transparent-backend"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-018",
+      "type": "spec",
+      "title": "Build a reusable stress test harness (`createMockContainer`, `withTimeout`, `validateNoUnhandledRejections`, `assertSessionState`) before writing workflow-specific stress tests. The harness self-test catches harness bugs before stress tests depend on it. This DRY investment pays back when multiple test suites (L4, L5, future L6+) build on the same foundation without duplicating fixture/cleanup code.",
+      "summary": "Build a reusable stress test harness (`createMockContainer`, `withTimeout`, `validateNoUnhandledRejections`, `assertSessionState`) before writing workflow-specific stress tests. The harness self-test catches harness bugs before stress tests",
+      "tags": [
+        "stress-test",
+        "harness",
+        "reusable",
+        "mock-container",
+        "timeout-guard"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-019",
+      "type": "spec",
+      "title": "L4 Brainstorm's `generateArtifacts()` was sequential despite `max_parallel` config — a 37500ms baseline for 5 rounds. Fix: make `execute()` async with `generateArtifactsAsync` + `Promise.race` timeout per role, yielding 5x speedup to 7534ms. Root cause: the original loop iterated roles sequentially without honoring parallelism config. Always verify that parallelism configs are actually used in hot loops, not just documented.",
+      "summary": "L4 Brainstorm's `generateArtifacts()` was sequential despite `max_parallel` config — a 37500ms baseline for 5 rounds. Fix: make `execute()` async with `generateArtifactsAsync` + `Promise.race` timeout per role, yielding 5x speedup to 7534ms",
+      "tags": [
+        "parallelism",
+        "sequential-bottleneck",
+        "Promise.race",
+        "timeout",
+        "async-fix"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-020",
+      "type": "spec",
+      "title": "For integration tests involving optional ML dependencies (fastembed model), use two tiers: smoke test (unconditional, verifies DI wiring and interface contracts) + e2e test (env-gated, skips when model unavailable). The smoke test catches DI miswiring in CI; the e2e test proves the full pipeline when run in an environment with the model. This prevents false CI failures from missing optional dependencies while still validating integration contracts.",
+      "summary": "For integration tests involving optional ML dependencies (fastembed model), use two tiers: smoke test (unconditional, verifies DI wiring and interface contracts) + e2e test (env-gated, skips when model unavailable). The smoke test catches D",
+      "tags": [
+        "integration-test",
+        "smoke",
+        "e2e",
+        "env-gate",
+        "optional-dependency"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-021",
+      "type": "spec",
+      "title": "Track exact test counts at each phase boundary (Phase 1: 860/860 frontend baseline). At Phase 2, verify `baseline_match=true` with exact count comparison. Classify sidecar failures as pre-existing (verified via `git stash` at baseline commit + re-run) or environmental (missing LLM provider) rather than new regressions. This three-tier classification (baseline match / pre-existing / environmental) prevents false regression alarms during multi-phase milestones.",
+      "summary": "Track exact test counts at each phase boundary (Phase 1: 860/860 frontend baseline). At Phase 2, verify `baseline_match=true` with exact count comparison. Classify sidecar failures as pre-existing (verified via `git stash` at baseline commi",
+      "tags": [
+        "regression-baseline",
+        "test-count",
+        "phase-boundary",
+        "classification"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-022",
+      "type": "spec",
+      "title": "For MCP services wrapping manager classes not in the DI container (ForeshadowingManager, CharacterManager), use module-level singleton with lazy `getManager()` init. Pattern: `let instance = null; function getManager() { if (!instance) { instance = new ManagerClass(); } return instance; }`. This avoids import-time construction while keeping the service layer simple. Each service file exports async functions that call `getManager()` then delegate to the manager.",
+      "summary": "For MCP services wrapping manager classes not in the DI container (ForeshadowingManager, CharacterManager), use module-level singleton with lazy `getManager()` init. Pattern: `let instance = null; function getManager() { if (!instance) { in",
+      "tags": [
+        "service-singleton",
+        "lazy-init",
+        "MCP-endpoint",
+        "manager-pattern"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-023",
+      "type": "spec",
+      "title": "When a module requires a `store` interface (e.g., NarrativePatternDetector needing `getEntitiesByTypes()`), create a lightweight adapter that translates calls to the graph engine's `executeCypher()`. The adapter lives in the service layer, not the module itself, keeping the module's dependency on an abstract store interface while the service provides the concrete implementation. This allows the module to remain testable with mock stores.",
+      "summary": "When a module requires a `store` interface (e.g., NarrativePatternDetector needing `getEntitiesByTypes()`), create a lightweight adapter that translates calls to the graph engine's `executeCypher()`. The adapter lives in the service layer, ",
+      "tags": [
+        "store-adapter",
+        "Cypher",
+        "graph-engine",
+        "NarrativePatternDetector"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-024",
+      "type": "spec",
+      "title": "When adding per-module score breakdowns to an existing evaluation API, use additive fields (`module_scores?`) rather than replacing the existing aggregate scores. The dual transport pattern: existing `lock_score/style_score/logic_score` remain unchanged for backward compat, while `module_scores` is an optional addition. Frontend code checks for `module_scores` presence before rendering the breakdown. This lets existing consumers continue working without modification while new consumers opt into richer data.",
+      "summary": "When adding per-module score breakdowns to an existing evaluation API, use additive fields (`module_scores?`) rather than replacing the existing aggregate scores. The dual transport pattern: existing `lock_score/style_score/logic_score` rem",
+      "tags": [
+        "dual-transport",
+        "backward-compat",
+        "module-scores",
+        "additive-fields"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-025",
+      "type": "spec",
+      "title": "Deferred items from prior milestones may become inapplicable when the codebase evolves. Before implementing a deferred fix, verify the referenced code still exists. ISS-066 deferred `executeChain` interrupt edge case, but by M3 the function no longer exists in workflow.js. Similarly, F-001 referenced a `renameSkill` import that had already been removed. Always re-validate deferred items against current code rather than assuming they remain relevant.",
+      "summary": "Deferred items from prior milestones may become inapplicable when the codebase evolves. Before implementing a deferred fix, verify the referenced code still exists. ISS-066 deferred `executeChain` interrupt edge case, but by M3 the function",
+      "tags": [
+        "deferral-validation",
+        "codebase-evolution",
+        "stale-deferred",
+        "N/A-resolution"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-026",
+      "type": "spec",
+      "title": "When creating new CriticEngine evaluators, follow the BaseEvaluator pattern: extend BaseEvaluator, implement `evaluate(content)` returning `{ name, score, issues, suggestions, subscores }`, and use Chinese marker arrays for content analysis. Each evaluator gets a weight in CriticEngine's weights map (sum must equal 1.0). The `relatedSkill` property links evaluators to writing skills for the skill system. Weights are redistributed when adding evaluators — reduce existing weights proportionally.",
+      "summary": "When creating new CriticEngine evaluators, follow the BaseEvaluator pattern: extend BaseEvaluator, implement `evaluate(content)` returning `{ name, score, issues, suggestions, subscores }`, and use Chinese marker arrays for content analysis",
+      "tags": [
+        "evaluator-pattern",
+        "BaseEvaluator",
+        "weighted-subscores",
+        "Chinese-markers"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-027",
+      "type": "spec",
+      "title": "For PDF export in web apps, use `window.print()` with dedicated `@media print` CSS instead of external libraries (jsPDF, puppeteer). The print CSS hides all UI except target content (`.niko-editor-content .ProseMirror`), sets print-optimized typography (12pt font, 1.6 line-height, break-inside/after rules), and delegates PDF generation to the browser's native print dialog. Zero dependencies, full platform support.",
+      "summary": "For PDF export in web apps, use `window.print()` with dedicated `@media print` CSS instead of external libraries (jsPDF, puppeteer). The print CSS hides all UI except target content (`.niko-editor-content .ProseMirror`), sets print-optimize",
+      "tags": [
+        "pdf-export",
+        "window.print",
+        "media-print",
+        "css",
+        "browser-native"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "learning",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-028",
+      "type": "spec",
+      "title": "For testing file download functions that create Blob URLs and trigger anchor clicks, use a `captureDownload()` helper: `vi.spyOn(document.body, 'appendChild').mockImplementation((node) => { calls.push({ filename: (node as HTMLAnchorElement).download }); return node })`. Also stub `URL.createObjectURL`/`revokeObjectURL` at module level. This avoids jsdom Blob/navigation issues while verifying correct filename and MIME type.",
+      "summary": "For testing file download functions that create Blob URLs and trigger anchor clicks, use a `captureDownload()` helper: `vi.spyOn(document.body, 'appendChild').mockImplementation((node) => { calls.push({ filename: (node as HTMLAnchorElement)",
+      "tags": [
+        "test-helper",
+        "blob-download",
+        "captureDownload",
+        "mock-anchor",
+        "file-export"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-029",
+      "type": "spec",
+      "title": "Migration from localStorage to filesystem must be idempotent — re-running the migration should be a no-op if data already exists on disk. Store a migration flag and keep a backup of the original localStorage data for rollback. Test with both fresh-install and already-migrated scenarios.",
+      "summary": "Migration from localStorage to filesystem must be idempotent — re-running the migration should be a no-op if data already exists on disk. Store a migration flag and keep a backup of the original localStorage data for rollback. Test with bot",
+      "tags": [
+        "idempotent-migration",
+        "localStorage",
+        "filesystem",
+        "backup-restore",
+        "migration-service"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-030",
+      "type": "spec",
+      "title": "TipTap editor content must be persisted as JSON (ProseMirror doc) not HTML — this preserves node attributes, marks, and custom extension data that HTML serialization loses. The JSON round-trip (editor→store→disk→store→editor) must be lossless. Test by creating content with all extension types and verifying JSON equality after round-trip.",
+      "summary": "TipTap editor content must be persisted as JSON (ProseMirror doc) not HTML — this preserves node attributes, marks, and custom extension data that HTML serialization loses. The JSON round-trip (editor→store→disk→store→editor) must be lossle",
+      "tags": [
+        "tiptap",
+        "json-persistence",
+        "end-to-end",
+        "editor-state",
+        "prosemirror"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-031",
+      "type": "spec",
+      "title": "Use the `diff` npm package for Myers diff in version history — it provides both character-level and line-level diffing with minimal dependencies. Store snapshots as full content (not deltas) to avoid reconstruction complexity, but display diffs by comparing consecutive snapshots. This trades disk space for simplicity and reliability.",
+      "summary": "Use the `diff` npm package for Myers diff in version history — it provides both character-level and line-level diffing with minimal dependencies. Store snapshots as full content (not deltas) to avoid reconstruction complexity, but display d",
+      "tags": [
+        "myers-diff",
+        "version-history",
+        "snapshot",
+        "diff-algorithm"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-032",
+      "type": "spec",
+      "title": "When replacing a legacy data layer (useDraftCache) with a new service (projectFileService), use an adapter module that translates between the two APIs. The adapter keeps the editor component interface unchanged while routing reads/writes through the new service. This enables incremental migration without touching every consumer.",
+      "summary": "When replacing a legacy data layer (useDraftCache) with a new service (projectFileService), use an adapter module that translates between the two APIs. The adapter keeps the editor component interface unchanged while routing reads/writes th",
+      "tags": [
+        "adapter-pattern",
+        "chapter-adapter",
+        "editor-wiring",
+        "useDraftCache-replacement"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "architecture",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-033",
+      "type": "spec",
+      "title": "New UI panels (sidebar tree, history rail) should default to collapsed. Users discover features progressively — panels open on demand and don't clutter the initial writing experience. Store panel state in Zustand so it persists within the session but resets on reload.",
+      "summary": "New UI panels (sidebar tree, history rail) should default to collapsed. Users discover features progressively — panels open on demand and don't clutter the initial writing experience. Store panel state in Zustand so it persists within the s",
+      "tags": [
+        "collapsible-ui",
+        "progressive-disclosure",
+        "sidebar-defaults",
+        "history-panel"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "ux",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-034",
+      "type": "spec",
+      "title": "DOCX export with docx.js requires a recursive nodeToDocx converter that maps each TipTap node type to the corresponding docx.js construct (Paragraph, TextRun, Table, etc.). Style mapping tables should be data-driven (a lookup object), not switch/case — this makes adding new node types trivial. Handle unknown nodes by falling through to their children.",
+      "summary": "DOCX export with docx.js requires a recursive nodeToDocx converter that maps each TipTap node type to the corresponding docx.js construct (Paragraph, TextRun, Table, etc.). Style mapping tables should be data-driven (a lookup object), not s",
+      "tags": [
+        "docx-export",
+        "nodeToDocx",
+        "recursive-converter",
+        "style-mapping",
+        "docx-js"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-035",
+      "type": "spec",
+      "title": "KaTeX must be dynamically imported (`import('katex')`) in TipTap math extensions to avoid bundling the full KaTeX library when math is never used. The MathView component loads KaTeX only on mount and shows a fallback during loading. This keeps initial bundle size down while supporting math rendering.",
+      "summary": "KaTeX must be dynamically imported (`import('katex')`) in TipTap math extensions to avoid bundling the full KaTeX library when math is never used. The MathView component loads KaTeX only on mount and shows a fallback during loading. This ke",
+      "tags": [
+        "katex",
+        "dynamic-import",
+        "math-extension",
+        "tiptap",
+        "ssr-compat"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-036",
+      "type": "spec",
+      "title": "Slash command menu items should be registered as a flat array of command objects, each with `title`, `description`, `command` (editor chain method), and optional `icon`. New extensions add their commands by pushing to this array during extension initialization. This avoids hardcoding commands and makes extensions self-documenting.",
+      "summary": "Slash command menu items should be registered as a flat array of command objects, each with `title`, `description`, `command` (editor chain method), and optional `icon`. New extensions add their commands by pushing to this array during exte",
+      "tags": [
+        "slash-command",
+        "extensibility",
+        "tiptap",
+        "command-menu",
+        "plugin-registration"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.813Z",
+      "updated": "2026-05-24T20:18:18.013Z",
+      "scope": "project",
+      "category": "architecture",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:quality-rules",
+      "type": "spec",
+      "title": "Quality Rules",
+      "summary": "# Quality Rules",
+      "tags": [
+        "quality",
+        "lint",
+        "rule",
+        "enforcement"
+      ],
+      "status": "active",
+      "created": "2026-05-24T20:18:18.015Z",
+      "updated": "2026-05-24T20:18:18.015Z",
+      "scope": "project",
+      "category": "review",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      }
+    },
+    {
+      "id": "spec:project:review-standards",
+      "type": "spec",
+      "title": "Review Standards",
+      "summary": "# Review Standards",
+      "tags": [
+        "review",
+        "checklist",
+        "gate",
+        "approval",
+        "standard"
+      ],
+      "status": "active",
+      "created": "2026-05-24T20:18:18.016Z",
+      "updated": "2026-05-24T20:18:18.016Z",
+      "scope": "project",
+      "category": "review",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/review-standards.md"
+      }
+    },
+    {
+      "id": "spec:project:test-conventions",
+      "type": "spec",
+      "title": "Test Conventions",
+      "summary": "# Test Conventions",
+      "tags": [
+        "test",
+        "coverage",
+        "mock",
+        "fixture",
+        "assertion",
+        "framework"
+      ],
+      "status": "active",
+      "created": "2026-05-24T20:18:18.015Z",
+      "updated": "2026-05-24T20:18:18.015Z",
+      "scope": "project",
+      "category": "test",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/test-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:ui-conventions",
+      "type": "spec",
+      "title": "UI Conventions",
+      "summary": "# UI Conventions",
+      "tags": [
+        "ui",
+        "design",
+        "color",
+        "typography",
+        "layout",
+        "animation",
+        "component"
+      ],
+      "status": "active",
+      "created": "2026-05-24T20:18:18.016Z",
+      "updated": "2026-05-24T20:18:18.016Z",
+      "scope": "project",
+      "category": "ui",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/ui-conventions.md"
+      }
+    },
+    {
+      "id": "issue-DEF-M3-001",
       "type": "issue",
-      "title": "[correctness] useEffect overwrites in-progress input on conversation switch",
-      "summary": "useEffect(() => { setInput(persistedText) }, [persistedText]) fires whenever conversationId changes, overwriting any text the user has started typing before the async state update completes.",
+      "title": "Narrative pattern → evaluator integration",
+      "summary": "F4 pattern detection feeding into F1 evaluator scoring (pattern-aware evaluation). Requires F4 to ship first.",
       "tags": [],
-      "status": "completed",
-      "created": "2026-05-02T00:00:00.000Z",
-      "updated": "2026-05-02T00:00:00.000Z",
+      "status": "archived",
+      "created": "2026-05-03T13:30:00.000Z",
+      "updated": "1970-01-01T00:00:00.000Z",
       "scope": null,
       "category": null,
       "createdBy": null,
-      "sourceRef": "ISS-20260502-001",
+      "sourceRef": "DEF-M3-001",
       "parent": null,
       "related": [],
       "source": {
@@ -443,18 +1196,18 @@
       }
     },
     {
-      "id": "issue-ISS-20260502-002",
+      "id": "issue-DEF-M3-002",
       "type": "issue",
-      "title": "[correctness] clearDraft called before send confirmation creates data loss on network failure",
-      "summary": "clearDraft() is called optimistically at send time. If the send fails (network error, rate limit), the draft is already gone from localStorage.",
+      "title": "Character-foreshadow cross-linking",
+      "summary": "Characters linked to foreshadowing events via graph relations. F2 and F6 ship independently; cross-linking is a natural follow-up.",
       "tags": [],
-      "status": "draft",
-      "created": "2026-05-02T00:00:00.000Z",
-      "updated": "2026-05-02T00:00:00.000Z",
+      "status": "archived",
+      "created": "2026-05-03T13:30:00.000Z",
+      "updated": "1970-01-01T00:00:00.000Z",
       "scope": null,
       "category": null,
       "createdBy": null,
-      "sourceRef": "ISS-20260502-002",
+      "sourceRef": "DEF-M3-002",
       "parent": null,
       "related": [],
       "source": {
@@ -464,18 +1217,18 @@
       }
     },
     {
-      "id": "issue-ISS-20260502-003",
+      "id": "issue-DEF-M3-003",
       "type": "issue",
-      "title": "[correctness] onOpenKnowledgePanel button always rendered when prop is undefined",
-      "summary": "BookmarkPlus button renders unconditionally. When onOpenKnowledgePanel is undefined, clicking it calls undefined(). Inconsistent with Trash2/Copy which have conditional render guards.",
+      "title": "HybridSearch pattern-based search",
+      "summary": "Using detected narrative patterns as search dimensions in HybridSearch. Requires F4 to ship first.",
       "tags": [],
-      "status": "completed",
-      "created": "2026-05-02T00:00:00.000Z",
-      "updated": "2026-05-02T00:00:00.000Z",
+      "status": "archived",
+      "created": "2026-05-03T13:30:00.000Z",
+      "updated": "1970-01-01T00:00:00.000Z",
       "scope": null,
       "category": null,
       "createdBy": null,
-      "sourceRef": "ISS-20260502-003",
+      "sourceRef": "DEF-M3-003",
       "parent": null,
       "related": [],
       "source": {
@@ -485,18 +1238,18 @@
       }
     },
     {
-      "id": "issue-ISS-20260502-004",
+      "id": "issue-DEF-M3-004",
       "type": "issue",
-      "title": "[performance] persist() called synchronously on every keystroke",
-      "summary": "localStorage.setItem called synchronously on every keypress via onInputChange handler. Blocks main thread; measurable latency on lower-end hardware for long drafts.",
+      "title": "Writing session analytics dashboard",
+      "summary": "Session clustering visualization (timeline heatmap, session similarity matrix). Lower priority than feature exposure.",
       "tags": [],
-      "status": "completed",
-      "created": "2026-05-02T00:00:00.000Z",
-      "updated": "2026-05-02T00:00:00.000Z",
+      "status": "archived",
+      "created": "2026-05-03T13:30:00.000Z",
+      "updated": "1970-01-01T00:00:00.000Z",
       "scope": null,
       "category": null,
       "createdBy": null,
-      "sourceRef": "ISS-20260502-004",
+      "sourceRef": "DEF-M3-004",
       "parent": null,
       "related": [],
       "source": {
@@ -506,18 +1259,18 @@
       }
     },
     {
-      "id": "issue-ISS-20260502-005",
+      "id": "issue-DEF-M3-005",
       "type": "issue",
-      "title": "[performance] onInputChange inline arrow recreated on every render",
-      "summary": "Inline arrow (v) => { setInput(v); persist(v) } is a new reference on each ChatArea render, defeating ChatAreaComposer memoization and causing unnecessary re-renders.",
+      "title": "Chinese-novelist-specific features",
+      "summary": "Genre convention detection, tone analysis, classical Chinese style evaluation. Market research needed to validate.",
       "tags": [],
-      "status": "completed",
-      "created": "2026-05-02T00:00:00.000Z",
-      "updated": "2026-05-02T00:00:00.000Z",
+      "status": "archived",
+      "created": "2026-05-03T13:30:00.000Z",
+      "updated": "1970-01-01T00:00:00.000Z",
       "scope": null,
       "category": null,
       "createdBy": null,
-      "sourceRef": "ISS-20260502-005",
+      "sourceRef": "DEF-M3-005",
       "parent": null,
       "related": [],
       "source": {
@@ -527,18 +1280,18 @@
       }
     },
     {
-      "id": "issue-ISS-20260502-006",
+      "id": "issue-DEF-M3-006",
       "type": "issue",
-      "title": "[architecture] Draft persistence logic mixed into ChatArea UI component",
-      "summary": "useDraftCache consumed directly in ChatArea couples persistence concern to UI layer. Draft lifecycle (when to persist, when to clear) scattered through ChatArea's render logic.",
+      "title": "Evaluator customization",
+      "summary": "User-configurable evaluator weights and custom evaluation dimensions. Requires F1 to ship first.",
       "tags": [],
-      "status": "draft",
-      "created": "2026-05-02T00:00:00.000Z",
-      "updated": "2026-05-02T00:00:00.000Z",
+      "status": "archived",
+      "created": "2026-05-03T13:30:00.000Z",
+      "updated": "1970-01-01T00:00:00.000Z",
       "scope": null,
       "category": null,
       "createdBy": null,
-      "sourceRef": "ISS-20260502-006",
+      "sourceRef": "DEF-M3-006",
       "parent": null,
       "related": [],
       "source": {
@@ -548,1242 +1301,2915 @@
       }
     },
     {
-      "id": "issue-ISS-20260502-007",
-      "type": "issue",
-      "title": "[architecture] 4-level prop chain for onOpenKnowledgePanel",
-      "summary": "onOpenKnowledgePanel threaded through 4 layers: useAppShellViewModel → ChatSidebar → ChatArea → ChatAreaComposer. Adding new cross-cutting actions requires touching all 4 files.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-001",
+      "type": "knowhow",
+      "title": "NikoEditor",
+      "summary": "NikoEditor",
+      "tags": [
+        "Core",
+        "FT-001"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-007",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-001",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-001"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 7
+        "path": "codebase/tech-registry/nikoeditor.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-008",
-      "type": "issue",
-      "title": "[architecture] ChatArea is a 1,269-line god component",
-      "summary": "ChatArea handles streaming, draft persistence, mode switching, tool use, selection, and rendering. Phase 1 additions make decomposition more urgent.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-002",
+      "type": "knowhow",
+      "title": "DocumentEditor",
+      "summary": "DocumentEditor",
+      "tags": [
+        "Core",
+        "FT-001",
+        "FT-004"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-008",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-002",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-001",
+        "codebase-feat-ft-004"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 8
+        "path": "codebase/tech-registry/documenteditor.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-009",
-      "type": "issue",
-      "title": "[architecture] useDraftCache couples storage format to hook interface",
-      "summary": "Hook hardcodes localStorage and JSON format. Changing storage layer (e.g., IndexedDB for larger drafts) requires rewriting the hook interface.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-003",
+      "type": "knowhow",
+      "title": "SlashCommandMenu",
+      "summary": "SlashCommandMenu",
+      "tags": [
+        "Core",
+        "FT-002"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-009",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-003",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-002"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 9
+        "path": "codebase/tech-registry/slashcommandmenu.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-010",
-      "type": "issue",
-      "title": "[maintainability] ChatArea.tsx at 1,269 lines exceeds maintainable size",
-      "summary": "Phase 1 added ~50 lines. File was already at maintainability limit. Every change requires reading the entire file to avoid regression.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-004",
+      "type": "knowhow",
+      "title": "BubbleToolbar",
+      "summary": "BubbleToolbar",
+      "tags": [
+        "Core",
+        "FT-003"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-010",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-004",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-003"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 10
+        "path": "codebase/tech-registry/bubbletoolbar.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-011",
-      "type": "issue",
-      "title": "[maintainability] localStorage key prefix 'niko.draft:' is a magic string",
-      "summary": "Key prefix hardcoded inline. Not exported for other modules to enumerate/clear draft keys. Key name drift risk.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-005",
+      "type": "knowhow",
+      "title": "ContentSearch",
+      "summary": "ContentSearch",
+      "tags": [
+        "Utils",
+        "FT-005"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-011",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-005",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-005"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 11
+        "path": "codebase/tech-registry/contentsearch.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-012",
-      "type": "issue",
-      "title": "[maintainability] New toolbar buttons missing focus-visible classes unlike all other interactive elements",
-      "summary": "The 3 new toolbar buttons (BookmarkPlus, Trash2, Copy) added in TASK-002 lack focus-visible:ring-2 classes that TASK-005/006 added to all other interactive elements. Keyboard navigation inconsistency.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-006",
+      "type": "knowhow",
+      "title": "useDraftCache",
+      "summary": "useDraftCache",
+      "tags": [
+        "Utils",
+        "FT-006"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-012",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-006",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-006"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 12
+        "path": "codebase/tech-registry/usedraftcache.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-013",
-      "type": "issue",
-      "title": "[maintainability] globals.css composer token block lacks section boundary",
-      "summary": "New token block has one comment but is not visually separated from sidebar tokens above. As globals.css grows, locating token groups becomes harder.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-010",
+      "type": "knowhow",
+      "title": "ChatArea",
+      "summary": "ChatArea",
+      "tags": [
+        "Core",
+        "FT-010",
+        "FT-011",
+        "FT-015",
+        "FT-016",
+        "FT-018",
+        "FT-019"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-013",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-010",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-010",
+        "codebase-feat-ft-011",
+        "codebase-feat-ft-015",
+        "codebase-feat-ft-016",
+        "codebase-feat-ft-018",
+        "codebase-feat-ft-019"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 13
+        "path": "codebase/tech-registry/chatarea.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-014",
-      "type": "issue",
-      "title": "[maintainability] ChatArea draft lifecycle undocumented in-code",
-      "summary": "Contract between ChatArea and useDraftCache (when to persist, when to clear, what happens on conversationId change) not documented. Future maintainers must trace the entire component to understand.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-011",
+      "type": "knowhow",
+      "title": "ChatAreaComposer",
+      "summary": "ChatAreaComposer",
+      "tags": [
+        "Core",
+        "FT-010",
+        "FT-012",
+        "FT-014",
+        "FT-015"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-014",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-011",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-010",
+        "codebase-feat-ft-012",
+        "codebase-feat-ft-014",
+        "codebase-feat-ft-015"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 14
+        "path": "codebase/tech-registry/chatareacomposer.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-015",
-      "type": "issue",
-      "title": "[best-practices] useEffect for syncing state from props is a React anti-pattern",
-      "summary": "React docs explicitly discourage useEffect to sync derived state from props. Creates render cycle: render → effect fires → setState → re-render. Root of CORR-001.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-012",
+      "type": "knowhow",
+      "title": "MessageBubble",
+      "summary": "MessageBubble",
+      "tags": [
+        "Core",
+        "FT-010"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-015",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-012",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-010"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 15
+        "path": "codebase/tech-registry/messagebubble.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-016",
-      "type": "issue",
-      "title": "[best-practices] No visual feedback after clipboard copy action",
-      "summary": "Copy button provides no visual feedback after successful copy. Standard practice is to show a checkmark or brief toast. Users have no confirmation the action completed.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-013",
+      "type": "knowhow",
+      "title": "ChatAreaModeControls",
+      "summary": "ChatAreaModeControls",
+      "tags": [
+        "Core",
+        "FT-011",
+        "FT-012",
+        "FT-013",
+        "FT-014",
+        "FT-020"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-016",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-013",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-011",
+        "codebase-feat-ft-012",
+        "codebase-feat-ft-013",
+        "codebase-feat-ft-014",
+        "codebase-feat-ft-020"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 16
+        "path": "codebase/tech-registry/chatareamodecontrols.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-017",
-      "type": "issue",
-      "title": "[best-practices] clearDraft called unconditionally on send even when no draft exists",
-      "summary": "clearDraft() runs on every send, triggering localStorage.removeItem even when there is no draft. Unnecessary side effect on every send action.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-014",
+      "type": "knowhow",
+      "title": "useChatRequestBuilder",
+      "summary": "useChatRequestBuilder",
+      "tags": [
+        "Utils",
+        "FT-011",
+        "FT-013"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-017",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-014",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-011",
+        "codebase-feat-ft-013"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 17
+        "path": "codebase/tech-registry/usechatrequestbuilder.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-018",
-      "type": "issue",
-      "title": "[best-practices] focus-visible ring on non-interactive div in AppContextFooter",
-      "summary": "TASK-005 added focus-visible:ring-2 to AppContextFooter's outer div. Divs without tabIndex are not focusable — these classes are dead code and misleading to future developers.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-015",
+      "type": "knowhow",
+      "title": "ChatAreaStreamStatus",
+      "summary": "ChatAreaStreamStatus",
+      "tags": [
+        "Core",
+        "FT-015"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-018",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-015",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-015"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 18
+        "path": "codebase/tech-registry/chatareastreamstatus.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-019",
-      "type": "issue",
-      "title": "[best-practices] Trash2 button appears/disappears without animation causing toolbar layout shift",
-      "summary": "Trash2 button pops in/out of existence as user types first character or deletes last. Creates jarring layout shift in the composer toolbar.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-016",
+      "type": "knowhow",
+      "title": "useChatStreaming",
+      "summary": "useChatStreaming",
+      "tags": [
+        "Utils",
+        "FT-015"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-019",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-016",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-015"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 19
+        "path": "codebase/tech-registry/usechatstreaming.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-020",
-      "type": "issue",
-      "title": "[best-practices] BookmarkPlus button missing disabled state for unavailable contexts",
-      "summary": "Button is always active with no disabled state. No visual affordance for unavailability. Ties into CORR-003 (should be conditionally rendered).",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-017",
+      "type": "knowhow",
+      "title": "useChatRecovery",
+      "summary": "useChatRecovery",
+      "tags": [
+        "Utils",
+        "FT-016"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-020",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-017",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-016"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 20
+        "path": "codebase/tech-registry/usechatrecovery.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-021",
-      "type": "issue",
-      "title": "[best-practices] --composer-focus-ring token missing dark mode override",
-      "summary": "TASK-001 added --composer-focus-ring to :root with light mode value. .dark block has no override. Future components consuming this token will get incorrect dark mode color.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-018",
+      "type": "knowhow",
+      "title": "ChatAreaInlineActions",
+      "summary": "ChatAreaInlineActions",
+      "tags": [
+        "Core",
+        "FT-017"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-021",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-018",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-017"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 21
+        "path": "codebase/tech-registry/chatareainlineactions.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-022",
-      "type": "issue",
-      "title": "[correctness] Clipboard writeText called without runtime API availability check",
-      "summary": "navigator.clipboard.writeText called with .catch(() => {}) silencing failures. Doesn't guard against navigator.clipboard being undefined in non-HTTPS or unsupported environments.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-019",
+      "type": "knowhow",
+      "title": "useInlineActions",
+      "summary": "useInlineActions",
+      "tags": [
+        "Utils",
+        "FT-017"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-022",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-019",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-017"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 22
+        "path": "codebase/tech-registry/useinlineactions.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-023",
-      "type": "issue",
-      "title": "[correctness] persistedText initial state ignores conversationId changes after mount",
-      "summary": "useState initializer only runs on mount. Draft restoration after conversationId change depends on the useEffect (CORR-001). Removing CORR-001's useEffect without a replacement breaks restoration.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-020",
+      "type": "knowhow",
+      "title": "useMemoryUpload",
+      "summary": "useMemoryUpload",
+      "tags": [
+        "Utils",
+        "FT-019"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-023",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-020",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-019"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 23
+        "path": "codebase/tech-registry/usememoryupload.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-024",
-      "type": "issue",
-      "title": "[correctness] useDraftCache TTL checked on load only, not on persist",
-      "summary": "24h TTL validated only when loading a draft. If tab stays open across TTL boundary, persist() continues writing into an expired entry without refreshing the timestamp.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-021",
+      "type": "knowhow",
+      "title": "PromptTemplatePanel",
+      "summary": "PromptTemplatePanel",
+      "tags": [
+        "Core",
+        "FT-020"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-024",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-021",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-020"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 24
+        "path": "codebase/tech-registry/prompttemplatepanel.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-025",
-      "type": "issue",
-      "title": "[correctness] Snapshot tests don't validate focus-visible interactive states",
-      "summary": "Snapshot tests added in Phase 1 capture static rendering but don't verify that focus-visible ring changes from TASK-005 apply correctly via keyboard navigation.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-022",
+      "type": "knowhow",
+      "title": "ThinkingEffect",
+      "summary": "ThinkingEffect",
+      "tags": [
+        "Core",
+        "FT-021"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-025",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-022",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-021"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 25
+        "path": "codebase/tech-registry/thinkingeffect.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-026",
-      "type": "issue",
-      "title": "[security] localStorage draft content not size-bounded",
-      "summary": "No maximum size check before writing to localStorage. Very long drafts could push toward browser localStorage limits (5-10MB per origin), causing QuotaExceededError.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-023",
+      "type": "knowhow",
+      "title": "AppHeader",
+      "summary": "AppHeader",
+      "tags": [
+        "Core",
+        "FT-022",
+        "FT-043",
+        "FT-052"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-026",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-023",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-022",
+        "codebase-feat-ft-043",
+        "codebase-feat-ft-052"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 26
+        "path": "codebase/tech-registry/appheader.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-027",
-      "type": "issue",
-      "title": "[security] Clipboard receives AI-generated content without sanitization note",
-      "summary": "lastAssistantContent is AI-generated text written directly to clipboard. Acceptable for desktop Electron context, but assumption should be documented.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-024",
+      "type": "knowhow",
+      "title": "AppContextFooter",
+      "summary": "AppContextFooter",
+      "tags": [
+        "Core",
+        "FT-022"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-027",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-024",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-022"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 27
+        "path": "codebase/tech-registry/appcontextfooter.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-028",
-      "type": "issue",
-      "title": "[security] Draft key uses conversationId without format validation",
-      "summary": "localStorage key uses conversationId verbatim. If id contains special characters or is user-controlled, key could collide with other entries. UUID format assumed but not enforced.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-025",
+      "type": "knowhow",
+      "title": "useAppContextUsage",
+      "summary": "useAppContextUsage",
+      "tags": [
+        "Utils",
+        "FT-022"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-028",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-025",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-022"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 28
+        "path": "codebase/tech-registry/useappcontextusage.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-029",
-      "type": "issue",
-      "title": "[performance] useDraftCache reads localStorage on every conversationId change without debounce",
-      "summary": "Rapid conversation switching triggers a localStorage read + JSON.parse on each change. Minor hit during search/navigation through conversation history.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-026",
+      "type": "knowhow",
+      "title": "AppMainContent",
+      "summary": "AppMainContent",
+      "tags": [
+        "Core",
+        "FT-023"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-029",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-026",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-023"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 29
+        "path": "codebase/tech-registry/appmaincontent.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-030",
-      "type": "issue",
-      "title": "[performance] useLatestAssistantMessageContent re-evaluates on every streaming token",
-      "summary": "Selector runs on every message update including streaming tokens, potentially causing ChatAreaComposer re-renders during active AI response streaming.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-027",
+      "type": "knowhow",
+      "title": "useWriterWorkspaceSummary",
+      "summary": "useWriterWorkspaceSummary",
+      "tags": [
+        "Utils",
+        "FT-023"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-030",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-027",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-023"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 30
+        "path": "codebase/tech-registry/usewriterworkspacesummary.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-031",
-      "type": "issue",
-      "title": "[performance] StoryBiblePanel snapshot captures hundreds of DOM nodes",
-      "summary": "Full container snapshot of StoryBiblePanel creates large .snap file and slow serialization. Snapshot tests that large components are anti-pattern.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-030",
+      "type": "knowhow",
+      "title": "KnowledgeModal",
+      "summary": "KnowledgeModal",
+      "tags": [
+        "Core",
+        "FT-030",
+        "FT-032"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-031",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-030",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-030",
+        "codebase-feat-ft-032"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 31
+        "path": "codebase/tech-registry/knowledgemodal.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-032",
-      "type": "issue",
-      "title": "[performance] localStorage.clear() in test beforeEach runs for unrelated tests",
-      "summary": "Global localStorage.clear() in beforeEach of ChatArea.test.tsx runs for every test including those that don't use drafts. Minor overhead.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-031",
+      "type": "knowhow",
+      "title": "CharacterTab",
+      "summary": "CharacterTab",
+      "tags": [
+        "Core",
+        "FT-030"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-032",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-031",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-030"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 32
+        "path": "codebase/tech-registry/charactertab.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-033",
-      "type": "issue",
-      "title": "[architecture] ChatAreaComposer toolbar mixes unrelated feature concerns",
-      "summary": "Toolbar hosts knowledge attachment (BookmarkPlus), draft management (Trash2), and conversation history (Copy) with no architectural grouping or ownership model. Will grow unbounded.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-032",
+      "type": "knowhow",
+      "title": "LocationTab",
+      "summary": "LocationTab",
+      "tags": [
+        "Core",
+        "FT-030"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-033",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-032",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-030"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 33
+        "path": "codebase/tech-registry/locationtab.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-034",
-      "type": "issue",
-      "title": "[architecture] ChatAreaModeControls simplification removed extension points",
-      "summary": "TASK-003 removed showAdvanced, onSetChatMode, and advanced section. If future modes need per-mode sub-settings, the extension mechanism no longer exists.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-033",
+      "type": "knowhow",
+      "title": "PlotTab",
+      "summary": "PlotTab",
+      "tags": [
+        "Core",
+        "FT-030"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-034",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-033",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-030"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 34
+        "path": "codebase/tech-registry/plottab.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-035",
-      "type": "issue",
-      "title": "[architecture] Full-container snapshot tests create coupling to rendering details",
-      "summary": "Snapshot tests in Phase 1 capture full DOM structure including all CSS classes. Any unrelated UI change fails the snapshot, coupling test maintenance to irrelevant changes.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-034",
+      "type": "knowhow",
+      "title": "SkillTab",
+      "summary": "SkillTab",
+      "tags": [
+        "Core",
+        "FT-030"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-035",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-034",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-030"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 35
+        "path": "codebase/tech-registry/skilltab.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-036",
-      "type": "issue",
-      "title": "[architecture] Temporal coupling between persistedText and input state initialization",
-      "summary": "Initial state depends on persistedText from localStorage read. The initialization order creates implicit temporal coupling not documented anywhere.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-035",
+      "type": "knowhow",
+      "title": "PersistedEntityTab",
+      "summary": "PersistedEntityTab",
+      "tags": [
+        "Core",
+        "FT-030"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-036",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-035",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-030"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 36
+        "path": "codebase/tech-registry/persistedentitytab.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-037",
-      "type": "issue",
-      "title": "[architecture] No abstraction layer between toolbar actions and their side effects",
-      "summary": "Toolbar button handlers defined inline directly calling browser APIs and prop callbacks. No unit-testable action layer exists.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-036",
+      "type": "knowhow",
+      "title": "MemoryForm",
+      "summary": "MemoryForm",
+      "tags": [
+        "Core",
+        "FT-030"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-037",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-036",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-030"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 37
+        "path": "codebase/tech-registry/memoryform.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-038",
-      "type": "issue",
-      "title": "[maintainability] ChatAreaComposer props interface has grown to 13+ optional props",
-      "summary": "Phase 1 added 3 new optional props. Interface now has 13+ props making it unclear which are required vs optional. High cognitive load when consuming the component.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-037",
+      "type": "knowhow",
+      "title": "StoryBiblePanel",
+      "summary": "StoryBiblePanel",
+      "tags": [
+        "Core",
+        "FT-031",
+        "FT-032",
+        "FT-033"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-038",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-037",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-031",
+        "codebase-feat-ft-032",
+        "codebase-feat-ft-033"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 38
+        "path": "codebase/tech-registry/storybiblepanel.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-039",
-      "type": "issue",
-      "title": "[maintainability] useDraftCache TTL value is a magic number",
-      "summary": "24h TTL computed inline as a magic number. Configuration value should be a named constant.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-040",
+      "type": "knowhow",
+      "title": "WritingHelperPanel",
+      "summary": "WritingHelperPanel",
+      "tags": [
+        "Core",
+        "FT-040"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-039",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-040",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-040"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 39
+        "path": "codebase/tech-registry/writinghelperpanel.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-040",
-      "type": "issue",
-      "title": "[maintainability] Focus-visible class string duplicated across 8+ component files",
-      "summary": "TASK-005/006 copy-pasted focus ring class string into 8+ files. Any change to the focus ring style requires updating every occurrence individually.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-041",
+      "type": "knowhow",
+      "title": "useAppUiPersistence",
+      "summary": "useAppUiPersistence",
+      "tags": [
+        "Utils",
+        "FT-040",
+        "FT-072"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-040",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-041",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-040",
+        "codebase-feat-ft-072"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 40
+        "path": "codebase/tech-registry/useappuipersistence.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-041",
-      "type": "issue",
-      "title": "[maintainability] ChatAreaModeControls simplification not marked as intentional in code",
-      "summary": "Removal of showAdvanced, onSetChatMode, and advanced section was intentional scope reduction. Without a comment, future devs may re-add the removed infrastructure.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-042",
+      "type": "knowhow",
+      "title": "AiTextOptimizer",
+      "summary": "AiTextOptimizer",
+      "tags": [
+        "Core",
+        "FT-041"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-041",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-042",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-041"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 41
+        "path": "codebase/tech-registry/aitextoptimizer.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-042",
-      "type": "issue",
-      "title": "[maintainability] Test assertions query by aria-label strings that can drift",
-      "summary": "Tests query by aria-label string 'attach context'. If the label changes, test fails with confusing error rather than a clear signal.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-043",
+      "type": "knowhow",
+      "title": "EvaluationPanel",
+      "summary": "EvaluationPanel",
+      "tags": [
+        "Core",
+        "FT-042"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-042",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-043",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-042"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 42
+        "path": "codebase/tech-registry/evaluationpanel.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-043",
-      "type": "issue",
-      "title": "[maintainability] StoryBiblePanel snapshot too large to be maintainable",
-      "summary": "Snapshot test renders full component creating a large .snap file. Any unrelated change to StoryBiblePanel fails the snapshot.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-044",
+      "type": "knowhow",
+      "title": "useEvaluationWorkflow",
+      "summary": "useEvaluationWorkflow",
+      "tags": [
+        "Utils",
+        "FT-042"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-043",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-044",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-042"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 43
+        "path": "codebase/tech-registry/useevaluationworkflow.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-044",
-      "type": "issue",
-      "title": "[maintainability] AppContextFooter has no test coverage",
-      "summary": "AppContextFooter was modified in TASK-005 but has no test file. The incorrectly added focus-visible classes (BP-004) went undetected because there were no tests.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-045",
+      "type": "knowhow",
+      "title": "useEvaluationRecommendations",
+      "summary": "useEvaluationRecommendations",
+      "tags": [
+        "Utils",
+        "FT-042"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-044",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-045",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-042"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 44
+        "path": "codebase/tech-registry/useevaluationrecommendations.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-045",
-      "type": "issue",
-      "title": "[maintainability] Sidebar snapshot will break on every navigation item change",
-      "summary": "Sidebar snapshot captures full navigation tree. Adding/removing nav items will fail the snapshot, making it a merge conflict magnet.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-046",
+      "type": "knowhow",
+      "title": "useEvaluationCheckpoints",
+      "summary": "useEvaluationCheckpoints",
+      "tags": [
+        "Utils",
+        "FT-042"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-045",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-046",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-042"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 45
+        "path": "codebase/tech-registry/useevaluationcheckpoints.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-046",
-      "type": "issue",
-      "title": "[maintainability] clearDraft and persist hook return types not explicitly typed",
-      "summary": "useDraftCache return type is inferred, not declared. Explicit types aid IDE hover documentation and catch interface changes at the call site.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-047",
+      "type": "knowhow",
+      "title": "useEvaluationQualityCheck",
+      "summary": "useEvaluationQualityCheck",
+      "tags": [
+        "Utils",
+        "FT-042"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-046",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-047",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-042"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 46
+        "path": "codebase/tech-registry/useevaluationqualitycheck.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-047",
-      "type": "issue",
-      "title": "[maintainability] ChatArea.test.tsx stale test cleanup undocumented",
-      "summary": "TASK-007 fixed 5 pre-existing test failures in ChatArea.test.tsx but the nature of each fix is not documented. Future devs may re-introduce the removed test cases.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-048",
+      "type": "knowhow",
+      "title": "useEvaluationData",
+      "summary": "useEvaluationData",
+      "tags": [
+        "Utils",
+        "FT-042"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-047",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-048",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-042"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 47
+        "path": "codebase/tech-registry/useevaluationdata.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-048",
-      "type": "issue",
-      "title": "[maintainability] Section header normalization may be incomplete across all knowledge tabs",
-      "summary": "TASK-004 normalized section headers in 3 files. Other knowledge tabs (EventTab, ThemeTab, etc.) may still use old styles if they exist.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-049",
+      "type": "knowhow",
+      "title": "AiToolbar",
+      "summary": "AiToolbar",
+      "tags": [
+        "Core",
+        "FT-043"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-048",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-049",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-043"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 48
+        "path": "codebase/tech-registry/aitoolbar.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-049",
-      "type": "issue",
-      "title": "[best-practices] Missing aria-live region for draft-restored notification",
-      "summary": "When a draft is restored on conversation switch, there is no accessible announcement. Screen reader users have no way to know their previous draft was loaded.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-050",
+      "type": "knowhow",
+      "title": "RevisionPreviewCard",
+      "summary": "RevisionPreviewCard",
+      "tags": [
+        "Core",
+        "FT-044"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-049",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-050",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-044"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 49
+        "path": "codebase/tech-registry/revisionpreviewcard.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-050",
-      "type": "issue",
-      "title": "[best-practices] Copy button missing aria-pressed state for copy confirmation",
-      "summary": "After copy, button provides no state change signal to assistive technologies. aria-pressed or a status announcement would confirm the copy action to screen readers.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-051",
+      "type": "knowhow",
+      "title": "useSmoothStream",
+      "summary": "useSmoothStream",
+      "tags": [
+        "Utils",
+        "FT-045"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-050",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-051",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-045"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 50
+        "path": "codebase/tech-registry/usesmoothstream.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-051",
-      "type": "issue",
-      "title": "[best-practices] QuickPanel search input missing autocomplete=off",
-      "summary": "Search inputs should have autocomplete='off' to prevent browser autofill from interfering with quick-switch functionality.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-060",
+      "type": "knowhow",
+      "title": "AutomationPanel",
+      "summary": "AutomationPanel",
+      "tags": [
+        "Core",
+        "FT-050"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-051",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-060",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-050"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 51
+        "path": "codebase/tech-registry/automationpanel.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-052",
-      "type": "issue",
-      "title": "[best-practices] AiToolbar disabled state missing aria-disabled attribute",
-      "summary": "TASK-006 added disabled:cursor-not-allowed CSS. HTML disabled attribute present but aria-disabled not explicitly set. Minor a11y gap.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-061",
+      "type": "knowhow",
+      "title": "QuickPanel",
+      "summary": "QuickPanel",
+      "tags": [
+        "Core",
+        "FT-051"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-052",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-061",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-051"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 52
+        "path": "codebase/tech-registry/quickpanel.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-053",
-      "type": "issue",
-      "title": "[best-practices] MessageBubble focus rings untested through keyboard navigation",
-      "summary": "TASK-006 added focus rings to 4 MessageBubble buttons but no test verifies keyboard navigation through them (tab order, focus management after action).",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-062",
+      "type": "knowhow",
+      "title": "useAppCheckpointMenu",
+      "summary": "useAppCheckpointMenu",
+      "tags": [
+        "Utils",
+        "FT-052"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-053",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-062",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-052"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 53
+        "path": "codebase/tech-registry/useappcheckpointmenu.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-054",
-      "type": "issue",
-      "title": "[best-practices] ChatSidebar ComponentProps spread exposes all ChatArea props",
-      "summary": "chatAreaProps typed as ComponentProps<typeof ChatArea> and spread to ChatArea. Adding props to ChatArea automatically exposes them through ChatSidebar's interface.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-063",
+      "type": "knowhow",
+      "title": "AppRestoreStatusBanner",
+      "summary": "AppRestoreStatusBanner",
+      "tags": [
+        "Core",
+        "FT-052"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-054",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-063",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-052"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 54
+        "path": "codebase/tech-registry/apprestorestatusbanner.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-055",
-      "type": "issue",
-      "title": "[best-practices] Sidebar active state uses raw palette classes instead of semantic tokens",
-      "summary": "TASK-005 active state highlight uses bg-primary-50 dark:bg-primary-900/20 — raw Tailwind values. Changing the app's active color requires updating every file that uses these classes.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-070",
+      "type": "knowhow",
+      "title": "SettingsModal",
+      "summary": "SettingsModal",
+      "tags": [
+        "Core",
+        "FT-060"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-055",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-070",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-060"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 55
+        "path": "codebase/tech-registry/settingsmodal.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-056",
-      "type": "issue",
-      "title": "[best-practices] Snapshot tests lack update instructions in test file",
-      "summary": "Snapshot tests added in TASK-008 will fail after legitimate UI changes. No comment or documentation about how to update snapshots intentionally.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-071",
+      "type": "knowhow",
+      "title": "useSettingsBackendConfig",
+      "summary": "useSettingsBackendConfig",
+      "tags": [
+        "Utils",
+        "FT-060"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-056",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-071",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-060"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 56
+        "path": "codebase/tech-registry/usesettingsbackendconfig.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-057",
-      "type": "issue",
-      "title": "[best-practices] BookmarkPlus icon semantic mismatch with knowledge panel action",
-      "summary": "BookmarkPlus is a 'save to bookmarks' icon. Intended action is opening the knowledge/context panel. Creates semantic disconnect for users familiar with standard iconography.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-072",
+      "type": "knowhow",
+      "title": "useSettingsProviderModels",
+      "summary": "useSettingsProviderModels",
+      "tags": [
+        "Utils",
+        "FT-060"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-057",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-072",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-060"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 57
+        "path": "codebase/tech-registry/usesettingsprovidermodels.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-058",
-      "type": "issue",
-      "title": "[best-practices] onOpenKnowledgePanel naming doesn't match toggle behavior",
-      "summary": "Prop named onOpenKnowledgePanel but implementation toggles (opens AND closes). Misleading name creates maintenance confusion.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-073",
+      "type": "knowhow",
+      "title": "useSettingsDiagnostics",
+      "summary": "useSettingsDiagnostics",
+      "tags": [
+        "Utils",
+        "FT-060"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-058",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-073",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-060"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 58
+        "path": "codebase/tech-registry/usesettingsdiagnostics.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-059",
-      "type": "issue",
-      "title": "[best-practices] ChatAreaModeControls tests lack negative assertions for removed functionality",
-      "summary": "Test file updated in TASK-003 but no tests explicitly verify the advanced section is gone. If accidentally re-added, tests won't catch it.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-074",
+      "type": "knowhow",
+      "title": "McpStatusPanel",
+      "summary": "McpStatusPanel",
+      "tags": [
+        "Core",
+        "FT-061"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-059",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-074",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-061"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 59
+        "path": "codebase/tech-registry/mcpstatuspanel.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-060",
-      "type": "issue",
-      "title": "[performance] PERF-006 transition-colors on all toolbar buttons adds GPU layers",
-      "summary": "All toolbar buttons use transition-colors which triggers GPU compositing on hover. With 5+ buttons, each hover creates a layer promotion. Minor impact on modern hardware.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-075",
+      "type": "knowhow",
+      "title": "useTheme",
+      "summary": "useTheme",
+      "tags": [
+        "Utils",
+        "FT-062"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-060",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-075",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-062"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 60
+        "path": "codebase/tech-registry/usetheme.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-061",
-      "type": "issue",
-      "title": "[best-practices] Trash2 aria-hidden on focusable interactive button",
-      "summary": "When input is empty, the Trash2 clear-draft button has aria-hidden=true but remains keyboard-focusable (no tabIndex=-1 applied). ARIA spec forbids aria-hidden on interactive elements still in tab order — keyboard users can focus a control t",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-076",
+      "type": "knowhow",
+      "title": "i18n",
+      "summary": "useI18n, i18n",
+      "tags": [
+        "Core",
+        "FT-063"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-061",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-076",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-063"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 61
+        "path": "codebase/tech-registry/i18n.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-062",
-      "type": "issue",
-      "title": "[best-practices] Copy success feedback not announced to screen readers",
-      "summary": "The copy button transitions aria-label from \"copy last reply\" to \"copied!\" on success, but changing aria-label in place does not reliably trigger announcements in NVDA/VoiceOver. WCAG 2.1 SC 4.1.3 requires status changes to be programmatica",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-080",
+      "type": "knowhow",
+      "title": "Sidebar",
+      "summary": "Sidebar",
+      "tags": [
+        "Core",
+        "FT-070"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-062",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-080",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-070"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 62
+        "path": "codebase/tech-registry/sidebar.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-063",
-      "type": "issue",
-      "title": "[UAT] Theme switching only affects a few buttons, not the full UI",
-      "summary": "Switching themes in Settings only affects a few small buttons — most of the UI does not change. Only 'follow system' works correctly. Non-system themes (charcoal, cauldron, moonbeam, etc.) partially apply.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-081",
+      "type": "knowhow",
+      "title": "useResizablePanel",
+      "summary": "useResizablePanel",
+      "tags": [
+        "Utils",
+        "FT-070",
+        "FT-071"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-063",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-081",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-070",
+        "codebase-feat-ft-071"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 63
+        "path": "codebase/tech-registry/useresizablepanel.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-064",
-      "type": "issue",
-      "title": "[UAT] Middle column bottom content clipped — novel outline only half visible",
-      "summary": "When scrolling to the bottom of the middle column (DocumentEditor), the novel outline section is only partially visible — bottom half is clipped/hidden. Overflow or height calculation issue.",
-      "tags": [],
-      "status": "draft",
+      "id": "codebase-comp-tc-082",
+      "type": "knowhow",
+      "title": "PanelResizeHandle",
+      "summary": "PanelResizeHandle",
+      "tags": [
+        "Core",
+        "FT-070"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
       "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-064",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-082",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-070"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 64
+        "path": "codebase/tech-registry/panelresizehandle.md"
       }
     },
     {
-      "id": "issue-ISS-20260502-065",
-      "type": "issue",
-      "title": "[UAT] Send button mouse click not working — only keyboard send works",
-      "summary": "The send button in the chat composer (bottom right) does not respond to mouse clicks. Users can only send messages via keyboard (Enter key). The button onClick handler exists but mouse clicks are ineffective.",
-      "tags": [],
-      "status": "completed",
+      "id": "codebase-comp-tc-083",
+      "type": "knowhow",
+      "title": "ChatSidebar",
+      "summary": "ChatSidebar",
+      "tags": [
+        "Core",
+        "FT-071"
+      ],
+      "status": "active",
       "created": "2026-05-02T00:00:00.000Z",
-      "updated": "2026-05-03T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
       "scope": null,
-      "category": null,
-      "createdBy": null,
-      "sourceRef": "ISS-20260502-065",
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-083",
       "parent": null,
-      "related": [],
+      "related": [
+        "codebase-feat-ft-071"
+      ],
       "source": {
         "kind": "virtual",
-        "path": "issues/issues.jsonl",
-        "line": 65
+        "path": "codebase/tech-registry/chatsidebar.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-084",
+      "type": "knowhow",
+      "title": "AppRightPanels",
+      "summary": "AppRightPanels",
+      "tags": [
+        "Core",
+        "FT-072"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-084",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-072"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/apprightpanels.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-085",
+      "type": "knowhow",
+      "title": "useAppPanelOrchestration",
+      "summary": "useAppPanelOrchestration",
+      "tags": [
+        "Utils",
+        "FT-072"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-085",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-072"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/useapppanelorchestration.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-086",
+      "type": "knowhow",
+      "title": "App",
+      "summary": "App",
+      "tags": [
+        "Core",
+        "FT-072"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-086",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-072"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/app.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-087",
+      "type": "knowhow",
+      "title": "ToastContainer",
+      "summary": "ToastContainer",
+      "tags": [
+        "Core",
+        "FT-073"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-087",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-073"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/toastcontainer.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-088",
+      "type": "knowhow",
+      "title": "useToast",
+      "summary": "useToast",
+      "tags": [
+        "Utils",
+        "FT-073"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-088",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-073"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/usetoast.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-089",
+      "type": "knowhow",
+      "title": "ErrorBoundary",
+      "summary": "ErrorBoundary",
+      "tags": [
+        "Core",
+        "FT-074"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-089",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-074"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/errorboundary.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-090",
+      "type": "knowhow",
+      "title": "useAppStartup",
+      "summary": "useAppStartup",
+      "tags": [
+        "Utils",
+        "FT-075"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-090",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-075"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/useappstartup.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-091",
+      "type": "knowhow",
+      "title": "useAppBackendBootstrap",
+      "summary": "useAppBackendBootstrap",
+      "tags": [
+        "Utils",
+        "FT-075"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-091",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-075"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/useappbackendbootstrap.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-092",
+      "type": "knowhow",
+      "title": "useAppRuntimeHealth",
+      "summary": "useAppRuntimeHealth",
+      "tags": [
+        "Utils",
+        "FT-075"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-092",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-075"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/useappruntimehealth.md"
+      }
+    },
+    {
+      "id": "codebase-comp-tc-093",
+      "type": "knowhow",
+      "title": "VirtualList",
+      "summary": "VirtualList",
+      "tags": [
+        "Utils",
+        "FT-076"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "TC-093",
+      "parent": null,
+      "related": [
+        "codebase-feat-ft-076"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/tech-registry/virtuallist.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-001",
+      "type": "knowhow",
+      "title": "Rich Text Editor (NikoEditor)",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-001",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-001",
+        "codebase-comp-tc-002"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/rich-text-editor-nikoeditor.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-002",
+      "type": "knowhow",
+      "title": "Slash Command Menu",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-002",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-003"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/slash-command-menu.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-003",
+      "type": "knowhow",
+      "title": "Bubble Toolbar (Selection Rewrite)",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-003",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-004"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/bubble-toolbar-selection-rewrite.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-004",
+      "type": "knowhow",
+      "title": "Document Export",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-004",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-002"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/document-export.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-005",
+      "type": "knowhow",
+      "title": "Content Search",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-005",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-005"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/content-search.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-006",
+      "type": "knowhow",
+      "title": "Draft Cache",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-006",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-006"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/draft-cache.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-010",
+      "type": "knowhow",
+      "title": "Chat Mode Conversation",
+      "summary": "3 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-010",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-010",
+        "codebase-comp-tc-011",
+        "codebase-comp-tc-012"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/chat-mode-conversation.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-011",
+      "type": "knowhow",
+      "title": "Agent Write / Revise / Context Modes",
+      "summary": "3 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-011",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-010",
+        "codebase-comp-tc-013",
+        "codebase-comp-tc-014"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/agent-write-revise-context-modes.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-012",
+      "type": "knowhow",
+      "title": "Workflow Level Selection (L1–L5)",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-012",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-013",
+        "codebase-comp-tc-011"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/workflow-level-selection-l1-l5.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-013",
+      "type": "knowhow",
+      "title": "Skill Pack Selection",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-013",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-013",
+        "codebase-comp-tc-014"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/skill-pack-selection.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-014",
+      "type": "knowhow",
+      "title": "Model Comparison Mode",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-014",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-013",
+        "codebase-comp-tc-011"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/model-comparison-mode.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-015",
+      "type": "knowhow",
+      "title": "Streaming with Cancel",
+      "summary": "4 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-015",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-010",
+        "codebase-comp-tc-011",
+        "codebase-comp-tc-015",
+        "codebase-comp-tc-016"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/streaming-with-cancel.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-016",
+      "type": "knowhow",
+      "title": "Chat Recovery",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-016",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-010",
+        "codebase-comp-tc-017"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/chat-recovery.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-017",
+      "type": "knowhow",
+      "title": "Inline Chat Actions",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-017",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-018",
+        "codebase-comp-tc-019"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/inline-chat-actions.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-018",
+      "type": "knowhow",
+      "title": "Quick Rollback",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-018",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-010"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/quick-rollback.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-019",
+      "type": "knowhow",
+      "title": "Memory Upload",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-019",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-010",
+        "codebase-comp-tc-020"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/memory-upload.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-020",
+      "type": "knowhow",
+      "title": "Prompt Template Library",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-020",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-021",
+        "codebase-comp-tc-013"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/prompt-template-library.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-021",
+      "type": "knowhow",
+      "title": "Thinking Effect Display",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-021",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-022"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/thinking-effect-display.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-022",
+      "type": "knowhow",
+      "title": "Context Usage Meter",
+      "summary": "3 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-022",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-023",
+        "codebase-comp-tc-024",
+        "codebase-comp-tc-025"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/context-usage-meter.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-023",
+      "type": "knowhow",
+      "title": "Writer Workspace Summary",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-023",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-026",
+        "codebase-comp-tc-027"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/writer-workspace-summary.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-030",
+      "type": "knowhow",
+      "title": "Knowledge Modal (Character/Location/Plot/Skills)",
+      "summary": "7 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-030",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-030",
+        "codebase-comp-tc-031",
+        "codebase-comp-tc-032",
+        "codebase-comp-tc-033",
+        "codebase-comp-tc-034",
+        "codebase-comp-tc-035",
+        "codebase-comp-tc-036"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/knowledge-modal-character-location-plot-skills.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-031",
+      "type": "knowhow",
+      "title": "Story Bible Panel",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-031",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-037"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/story-bible-panel.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-032",
+      "type": "knowhow",
+      "title": "Wiki Canon Promotion",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-032",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-030",
+        "codebase-comp-tc-037"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/wiki-canon-promotion.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-033",
+      "type": "knowhow",
+      "title": "Graph Query & Merge",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-033",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-037"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/graph-query-merge.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-040",
+      "type": "knowhow",
+      "title": "Writing Helper Panel",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-040",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-040",
+        "codebase-comp-tc-041"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/writing-helper-panel.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-041",
+      "type": "knowhow",
+      "title": "AI Text Optimizer",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-041",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-042"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/ai-text-optimizer.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-042",
+      "type": "knowhow",
+      "title": "Evaluation Panel (Quality Check)",
+      "summary": "6 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-042",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-043",
+        "codebase-comp-tc-044",
+        "codebase-comp-tc-045",
+        "codebase-comp-tc-046",
+        "codebase-comp-tc-047",
+        "codebase-comp-tc-048"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/evaluation-panel-quality-check.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-043",
+      "type": "knowhow",
+      "title": "AI Toolbar (Document Header Shortcuts)",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-043",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-049",
+        "codebase-comp-tc-023"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/ai-toolbar-document-header-shortcuts.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-044",
+      "type": "knowhow",
+      "title": "Revision Preview Card",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-044",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-050"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/revision-preview-card.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-045",
+      "type": "knowhow",
+      "title": "Smooth Stream Display",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-045",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-051"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/smooth-stream-display.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-050",
+      "type": "knowhow",
+      "title": "Automation Panel (Workflow Scheduler)",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-050",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-060"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/automation-panel-workflow-scheduler.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-051",
+      "type": "knowhow",
+      "title": "Quick Panel (Command Palette)",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-051",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-061"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/quick-panel-command-palette.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-052",
+      "type": "knowhow",
+      "title": "Checkpoint Management",
+      "summary": "3 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-052",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-023",
+        "codebase-comp-tc-062",
+        "codebase-comp-tc-063"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/checkpoint-management.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-060",
+      "type": "knowhow",
+      "title": "Settings Modal",
+      "summary": "4 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-060",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-070",
+        "codebase-comp-tc-071",
+        "codebase-comp-tc-072",
+        "codebase-comp-tc-073"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/settings-modal.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-061",
+      "type": "knowhow",
+      "title": "MCP Status & Gateway Panel",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-061",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-074"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/mcp-status-gateway-panel.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-062",
+      "type": "knowhow",
+      "title": "Theme Support (Dark/Light)",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-062",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-075"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/theme-support-dark-light.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-063",
+      "type": "knowhow",
+      "title": "Language / i18n (ZH/EN)",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-063",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-076"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/language-i18n-zh-en.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-070",
+      "type": "knowhow",
+      "title": "Sidebar (Conversation List + Navigation)",
+      "summary": "3 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-070",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-080",
+        "codebase-comp-tc-081",
+        "codebase-comp-tc-082"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/sidebar-conversation-list-navigation.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-071",
+      "type": "knowhow",
+      "title": "Chat Sidebar (Resizable AI Pane)",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-071",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-083",
+        "codebase-comp-tc-081"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/chat-sidebar-resizable-ai-pane.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-072",
+      "type": "knowhow",
+      "title": "Right Panel Orchestration (Lazy Panels)",
+      "summary": "3 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-072",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-084",
+        "codebase-comp-tc-085",
+        "codebase-comp-tc-086"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/right-panel-orchestration-lazy-panels.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-073",
+      "type": "knowhow",
+      "title": "Toast Notification System",
+      "summary": "2 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-073",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-087",
+        "codebase-comp-tc-088"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/toast-notification-system.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-074",
+      "type": "knowhow",
+      "title": "Error Boundary",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-074",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-089"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/error-boundary.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-075",
+      "type": "knowhow",
+      "title": "App Startup & Backend Bootstrap",
+      "summary": "3 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-075",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-090",
+        "codebase-comp-tc-091",
+        "codebase-comp-tc-092"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/app-startup-backend-bootstrap.md"
+      }
+    },
+    {
+      "id": "codebase-feat-ft-076",
+      "type": "knowhow",
+      "title": "Virtual List (Message Rendering)",
+      "summary": "1 components, 0 requirements",
+      "tags": [
+        "feature",
+        "active"
+      ],
+      "status": "active",
+      "created": "2026-05-02T00:00:00.000Z",
+      "updated": "2026-05-02T00:00:00.000Z",
+      "scope": null,
+      "category": "arch",
+      "createdBy": "manage-codebase-rebuild",
+      "sourceRef": "FT-076",
+      "parent": null,
+      "related": [
+        "codebase-comp-tc-093"
+      ],
+      "source": {
+        "kind": "virtual",
+        "path": "codebase/feature-maps/virtual-list-message-rendering.md"
       }
     }
   ]
