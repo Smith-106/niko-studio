@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.27.0] — 2026-05-26
+
+### Added
+- **WorkflowEventRelay (WebSocket)**: Gateway 新增 `/ws/events` WebSocket 端点，支持实时状态推送与事件类型订阅过滤
+- **PhaseOrchestrator + Workflow Gate**: 阶段门控系统，fix-retry 耗尽自动强制完成
+- **DelegateBroker**: 委托任务代理，支持任务分发与状态追踪
+- 版本号同步至 9.27.0（Tauri + Cargo + package.json）
+
+### Fixed
+- PhaseOrchestrator fixAttempts 累积逻辑修复
+
 ## [9.25.8] — 2026-05-14
 
 ### Fixed

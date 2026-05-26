@@ -1,5 +1,27 @@
 # Changelog
 
+## [9.27.0] - 2026-05-26
+
+### Added
+- **PhaseOrchestrator + Workflow Gate**: 阶段门控系统，支持 soft/hard gate 评估、fix-retry 耗尽自动强制完成
+- **DelegateBroker**: 委托任务代理，支持任务分发、状态追踪、结果收集
+- **WorkflowEventRelay (WebSocket)**: 实时状态推送，客户端可订阅事件类型过滤，支持 ping/pong 心跳
+- **Hook 实战接入**: HookRegistry + HookType 扩展，WorkflowEngine 构造器注入 _hooks/_phaseOrch
+- **Lazy 工具类**: 懒加载工具类，减少启动时间
+- **HybridSearch 不可变策略**: 搜索结果不可变，防止意外修改
+- **25 项性能优化**: 对标 maestro-flow 经验，涵盖 logger 统一、WorkflowEngine 双写、store 安全写入、模块 console 清理等
+- **Phase 3 深度对比分析**: Dashboard 可视化架构、配置热加载与动态重配置、TUI 架构分析，产出 10 项迁移路线图
+
+### Fixed
+- PhaseOrchestrator fixAttempts 累积逻辑：仅在 complete 阶段重置计数器，修复 fix-retry 永远无法耗尽的 bug
+- vitest 全量测试 OOM：启用 singleFork 减少内存叠加
+- WorkflowEngine 构造器注入 _hooks/_phaseOrch 字段
+
+### Verification
+- 47 tests pass (18 phase-orchestrator + 11 delegate-broker + 9 gateway-ws + 9 lazy)
+- 30 hybrid-search + openkl-contract tests pass
+- No regressions
+
 ## [9.26.2] - 2026-05-20
 
 ### Fixed
