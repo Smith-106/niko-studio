@@ -90,13 +90,19 @@ function readString(value: unknown): string | null {
 }
 
 function normalizeAscii(value: string): string {
-  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  return value.normalize('NFKD').replace(/[̀-ͯ]/g, '');
 }
+
+// CJK Unified Ideographs ranges for slug sanitization
+// 一-鿿: CJK Unified Ideographs
+// 㐀-䶿: CJK Unified Ideographs Extension A
+const CJK_SLUG_PATTERN = new RegExp('[^a-z0-9_\\u4e00-\\u9fff\\u3400-\\u4dbf-]+', 'g');
+const SMART_QUOTES_PATTERN = /[‘’"]/g;
 
 function sanitizeIdentifier(value: string): string {
   return normalizeAscii(value)
     .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(CJK_SLUG_PATTERN, '-')
     .replace(/^-+|-+$/g, '')
     || 'workspace';
 }
@@ -104,8 +110,8 @@ function sanitizeIdentifier(value: string): string {
 function sanitizeSlugSegment(value: string): string {
   return normalizeAscii(value)
     .toLowerCase()
-    .replace(/['’"]/g, '')
-    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(SMART_QUOTES_PATTERN, '')
+    .replace(CJK_SLUG_PATTERN, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
     || 'untitled';

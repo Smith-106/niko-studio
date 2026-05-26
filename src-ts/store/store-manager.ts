@@ -218,7 +218,12 @@ export class Document {
 
   /** Approximate word count */
   get wordCount(): number {
-    return this.content.split(/\s+/).filter(Boolean).length;
+    if (!this.content) return 0;
+    const cjkChars = this.content.match(/[一-鿿㐀-䶿]/g);
+    const cjkCount = cjkChars ? cjkChars.length : 0;
+    const withoutCjk = this.content.replace(/[一-鿿鿿㐀-䶿]/g, ' ');
+    const latinWords = withoutCjk.split(/\s+/).filter(Boolean).length;
+    return cjkCount + latinWords;
   }
 
   /** Character count */

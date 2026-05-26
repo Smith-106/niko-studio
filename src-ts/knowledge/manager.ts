@@ -8,7 +8,7 @@
 import type {
   ProviderConfig,
   ServiceConfig,
-  LLMProvider as LLMServiceProviderContract,
+  LLMProviderEntry as LLMServiceProviderContract,
   EmbeddingProvider as EmbeddingServiceProviderContract,
   LLMResponse,
   EmbeddingResponse,

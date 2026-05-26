@@ -9,7 +9,7 @@ import type { RankedDocument, RerankerConfig } from '../models';
 import { RerankerError, RerankerType } from '../models';
 import { RerankerStrategy } from '../base';
 
-const DEFAULT_BASE_URL = 'http://localhost:8080';
+const DEFAULT_BASE_URL = process.env.TEI_RERANKER_URL || 'http://localhost:8080';
 const DEFAULT_MODEL = 'BAAI/bge-reranker-v2-m3';
 
 export class TEIReranker extends RerankerStrategy {

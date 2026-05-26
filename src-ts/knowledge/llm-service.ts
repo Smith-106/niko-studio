@@ -4,7 +4,7 @@
  * Unified multi-provider LLM service with model tier routing, retry, and degradation.
  */
 
-import type { LLMProvider } from './models';
+import type { LLMProviderEntry } from './models';
 import type {
   LLMRequest,
   LLMResponse,
@@ -88,13 +88,13 @@ async function withRetry<T>(
  * - JSON generation
  */
 export class LLMServiceImpl {
-  private readonly _providers: Map<string, LLMProvider>;
+  private readonly _providers: Map<string, LLMProviderEntry>;
   private readonly _defaultProvider: string;
   private readonly _maxRetries: number;
   private readonly _retryBaseDelay: number;
 
   constructor(params: {
-    providers: Map<string, LLMProvider>;
+    providers: Map<string, LLMProviderEntry>;
     defaultProvider?: string;
     maxRetries?: number;
     retryBaseDelay?: number;
@@ -108,7 +108,7 @@ export class LLMServiceImpl {
   /**
    * Get provider instance by type
    */
-  private _getProvider(providerType?: string | null): LLMProvider {
+  private _getProvider(providerType?: string | null): LLMProviderEntry {
     let ptype = providerType ?? this._defaultProvider;
     const provider = this._providers.get(ptype);
     if (!provider) {
@@ -127,7 +127,7 @@ export class LLMServiceImpl {
    */
   private _resolveModel(
     model: string | ModelTier | null | undefined,
-    provider: LLMProvider,
+    provider: LLMProviderEntry,
   ): string {
     if (model == null) {
       return provider.getModelForTier(ModelTier.DEFAULT);

@@ -3,14 +3,42 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolveCorsOrigins } from './config';
 import type { HttpRequest, HttpResponse } from './http-types';
 
-export function readRequestBody(req: IncomingMessage): Promise<string> {
+export function readRequestBody(req: IncomingMessage, timeoutMs: number = 30000): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = '';
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error(`Request body read timed out after ${timeoutMs}ms`));
+      }
+    }, timeoutMs);
+
+    const cleanup = () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+      }
+    };
+
     req.on('data', (chunk) => {
       data += chunk;
     });
-    req.on('end', () => resolve(data));
-    req.on('error', reject);
+    req.on('end', () => {
+      cleanup();
+      resolve(data);
+    });
+    req.on('error', (err) => {
+      cleanup();
+      reject(err);
+    });
+    req.on('close', () => {
+      // Client disconnected before sending full body
+      if (!settled) {
+        cleanup();
+        reject(new Error('Client disconnected before request body was fully received'));
+      }
+    });
   });
 }
 

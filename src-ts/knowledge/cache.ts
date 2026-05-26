@@ -90,6 +90,29 @@ export class TieredEmbeddingCache implements EmbeddingCache {
     this._stmtAccessed = this._db.prepare(
       'UPDATE embedding_cache SET accessed_at = ? WHERE key = ?',
     );
+
+    this._evictColdTier();
+  }
+
+  private static readonly COLD_MAX_ROWS = 50000;
+  private static readonly COLD_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+  private _evictColdTier(): void {
+    if (!this._db) return;
+    try {
+      const now = Date.now();
+      const cutoff = now - TieredEmbeddingCache.COLD_TTL_MS;
+      this._db.prepare('DELETE FROM embedding_cache WHERE accessed_at < ?').run(cutoff);
+
+      const row = this._db.prepare('SELECT COUNT(*) as cnt FROM embedding_cache').get() as { cnt: number };
+      if (row.cnt > TieredEmbeddingCache.COLD_MAX_ROWS) {
+        this._db.prepare(
+          'DELETE FROM embedding_cache WHERE key NOT IN (SELECT key FROM embedding_cache ORDER BY accessed_at DESC LIMIT ?)'
+        ).run(TieredEmbeddingCache.COLD_MAX_ROWS);
+      }
+    } catch {
+      // 冷层淘汰失败不影响运行
+    }
   }
 
   // ============================================================

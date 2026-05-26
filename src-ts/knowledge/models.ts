@@ -87,7 +87,7 @@ export interface LLMResponse {
   cached: boolean;
 }
 
-export interface LLMProvider {
+export interface LLMProviderEntry {
   readonly providerType: string;
   getModelForTier(tier: ModelTier): string;
   generate(request: LLMRequest): Promise<LLMResponse>;

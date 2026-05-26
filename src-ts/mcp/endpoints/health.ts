@@ -8,6 +8,7 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse } from '../http-types';
 import type { ServiceConfig } from '../../knowledge/models';
+import { listSkills } from '../../skills/index.js';
 
 // ---------------------------------------------------------------
 // Gateway imports (will be wired via dependency injection)
@@ -301,11 +302,10 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
     engine_health: engineHealth,
     diagnostic,
     observability: gw.getObservabilitySnapshot(services, engineHealth),
-    agents: [
-      'commander', 'architect', 'writer', 'critic',
-      'worldbuilding', 'character', 'plot',
-    ],
-    skills_count: 40,
+    agents: Object.keys(engineHealth).filter(
+      (name) => name !== 'memory' && name !== 'graph' && name !== 'search' && name !== 'workflow' && name !== 'critic'
+    ).concat(['commander', 'architect', 'writer', 'critic', 'worldbuilding', 'character', 'plot']),
+    skills_count: listSkills().length,
     mcp_runtime: {
       session_id: gw.runtimeSessionId,
       connection_state: connectionState,

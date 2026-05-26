@@ -54,6 +54,7 @@ export async function startGatewayServer(
 ): Promise<Server> {
   // Initialize config from project file + validate
   initConfig();
+  ensureEnvironment(false);
   const { errors, warnings } = validateConfig();
   if (errors.length > 0) {
     _log.error('Config validation failed', { errors });

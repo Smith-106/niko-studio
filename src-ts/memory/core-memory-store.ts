@@ -574,42 +574,38 @@ export class CoreMemoryStore {
     }
 
     const vConn = this._vectorSearch._getConnection();
-    try {
-      const row = vConn
-        .prepare(
-          "SELECT id, content, metadata FROM items WHERE id = ? AND type = 'memory'"
-        )
-        .get(memoryId) as Record<string, unknown> | undefined;
+    const row = vConn
+      .prepare(
+        "SELECT id, content, metadata FROM items WHERE id = ? AND type = 'memory'"
+      )
+      .get(memoryId) as Record<string, unknown> | undefined;
 
-      if (!row) {
-        return null;
-      }
-
-      let meta: Record<string, unknown> = {};
-      try { meta = JSON.parse(row.metadata as string) as Record<string, unknown>; } catch { /* corrupted metadata */ }
-      const memory = new CoreMemory({
-        id: row.id as string,
-        content: row.content as string,
-        summary: (meta["summary"] as string | null) ?? null,
-        archived: (meta["archived"] as boolean) ?? false,
-        createdAt: (meta["created_at"] as number) ?? 0,
-        updatedAt: (meta["updated_at"] as number) ?? 0,
-        metadata: (meta["extra"] as Record<string, unknown>) ?? {},
-        importance: (meta["importance"] as number) ?? 0.5,
-        accessCount: (meta["access_count"] as number) ?? 0,
-      });
-
-      // Track access if requested
-      if (trackAccess) {
-        memory.accessCount += 1;
-        this._updateAccessCount(memoryId, memory.accessCount);
-        this._updateSqliteAccessCount(memoryId, memory.accessCount);
-      }
-
-      return memory;
-    } finally {
-      vConn.close();
+    if (!row) {
+      return null;
     }
+
+    let meta: Record<string, unknown> = {};
+    try { meta = JSON.parse(row.metadata as string) as Record<string, unknown>; } catch { /* corrupted metadata */ }
+    const memory = new CoreMemory({
+      id: row.id as string,
+      content: row.content as string,
+      summary: (meta["summary"] as string | null) ?? null,
+      archived: (meta["archived"] as boolean) ?? false,
+      createdAt: (meta["created_at"] as number) ?? 0,
+      updatedAt: (meta["updated_at"] as number) ?? 0,
+      metadata: (meta["extra"] as Record<string, unknown>) ?? {},
+      importance: (meta["importance"] as number) ?? 0.5,
+      accessCount: (meta["access_count"] as number) ?? 0,
+    });
+
+    // Track access if requested
+    if (trackAccess) {
+      memory.accessCount += 1;
+      this._updateAccessCount(memoryId, memory.accessCount);
+      this._updateSqliteAccessCount(memoryId, memory.accessCount);
+    }
+
+    return memory;
   }
 
   private _getMemorySqlite(memoryId: string): CoreMemory | null {
