@@ -4,6 +4,7 @@ import { initializeGatewayControlPlane, prewarmGatewayControlPlane } from '../co
 import { resolveGatewayHostPort } from './config';
 import { createGatewayRequestHandler } from './gateway-request-handler';
 import { gatewayRoutes } from './routes';
+import { WorkflowEventRelay } from './gateway-ws';
 import { createLogger } from '../logger/index.js';
 import { initConfig, validateConfig, ensureEnvironment } from '../config/index.js';
 
@@ -30,7 +31,7 @@ export function resolveGatewayServerStartOptions(
   return { host, port };
 }
 
-function logGatewayStartup(host: string, port: number): void {
+function logGatewayStartup(host: string, port: number, wsEnabled: boolean): void {
   _log.info('NIKO Studio Gateway started', { host, port });
   _log.info('Endpoints available', {
     health: `http://localhost:${port}/health`,
@@ -38,6 +39,7 @@ function logGatewayStartup(host: string, port: number): void {
     graph: `http://localhost:${port}/graph/query`,
     skills: `http://localhost:${port}/skills/list`,
     workflow: `http://localhost:${port}/workflow/route`,
+    ws: wsEnabled ? `ws://localhost:${port}/ws/events` : 'disabled',
   });
 }
 
@@ -67,8 +69,15 @@ export async function startGatewayServer(
   await prewarmGatewayControlPlane(container);
 
   const server = createServer(createGatewayRequestHandler(gatewayRoutes));
+
+  // WebSocket event relay
+  const relay = new WorkflowEventRelay(server, '/ws/events');
+
   await listen(server, host, port);
-  logGatewayStartup(host, port);
+  logGatewayStartup(host, port, true);
+
+  // Attach relay to server for downstream access
+  (server as Server & { eventRelay?: WorkflowEventRelay }).eventRelay = relay;
 
   return server;
 }

@@ -107,3 +107,10 @@ export {
   McpGateway as LegacyMcpGateway,
   startSidecar as startLegacySidecar,
 } from './gateway';
+
+// WebSocket event relay
+export {
+  WorkflowEventRelay,
+  type WorkflowEventType,
+  type WorkflowEvent,
+} from './gateway-ws';

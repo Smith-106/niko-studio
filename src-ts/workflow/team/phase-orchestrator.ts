@@ -115,9 +115,13 @@ export class PhaseOrchestrator {
     // 执行转换
     if (target === TeamPhase.fix) {
       this._fixAttempts += 1;
-    } else {
+    } else if (target === TeamPhase.complete) {
+      // Complete is terminal — reset fixAttempts
       this._fixAttempts = 0;
     }
+    // Note: fix→review and review→verification do NOT reset fixAttempts.
+    // Fix-retry exhaustion is tracked as total fix cycles in the current verification loop.
+    // Only reaching complete (gate fully passes) clears the count.
 
     const trigger = gate.allowed ? 'gate-passed' : (force ? 'force-override' : 'gate-failed-fix');
     const record = this._recordTransition(this._phase, target, trigger, force, gate.reasons);

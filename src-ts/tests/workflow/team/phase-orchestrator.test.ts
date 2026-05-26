@@ -204,8 +204,9 @@ describe('PhaseOrchestrator', () => {
   it('fix-retry exhausts and forces completion', () => {
     const orch = new PhaseOrchestrator(TeamPhase.verification);
 
-    // First 3 fix attempts
+    // Run 3 full fix loops: verification→fix→review→verification (soft gate each time)
     for (let i = 0; i < MAX_FIX_ATTEMPTS; i++) {
+      // verification (soft gate) → fix
       orch.advance({
         verification: {
           status: 'gaps_found',
@@ -214,21 +215,20 @@ describe('PhaseOrchestrator', () => {
       });
       expect(orch.phase).toBe(TeamPhase.fix);
 
-      // Simulate fix → review
-      if (i < MAX_FIX_ATTEMPTS - 1) {
-        // fix → review (gate passes review)
-        orch.advance({ review: { verdict: 'APPROVE' } });
-        // review → verification (soft gate still fails)
-        orch.advance({
-          verification: {
-            status: 'gaps_found',
-            gaps: [{ severity: 'high', description: 'Still missing' }],
-          },
-        });
-      }
+      // fix (gate passes) → review
+      orch.advance({ review: { verdict: 'APPROVE' } });
+      expect(orch.phase).toBe(TeamPhase.review);
+
+      // review (gate passes) → verification
+      orch.advance({
+        review: { verdict: 'APPROVE' },
+        verification: { status: 'verified' },
+      });
+      expect(orch.phase).toBe(TeamPhase.verification);
     }
 
-    // After exhausting fix attempts, should force complete
+    // After exhausting fix attempts, still at verification with soft gate
+    // → should force complete instead of entering another fix loop
     const result = orch.advance({
       verification: {
         status: 'gaps_found',
