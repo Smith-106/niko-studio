@@ -135,6 +135,8 @@ export function resolveReloadEnabled(): boolean {
 /**
  * Resolve gateway host and port from environment or config.
  */
+const DEFAULT_GATEWAY_PORT = 8000;
+
 export function resolveGatewayHostPort(): { host: string; port: number } {
   let host = process.env.NIKO_GATEWAY_HOST;
   if (host === undefined) {
@@ -144,11 +146,11 @@ export function resolveGatewayHostPort(): { host: string; port: number } {
 
   let rawPort = process.env.NIKO_GATEWAY_PORT;
   if (rawPort === undefined) {
-    rawPort = String(getConfigValue('gateway.port', 8000));
+    rawPort = String(getConfigValue('gateway.port', DEFAULT_GATEWAY_PORT));
   }
 
   const port = parseInt(String(rawPort).trim(), 10);
-  return { host, port: Number.isNaN(port) ? 8000 : port };
+  return { host, port: Number.isNaN(port) ? DEFAULT_GATEWAY_PORT : port };
 }
 
 /**

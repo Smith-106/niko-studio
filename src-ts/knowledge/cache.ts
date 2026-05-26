@@ -12,6 +12,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { tmpdir } from 'os';
 import type { EmbeddingCache } from '../protocols/embedding';
+import { parseJsonSafe } from '../utils/json';
 
 type DatabaseType = InstanceType<typeof BetterSqlite3>;
 

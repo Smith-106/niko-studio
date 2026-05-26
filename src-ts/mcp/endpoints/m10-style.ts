@@ -4,7 +4,7 @@ import { createLogger } from '../../logger/index.js';
 
 const log = createLogger('m10-style');
 
-const SENTENCE_ENDINGS = /[.!?。！？]+/g;
+const SENTENCE_ENDINGS = /[.!?。！？；；…]+/g;
 const DIALOGUE_MARKERS = /[""「」『』""'']/g;
 const PARAGRAPH_BREAK = /\n\s*\n/;
 
@@ -13,13 +13,13 @@ function splitSentences(text: string): string[] {
 }
 
 function countWords(text: string): number {
-  const cjk = text.match(/[一-鿿㐀-䶿]/g);
-  const latin = text.replace(/[一-鿿㐀-䶿]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  const cjk = text.match(/\p{Script=Han}/gu);
+  const latin = text.replace(/\p{Script=Han}/gu, ' ').trim().split(/\s+/).filter(Boolean);
   return (cjk?.length ?? 0) + latin.length;
 }
 
 function countUniqueWords(text: string): number {
-  const normalized = text.toLowerCase().replace(/[^\w一-鿿㐀-䶿]/g, ' ');
+  const normalized = text.normalize('NFKC').toLowerCase().replace(/[^\w\p{Script=Han}]/gu, ' ');
   const words = normalized.split(/\s+/).filter(Boolean);
   return new Set(words).size;
 }

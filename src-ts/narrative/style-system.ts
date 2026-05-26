@@ -455,16 +455,17 @@ export class StyleAnalyzer {
   }
 
   private splitSentences(text: string): string[] {
-    return text.split(/[\u3002\uFF01\uFF1F]/).map((s) => s.trim()).filter((s) => s.length > 0);
+    return text.split(/[\u3002\uFF01\uFF1F\uFF1B\u2026]/).map((s) => s.trim()).filter((s) => s.length > 0);
   }
 
   private tokenize(text: string): string[] {
-    const cleanText = text.replace(/[^\w\s\u4e00-\u9fff]/g, '');
+    const cleanText = text.replace(/[^\w\s\p{Script=Han}]/gu, '');
     const tokens: string[] = [];
     let currentWord = '';
     for (const char of cleanText) {
-      const code = char.charCodeAt(0);
-      if (code >= 0x4e00 && code <= 0x9fff) {
+      const cp = char.codePointAt(0)!;
+      const isCJK = (cp >= 0x4e00 && cp <= 0x9fff) || (cp >= 0x3400 && cp <= 0x4dbf) || cp >= 0x20000;
+      if (isCJK) {
         if (currentWord) { tokens.push(currentWord); currentWord = ''; }
         tokens.push(char);
       } else if (/\s/.test(char)) {

@@ -438,8 +438,8 @@ export class WriterAgent {
 
   private simpleHash(s: string): number {
     let h = 0;
-    for (let i = 0; i < s.length; i++) {
-      h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    for (const ch of s) {
+      h = ((h << 5) - h + ch.codePointAt(0)!) | 0;
     }
     return Math.abs(h) % 10000;
   }

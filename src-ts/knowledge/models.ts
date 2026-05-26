@@ -19,6 +19,23 @@ export enum ModelTier {
 }
 
 /**
+ * Canonical model mapping — single source of truth for default model names.
+ * Provider implementations should reference this instead of hardcoding.
+ */
+export const DEFAULT_MODEL_MAPPING: Record<string, Record<ModelTier, string>> = {
+  openai: {
+    [ModelTier.FAST]: 'gpt-4o-mini',
+    [ModelTier.DEFAULT]: 'gpt-4o',
+    [ModelTier.POWERFUL]: 'o1',
+  },
+  anthropic: {
+    [ModelTier.FAST]: 'claude-haiku-4-5-20251001',
+    [ModelTier.DEFAULT]: 'claude-sonnet-4-6',
+    [ModelTier.POWERFUL]: 'claude-opus-4-7',
+  },
+};
+
+/**
  * Service provider type
  */
 export enum ProviderType {

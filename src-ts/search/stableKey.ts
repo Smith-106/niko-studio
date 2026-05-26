@@ -10,8 +10,8 @@
 // FNV-1a 算法，32位，足够区分不同内容
 export function stableKey(input: string): number {
   let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
+  for (const ch of input) {
+    hash ^= ch.codePointAt(0)!;
     hash = Math.imul(hash, 0x01000193);
   }
   return hash >>> 0;

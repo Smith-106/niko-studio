@@ -173,3 +173,13 @@ export function closeAllPools(): void {
   for (const pool of _globalPools.values()) pool.close();
   _globalPools.clear();
 }
+
+// 退出时自动关闭所有连接池
+function _registerExitHook(): void {
+  const shutdown = () => { closeAllPools(); };
+  process.on('exit', shutdown);
+  process.on('SIGINT', () => { shutdown(); process.exit(0); });
+  process.on('SIGTERM', () => { shutdown(); process.exit(0); });
+}
+
+_registerExitHook();

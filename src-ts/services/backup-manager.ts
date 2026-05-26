@@ -491,28 +491,32 @@ export class BackupManager {
 
     try {
       const { client, bucket, prefix } = this._createS3Client(s3Config);
-      const keyPrefix = prefix ? `${prefix}/${backupId}` : backupId;
-      const localFiles = this._collectFiles(backup.backupPath);
+      try {
+        const keyPrefix = prefix ? `${prefix}/${backupId}` : backupId;
+        const localFiles = this._collectFiles(backup.backupPath);
 
-      for (const file of localFiles) {
-        const rel = relative(backup.backupPath, file).replace(/\\/g, '/');
-        const s3Key = `${keyPrefix}/${rel}`;
-        await client.send(new PutObjectCommand({
-          Bucket: bucket,
-          Key: s3Key,
-          Body: readFileSync(file),
-          ContentType: 'application/octet-stream',
-        }));
+        for (const file of localFiles) {
+          const rel = relative(backup.backupPath, file).replace(/\\/g, '/');
+          const s3Key = `${keyPrefix}/${rel}`;
+          await client.send(new PutObjectCommand({
+            Bucket: bucket,
+            Key: s3Key,
+            Body: readFileSync(file),
+            ContentType: 'application/octet-stream',
+          }));
+        }
+
+        return {
+          success: true,
+          backupId,
+          bucket,
+          prefix: keyPrefix,
+          s3Key: keyPrefix,
+          fileCount: localFiles.length,
+        };
+      } finally {
+        client.destroy();
       }
-
-      return {
-        success: true,
-        backupId,
-        bucket,
-        prefix: keyPrefix,
-        s3Key: keyPrefix,
-        fileCount: localFiles.length,
-      };
     } catch (err) {
       return { success: false, error: `S3 upload failed: ${(err as Error).message}` };
     }
@@ -533,31 +537,32 @@ export class BackupManager {
 
     try {
       const { client, bucket } = this._createS3Client(s3Config);
-      const downloadedFiles: string[] = [];
-      let continuationToken: string | undefined;
+      try {
+        const downloadedFiles: string[] = [];
+        let continuationToken: string | undefined;
 
-      do {
-        const page = await client.send(new ListObjectsV2Command({
-          Bucket: bucket,
-          Prefix: normalizedKey,
-          ContinuationToken: continuationToken,
-        }));
-
-        for (const obj of page.Contents ?? []) {
-          const key = obj.Key ?? '';
-          if (!key || key.endsWith('/')) continue;
-
-          const rel = key.slice(normalizedKey.length).replace(/^\/+/, '');
-          if (!rel) continue;
-
-          const localFile = join(target, ...rel.split('/'));
-          mkdirSync(dirname(localFile), { recursive: true });
-
-          const response = await client.send(new GetObjectCommand({
+        do {
+          const page = await client.send(new ListObjectsV2Command({
             Bucket: bucket,
-            Key: key,
+            Prefix: normalizedKey,
+            ContinuationToken: continuationToken,
           }));
-          const content = await this._readS3Body(response.Body);
+
+          for (const obj of page.Contents ?? []) {
+            const key = obj.Key ?? '';
+            if (!key || key.endsWith('/')) continue;
+
+            const rel = key.slice(normalizedKey.length).replace(/^\/+/, '');
+            if (!rel) continue;
+
+            const localFile = join(target, ...rel.split('/'));
+            mkdirSync(dirname(localFile), { recursive: true });
+
+            const response = await client.send(new GetObjectCommand({
+              Bucket: bucket,
+              Key: key,
+            }));
+            const content = await this._readS3Body(response.Body);
           writeFileSync(localFile, content);
           downloadedFiles.push(rel);
         }
@@ -573,6 +578,9 @@ export class BackupManager {
         targetPath: target,
         fileCount: downloadedFiles.length,
       };
+    } finally {
+      client.destroy();
+    }
     } catch (err) {
       return { success: false, error: `S3 restore failed: ${(err as Error).message}` };
     }

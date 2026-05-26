@@ -348,6 +348,15 @@ export class GraphManager {
   // 属性解析缓存：同一 node/edge ID 在多次查询中重复出现时避免重复解析
   // 写操作时清除对应缓存条目以保持一致性
   private _propsCache = new Map<string, Record<string, unknown>>();
+  private static readonly PROPS_CACHE_MAX = 2000;
+
+  private _setPropsCache(key: string, value: Record<string, unknown>): void {
+    if (this._propsCache.size >= GraphManager.PROPS_CACHE_MAX) {
+      const firstKey = this._propsCache.keys().next().value;
+      if (firstKey !== undefined) this._propsCache.delete(firstKey);
+    }
+    this._propsCache.set(key, value);
+  }
 
   constructor(dbPath?: string | null) {
     const resolved = dbPath ?? join(homedir(), '.niko', 'graph_manager.db');
