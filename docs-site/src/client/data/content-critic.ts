@@ -150,24 +150,79 @@ POST /m10/style/apply</code></pre>
   <li><strong>对话补充</strong> — 生成或调整对话内容。</li>
 </ul>
 <h2>案例：不知道下一步写什么，但又不想让 AI 直接代写</h2>
-<p>上下文建议非常适合这种情况。它不直接替你写整段，而是给出几个更贴近当前项目事实的推进方向，比如“让角色先做错误判断”“先补氛围再爆冲突”“先用对话拖住节奏”。</p>
+<p>上下文建议非常适合这种情况。它不直接替你写整段，而是给出几个更贴近当前项目事实的推进方向，比如”让角色先做错误判断””先补氛围再爆冲突””先用对话拖住节奏”。</p>
 <h2>输入示例文本片段</h2>
 <pre><code>当前状态：主角刚得知父亲可能还活着，但还没有证据。
 目标：给下一场戏 3 个推进方向，不直接代写正文。</code></pre>
 <h2>期望输出形态</h2>
 <ul>
   <li>返回多个方向，而不是单一标准答案。</li>
-  <li>每个方向都应说明更偏“情节推进”“角色行为”还是“氛围铺垫”。</li>
+  <li>每个方向都应说明更偏”情节推进””角色行为”还是”氛围铺垫”。</li>
   <li>建议应围绕当前项目事实，而不是泛泛的套路化桥段。</li>
 </ul>
 <h2>Related Endpoints</h2>
 <ul>
-  <li><a href="/api/critic-api">批评 API</a>：对应上下文建议能力。</li>
-  <li><a href="/agent/chat-system">对话系统</a>：当你要围绕这些方向继续追问时。</li>
-  <li><a href="/guides/common-writing-problems">常见写作问题索引</a>：适合从“节奏塌”“不知道怎么推进”跳回来。</li>
+  <li><a href=”/api/critic-api”>批评 API</a>：对应上下文建议能力。</li>
+  <li><a href=”/agent/chat-system”>对话系统</a>：当你要围绕这些方向继续追问时。</li>
+  <li><a href=”/guides/common-writing-problems”>常见写作问题索引</a>：适合从”节奏塌””不知道怎么推进”跳回来。</li>
 </ul>
 <h3>端点</h3>
 <pre><code>POST /m10/context-suggestions</code></pre>
+  `,
+  'intelligent-revision': `
+<h2>智能修订</h2>
+<p>智能修订通过 Critic-driven 循环实现多轮自动修订：每轮先用 Critic 评估薄弱点，再基于评估结果定向改进，直到质量达标或达到迭代上限。</p>
+<h2>核心流程</h2>
+<ol>
+  <li><strong>分析</strong> — IRevisionService.analyze() 对文本进行多维度评估。</li>
+  <li><strong>建议</strong> — suggest() 提取薄弱点和改进建议。</li>
+  <li><strong>修订</strong> — revise() 执行 Critic-driven 修订循环。</li>
+  <li><strong>比较</strong> — compare() 对比修订前后差异。</li>
+</ol>
+<h2>跨迭代学习</h2>
+<p>每次修订循环会积累 LearningInsight — 记录哪些维度最容易出问题、哪些修订策略最有效。这些洞察在后续修订中会自动复用，使修订质量随使用逐步提升。</p>
+<h2>终止条件</h2>
+<ul>
+  <li><strong>APPROVED</strong> — 最终评分达到目标阈值。</li>
+  <li><strong>HUMAN_REVIEW</strong> — 接近阈值但需要人工确认。</li>
+  <li><strong>MAX_ITERATIONS</strong> — 达到迭代上限，建议人工介入。</li>
+</ul>
+<h2>案例：一章从 5 分修到 8 分</h2>
+<p>输入章节文本，设置 target_score=8.0，max_iterations=5。系统会先分析得到 baseline score（如 5.2），然后每轮聚焦最低分维度改进。可能第 2 轮修节奏、第 3 轮修情感张力、第 4 轮达到 7.8 分进入 HUMAN_REVIEW。</p>
+<h2>Related Endpoints</h2>
+<ul>
+  <li><a href=”/api/critic-api”>批评 API</a>：底层 Critic 评估能力。</li>
+  <li><a href=”/writing/session-intelligence”>会话智能</a>：修订洞察可反馈到会话分析。</li>
+  <li><a href=”/critic/style-personalization”>风格个性化</a>：修订偏好可沉淀到个性化系统。</li>
+</ul>
+<h3>端点</h3>
+<pre><code>POST /m10/revision/multi-pass
+Body: { text, target_score?, max_iterations?, chapter_id? }</code></pre>
+  `,
+  'style-personalization': `
+<h2>风格个性化</h2>
+<p>风格个性化基于你的写作偏好信号（接受/拒绝/修改建议的记录），构建个性化推荐引擎，使系统建议越来越贴合你的创作风格。</p>
+<h2>核心能力</h2>
+<ul>
+  <li><strong>偏好信号记录</strong> — recordPreferenceSignal() 记录你对每条建议的反馈。</li>
+  <li><strong>个性化画像</strong> — buildProfile() 基于偏好信号构建 PersonalizedCraftProfile。</li>
+  <li><strong>风格推荐</strong> — getRecommendations() 融合模式推荐 + 偏好推荐，按置信度排序。</li>
+  <li><strong>持久化</strong> — 偏好信号通过 KnowledgeMemory 桥接持久存储。</li>
+</ul>
+<h2>推荐来源</h2>
+<ul>
+  <li><strong>pattern</strong> — 来自写作模式检测的结构化推荐。</li>
+  <li><strong>preference</strong> — 来自你历史偏好行为的个性化推荐。</li>
+  <li><strong>reference</strong> — 来自会话智能的上下文推荐。</li>
+</ul>
+<h2>案例：系统越用越懂你</h2>
+<p>前几次使用时，推荐主要是模式检测驱动的（如”句子偏长””过渡不够”）。随着你不断接受/拒绝建议，系统会学到你更在意节奏而非修辞，推荐会逐渐偏向节奏维度的建议，并自动降低你从不采纳的维度权重。</p>
+<h2>Related Endpoints</h2>
+<ul>
+  <li><a href=”/critic/intelligent-revision”>智能修订</a>：修订反馈直接驱动偏好学习。</li>
+  <li><a href=”/writing/session-intelligence”>会话智能</a>：会话模式为推荐提供上下文。</li>
+  <li><a href=”/api/critic-api”>批评 API</a>：底层风格分析能力。</li>
+</ul>
   `,
 };
 

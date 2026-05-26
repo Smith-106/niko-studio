@@ -239,6 +239,30 @@ const baseWritingContent: Record<string, string> = {
   <li><a href="/writing/narrative-structure">叙事结构</a>：查看更通用的结构识别。</li>
 </ul>
   `,
+  'session-intelligence': `
+<h2>会话智能</h2>
+<p>会话智能通过收集写作行为 telemetry（活跃时间、保存频率、重写次数、跳转编辑等），对单次写作会话进行分析，并在多次会话间挖掘跨会话模式。</p>
+<h2>核心能力</h2>
+<ul>
+  <li><strong>Telemetry 收集</strong> — 记录写作过程中的行为信号：activeMinutes、saveCount、rewriteCount、jumpEditCount、historyPanelOpenCount。</li>
+  <li><strong>单会话分析</strong> — 基于 WritingSessionTelemetry 生成 SessionInsight，识别写作模式和薄弱点。</li>
+  <li><strong>跨会话聚类</strong> — 通过 WritingSessionCluster 将相似写作会话分组，发现跨会话模式（如"总是深夜写角色对话"）。</li>
+  <li><strong>模式挖掘</strong> — minePatterns() 提取 CrossSessionInsight，按置信度排序输出跨会话洞察。</li>
+</ul>
+<h2>使用场景</h2>
+<ol>
+  <li>单章写完后查看本次会话洞察。</li>
+  <li>多章完成后查看跨会话模式。</li>
+  <li>根据会话模式调整写作策略。</li>
+</ol>
+<h2>案例：发现"深夜重写模式"</h2>
+<p>会话智能可能发现：你在凌晨 1-3 点的会话中 rewriteCount 普遍偏高，而白天的会话 saveCount 更高。这可能意味着深夜写作时产出不如白天稳定，建议把"深度创作"集中在高效时段。</p>
+<h2>Related Endpoints</h2>
+<ul>
+  <li><a href="/critic/intelligent-revision">智能修订</a>：会话洞察可直接驱动修订。</li>
+  <li><a href="/critic/style-personalization">风格个性化</a>：会话模式可反馈到偏好系统。</li>
+</ul>
+  `,
 };
 
 export const writingContent = appendSectionToPages(

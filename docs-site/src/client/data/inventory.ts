@@ -179,6 +179,9 @@ export const docPages: DocPage[] = [
   { id: 'voice-fingerprint', title: '角色声纹', category: 'writing', description: '角色语音一致性分析、修饰标记检测', slug: 'voice-fingerprint' },
   { id: 'emotional-arc', title: '情感弧线', category: 'writing', description: '情绪轨迹追踪、Show/Tell 比率、沉浸感评分', slug: 'emotional-arc' },
   { id: 'mystery-analysis', title: '悬疑分析', category: 'writing', description: '推理链分析、本格/社会派/硬汉/惊悚分类', slug: 'mystery-analysis' },
+  { id: 'intelligent-revision', title: '智能修订', category: 'critic', description: '多轮 Critic-driven 修订循环、跨迭代学习、MCP 端点', slug: 'intelligent-revision' },
+  { id: 'session-intelligence', title: '会话智能', category: 'writing', description: '写作行为 telemetry 收集、单会话分析、跨会话聚类', slug: 'session-intelligence' },
+  { id: 'style-personalization', title: '风格个性化', category: 'critic', description: '偏好信号记录、个性化推荐引擎、KnowledgeMemory 持久化', slug: 'style-personalization' },
 
   // Sync
   { id: 'sync-overview', title: '同步概览', category: 'sync', description: '云同步架构和工作原理', slug: 'sync-overview' },
