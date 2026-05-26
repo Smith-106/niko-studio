@@ -403,12 +403,16 @@ export class WorkflowEngine {
   private _moduleOwners: Map<string, string> = new Map();
   private _llmService: LLMService | null = null;
   private _stateStore: IWorkflowStateStore | null = null;
+  private _hooks: HookRegistry | null = null;
+  private _phaseOrch: PhaseOrchestrator | null = null;
 
-  constructor(workspace?: string, sessionNamespace?: string, llmService?: LLMService, stateStore?: IWorkflowStateStore) {
+  constructor(workspace?: string, sessionNamespace?: string, llmService?: LLMService, stateStore?: IWorkflowStateStore, hooks?: HookRegistry, phaseOrch?: PhaseOrchestrator) {
     this.workspace = workspace ?? process.cwd();
     this._sessionNamespace = sessionNamespace ?? 'default';
     if (llmService) this._llmService = llmService;
     if (stateStore) this._stateStore = stateStore;
+    if (hooks) this._hooks = hooks;
+    if (phaseOrch) this._phaseOrch = phaseOrch;
     this.checkpointStrategy = new DefaultWorkflowCheckpointStrategy({
       workspace: this.workspace,
       checkpoints: this.checkpoints,
