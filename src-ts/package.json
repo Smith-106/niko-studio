@@ -52,7 +52,7 @@
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.0",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.7"
   },
   "engines": {
     "node": ">=20.0.0",
