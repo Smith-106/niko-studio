@@ -2,7 +2,7 @@
   "passed": [
     {
       "test": "executes 3-step chain end-to-end with persistState at each phase boundary",
-      "notes": "decision=APPROVED phase=completed sessionId=71195d18-9a73-41f8-ae40-e52abe99fede"
+      "notes": "decision=APPROVED phase=completed sessionId=e7972af2-a673-4105-8fc4-2d3dcc9fdb9c"
     },
     {
       "test": "resumes cleanly from mid-chain checkpoint",
@@ -10,7 +10,7 @@
     },
     {
       "test": "concurrent two L5 sessions do not corrupt each other persistState files",
-      "notes": "two concurrent sessions persisted to distinct files with correct sessionIds (A=concurrent-a-1779779704500, B=concurrent-b-1779779704500)"
+      "notes": "two concurrent sessions persisted to distinct files with correct sessionIds (A=concurrent-a-1779872949935, B=concurrent-b-1779872949935)"
     },
     {
       "test": "unhandled rejections are zero across all 3 L5 stress cases",
