@@ -541,6 +541,24 @@ export class SequentialThinking {
     return lines.join("\n");
   }
 
+  // ---------- Public accessors for MCP wrapper ----------
+
+  get thoughtCount(): number {
+    return this._thoughts.size;
+  }
+
+  get branchCount(): number {
+    return this._branches.size;
+  }
+
+  get currentBranchId(): string {
+    return this._currentBranchId;
+  }
+
+  get currentThoughtId(): string | null {
+    return this._currentThoughtId;
+  }
+
   // ---------- Reset ----------
 
   reset(): void {

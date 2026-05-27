@@ -9,9 +9,6 @@
 
 import { BaseAgent } from './base';
 import type { IAgentGraphEngine, IAgentMemoryEngine } from './base';
-import { createLogger } from '../logger/index.js';
-
-const _log = createLogger('agent-plot');
 
 // ── Enums ──────────────────────────────────────────────────
 
@@ -272,7 +269,7 @@ export class PlotAgent extends BaseAgent {
         }
       }
     } catch (e) {
-      _log.warn('Upcoming events query failed', { detail: e });
+      this.logActivity('Upcoming events query failed', { detail: e });
     }
 
     return upcoming;

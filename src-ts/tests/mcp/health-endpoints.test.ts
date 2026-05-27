@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { HttpRequest } from '../../mcp/http-types';
-import { healthCheck, listModels, setGatewayDeps } from '../../mcp/endpoints/health';
+import { healthCheck, listModels, setGatewayDeps, GatewayRuntimeTracker } from '../../mcp/endpoints/health';
 import {
   createProviderConfig,
   createServiceConfig,
@@ -29,9 +29,7 @@ function installGatewayDeps(loadServicesConfig: () => unknown): void {
     getMetricsSnapshot: () => ({}),
     getObservabilitySnapshot: () => ({}),
     runtimeSessionId: 'test-session',
-    runtimeLastProbeAt: null,
-    runtimeReconnectAttempts: 0,
-    runtimeLastError: null,
+    runtimeTracker: new GatewayRuntimeTracker(),
     mcpServiceConfigs: new Map(),
     runtimeServerOrder: [],
     refreshServiceHealthCache: () => {},
@@ -58,9 +56,7 @@ describe('health endpoint diagnostics', () => {
       getMetricsSnapshot: () => ({}),
       getObservabilitySnapshot: () => ({}),
       runtimeSessionId: '',
-      runtimeLastProbeAt: null,
-      runtimeReconnectAttempts: 0,
-      runtimeLastError: null,
+      runtimeTracker: new GatewayRuntimeTracker(),
       mcpServiceConfigs: new Map(),
       runtimeServerOrder: [],
       refreshServiceHealthCache: () => {},
@@ -97,9 +93,7 @@ describe('health endpoint diagnostics', () => {
       getMetricsSnapshot: () => ({}),
       getObservabilitySnapshot: () => ({}),
       runtimeSessionId: 'session-1',
-      runtimeLastProbeAt: null,
-      runtimeReconnectAttempts: 0,
-      runtimeLastError: null,
+      runtimeTracker: new GatewayRuntimeTracker(),
       mcpServiceConfigs: new Map(),
       runtimeServerOrder: ['search'],
       refreshServiceHealthCache: () => {},
@@ -134,9 +128,7 @@ describe('health endpoint diagnostics', () => {
       getMetricsSnapshot: () => ({}),
       getObservabilitySnapshot: () => ({}),
       runtimeSessionId: 'session-1',
-      runtimeLastProbeAt: null,
-      runtimeReconnectAttempts: 0,
-      runtimeLastError: null,
+      runtimeTracker: new GatewayRuntimeTracker(),
       mcpServiceConfigs: new Map(),
       runtimeServerOrder: ['search'],
       refreshServiceHealthCache: () => {},

@@ -2,7 +2,7 @@ import { ConfigManager, getConfig as getAppConfig, getConfigValue as getAppConfi
 import { ServiceContainer } from '../container/ServiceContainer';
 import { loadConfig as loadServicesConfig } from '../knowledge/config';
 import { setConfigAccess } from './endpoints/config';
-import { setGatewayDeps } from './endpoints/health';
+import { setGatewayDeps, GatewayRuntimeTracker } from './endpoints/health';
 import { getMetricsSnapshot, utcNowIso } from './metrics';
 import {
   RUNTIME_SESSION_ID,
@@ -130,9 +130,7 @@ export function buildGatewayDeps(
     getMetricsSnapshot: () => getMetricsSnapshot(),
     getObservabilitySnapshot,
     runtimeSessionId: RUNTIME_SESSION_ID,
-    runtimeLastProbeAt: null,
-    runtimeReconnectAttempts: 0,
-    runtimeLastError: null,
+    runtimeTracker: new GatewayRuntimeTracker(),
     mcpServiceConfigs: mcpConfigs,
     runtimeServerOrder: [...RUNTIME_SERVER_ORDER],
     refreshServiceHealthCache: (services: Record<string, string>) => {

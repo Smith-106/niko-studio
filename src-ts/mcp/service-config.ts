@@ -12,6 +12,13 @@
 
 export type McpTransport = 'streamable-http' | 'stdio' | 'sse';
 
+const VALID_TRANSPORTS: readonly McpTransport[] = ['streamable-http', 'stdio', 'sse'];
+
+export function validateMcpTransport(value: string): McpTransport {
+  if (VALID_TRANSPORTS.includes(value as McpTransport)) return value as McpTransport;
+  throw new Error(`Invalid transport "${value}". Must be one of: ${VALID_TRANSPORTS.join(', ')}`);
+}
+
 export interface McpServiceConfig {
   serviceId: string;
   name: string;
@@ -111,31 +118,34 @@ export function serializeServiceConfig(
 export function normalizeServiceConfigPayload(
   serviceId: string,
   body: Record<string, unknown>,
-): Record<string, unknown> {
-  const normalized: Record<string, unknown> = {
-    service_id: serviceId.trim().toLowerCase(),
-    name: String(body.name ?? serviceId).trim(),
-    path: String(body.path ?? `/${serviceId}`).trim(),
-    enabled: Boolean(body.enabled ?? true),
-    builtin: Boolean(body.builtin ?? false),
-    health_url: body.health_url ?? null,
-    transport: String(body.transport ?? 'streamable-http').trim() || 'streamable-http',
-  };
+): McpServiceConfig {
+  const transport = validateMcpTransport(String(body.transport ?? 'streamable-http').trim() || 'streamable-http');
+  let serviceIdValue = serviceId.trim().toLowerCase();
+  let nameValue = String(body.name ?? serviceId).trim();
+  let pathValue = String(body.path ?? `/${serviceId}`).trim();
+  const enabledValue = Boolean(body.enabled ?? true);
+  const builtinValue = Boolean(body.builtin ?? false);
+  const healthUrlValue = body.health_url ?? null;
 
-  if (!normalized.service_id) {
+  if (!serviceIdValue) {
     throw new Error('service_id is required');
   }
-  if (!normalized.path) {
+  if (!pathValue) {
     throw new Error('path is required');
   }
-  if (!(normalized.path as string).startsWith('/')) {
-    normalized.path = `/${normalized.path}`;
-  }
-  if (normalized.health_url !== null) {
-    normalized.health_url = String(normalized.health_url).trim() || null;
+  if (!pathValue.startsWith('/')) {
+    pathValue = `/${pathValue}`;
   }
 
-  return normalized;
+  return {
+    serviceId: serviceIdValue,
+    name: nameValue,
+    path: pathValue,
+    enabled: enabledValue,
+    builtin: builtinValue,
+    healthUrl: healthUrlValue as string | null,
+    transport,
+  };
 }
 
 /**
@@ -166,24 +176,16 @@ export function updateServiceConfig(
 
   let updated: McpServiceConfig;
   if (current === undefined) {
-    updated = {
-      serviceId: payload.service_id as string,
-      name: payload.name as string,
-      path: payload.path as string,
-      enabled: payload.enabled as boolean,
-      builtin: payload.builtin as boolean,
-      healthUrl: payload.health_url as string | null,
-      transport: payload.transport as McpTransport,
-    };
+    updated = payload;
   } else {
     updated = {
       serviceId: current.serviceId,
-      name: payload.name as string,
-      path: current.builtin ? current.path : (payload.path as string),
-      enabled: payload.enabled as boolean,
+      name: payload.name,
+      path: current.builtin ? current.path : payload.path,
+      enabled: payload.enabled,
       builtin: current.builtin,
-      healthUrl: payload.health_url as string | null,
-      transport: payload.transport as McpTransport,
+      healthUrl: payload.healthUrl,
+      transport: payload.transport,
     };
   }
 

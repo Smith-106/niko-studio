@@ -21,13 +21,7 @@ import {
   type Branch,
 } from "../agents/sequential-thinking";
 
-// Type that exposes the engine's protected fields for internal access
-type EngineInternals = {
-  _thoughts: Map<string, ThoughtData>;
-  _branches: Map<string, Branch>;
-  _currentBranchId: string;
-  _currentThoughtId: string | null;
-};
+
 
 // ============================================================
 // Session registry
@@ -115,7 +109,7 @@ export function switchBranch(params: {
   return {
     status: "switched",
     branchId: params.branchId,
-    currentThoughtId: (engine as unknown as EngineInternals)._currentThoughtId,
+    currentThoughtId: engine.currentThoughtId,
   };
 }
 
@@ -139,8 +133,8 @@ export function backtrack(params: {
   return {
     status: "backtracked",
     to: params.toThoughtId,
-    currentThoughtId: (engine as unknown as EngineInternals)._currentThoughtId,
-    currentBranchId: (engine as unknown as EngineInternals)._currentBranchId,
+    currentThoughtId: engine.currentThoughtId,
+    currentBranchId: engine.currentBranchId,
   };
 }
 
@@ -172,17 +166,16 @@ export function getState(params?: {
 }): Record<string, unknown> {
   const engine = getEngine(params?.sessionId);
   const state = engine.toDict();
-  const internals = engine as unknown as EngineInternals;
 
   return {
     ...state,
     summary: {
-      totalThoughts: internals._thoughts.size,
-      totalBranches: internals._branches.size,
+      totalThoughts: engine.thoughtCount,
+      totalBranches: engine.branchCount,
       activeThoughts: engine.getActiveThoughts().length,
       conclusions: engine.getConclusions().length,
-      currentBranch: internals._currentBranchId,
-      currentThought: internals._currentThoughtId,
+      currentBranch: engine.currentBranchId,
+      currentThought: engine.currentThoughtId,
     },
   };
 }
@@ -231,20 +224,18 @@ export function listSessions(): Array<Record<string, unknown>> {
   const sessions: Array<Record<string, unknown>> = [];
 
   if (defaultEngine) {
-    const internals = defaultEngine as unknown as EngineInternals;
     sessions.push({
       id: "default",
-      thoughts: internals._thoughts.size,
-      branches: internals._branches.size,
+      thoughts: defaultEngine.thoughtCount,
+      branches: defaultEngine.branchCount,
     });
   }
 
   for (const [sid, engine] of engines) {
-    const internals = engine as unknown as EngineInternals;
     sessions.push({
       id: sid,
-      thoughts: internals._thoughts.size,
-      branches: internals._branches.size,
+      thoughts: engine.thoughtCount,
+      branches: engine.branchCount,
     });
   }
 

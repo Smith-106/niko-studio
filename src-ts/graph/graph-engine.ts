@@ -21,7 +21,7 @@ import { getConfigValue as getAppConfigValue } from '../config';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 import { createLogger } from '../logger/index.js';
 
-const log = createLogger('graph-engine');
+const _log = createLogger('graph-engine');
 
 // ---------------------------------------------------------------------------
 // Data classes
@@ -189,7 +189,7 @@ export class GraphEngine {
     this._integrationAdapters = createIntegrationAdapters();
     this._initSchema();
 
-    log.info(`Graph engine initialized`, { dbPath: this.dbPath });
+    _log.info(`Graph engine initialized`, { dbPath: this.dbPath });
 
     if (plugins) {
       this._registerPlugins(plugins);
@@ -216,7 +216,7 @@ export class GraphEngine {
         await plugin.load(this);
       } catch (exc) {
         const name = (plugin as EnginePlugin).name ?? 'unknown';
-        log.error(`Graph plugin load failed: ${name}`, { error: String(exc) });
+        _log.error(`Graph plugin load failed: ${name}`, { error: String(exc) });
         this._pluginHealth[name] = { status: 'error', error: String(exc) };
       }
     }
@@ -364,7 +364,7 @@ export class GraphEngine {
     scope?: GraphReadScope | null
   ): Promise<Record<string, unknown>[]> {
     if (typeof cypher !== 'string') {
-      log.warn('Blocked non-string graph query input');
+      _log.warn('Blocked non-string graph query input');
       return [{ error: 'Invalid query input' }];
     }
 
@@ -374,7 +374,7 @@ export class GraphEngine {
     }
 
     if (cypher.length > GraphEngine.MAX_CYPHER_LENGTH) {
-      log.warn('Blocked oversized graph query');
+      _log.warn('Blocked oversized graph query');
       return [{ error: 'Query too long' }];
     }
 
@@ -386,7 +386,7 @@ export class GraphEngine {
       return this._executeMergeMutation(cypher);
     }
 
-    log.warn('Blocked graph query outside MATCH/MERGE subset');
+    _log.warn('Blocked graph query outside MATCH/MERGE subset');
     return [{ error: 'Only MATCH queries and scoped MERGE mutations are allowed' }];
   }
 
@@ -509,7 +509,7 @@ export class GraphEngine {
         matchProps: matchProps as Record<string, unknown>,
         setProps: setProps as Record<string, unknown>,
       };
-    } catch (e) { log.warn('Entity search failed', { detail: e }); return null; }
+    } catch (e) { _log.warn('Entity search failed', { detail: e }); return null; }
   }
 
   private _extractBalancedJsonObject(
@@ -981,7 +981,7 @@ export class GraphEngine {
     if (typeof raw === 'string') {
       try {
         return JSON.parse(raw) as Record<string, unknown>;
-      } catch (e) { log.warn('Failed to parse relation props', { detail: e }); return {}; }
+      } catch (e) { _log.warn('Failed to parse relation props', { detail: e }); return {}; }
     }
 
     if (raw && typeof raw === 'object') {
@@ -1013,14 +1013,14 @@ export class GraphEngine {
     }
 
     if (namePattern.length > GraphEngine.MAX_NAME_PATTERN_LENGTH) {
-      log.warn('Blocked oversized entity name pattern');
+      _log.warn('Blocked oversized entity name pattern');
       return [];
     }
 
     let normalizedLimit: number;
     try {
       normalizedLimit = Math.max(1, Math.min(Number(limit), 200));
-    } catch (e) { log.warn('Invalid limit parameter, using default', { detail: e }); normalizedLimit = 50; }
+    } catch (e) { _log.warn('Invalid limit parameter, using default', { detail: e }); normalizedLimit = 50; }
 
     const rows = this.db
       .prepare(
@@ -1250,7 +1250,7 @@ export class GraphEngine {
       created_at: now,
     });
 
-    log.info(`Created entity`, { entityType, name });
+    _log.info(`Created entity`, { entityType, name });
     return { id: entityId, status: 'created' };
   }
 
@@ -1297,7 +1297,7 @@ export class GraphEngine {
       created_at: now,
     });
 
-    log.info(`Created relation`, { fromName, relationType, toName });
+    _log.info(`Created relation`, { fromName, relationType, toName });
     return { id: relationId, status: 'created' };
   }
 
@@ -1312,7 +1312,7 @@ export class GraphEngine {
     try {
       await this._integrationAdapters.graphProjection.projectEntity(entity);
     } catch (exc) {
-      log.warn(`Neo4j entity projection failed, local-first path preserved`, { error: String(exc) });
+      _log.warn(`Neo4j entity projection failed, local-first path preserved`, { error: String(exc) });
     }
   }
 
@@ -1323,7 +1323,7 @@ export class GraphEngine {
     try {
       await this._integrationAdapters.graphProjection.projectRelation(relation);
     } catch (exc) {
-      log.warn(`Neo4j relation projection failed, local-first path preserved`, { error: String(exc) });
+      _log.warn(`Neo4j relation projection failed, local-first path preserved`, { error: String(exc) });
     }
   }
 
@@ -1368,7 +1368,7 @@ export class GraphEngine {
       .run(entityId, entityId);
     this.db.prepare('DELETE FROM entities WHERE id = ?').run(entityId);
 
-    log.info(`Deleted entity: ${name}`);
+    _log.info(`Deleted entity: ${name}`);
     return { status: 'deleted' };
   }
 

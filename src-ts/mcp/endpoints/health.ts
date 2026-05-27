@@ -18,24 +18,20 @@ interface EngineGetter {
   healthCheck?: () => Promise<Record<string, unknown>>;
 }
 
-interface GatewayDeps {
-  version: string;
+interface HealthEngineAccess {
   getEngine(name: string): EngineGetter | null;
-  getConfigValue(key: string, defaultValue?: unknown): unknown;
-  loadServicesConfig(): unknown;
-  getMetricsSnapshot(): Record<string, unknown>;
-  getObservabilitySnapshot(
-    services: Record<string, string>,
-    engineHealth: Record<string, Record<string, unknown>>
-  ): Record<string, unknown>;
-  readonly runtimeSessionId: string;
-  runtimeLastProbeAt: string | null;
-  runtimeReconnectAttempts: number;
-  runtimeLastError: string | null;
+}
+
+interface ServiceRegistryAccess {
   readonly mcpServiceConfigs: Map<string, { enabled: boolean }>;
   readonly runtimeServerOrder: string[];
-  refreshServiceHealthCache(services: Record<string, string>): void;
   serviceRuntimeStatus(name: string, services: Record<string, string>): string;
+  refreshServiceHealthCache(services: Record<string, string>): void;
+  serializeServiceConfig(config: unknown, services?: Record<string, string> | null): unknown;
+}
+
+interface RuntimeStateAccess {
+  readonly runtimeSessionId: string;
   toRuntimeConnectionState(status: string, services: Record<string, string>): string;
   toRuntimeReconnectState(connectionState: string): string;
   buildRuntimeServers(
@@ -43,8 +39,45 @@ interface GatewayDeps {
     connectionState: string,
     lastError: string | null
   ): Record<string, Record<string, unknown>>;
-  serializeServiceConfig(config: unknown, services?: Record<string, string> | null): unknown;
+}
+
+interface ObservabilityAccess {
+  getMetricsSnapshot(): Record<string, unknown>;
+  getObservabilitySnapshot(
+    services: Record<string, string>,
+    engineHealth: Record<string, Record<string, unknown>>
+  ): Record<string, unknown>;
+}
+
+interface ConfigAccess {
+  getConfigValue(key: string, defaultValue?: unknown): unknown;
+  loadServicesConfig(): unknown;
+}
+
+interface GatewayDeps extends HealthEngineAccess, ServiceRegistryAccess, RuntimeStateAccess, ObservabilityAccess, ConfigAccess {
+  version: string;
   utcNowIso(): string;
+  runtimeTracker: GatewayRuntimeTracker;
+}
+
+export class GatewayRuntimeTracker {
+  lastProbeAt: string | null = null;
+  reconnectAttempts = 0;
+  lastError: string | null = null;
+
+  recordProbe(utcNow: string): void {
+    this.lastProbeAt = utcNow;
+  }
+
+  recordFailure(failingServices: string[]): void {
+    this.lastError = failingServices.join('; ');
+    this.reconnectAttempts += 1;
+  }
+
+  clearFailure(): void {
+    this.lastError = null;
+    this.reconnectAttempts = 0;
+  }
 }
 
 let gatewayDeps: GatewayDeps | null = null;
@@ -257,7 +290,7 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
 
   gw.refreshServiceHealthCache(services);
 
-  gw.runtimeLastProbeAt = gw.utcNowIso();
+  gw.runtimeTracker.recordProbe(gw.utcNowIso());
   const failingServices = gw.runtimeServerOrder
     .filter(
       (name) =>
@@ -266,11 +299,9 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
     .map((name) => `${name}:${gw.serviceRuntimeStatus(name, services)}`);
 
   if (failingServices.length > 0) {
-    gw.runtimeLastError = failingServices.join('; ');
-    gw.runtimeReconnectAttempts += 1;
+    gw.runtimeTracker.recordFailure(failingServices);
   } else {
-    gw.runtimeLastError = null;
-    gw.runtimeReconnectAttempts = 0;
+    gw.runtimeTracker.clearFailure();
   }
 
   const effectiveStatus = runtimeUnavailable && status === 'healthy' ? 'degraded' : status;
@@ -284,16 +315,16 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
     ? {
         failure_class: 'runtime_unavailable',
         summary: 'Gateway runtime session is unavailable.',
-        detail: gw.runtimeLastError ?? 'Gateway runtime session has not been initialized.',
+        detail: gw.runtimeTracker.lastError ?? 'Gateway runtime session has not been initialized.',
         action: 'Start or reinitialize the local gateway runtime and retry the health check.',
         affected_services: [],
         prerequisite: {
           kind: 'runtime',
-          detail: gw.runtimeLastError ?? 'Gateway runtime session has not been initialized.',
+          detail: gw.runtimeTracker.lastError ?? 'Gateway runtime session has not been initialized.',
           action: 'Start or reinitialize the local gateway runtime and retry the health check.',
         },
       }
-    : buildGatewayDiagnostic(effectiveStatus, services, engineHealth, gw.runtimeLastError);
+    : buildGatewayDiagnostic(effectiveStatus, services, engineHealth, gw.runtimeTracker.lastError);
 
   return jsonResponse({
     status: effectiveStatus,
@@ -310,11 +341,11 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
       session_id: gw.runtimeSessionId,
       connection_state: connectionState,
       reconnect_state: reconnectState,
-      last_probe_at: gw.runtimeLastProbeAt,
-      reconnect_attempts: gw.runtimeReconnectAttempts,
-      last_error: gw.runtimeLastError,
+      last_probe_at: gw.runtimeTracker.lastProbeAt,
+      reconnect_attempts: gw.runtimeTracker.reconnectAttempts,
+      last_error: gw.runtimeTracker.lastError,
       diagnostic,
-      servers: gw.buildRuntimeServers(services, connectionState, gw.runtimeLastError),
+      servers: gw.buildRuntimeServers(services, connectionState, gw.runtimeTracker.lastError),
       service_configs: Array.from(gw.mcpServiceConfigs.values()).map((config) =>
         gw.serializeServiceConfig(config, services)
       ),
@@ -338,9 +369,9 @@ export async function metricsEndpoint(_request: HttpRequest): Promise<HttpRespon
     metrics: gw.getMetricsSnapshot(),
     runtime: {
       session_id: gw.runtimeSessionId,
-      reconnect_attempts: gw.runtimeReconnectAttempts,
-      last_probe_at: gw.runtimeLastProbeAt,
-      last_error: gw.runtimeLastError,
+      reconnect_attempts: gw.runtimeTracker.reconnectAttempts,
+      last_probe_at: gw.runtimeTracker.lastProbeAt,
+      last_error: gw.runtimeTracker.lastError,
     },
   });
 }

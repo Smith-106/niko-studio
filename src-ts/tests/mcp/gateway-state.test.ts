@@ -28,6 +28,14 @@ vi.mock('../../mcp/endpoints/config', () => ({
 
 vi.mock('../../mcp/endpoints/health', () => ({
   setGatewayDeps: vi.fn(),
+  GatewayRuntimeTracker: class {
+    lastProbeAt: string | null = null;
+    reconnectAttempts = 0;
+    lastError: string | null = null;
+    recordProbe(_utcNow: string): void {}
+    recordFailure(_failingServices: string[]): void {}
+    clearFailure(): void {}
+  },
 }));
 
 vi.mock('../../mcp/metrics', () => ({

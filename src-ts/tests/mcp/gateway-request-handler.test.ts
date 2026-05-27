@@ -178,8 +178,8 @@ describe('gateway-request-handler', () => {
     const parsed = JSON.parse(captured.body);
     expect(parsed).toMatchObject({
       error: 'Internal server error',
-      message: 'handler exploded',
     });
+    expect(parsed).not.toHaveProperty('message');
   });
 
   it('extracts route params for parameterized routes', async () => {

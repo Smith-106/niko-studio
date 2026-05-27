@@ -4,9 +4,9 @@
  * Migrated from src/cli/commands/.
  */
 
-const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8000';
 const DEFAULT_GATEWAY_HOST = '127.0.0.1';
 const DEFAULT_GATEWAY_PORT = 8000;
+const DEFAULT_GATEWAY_URL = `http://${DEFAULT_GATEWAY_HOST}:${DEFAULT_GATEWAY_PORT}`;
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -412,7 +412,7 @@ async function gatewayRequest(
     timeout?: number;
   } = {},
 ): Promise<Record<string, unknown>> {
-  const base = (options.gateway ?? 'http://127.0.0.1:8000').replace(/\/$/, '');
+  const base = (options.gateway ?? DEFAULT_GATEWAY_URL).replace(/\/$/, '');
   const url = `${base}${path}`;
 
   const fetchOptions: RequestInit = {
@@ -439,7 +439,7 @@ export const statusCommand: Command = {
   name: 'status',
   description: 'Show gateway health status',
   options: [
-    { name: 'gateway', type: 'string', default: 'http://127.0.0.1:8000', description: 'Gateway URL' },
+    { name: 'gateway', type: 'string', default: DEFAULT_GATEWAY_URL, description: 'Gateway URL' },
   ],
   async execute(ctx: CliContext, args: Record<string, unknown>): Promise<void> {
     try {
@@ -455,7 +455,7 @@ export const statsCommand: Command = {
   name: 'stats',
   description: 'Show gateway runtime metrics',
   options: [
-    { name: 'gateway', type: 'string', default: 'http://127.0.0.1:8000', description: 'Gateway URL' },
+    { name: 'gateway', type: 'string', default: DEFAULT_GATEWAY_URL, description: 'Gateway URL' },
   ],
   async execute(ctx: CliContext, args: Record<string, unknown>): Promise<void> {
     try {
@@ -474,7 +474,7 @@ export const searchCommand: Command = {
     { name: 'query', type: 'string', required: true, description: 'Search query' },
     { name: 'scope', type: 'string', default: 'all', description: 'Search scope' },
     { name: 'limit', type: 'number', default: 10, description: 'Max results' },
-    { name: 'gateway', type: 'string', default: 'http://127.0.0.1:8000', description: 'Gateway URL' },
+    { name: 'gateway', type: 'string', default: DEFAULT_GATEWAY_URL, description: 'Gateway URL' },
   ],
   async execute(ctx: CliContext, args: Record<string, unknown>): Promise<void> {
     try {
@@ -498,8 +498,8 @@ export const serveCommand: Command = {
     { name: 'port', type: 'number', description: 'Gateway port' },
   ],
   async execute(ctx: CliContext, args: Record<string, unknown>): Promise<void> {
-    const host = (args.host as string) || '127.0.0.1';
-    const port = (args.port as number) || 8000;
+    const host = (args.host as string) || DEFAULT_GATEWAY_HOST;
+    const port = (args.port as number) || DEFAULT_GATEWAY_PORT;
     const { startGatewayServer } = await import('../gateway-server');
     await startGatewayServer({ host, port });
     ctx.console.log(`Gateway serving at ${host}:${port}`);

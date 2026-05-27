@@ -331,19 +331,26 @@ export abstract class BaseAgent {
 
   // ---------- Logging helper ----------
 
-  logActivity(message: string, level: "INFO" | "WARNING" | "ERROR" | "DEBUG" = "INFO"): void {
+  logActivity(message: string, levelOrMetadata?: "INFO" | "WARNING" | "ERROR" | "DEBUG" | Record<string, unknown>): void {
+    let level: "INFO" | "WARNING" | "ERROR" | "DEBUG" = "INFO";
+    let metadata: Record<string, unknown> = {};
+    if (typeof levelOrMetadata === 'string') {
+      level = levelOrMetadata;
+    } else if (levelOrMetadata && typeof levelOrMetadata === 'object') {
+      metadata = levelOrMetadata;
+    }
     switch (level) {
       case "WARNING":
-        this._logger.warn(message);
+        this._logger.warn(message, metadata);
         break;
       case "ERROR":
-        this._logger.error(message);
+        this._logger.error(message, metadata);
         break;
       case "DEBUG":
-        this._logger.debug(message);
+        this._logger.debug(message, metadata);
         break;
       default:
-        this._logger.info(message);
+        this._logger.info(message, metadata);
         break;
     }
   }
