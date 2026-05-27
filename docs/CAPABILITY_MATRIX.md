@@ -41,6 +41,8 @@
 | Dialogue Quality Analyzer               |   ✅    | `src-ts/narrative/dialogue-analyzer.ts` | 5-dimension dialogue quality: naturalness, distinctness, subtext, functionality, rhythm.        |
 | Scene Quality Assessment                |   ✅    | `src-ts/narrative/scene-quality.ts` | 5-dimension scene quality: pacing, atmosphere, conflict density, info efficiency, change.        |
 | Mystery Subtype Classification           |   ✅    | `src-ts/narrative/mystery-classifier.ts` | 4 types: honkaku, social faction, hardboiled, thriller; deduction chain analysis.               |
+| Nowledge Mem 集成协议                    |   🧪   | `src-ts/protocols/nowledge-mem.ts` | `INowledgeMemService` 接口定义 + CLI 适配器测试; 实现待接入.                                      |
+| Composition Root (控制平面解耦)           |   ✅    | `src-ts/composition-root/gateway-control-plane.ts` | container↔mcp 双向依赖重构; 独立 wiring 层.                                                    |
 
 ## 2. External Integration Adapters
 

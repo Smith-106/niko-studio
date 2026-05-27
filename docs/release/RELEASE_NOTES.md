@@ -1,5 +1,40 @@
 # RELEASE NOTES
 
+## v9.27.1 (2026-05-27)
+
+### Code Quality — HIGH Findings Fix
+
+修复 review 中 10 个 high findings，提升类型安全、架构清晰度和安全性。
+
+| ID | 修复内容 | 影响文件 |
+|----|---------|---------|
+| HIGH-001 | McpTransport 运行时验证 (`validateMcpTransport`) | `service-config.ts` |
+| HIGH-002 | EngineInternals `as-unknown-as` 消除，改为公共访问器 | `sequential-thinking.ts`, `sequential-thinking-mcp.ts` |
+| HIGH-003 | GatewayDeps ISP 拆分为 5 个 focused sub-interfaces | `health.ts`, `gateway-state.ts` |
+| HIGH-004 | 500 错误信息泄露修复，移除 response 中 message 字段 | `gateway-request-handler.ts` |
+| HIGH-005 | `validateSchemaVersion` 严格 regex + null 处理 | `preflight.ts` |
+| HIGH-006 | `DEFAULT_GATEWAY_*` 常量清理，统一引用 | `commands.ts` |
+| HIGH-007 | container↔mcp 双向依赖重构，提取 composition-root | `gateway-control-plane.ts` |
+| HIGH-008 | GatewayDeps 可变状态提取为 `GatewayRuntimeTracker` 类 | `health.ts` |
+| HIGH-009 | logger 命名统一 `_log` → `log` | 8 files |
+| HIGH-010 | 代理双日志机制统一，`logActivity` 扩展 metadata | `agents/*.ts`, `base.ts` |
+
+### New Features
+
+- **Nowledge Mem 集成协议** — 定义 `INowledgeMemService` 接口与 CLI 适配器测试用例
+
+### Architecture
+
+- **Composition Root** — 提取 `container↔mcp` 双向依赖为独立 wiring 层，解耦控制平面
+
+### Verification
+
+- TypeScript 编译零错误
+- 748 测试全绿，零回归
+- 4 维度 code review (correctness/security/architecture/maintainability) 通过
+
+---
+
 ## v9.27.0
 
 ### 发布结果
