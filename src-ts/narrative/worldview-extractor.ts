@@ -194,19 +194,37 @@ ${chunk.slice(0, 1000)}`;
   private ruleBasedExtraction(chunk: string): RawExtraction[] {
     const results: RawExtraction[] = [];
 
-    // Magic system keywords
-    const magicPatterns = [
-      /(?:在|于)(.{2,10})(?:中|里|内)(?:修炼|修炼者|灵力|魔力|法力|真气|内力)/,
-      /(.{2,8})(?:的)(?:原理|规则|限制|代价|条件)/,
-      /(.{2,6})(?:必须|不能|禁止|严禁|绝不可)(.{2,20})/,
+    const MAGIC_TERMS: Array<{ term: string; nature: string; detail: string }> = [
+      { term: '法术', nature: WorldviewNature.MAGIC_SYSTEM, detail: '魔法系统中使用的法术能力' },
+      { term: '灵力', nature: WorldviewNature.MAGIC_SYSTEM, detail: '角色内在的精神能量' },
+      { term: '内力', nature: WorldviewNature.MAGIC_SYSTEM, detail: '武学体系中的内在力量' },
+      { term: '真气', nature: WorldviewNature.MAGIC_SYSTEM, detail: '修炼体系中的能量' },
+      { term: '阵法', nature: WorldviewNature.MAGIC_SYSTEM, detail: '通过特定排列产生的魔法阵' },
+      { term: '禁术', nature: WorldviewNature.MAGIC_SYSTEM, detail: '被禁止使用的法术' },
+      { term: '结界', nature: WorldviewNature.MAGIC_SYSTEM, detail: '魔法防御屏障' },
+      { term: '修炼', nature: WorldviewNature.MAGIC_SYSTEM, detail: '修炼体系中的实践' },
+      { term: '魔力', nature: WorldviewNature.MAGIC_SYSTEM, detail: '魔道体系中的力量' },
+      { term: '法力', nature: WorldviewNature.MAGIC_SYSTEM, detail: '法术驱动的力量' },
     ];
 
-    for (const pattern of magicPatterns) {
+    for (const { term, nature, detail } of MAGIC_TERMS) {
+      if (chunk.includes(term)) {
+        results.push({ term, nature, detail });
+      }
+    }
+
+    // Regex patterns for rule/norm extraction
+    const rulePatterns: RegExp[] = [
+      /(.{2,8})(?:的)(?:原理|规则|限制|代价|条件)/g,
+      /(.{2,6})(?:必须|不能|禁止|严禁|绝不可)(.{2,20})/g,
+    ];
+
+    for (const pattern of rulePatterns) {
       let match;
       while ((match = pattern.exec(chunk)) !== null) {
         results.push({
           term: match[1]?.trim() ?? '',
-          nature: WorldviewNature.GENERAL,
+          nature: WorldviewNature.SOCIAL_NORM,
           detail: match[0].trim(),
         });
       }

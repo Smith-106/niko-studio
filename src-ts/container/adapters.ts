@@ -824,27 +824,97 @@ export class NowledgeMemServiceAdapter implements INowledgeMemService {
   }
 
   async status() { return this.adapter.status(); }
-  async addMemory(content: string, options?: { labels?: string[]; importance?: number; id?: string }) {
-    return this.adapter.addMemory(content, options);
+  async addMemory(content: string, options?: Record<string, unknown>) {
+    return this.adapter.addMemory(content, options as any);
   }
-  async searchMemories(query: string, options?: { labels?: string[]; timeRange?: 'today' | 'week' | 'month' | 'year'; importance?: number; mode?: 'normal' | 'deep'; limit?: number }) {
-    return this.adapter.searchMemories(query, options);
+  async searchMemories(query: string, options?: Record<string, unknown>) {
+    return this.adapter.searchMemories(query, options as any);
+  }
+  async searchByTimeRange(options: Record<string, unknown>) {
+    return this.adapter.searchByTimeRange(options as any);
   }
   async getMemory(id: string) { return this.adapter.getMemory(id); }
-  async updateMemory(id: string, updates: { content?: string; labels?: string[]; importance?: number }) {
-    return this.adapter.updateMemory(id, updates);
+  async listMemories(options?: Record<string, unknown>) {
+    return this.adapter.listMemories(options as any);
+  }
+  async updateMemory(id: string, updates: Record<string, unknown>) {
+    return this.adapter.updateMemory(id, updates as any);
   }
   async deleteMemory(id: string) { return this.adapter.deleteMemory(id); }
+  async moveMemory(id: string, targetSpaceId: string) {
+    return this.adapter.moveMemory(id, targetSpaceId);
+  }
   async expandGraph(id: string) { return this.adapter.expandGraph(id); }
+  async createRelation(source: string, target: string, options: Record<string, unknown>) {
+    return this.adapter.createRelation(source, target, options as any);
+  }
+  async getRelatedMemories(id: string, depth?: number) {
+    return this.adapter.getRelatedMemories(id, depth);
+  }
+  async searchRelations(options: Record<string, unknown>) {
+    return this.adapter.searchRelations(options as any);
+  }
+  async getEvolvesChain(id: string, options?: Record<string, unknown>) {
+    return this.adapter.getEvolvesChain(id, options as any);
+  }
+  async addSource(pathOrUrl: string, options?: Record<string, unknown>) {
+    return this.adapter.addSource(pathOrUrl, options as any);
+  }
+  async listSources(options?: Record<string, unknown>) {
+    return this.adapter.listSources(options as any);
+  }
+  async getSource(id: string) { return this.adapter.getSource(id); }
+  async deleteSource(id: string) { return this.adapter.deleteSource(id); }
+  async ingestSource(id: string, options?: Record<string, unknown>) {
+    return this.adapter.ingestSource(id, options as any);
+  }
+  async searchSourceChunks(sourceId: string, query: string, options?: Record<string, unknown>) {
+    return this.adapter.searchSourceChunks(sourceId, query, options as any);
+  }
+  async createSpace(name: string, options?: Record<string, unknown>) {
+    return this.adapter.createSpace(name, options as any);
+  }
+  async listSpaces() { return this.adapter.listSpaces(); }
+  async getSpace(id: string) { return this.adapter.getSpace(id); }
+  async switchSpace(id: string) { return this.adapter.switchSpace(id); }
+  async addSpaceMember(spaceId: string, entityId: string) {
+    return this.adapter.addSpaceMember(spaceId, entityId);
+  }
+  async removeSpaceMember(spaceId: string, entityId: string) {
+    return this.adapter.removeSpaceMember(spaceId, entityId);
+  }
   async addToLibrary(paths: string[]) { return this.adapter.addToLibrary(paths); }
-  async searchLibrary(query: string, options?: { limit?: number }) {
-    return this.adapter.searchLibrary(query, options);
+  async searchLibrary(query: string, options?: Record<string, unknown>) {
+    return this.adapter.searchLibrary(query, options as any);
   }
   async readArtifact(id: string) { return this.adapter.readArtifact(id); }
   async getWorkingMemory(date?: string) { return this.adapter.getWorkingMemory(date); }
   async setWorkingMemory(content: string) { return this.adapter.setWorkingMemory(content); }
   async listCommunities(limit?: number) { return this.adapter.listCommunities(limit); }
   async getFeed(days?: number) { return this.adapter.getFeed(days); }
+  async summarizeMemories(ids: string[]) { return this.adapter.summarizeMemories(ids); }
+  async addThread(messages: Array<{ role: string; content: string }>, options?: Record<string, unknown>) {
+    return this.adapter.addThread(messages, options as any);
+  }
+  async searchThreads(query: string, options?: Record<string, unknown>) {
+    return this.adapter.searchThreads(query, options as any);
+  }
+  async getThread(id: string) { return this.adapter.getThread(id); }
+  async appendThread(id: string, messages: Array<{ role: string; content: string }>, options?: Record<string, unknown>) {
+    return this.adapter.appendThread(id, messages, options as any);
+  }
+  async importThread(options: Record<string, unknown>) {
+    return this.adapter.importThread(options as any);
+  }
+  async saveThread(options?: Record<string, unknown>) {
+    return this.adapter.saveThread(options as any);
+  }
+  async reconcileTail(id: string, options?: Record<string, unknown>) {
+    return this.adapter.reconcileTail(id, options as any);
+  }
+  async importFromLibrary(source: string, options?: Record<string, unknown>) {
+    return this.adapter.importFromLibrary(source, options as any);
+  }
   async initialize() { return this.adapter.initialize(); }
   async healthCheck() { return this.adapter.healthCheck(); }
   async shutdown() { return this.adapter.shutdown(); }

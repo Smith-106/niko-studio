@@ -384,9 +384,9 @@ describe('HybridSearch', () => {
         strategies: [{ name: 'keyword', search: keywordSearch, weight: 1 }],
       });
 
-      hybrid.addStrategy('semantic', semanticSearch, 1);
+      const updated = hybrid.addStrategy('semantic', semanticSearch, 1);
 
-      const stats = hybrid.getStrategyStats();
+      const stats = updated.getStrategyStats();
       expect(stats).toHaveLength(2);
       expect(stats[0].weight).toBeCloseTo(0.5, 2);
       expect(stats[1].weight).toBeCloseTo(0.5, 2);
@@ -400,22 +400,22 @@ describe('HybridSearch', () => {
         ],
       });
 
-      const removed = hybrid.removeStrategy('keyword');
-      expect(removed).toBe(true);
+      const updated = hybrid.removeStrategy('keyword');
+      expect(updated).not.toBeNull();
 
-      const stats = hybrid.getStrategyStats();
+      const stats = updated!.getStrategyStats();
       expect(stats).toHaveLength(1);
       expect(stats[0].name).toBe('semantic');
       expect(stats[0].weight).toBe(1);
     });
 
-    it('should return false when removing non-existent strategy', () => {
+    it('should return null when removing non-existent strategy', () => {
       const hybrid = new HybridSearch({
         strategies: [{ name: 'keyword', search: keywordSearch, weight: 1 }],
       });
 
       const removed = hybrid.removeStrategy('nonexistent');
-      expect(removed).toBe(false);
+      expect(removed).toBeNull();
     });
   });
 

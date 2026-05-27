@@ -22,6 +22,7 @@ vi.mock('@aws-sdk/client-s3', () => {
     }
 
     send = s3SendMock;
+    destroy = vi.fn();
   }
 
   class PutObjectCommand {
@@ -110,7 +111,7 @@ describe('BackupManager S3 parity', () => {
         aws_secret_access_key: 'minio-secret',
       });
 
-      expect(result).toMatchObject({
+expect(result).toMatchObject({
         success: true,
         backupId: backup.backupId,
         bucket: 'story-bucket',

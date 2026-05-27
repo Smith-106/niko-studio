@@ -111,4 +111,33 @@ export class NowledgeMemKnowledgeBridge implements KnowledgeMemoryEngineAdapter 
       return [];
     }
   }
+
+  /** Sync temporal state to Nowledge Mem: update current, delete superseded */
+  async temporalSync(entityId: string, currentContent: string, supersededIds: string[]): Promise<void> {
+    if (!this._available) return;
+
+    try {
+      // Update or add the current valid state
+      await this.service.addMemory(currentContent, {
+        labels: ['temporal-current', entityId],
+        importance: 0.7,
+      });
+
+      // Delete superseded entries from Nowledge Mem
+      for (const id of supersededIds) {
+        try {
+          await this.service.deleteMemory(id);
+        } catch {
+          // individual delete failures are non-critical
+        }
+      }
+    } catch {
+      // temporal sync failure is non-critical
+    }
+  }
+
+  /** Filter out superseded memories from Nowledge Mem results */
+  filterSuperseded(memories: Array<{ id: string; labels?: string[] }>, supersededIds: Set<string>): Array<{ id: string; labels?: string[] }> {
+    return memories.filter((m) => !supersededIds.has(m.id));
+  }
 }

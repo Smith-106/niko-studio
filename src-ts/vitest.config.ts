@@ -18,8 +18,11 @@ export const baseVitestConfig: UserConfig = {
         singleFork: true,
       },
     },
+    env: {
+      NODE_OPTIONS: '--max-old-space-size=24576',
+    },
     globalSetup: 'tests/globalTeardown.ts',
-    exclude: ['**/.claude/**', '**/.ccw/**', '**/node_modules/**'],
+    exclude: ['**/.claude/**', '**/.ccw/**', '**/node_modules/**', 'dist/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

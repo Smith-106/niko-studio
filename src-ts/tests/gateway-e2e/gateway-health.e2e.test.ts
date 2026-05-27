@@ -1,12 +1,17 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { startE2EServer, stopAllServers, fetchJSON } from './helpers';
+
+vi.mock('../../skills/index', () => ({
+  listSkills: vi.fn(() => ['writing', 'critic', 'worldbuilding', 'character', 'plot', 'research']),
+}));
 
 describe('E2E: GET /health', () => {
   let baseUrl: string;
 
   afterEach(async () => {
     await stopAllServers();
+    vi.restoreAllMocks();
   });
 
   it('returns healthy status with version and services', async () => {
