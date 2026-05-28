@@ -1,0 +1,74 @@
+{
+  "id": "TASK-002",
+  "title": "补全 CompositeBridge temporal chain 同步",
+  "goal_ref": "G2",
+  "description": "ANL-96 识别出 temporal chain 未桥接到 Nowledge Mem，可能导致读取到过期状态。需要在 CompositeKnowledgeMemoryBridge 的写入路径中添加 temporal chain 同步逻辑。",
+  "approach": "在 CompositeBridge 写入时，检查 TemporalMemoryTracker 的 supersedes 链，将当前有效状态同步到 Nowledge Mem，同时标记/删除已过期状态。",
+
+  "scope": {
+    "in_scope": [
+      "services/composite-knowledge-memory-bridge.ts — 添加 temporal sync 逻辑",
+      "services/nowledge-mem-knowledge-bridge.ts — 添加 temporal sync 支持",
+      "memory/temporal-memory.ts — 可能需要暴露查询接口"
+    ],
+    "out_of_scope": [
+      "protocols/ 修改",
+      "Nowledge Mem 服务端改动"
+    ]
+  },
+
+  "implementation_steps": [
+    {
+      "step": 1,
+      "action": "读取 TemporalMemoryTracker 接口，确认可用的查询方法",
+      "files": ["memory/temporal-memory.ts"],
+      "detail": "需要: getCurrentFact(entityId), getSupersededChain(entityId), getFactsInRange(from, to)"
+    },
+    {
+      "step": 2,
+      "action": "在 NowledgeMemKnowledgeBridge 中添加 temporalSync 方法",
+      "files": ["services/nowledge-mem-knowledge-bridge.ts"],
+      "detail": "temporalSync(entityId, currentFact): 更新 Nowledge Mem 中对应 Memory 为最新状态，删除/标记已过期条目"
+    },
+    {
+      "step": 3,
+      "action": "在 CompositeKnowledgeMemoryBridge.add() 写入路径中集成 temporal 同步",
+      "files": ["services/composite-knowledge-memory-bridge.ts"],
+      "detail": "primary 写入后，检查 temporal tracker → 如有 supersedes → 调 secondary.temporalSync()。失败时静默降级。"
+    },
+    {
+      "step": 4,
+      "action": "在 CompositeKnowledgeMemoryBridge.get() 读取路径中添加过期状态过滤",
+      "files": ["services/composite-knowledge-memory-bridge.ts"],
+      "detail": "从 secondary 读取结果时，与 primary temporal 状态交叉验证，过滤已 superseded 的条目"
+    },
+    {
+      "step": 5,
+      "action": "编写集成测试",
+      "files": ["services/composite-knowledge-memory-bridge.test.ts"],
+      "detail": "测试场景: 1) 写入新 fact → 同步到 secondary; 2) supersedes 写入 → secondary 更新为最新; 3) secondary 读取 → 过期条目被过滤"
+    }
+  ],
+
+  "acceptance_criteria": [
+    "CompositeBridge 写入时自动同步 temporal chain 到 Nowledge Mem",
+    "读取时自动过滤已 superseded 的条目",
+    "secondary 同步失败时静默降级，不影响 primary 操作",
+    "集成测试覆盖正常同步 + 过期过滤 + 降级场景"
+  ],
+
+  "tests": {
+    "existing": [],
+    "new": ["services/composite-knowledge-memory-bridge.test.ts"],
+    "strategy": "mock primary/secondary，验证 temporal sync 调用链和降级行为"
+  },
+
+  "risks": [
+    {
+      "risk": "TemporalMemoryTracker 可能不暴露 getCurrentFact 等查询接口",
+      "mitigation": "如有需要扩展 TemporalMemoryTracker 接口，保持向后兼容"
+    }
+  ],
+
+  "estimated_effort": "3-4 hours"
+}

@@ -1,0 +1,74 @@
+{
+  "id": "TASK-005",
+  "title": "冲突解决结果双向同步",
+  "goal_ref": "G5",
+  "description": "ANL-96 识别出冲突解决结果不同步回 Nowledge Mem。ConflictResolver.resolve() 产生结果后，需要双向同步：niko-studio → Nowledge Mem + Nowledge Mem → niko-studio。",
+  "approach": "在 ConflictResolver 中添加事件回调机制，resolve() 完成后触发 CompositeBridge 同步。添加 Nowledge Mem 冲突检测入口，反向同步到 niko-studio。",
+
+  "scope": {
+    "in_scope": [
+      "memory/conflict-resolver.ts — 添加 resolve 后同步回调",
+      "services/composite-knowledge-memory-bridge.ts — 添加冲突同步方法",
+      "services/nowledge-mem-knowledge-bridge.ts — 添加冲突同步支持"
+    ],
+    "out_of_scope": [
+      "Nowledge Mem 服务端冲突检测",
+      "用户界面冲突展示"
+    ]
+  },
+
+  "implementation_steps": [
+    {
+      "step": 1,
+      "action": "在 ConflictResolver 中添加 onResolution 回调机制",
+      "files": ["memory/conflict-resolver.ts"],
+      "detail": "添加 setOnResolution(callback: (result: ResolutionResult) => Promise<void>) 方法。resolve() 完成后异步调用 callback，不阻塞 resolve 返回。callback 失败不回滚 resolve 结果。"
+    },
+    {
+      "step": 2,
+      "action": "在 NowledgeMemKnowledgeBridge 中添加 syncConflictResolution 方法",
+      "files": ["services/nowledge-mem-knowledge-bridge.ts"],
+      "detail": "syncConflictResolution(result): 根据 ResolutionResult.winner 更新 Nowledge Mem 中对应 Memory 的 content/labels/importance。如果策略是 MERGE，则用合并后内容更新。"
+    },
+    {
+      "step": 3,
+      "action": "在 CompositeBridge 中集成冲突同步",
+      "files": ["services/composite-knowledge-memory-bridge.ts"],
+      "detail": "初始化时向 ConflictResolver 注册 onResolution 回调：primary resolve → secondary syncConflictResolution。secondary 失败时静默降级。"
+    },
+    {
+      "step": 4,
+      "action": "添加反向同步：Nowledge Mem 冲突检测 → niko-studio",
+      "files": ["services/nowledge-mem-knowledge-bridge.ts", "services/composite-knowledge-memory-bridge.ts"],
+      "detail": "添加 detectConflicts() 方法：扫描 Nowledge Mem 中同一 source 的重复/矛盾 Memory → 生成 Conflict 对象 → 交由 ConflictResolver 处理。作为定期任务或按需调用。"
+    },
+    {
+      "step": 5,
+      "action": "编写测试",
+      "files": ["memory/conflict-resolver.test.ts", "services/composite-knowledge-memory-bridge.test.ts"],
+      "detail": "测试: 1) resolve 后回调触发; 2) secondary 同步正确; 3) secondary 失败时降级; 4) 反向冲突检测工作"
+    }
+  ],
+
+  "acceptance_criteria": [
+    "ConflictResolver.resolve() 完成后自动同步到 Nowledge Mem",
+    "反向冲突检测可以识别 Nowledge Mem 中的重复/矛盾条目",
+    "双向同步失败时静默降级",
+    "测试覆盖正向同步 + 反向检测 + 降级场景"
+  ],
+
+  "tests": {
+    "existing": ["memory/conflict-resolver.test.ts"],
+    "new": [],
+    "strategy": "扩展现有 conflict-resolver 测试 + 新增 bridge 集成测试"
+  },
+
+  "risks": [
+    {
+      "risk": "反向冲突检测可能产生误报",
+      "mitigation": "初始版本仅检测完全重复（相同 content），语义矛盾作为后续优化"
+    }
+  ],
+
+  "estimated_effort": "3-4 hours"
+}

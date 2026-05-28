@@ -1,0 +1,91 @@
+{
+  "summary": "全面升级 niko-studio 知识管理层：NowledgeMemAdapter 实现 + temporal chain 同步 + bridge 健康检查 + summarizeMemories 蒸馏 + 冲突双向同步 + Library 导入结构化",
+  "approach": "基于 ANL-96 分析结论，分 6 个子目标按依赖顺序分 3 波执行。Wave 1（G1+G2）完善适配器和 temporal chain 同步，是后续所有工作的基础。Wave 2（G3+G5）添加健康检查和冲突双向同步，依赖 Wave 1 的适配器实现。Wave 3（G4+G6）蒸馏集成和 Library 导入，依赖 Wave 2 的健康检查和同步机制。",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+  "task_count": 6,
+  "complexity": "high",
+  "estimated_time": "3-5 days",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002"],
+      "description": "基础层：适配器实现 + temporal chain 同步"
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-003", "TASK-005"],
+      "description": "运行时层：健康检查 + 冲突双向同步"
+    },
+    {
+      "wave": 3,
+      "tasks": ["TASK-004", "TASK-006"],
+      "description": "高级集成层：蒸馏 + Library 导入"
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "NowledgeMemAdapter ←→ CompositeBridge ←→ KnowledgeService\n    ↕                    ↕                    ↕\nTemporalTracker    ConflictResolver    DistillationManager\n    ↕                    ↕                    ↕\nNowledge Mem CLI  Nowledge Mem API   Nowledge Mem Library",
+    "stages": [
+      "Wave 1: NowledgeMemAdapter 全方法实现 → CompositeBridge temporal chain 同步",
+      "Wave 2: Bridge 健康检查端点 → ConflictResolver 双向同步",
+      "Wave 3: DistillationManager ↔ summarizeMemories → Library import → Entity 结构化"
+    ]
+  },
+
+  "design_decisions": [
+    {
+      "id": "DD-1",
+      "decision": "NowledgeMemAdapter 保持 CLI 通信模式，不添加 HTTP fallback",
+      "rationale": "CLI 模式已验证可用，HTTP fallback 增加复杂度且无实际需求"
+    },
+    {
+      "id": "DD-2",
+      "decision": "temporal chain 同步采用 '当前有效状态' 策略：仅同步当前未被 superseded 的 fact",
+      "rationale": "Nowledge Mem 无原生 temporal 模型，传递完整 supersedes 链无意义"
+    },
+    {
+      "id": "DD-3",
+      "decision": "冲突双向同步采用事件驱动：ConflictResolver.resolve() 完成后触发 bridge 同步",
+      "rationale": "避免轮询，减少延迟，保持一致性"
+    },
+    {
+      "id": "DD-4",
+      "decision": "summarizeMemories 集成通过 DistillationManager 桥接",
+      "rationale": "DistillationManager 已有 6 种模板和 LLM 集成，Nowledge Mem 的 summarize 作为额外蒸馏通道"
+    }
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "Adapter pattern: NowledgeMemAdapter implements INowledgeMemService",
+      "Bridge pattern: CompositeKnowledgeMemoryBridge composites primary + secondary",
+      "Singleton pattern: getConflictResolver(), getTemporalTracker(), getDistillationManager()",
+      "Graceful degradation: secondary failure → silent fallback to primary"
+    ],
+    "conventions": [
+      "TypeScript strict mode",
+      "Vitest for testing",
+      "ESM modules (.js extension in imports)",
+      "Logger via createLogger() from logger/index.js"
+    ],
+    "dependencies": [
+      "protocols/nowledge-mem.ts — INowledgeMemService interface",
+      "protocols/knowledge.ts — KnowledgeMemoryEngineAdapter interface",
+      "memory/conflict-resolver.ts — ConflictResolver + ResolutionResult",
+      "memory/temporal-memory.ts — TemporalMemoryTracker + TemporalFact",
+      "memory/distillation-manager.ts — DistillationManager"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-27T16:35:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": null,
+    "source_artifact_ref": "analyze:ANL-96"
+  }
+}

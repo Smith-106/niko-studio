@@ -1,0 +1,41 @@
+{
+  "task_id": "TASK-002",
+  "wave": 2,
+  "title": "双链桥接 — wiki-link ↔ GraphEngine 同步",
+  "action": "Add syncWikiLinks to ObsidianService for bidirectional wiki-link synchronization with GraphEngine",
+  "implementation": {
+    "files_to_modify": [
+      "services/obsidian-service.ts",
+      "container/types.ts",
+      "container/adapters.ts"
+    ],
+    "files_to_create": [],
+    "tests_to_modify": [
+      "tests/services/obsidian-service.test.ts",
+      "tests/container/obsidian-service-adapter.test.ts"
+    ],
+    "changes": [
+      "Add syncWikiLinks(vaultPath, graphEngine): scans vault wiki-links and GraphEngine entities, bidirectional sync",
+      "Add resolveWikiLink(vaultPath, link): resolves [[link]] to actual file path in vault",
+      "Add getBacklinks(vaultPath, notePath): finds all notes that reference the given note via [[link]]",
+      "Extend IObsidianService with syncWikiLinks, resolveWikiLink, getBacklinks",
+      "Extend ObsidianServiceAdapter.sync to include wiki-link bidirectional sync alongside existing doc sync"
+    ]
+  },
+  "read_first": [
+    "services/obsidian-service.ts",
+    "container/types.ts",
+    "container/adapters.ts",
+    "tests/services/obsidian-service.test.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'syncWikiLinks' services/obsidian-service.ts",
+      "grep -q 'resolveWikiLink' services/obsidian-service.ts",
+      "grep -q 'getBacklinks' services/obsidian-service.ts",
+      "npx vitest run tests/services/obsidian-service.test.ts"
+    ]
+  },
+  "complexity": "medium",
+  "estimated_changes": "80 lines to obsidian-service.ts, 10 lines to types.ts, 30 lines to adapters.ts, 60 lines to tests"
+}

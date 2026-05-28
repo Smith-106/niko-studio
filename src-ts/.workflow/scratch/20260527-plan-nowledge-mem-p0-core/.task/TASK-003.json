@@ -1,0 +1,32 @@
+{
+  "task_id": "TASK-003",
+  "title": "Relation 类型增强：6 种关系类型 + evolvesKind + strength",
+  "goal_ref": "G4",
+  "action": "扩展 NowledgeMemRelation 类型支持 RELATED/CAUSED/ENABLED/PART_OF/PRECEDED/EVOLVES 关系类型，新增 evolvesKind 和 strength 字段",
+  "files_to_edit": [
+    "protocols/nowledge-mem.ts",
+    "services/nowledge-mem-adapter.ts",
+    "services/nowledge-mem-adapter.test.ts"
+  ],
+  "steps": [
+    "1. 在 protocols/nowledge-mem.ts 新增 NowledgeMemRelationType 枚举: RELATED|CAUSED|ENABLED|PART_OF|PRECEDED|EVOLVES",
+    "2. 在 protocols/nowledge-mem.ts 新增 NowledgeMemEvolvesKind 枚举: Replaces|Enriches|Confirms|Challenges",
+    "3. 新增 NowledgeMemRelation 类型: { from: string, to: string, type: NowledgeMemRelationType, evolvesKind?: NowledgeMemEvolvesKind, strength?: number (0.0-1.0), recordedAt?: string }",
+    "4. 修改 INowledgeMemService.createRelation 签名: 从 (fromId, toId, relationType: string) 改为 (fromId: string, toId: string, options: { type: NowledgeMemRelationType, evolvesKind?: NowledgeMemEvolvesKind, strength?: number })",
+    "5. 修改 INowledgeMemService.getRelatedMemories 返回 NowledgeMemRelation[] 含完整关系信息",
+    "6. 在 NowledgeMemAdapter.createRelation 中传递 --relation-type, --evolves-kind, --strength CLI 参数",
+    "7. 新增 graph.searchRelations(type) 方法: 支持按关系类型搜索",
+    "8. 更新现有 bridge (distillation-nowledge-bridge, conflict-nowledge-bridge) 使用新关系类型",
+    "9. 新增测试覆盖 6 种关系类型 + evolvesKind + strength"
+  ],
+  "test_criteria": [
+    "NowledgeMemRelationType 含 6 种类型",
+    "NowledgeMemEvolvesKind 含 4 种类型",
+    "createRelation 支持全部 6 种关系类型",
+    "getRelatedMemories 返回含 evolvesKind/strength 的完整关系",
+    "现有 bridge 使用新关系类型不 break"
+  ],
+  "wave": "data-model",
+  "depends_on": ["TASK-001"],
+  "blocks": ["TASK-005"]
+}

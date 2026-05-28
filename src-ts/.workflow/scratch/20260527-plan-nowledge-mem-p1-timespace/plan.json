@@ -1,0 +1,42 @@
+{
+  "plan_id": "PLN-nowledge-mem-p1-timespace",
+  "summary": "P1 时序与空间补全：Bitemporal 搜索 + Space 管理 + Thread 高级 + EVOLVES 链 + S3 修复",
+  "approach": "按依赖顺序分 3 波实施：Wave 1 扩展接口+类型定义（searchByTimeRange + Space CRUD + Thread 高级方法），Wave 2 适配器实现（CLI 映射），Wave 3 测试+S3修复",
+  "source_artifact": "ANL-nowledge-mem-deep-research-2026-05-27",
+  "scope": "standalone",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+  "task_count": 6,
+  "complexity": "medium-high",
+  "confidence": {
+    "overall": 80,
+    "dimensions": {
+      "requirements_coverage": 85,
+      "task_quality": 80,
+      "dependency_correctness": 90,
+      "estimation_accuracy": 70
+    }
+  },
+  "waves": [
+    {
+      "label": "interface-types",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"],
+      "description": "接口+类型扩展 — searchByTimeRange + Space CRUD + Thread 高级方法签名"
+    },
+    {
+      "label": "adapter-impl",
+      "tasks": ["TASK-004"],
+      "description": "适配器实现 — CLI 映射所有新方法"
+    },
+    {
+      "label": "tests-s3",
+      "tasks": ["TASK-005", "TASK-006"],
+      "description": "测试覆盖 + S3 parity 修复"
+    }
+  ],
+  "constraints": [
+    "backward-compat: 现有调用方不受影响",
+    "P0 已定义接口签名，P1 在此基础上扩展（searchByTimeRange 新增，Space/Thread 方法新增）",
+    "test-green: 新测试 + 现有测试全绿（S3 除外）",
+    "sync-progress: 接口+实现+测试同步推进"
+  ]
+}

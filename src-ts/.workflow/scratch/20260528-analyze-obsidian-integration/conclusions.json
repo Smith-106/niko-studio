@@ -1,0 +1,121 @@
+{
+  "artifact_id": "ANL-20260528-OBS-INT",
+  "type": "analyze",
+  "scope": "macro",
+  "created_at": "2026-05-28T02:00:00Z",
+  "session_ref": "maestro-20260528-020000",
+  "intent": "Obsidian 集成改进：反向写入 + 双链桥接 + Frontmatter 映射 + Daily Notes 对接（无插件，文件系统层面）",
+  "scope_verdict": "medium",
+  "conclusions": {
+    "summary": "ObsidianService 当前为纯读取模式，仅支持单向同步（Obsidian → Knowledge）。4 个缺口均为文件系统层面可实现，无需插件开发。预估总工作量中等，建议按 G1a→G1c→G1b→G1d 优先级实施。",
+    "findings": [
+      {
+        "id": "F1",
+        "area": "反向写入",
+        "status": "gap",
+        "detail": "ObsidianService 无 write/update/create/delete 方法；IObsidianService 仅含 export/import/sync 3 个方法。export 方法仅写 export-{timestamp}.md 临时文件，不尊重 vault 目录结构。需要添加写回 vault 的完整 CRUD 方法。",
+        "priority": "P0",
+        "complexity": "medium",
+        "affected_files": ["services/obsidian-service.ts", "container/types.ts", "container/adapters.ts"]
+      },
+      {
+        "id": "F2",
+        "area": "双链桥接",
+        "status": "gap",
+        "detail": "GraphEngine 管理 wiki-store 内部实体关系，Obsidian 管理 [[wiki-link]] 文件内链接。两者完全独立，无双向同步机制。ObsidianService.extractLinks 已能解析 [[link]] 和 [[link|display]]，可扩展为反向写入 wiki-link。GraphEngine 需新增 obsidian-wiki-link 投影适配。",
+        "priority": "P1",
+        "complexity": "medium",
+        "affected_files": ["services/obsidian-service.ts", "services/wiki-store.ts", "services/wiki-schema.ts", "container/adapters.ts"]
+      },
+      {
+        "id": "F3",
+        "area": "Frontmatter 映射",
+        "status": "gap",
+        "detail": "YAML frontmatter ↔ SQLite 元数据无双向映射。ObsidianService.readNote 解析了 frontmatter 但不写入；MemoryManager 有 yamlDump/yamlSafeLoad 可复用。需要双向映射引擎：Obsidian YAML → SQLite metadata fields + SQLite → Obsidian YAML 写回。",
+        "priority": "P0",
+        "complexity": "low",
+        "affected_files": ["services/obsidian-service.ts", "memory/memory-manager.ts", "container/types.ts"]
+      },
+      {
+        "id": "F4",
+        "area": "Daily Notes / Templates",
+        "status": "gap",
+        "detail": "无 Daily Notes 自动创建或 Templates 对接。Obsidian Daily Notes 按 YYYY-MM-DD.md 格式存放（通常在 vault 根目录或 Daily/ 子目录）。需要：检测 vault 的 daily-notes 配置 → 按日期创建/追加笔记 → 支持模板变量替换。",
+        "priority": "P2",
+        "complexity": "low",
+        "affected_files": ["services/obsidian-service.ts", "container/types.ts"]
+      }
+    ],
+    "existing_infrastructure": [
+      {
+        "id": "EI1",
+        "component": "FileSyncService + FileWatcher",
+        "reusability": "high",
+        "detail": "已有 hash-based 变更检测 + 文件监控基础设施（mtime + SHA-256），可直接复用于 vault 文件监控和增量同步判断"
+      },
+      {
+        "id": "EI2",
+        "component": "MemoryManager yamlDump/yamlSafeLoad",
+        "reusability": "high",
+        "detail": "已有 YAML frontmatter 解析/序列化工具，可直接复用于 Obsidian frontmatter 双向映射"
+      },
+      {
+        "id": "EI3",
+        "component": "ObsidianService.extractLinks/extractTags",
+        "reusability": "high",
+        "detail": "已有 [[wiki-link]] 和 #tag 解析器，可扩展为反向写入和 GraphEngine 投影源"
+      },
+      {
+        "id": "EI4",
+        "component": "ObsidianServiceAdapter.sync 增量模式",
+        "reusability": "medium",
+        "detail": "现有单向 sync 的增量逻辑（mtime + hash 判断）可复用，但需扩展为双向判断（比较两端 mtime/hash）"
+      }
+    ]
+  },
+  "gaps": [
+    {
+      "id": "G1a",
+      "area": "反向写入",
+      "description": "ObsidianService 无 vault 写回方法",
+      "impact": "Niko 产出无法写回 Obsidian vault，知识层单向流动",
+      "fix_approach": "扩展 IObsidianService + ObsidianService：添加 writeNote/updateNote/createNote/deleteNote 方法，写回尊重 vault 目录结构",
+      "priority": "P0",
+      "complexity": "medium"
+    },
+    {
+      "id": "G1b",
+      "area": "双链桥接",
+      "description": "GraphEngine ↔ Obsidian wiki-link 无双向同步",
+      "impact": "两套独立链接系统，无法互引互查",
+      "fix_approach": "ObsidianService 新增 syncWikiLinks 方法；GraphEngine 新增 obsidian-wiki-link 投影适配；双向同步基于 FileSyncService 监控",
+      "priority": "P1",
+      "complexity": "medium"
+    },
+    {
+      "id": "G1c",
+      "area": "Frontmatter 映射",
+      "description": "YAML frontmatter ↔ SQLite metadata 无双向映射",
+      "impact": "Obsidian 标签/属性无法映射到 Niko 元数据查询",
+      "fix_approach": "新增 FrontmatterMapper：YAML→SQLite 字段映射 + SQLite→YAML 写回，复用 MemoryManager yamlDump/yamlSafeLoad",
+      "priority": "P0",
+      "complexity": "low"
+    },
+    {
+      "id": "G1d",
+      "area": "Daily Notes / Templates",
+      "description": "无 Daily Notes 自动创建或 Templates 对接",
+      "impact": "无法利用 Obsidian 日记和模板功能",
+      "fix_approach": "ObsidianService 新增 createDailyNote/getDailyNote 方法；支持模板变量替换；检测 vault daily-notes 配置",
+      "priority": "P2",
+      "complexity": "low"
+    }
+  ],
+  "scope_verdict_reasoning": "4 个缺口均为具体功能缺失，目标明确（添加方法/映射器/桥接），无架构重构需求。全部可在文件系统层面实现（不依赖 Obsidian 插件 API）。预估工作量中等，适合 analyze-macro → plan --from analyze → execute → verify 路径（跳过 roadmap + analyze-phase）。",
+  "recommended_chain": "plan --from analyze:ANL-20260528-OBS-INT → execute → verify → review",
+  "risk_assessment": {
+    "backward_compatibility": "LOW RISK — 新增方法不破坏现有 IObsidianService 3 个方法；ObsidianServiceAdapter.sync 增量逻辑不变",
+    "test_regression": "LOW RISK — 2979 现有测试不受影响（新增独立测试文件）",
+    "implementation_complexity": "MEDIUM — 双链桥接需要 GraphEngine 投影适配，是最复杂部分"
+  }
+}

@@ -1,0 +1,2 @@
+{"id":"DEC-20260528-033000","timestamp":"2026-05-28T03:30:00Z","source":"ralph","node_id":"post-analyze-scope","type":"scope-gate","verdict":"large","analyze_macro_id":"ANL-20260528-COLLAB"}
+{"id": "DEC-20260528122907", "timestamp": "2026-05-28T12:29:07.137993", "source": "ralph", "node_id": "post-goal-audit", "type": "goal-gate", "verdict": "proceed", "confidence_score": 85, "unmet_count": 1, "unmet_ids": ["G1"], "summary": "Phase 1 complete (8/37 gaps). G1 partially met - phases 2/3 remain for subsequent sessions."}

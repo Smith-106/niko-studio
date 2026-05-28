@@ -126,7 +126,7 @@
   ],
   "waves": [],
   "current_step": 0,
-  "status": "running",
+  "status": "completed",
   "boundary_contract": {
     "in_scope": ["git commit/push", "Lazy迁移", "Hook接入", "maestro-flow对比分析"],
     "out_of_scope": ["新增feature", "API变更", "破坏性重构"]

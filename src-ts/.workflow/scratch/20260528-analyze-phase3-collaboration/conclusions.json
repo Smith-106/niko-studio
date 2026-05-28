@@ -1,0 +1,135 @@
+{
+  "session_id": "maestro-20260528-060000",
+  "phase": "3",
+  "scope": "phase",
+  "analyzed_at": "2026-05-28T06:00:00.000Z",
+  "analyzer": "maestro-analyze",
+  "scope_verdict": "large",
+  "gaps": [
+    {
+      "id": "C1",
+      "title": "Delegate parallel execution with result aggregation",
+      "domain": "workflow",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "exists": "SubPlanDispatcher exists in workflow/delegate/sub-plan.ts with parallel/sequential/mixed execution. DelegateBroker has full lifecycle. But no result aggregation service — SubPlanResult is a plain type, no MapReduce-style aggregation, no timeout/cancellation coordination across parallel sub-plans.",
+      "missing": "ParallelResultAggregator that collects results from parallel sub-plans with timeout handling, partial result collection, and configurable aggregation strategy (merge-all, first-N, majority-vote). Integration with SubPlanDispatcher for coordinated parallel execution.",
+      "deps": ["C9 (EventBus replay for recovering lost sub-plan results)"],
+      "risk": "LOW — extending SubPlanDispatcher, no breaking changes"
+    },
+    {
+      "id": "C2",
+      "title": "LLM cross-provider automatic fallback chain",
+      "domain": "services",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "exists": "CircuitBreaker + CircuitBreakerRegistry exist in services/circuit-breaker.ts. LLMServiceImpl has provider Map + fallback in getProvider() that skips open-circuit providers. ProviderFallbackChain exists in gateway/provider-fallback.ts but is gateway-scoped.",
+      "missing": "LLMFallbackChain service that provides automatic fallback across providers: primary → secondary → tertiary with configurable retry policy per provider. Latency-based provider selection. Fallback event publishing via IEventBus. Integration with CircuitBreakerRegistry for health-aware selection.",
+      "deps": [],
+      "risk": "MEDIUM — modifying LLM service call paths; must preserve existing behavior"
+    },
+    {
+      "id": "C3",
+      "title": "Quality gate feedback loop (verify → plan gap → re-execute)",
+      "domain": "workflow",
+      "impact": "HIGH",
+      "complexity": "HIGH",
+      "exists": "ArtifactContract + ArtifactResolver exist in workflow/artifact-contract.ts. Workflow stages (analyze/plan/execute/verify) exist in state.json. No feedback loop mechanism — verification gaps don't automatically feed back into planning.",
+      "missing": "QualityGateFeedbackLoop that: reads verification.json gaps, maps them to plan tasks, generates re-execution sub-plans, tracks fix iterations, and escalates after max retries. Event-driven: publishes gap-detected events, subscribes to fix-completed events.",
+      "deps": ["C1 (parallel execution for re-executing fixes)", "C9 (EventBus for gap notification)"],
+      "risk": "HIGH — new workflow orchestration layer; must not interfere with existing stage progression"
+    },
+    {
+      "id": "C4",
+      "title": "Obsidian ↔ Knowledge bidirectional real-time sync",
+      "domain": "services",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "exists": "NowledgeGraphSync exists with bidirectional Knowledge↔Graph sync. IObsidianService has read/write/search. IKnowledgeService has CRUD. No real-time sync between Obsidian vault and Knowledge store — sync is request-driven, not event-driven.",
+      "missing": "ObsidianKnowledgeSync that: watches Obsidian vault changes (file create/modify/delete), syncs to Knowledge store in real-time; listens to Knowledge store change events, syncs back to Obsidian. Conflict resolution strategy. Debounced batch sync for performance. EventBus integration for change notifications.",
+      "deps": ["C9 (EventBus for change event routing)"],
+      "risk": "MEDIUM — Obsidian file system interaction; must handle concurrent writes gracefully"
+    },
+    {
+      "id": "C5",
+      "title": "Graph ↔ Wiki link resolution bridge",
+      "domain": "services",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "exists": "GraphEngineAdapter in DI. IObsidianService has vault operations. NowledgeGraphSync has entity/relation sync. No link resolution — graph edges don't resolve to wiki pages and vice versa.",
+      "missing": "GraphWikiLinkBridge that: resolves graph entity IDs to wiki page paths, resolves wiki [[links]] to graph nodes, maintains bidirectional link index, handles orphaned/dangling links. Integration with IGraphEngine for traversal and IObsidianService for page resolution.",
+      "deps": ["C4 (real-time sync keeps link index fresh)"],
+      "risk": "LOW — additive bridge service, no existing code changes"
+    },
+    {
+      "id": "C6",
+      "title": "MCP Gateway service discovery + health monitoring",
+      "domain": "gateway",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "exists": "MCPRequestRouter exists with capability-based routing. ProviderFallbackChain exists. No service discovery — providers are statically registered. No health monitoring — circuit breaker tracks failures but no proactive health checks.",
+      "missing": "MCPServiceDiscovery that: discovers providers dynamically (file-based, config-based, or registry-based), registers them with MCPRequestRouter. MCPHealthMonitor that: performs periodic health checks (ping/health endpoint), updates provider health status in MCPRequestRouter, publishes health events via IEventBus, triggers circuit breaker state transitions on health changes.",
+      "deps": ["C9 (EventBus for health event notifications)"],
+      "risk": "MEDIUM — gateway is external-facing; service discovery must be secure"
+    },
+    {
+      "id": "C7",
+      "title": "Workflow engine parallel wave execution",
+      "domain": "workflow",
+      "impact": "HIGH",
+      "complexity": "HIGH",
+      "exists": "SubPlanDispatcher supports parallel/sequential/mixed execution. Plan.json defines waves with parallel tasks. No wave execution engine — plan waves are not automatically executed by the workflow engine.",
+      "missing": "WaveExecutionEngine that: reads plan.json waves, executes tasks within each wave in parallel, waits for wave completion before advancing, handles wave-level failure (retry/skip/abort), publishes wave lifecycle events via IEventBus. Integration with existing workflow engine for stage progression.",
+      "deps": ["C1 (parallel execution for wave tasks)", "C9 (EventBus for wave notifications)"],
+      "risk": "HIGH — core workflow orchestration; must preserve sequential stage guarantees"
+    },
+    {
+      "id": "C8",
+      "title": "Search result relevance scoring + cache invalidation",
+      "domain": "search",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "exists": "UnifiedSearchPipeline with RRF fusion scoring. HybridSearch has scoring. SearchStrategyConfig has profiles. No explicit relevance scoring beyond RRF — no learning/ranking model. No cache invalidation — search results are not cached.",
+      "missing": "SearchRelevanceScorer that: applies configurable relevance scoring beyond RRF (recency boost, source authority, query expansion), tracks click-through / selection signals for learning. SearchCacheManager that: caches search results with TTL, invalidates on knowledge/Obsidian changes via IEventBus, supports cache warming for common queries.",
+      "deps": ["C9 (EventBus for cache invalidation triggers)"],
+      "risk": "LOW — extending search pipeline with optional components, no breaking changes"
+    },
+    {
+      "id": "C9",
+      "title": "Event bus replay + dead-letter queue",
+      "domain": "services",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "exists": "TypedEventBus in services/event-bus.ts with publish/subscribe/wildcard. No event persistence — events are in-process only, lost on crash. No replay mechanism. No dead-letter handling — failed handler calls throw and are lost.",
+      "missing": "EventBusReplay that: persists events to configurable store (in-memory ring buffer by default, pluggable for persistent), replays events from a given timestamp/sequence, supports snapshot-based replay for efficiency. DeadLetterQueue that: captures events that failed handler processing, provides retry mechanism with backoff, exposes dead-letter inspection and manual replay. Integration with existing TypedEventBus.",
+      "deps": [],
+      "risk": "MEDIUM — extending EventBus; must not impact synchronous dispatch performance"
+    },
+    {
+      "id": "C10",
+      "title": "Full-stack integration test suite",
+      "domain": "test",
+      "impact": "HIGH",
+      "complexity": "LOW",
+      "exists": "Individual unit tests exist for Phase 1/2 features. No integration tests that exercise cross-service workflows (e.g., LLM fallback → circuit breaker → event bus notification → search cache invalidation).",
+      "missing": "Integration test suite covering: (1) LLM fallback chain with circuit breaker, (2) Search pipeline with strategy config and cache, (3) Workflow execution with artifact contracts, (4) EventBus pub/sub with replay and dead-letter, (5) MCP Gateway routing with health monitoring, (6) Knowledge/Obsidian bidirectional sync, (7) Delegate parallel execution with result aggregation, (8) Wave execution engine end-to-end. Target: >= 80% integration coverage.",
+      "deps": ["C1-C9 all implemented first"],
+      "risk": "LOW — test-only, no production code changes"
+    }
+  ],
+  "execution_order": [
+    { "wave": 1, "tasks": ["C2", "C9"], "reason": "Foundational: C2 LLM fallback chain extends Phase 2 circuit breaker independently; C9 EventBus replay+DLQ is a keystone — C1/C3/C4/C6/C7/C8 all depend on it" },
+    { "wave": 2, "tasks": ["C1", "C4", "C6", "C8"], "reason": "Dependent on C9 (EventBus): C1 parallel aggregation, C4 Obsidian↔Knowledge sync, C6 MCP discovery+health, C8 search scoring+cache. C2 is done so LLM fallback is available." },
+    { "wave": 3, "tasks": ["C3", "C5", "C7"], "reason": "Higher-order: C3 quality gate feedback loop (needs C1+C9), C5 Graph↔Wiki bridge (needs C4), C7 wave execution engine (needs C1+C9)" },
+    { "wave": 4, "tasks": ["C10"], "reason": "Integration test suite runs after all C1-C9 are implemented" }
+  ],
+  "key_insights": [
+    "C9 (EventBus replay + dead-letter queue) is the keystone — 6 of 9 other gaps depend on it",
+    "C2 (LLM fallback chain) is independent and can start immediately with Phase 2 circuit breaker",
+    "C3 (Quality gate feedback loop) is the most complex — requires C1 and C9, introduces new workflow orchestration",
+    "C7 (Wave execution engine) is the second most complex — requires C1 and C9, touches core workflow",
+    "C10 (Integration tests) must come last but is LOW complexity — purely test code",
+    "Risk profile: 2 LOW, 6 MEDIUM, 2 HIGH — C3 and C7 are the high-risk items",
+    "4 waves needed vs Phase 2's 2 waves — reflects deeper dependency graph"
+  ]
+}

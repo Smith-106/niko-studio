@@ -1,0 +1,1 @@
+{"id":"DEC-20260527163000","timestamp":"2026-05-27T16:30:00.000Z","source":"ralph","node_id":"post-analyze-scope","type":"scope-gate","verdict":"medium","analyze_macro_id":"ANL-96","summary":"scope_verdict=medium, boundary_contract limits to read-only analysis. No downstream plan/execute cycle needed. Session ends as analysis completed."}

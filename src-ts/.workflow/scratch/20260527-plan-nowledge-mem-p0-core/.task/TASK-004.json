@@ -1,0 +1,32 @@
+{
+  "task_id": "TASK-004",
+  "title": "新增 NowledgeMemSource 实体和 Source 管理方法",
+  "goal_ref": "G2",
+  "action": "新增 NowledgeMemSource 类型定义和 INowledgeMemService 中 addSource/listSources/getSource/deleteSource/ingestSource 方法，在 NowledgeMemAdapter 中实现",
+  "files_to_edit": [
+    "protocols/nowledge-mem.ts",
+    "services/nowledge-mem-adapter.ts",
+    "services/nowledge-mem-adapter.test.ts"
+  ],
+  "steps": [
+    "1. 在 protocols/nowledge-mem.ts 新增 NowledgeMemSource 类型: { id: string, type: 'file'|'url'|'reference', name: string, path?: string, url?: string, content?: string, labels?: string[], ingestedAt?: string, memoryIds?: string[] }",
+    "2. 在 INowledgeMemService 新增方法:",
+    "   - addSource(pathOrUrl: string, options?: { type?: 'file'|'url'|'reference', labels?: string[] }): Promise<NowledgeMemSource>",
+    "   - listSources(options?: { type?: string, limit?: number }): Promise<NowledgeMemSource[]>",
+    "   - getSource(id: string): Promise<NowledgeMemSource | null>",
+    "   - deleteSource(id: string): Promise<boolean>",
+    "   - ingestSource(id: string, options?: { dryRun?: boolean }): Promise<{ memoryIds: string[], extractedEntities: number }>",
+    "   - searchSourceChunks(sourceId: string, query: string, options?: { limit?: number }): Promise<Array<{ content: string, score: number }>>",
+    "3. 在 NowledgeMemAdapter 中实现每个方法，映射到 CLI: sources add/list/show/delete/ingest/search-chunks",
+    "4. 新增测试覆盖 Source CRUD + ingest + search-chunks"
+  ],
+  "test_criteria": [
+    "NowledgeMemSource 类型定义完整",
+    "INowledgeMemService 含 addSource/listSources/getSource/deleteSource/ingestSource/searchSourceChunks",
+    "adapter 正确映射到 CLI sources 命令",
+    "5+ 个新测试覆盖 Source 生命周期"
+  ],
+  "wave": "source-entity",
+  "depends_on": ["TASK-002"],
+  "blocks": ["TASK-005"]
+}

@@ -1,0 +1,49 @@
+{
+  "plan_id": "PLN-nowledge-mem-p0-core",
+  "summary": "P0 核心补全：Nowledge Mem 接口扩展 + 数据模型补全 + Source 实体 + importance 修复 + Relation 增强",
+  "approach": "按依赖顺序分 3 波实施：Wave 1 处理数据模型变更（importance 类型 + Memory 字段补全 + Relation 类型），Wave 2 处理新增实体（Source），Wave 3 处理新增接口方法（get/list/update/delete/move）",
+  "source_artifact": "ANL-nowledge-mem-deep-research-2026-05-27",
+  "scope": "standalone",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"],
+  "task_count": 5,
+  "complexity": "medium-high",
+  "confidence": {
+    "overall": 85,
+    "dimensions": {
+      "requirements_coverage": 90,
+      "task_quality": 85,
+      "dependency_correctness": 95,
+      "estimation_accuracy": 75,
+      "collision_safety": 85
+    },
+    "pressure_pass": {
+      "task": "TASK-001",
+      "read_first_verified": true,
+      "convergence_verified": true,
+      "action_concrete": true
+    }
+  },
+  "waves": [
+    {
+      "label": "data-model",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"],
+      "description": "数据模型变更 — importance 类型修复、Memory 字段补全、Relation 类型增强"
+    },
+    {
+      "label": "source-entity",
+      "tasks": ["TASK-004"],
+      "description": "新增 Source 实体类型和管理方法"
+    },
+    {
+      "label": "interface-methods",
+      "tasks": ["TASK-005"],
+      "description": "新增 INowledgeMemService 接口方法（get/list/update/delete/move）"
+    }
+  ],
+  "constraints": [
+    "backward-compat: 现有调用方不受影响（importance 迁移除外）",
+    "test-green: 新测试 + 现有测试全绿",
+    "no-regression: 现有功能不退化",
+    "align-ANL-96: 建立在 ANL-96 G1-G6 之上"
+  ]
+}

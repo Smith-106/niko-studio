@@ -1,0 +1,107 @@
+{
+  "id": "ANL-96",
+  "type": "analyze",
+  "scope": "macro",
+  "created_at": "2026-05-27T15:55:00.000Z",
+  "source_session": "maestro-20260527-155500",
+  "intent": "全面研究niko-studio和nowledge mem对比",
+  "conclusions": {
+    "scope_verdict": "medium",
+    "summary": "niko-studio 与 Nowledge Mem 是互补而非替代关系。niko-studio 在叙事特化领域（叙事实体类型、时序覆盖链、冲突策略、叙事维度分析）具备 Nowledge Mem 无法提供的核心能力；Nowledge Mem 在通用知识管理（跨工具上下文、自动蒸馏、对话线程、社区导入）方面填补 niko-studio 短板。现有 CompositeBridge 双写桥接设计合理，集成范围中等，不需要大规模架构改动。",
+
+    "dimension_1_data_model": {
+      "title": "数据模型对比",
+      "niko_studio": {
+        "entity_types": ["CHARACTER", "LOCATION", "EVENT", "ITEM", "FORESHADOW", "THEME", "PLOT_THREAD"],
+        "relation_types": ["KNOWS", "LOCATED_IN", "PARTICIPATES", "CAUSES", "PRECEDES", "FORESHADOWS", "RESOLVES", "CONFLICTS_WITH", "SERVES", "OPPOSES"],
+        "memory_layers": ["ephemeral", "session", "user", "project"],
+        "memory_dimensions": ["timeline", "context", "character", "worldview", "preference", "experience"],
+        "temporal_model": "validFrom/validUntil + supersedes chain",
+        "conflict_strategies": ["LATEST_WINS", "SOURCE_PRIORITY", "MERGE", "MANUAL"],
+        "key_interfaces": [
+          "KnowledgeService: createEntity, getEntity, searchEntities, createRelation, getRelations, resolveConflicts",
+          "GraphEngine: query, traverse, shortestPath, subgraph, addNode, addEdge",
+          "UnifiedMemory: store, recall, search, getTimeline, resolveConflict",
+          "EmbeddingService: embed, embedBatch, similarity"
+        ]
+      },
+      "nowledge_mem": {
+        "core_types": ["Memory", "Thread", "Relation"],
+        "memory_fields": ["content", "labels", "importance", "source", "createdAt", "updatedAt"],
+        "key_interfaces": [
+          "INowledgeMemService: addMemory, getMemory, searchMemories, deleteMemory, updateMemory",
+          "getRelatedMemories, createRelation, summarizeMemories",
+          "addThread, searchThreads, importFromLibrary"
+        ],
+        "unique_capabilities": ["summarizeMemories (auto-distill)", "Thread management", "Library import + community detection"]
+      },
+      "verdict": "niko_studio_superior_for_narrative | nowledge_mem_superior_for_general | complementary"
+    },
+
+    "dimension_2_retrieval": {
+      "title": "检索能力对比",
+      "niko_studio": {
+        "search_modes": ["vector similarity (cosine)", "FTS5 full-text", "RRF fusion", "graph traversal"],
+        "ranking": "RRF (Reciprocal Rank Fusion) 融合向量+关键词排序",
+        "graph_queries": "BFS/DFS traversal, shortest path, subgraph extraction, Jaccard similarity",
+        "storage": "SQLite (better-sqlite3) + FS fallback + PG shadow-write"
+      },
+      "nowledge_mem": {
+        "search_modes": ["semantic search", "keyword search", "graph navigation (getRelatedMemories)"],
+        "ranking": "importance-weighted + recency",
+        "storage": "local files + HTTP API"
+      },
+      "verdict": "niko_studio_more_sophisticated (RRF fusion + FTS5 + graph traversal) | nowledge_mem_simpler_but_sufficient"
+    },
+
+    "dimension_3_bridge_design": {
+      "title": "桥接设计评估",
+      "architecture": "CompositeKnowledgeMemoryBridge (primary + secondary)",
+      "primary": "KnowledgeMemoryEngineAdapter → UnifiedMemory (4层6维时序 + 叙事实体)",
+      "secondary": "NowledgeMemKnowledgeBridge → INowledgeMemService (通用知识 + 跨工具)",
+      "write_strategy": "双写 (primary first, secondary async with silent degradation)",
+      "read_strategy": "primary 优先, secondary 补充",
+      "failover": "secondary 失败 → 静默降级到 primary-only, 无用户感知",
+      "mapping": {
+        "Entity → Memory": "labels = [entityType, ...tags]",
+        "Relationship → createRelation": "type 映射",
+        "UnifiedMemory layer → importance": "ephemeral=1, session=3, user=7, project=10",
+        "Temporal chain → 当前有效状态": "仅同步当前有效状态, 不传 supersedes 历史"
+      },
+      "gaps": [
+        "temporal_chain_not_bridged: supersedes 覆盖链不传递到 Nowledge Mem, 可能导致读取到过期状态",
+        "conflict_resolution_not_synced: 冲突解决结果不同步回 Nowledge Mem",
+        "summarize_not_utilized: Nowledge Mem 的 summarizeMemories 未被 niko-studio 调用, 浪费蒸馏能力"
+      ],
+      "verdict": "bridge_design_sound | gaps_should_be_addressed_in_medium_term"
+    },
+
+    "dimension_4_integration_roadmap": {
+      "title": "集成路线建议",
+      "short_term": {
+        "period": "1-2 周",
+        "actions": [
+          "完善 NowledgeMemAdapter 实现 (当前仅 protocol + test, 缺少实现)",
+          "补全 CompositeBridge 的 temporal chain 同步",
+          "添加 bridge 健康检查和指标暴露"
+        ]
+      },
+      "medium_term": {
+        "period": "1-2 月",
+        "actions": [
+          "利用 summarizeMemories 从 AI 对话中自动蒸馏创作洞察回 knowledge base",
+          "冲突解决结果双向同步",
+          "Nowledge Mem Library 导入 → niko-studio 叙事实体结构化"
+        ]
+      },
+      "long_term": {
+        "period": "3+ 月",
+        "actions": [
+          "Nowledge Mem 作为统一上下文层, niko-studio 作为叙事特化层, 共同服务多 AI 工具",
+          "社区知识图谱 → 叙事模板库",
+          "跨项目角色/世界观迁移"
+        ]
+      }
+    }
+  }
+}

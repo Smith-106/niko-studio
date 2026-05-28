@@ -1,0 +1,45 @@
+{
+  "task_id": "TASK-001",
+  "wave": 1,
+  "title": "ObsidianService 反向写入 + Frontmatter 映射",
+  "action": "Add writeNote, updateNote, createNote, deleteNote, readFrontmatter, updateFrontmatter, mergeFrontmatter to ObsidianService; extend IObsidianService interface",
+  "implementation": {
+    "files_to_modify": [
+      "services/obsidian-service.ts",
+      "container/types.ts"
+    ],
+    "files_to_create": [],
+    "tests_to_modify": [
+      "tests/services/obsidian-service.test.ts"
+    ],
+    "changes": [
+      "Add writeFileSync/mkdirSync imports to obsidian-service.ts",
+      "Add writeNote(vaultPath, notePath, content): writes content to vault note, creates parent dirs",
+      "Add updateNote(vaultPath, notePath, content): reads existing, writes updated, preserves frontmatter if present",
+      "Add createNote(vaultPath, notePath, content, frontmatter?): creates new note with optional YAML frontmatter",
+      "Add deleteNote(vaultPath, notePath): deletes note file from vault",
+      "Add readFrontmatter(vaultPath, notePath): parses and returns YAML frontmatter as object",
+      "Add updateFrontmatter(vaultPath, notePath, updates): merges updates into existing frontmatter, preserves body",
+      "Add mergeFrontmatter(vaultPath, notePath, data): deep-merge frontmatter fields, write back",
+      "Extend IObsidianService with writeNote, updateNote, createNote, deleteNote, readFrontmatter, updateFrontmatter",
+      "Add corresponding tests for all new methods"
+    ]
+  },
+  "read_first": [
+    "services/obsidian-service.ts",
+    "container/types.ts",
+    "memory/memory-manager.ts",
+    "tests/services/obsidian-service.test.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'writeNote' services/obsidian-service.ts",
+      "grep -q 'updateFrontmatter' services/obsidian-service.ts",
+      "grep -q 'writeNote' container/types.ts",
+      "grep -q 'readFrontmatter' services/obsidian-service.ts",
+      "npx vitest run tests/services/obsidian-service.test.ts"
+    ]
+  },
+  "complexity": "medium",
+  "estimated_changes": "150 lines added to obsidian-service.ts, 20 lines to types.ts, 120 lines to test"
+}

@@ -1,0 +1,75 @@
+{
+  "id": "TASK-006",
+  "title": "Nowledge Mem Library 导入 → 叙事实体结构化",
+  "goal_ref": "G6",
+  "description": "ANL-96 长期路线建议：Nowledge Mem Library 导入功能可以作为叙事知识的外部来源，导入后通过 niko-studio 的叙事实体模型结构化。需要实现 importFromLibrary → Entity/Relation 的转换逻辑。",
+  "approach": "实现 LibraryImportProcessor，调用 NowledgeMemAdapter.importFromLibrary() 获取原始数据，通过映射规则转换为 Entity/Relation，写入 KnowledgeService。",
+
+  "scope": {
+    "in_scope": [
+      "services/library-import-processor.ts — 新文件，Library 导入处理",
+      "knowledge/manager.ts — 添加 batch import 支持",
+      "services/nowledge-mem-adapter.ts — 确保 importFromLibrary 实现可用"
+    ],
+    "out_of_scope": [
+      "Nowledge Mem 服务端 Library API",
+      "前端 Library 浏览 UI"
+    ]
+  },
+
+  "implementation_steps": [
+    {
+      "step": 1,
+      "action": "定义 LibraryImportProcessor 和导入映射规则",
+      "files": ["services/library-import-processor.ts"],
+      "detail": "映射规则: Library item.content → Entity.name/description, Library item.labels → Entity.type + tags, Library item.relations → Relation(type mapping). 支持自定义 ImportMapping 配置。"
+    },
+    {
+      "step": 2,
+      "action": "实现 LibraryImportProcessor.importLibrary(source) 方法",
+      "files": ["services/library-import-processor.ts"],
+      "detail": "1) 调用 adapter.importFromLibrary(source) 获取原始数据; 2) 遍历 items → 按 mapping 转换为 Entity/Relation; 3) 批量写入 KnowledgeService; 4) 返回 ImportReport"
+    },
+    {
+      "step": 3,
+      "action": "在 KnowledgeService/manager 中添加 batch import 支持",
+      "files": ["knowledge/manager.ts"],
+      "detail": "添加 importEntities(entities[], relations[]) 方法：批量写入 + 去重检测 + 导入报告。避免逐条写入的性能问题。"
+    },
+    {
+      "step": 4,
+      "action": "在 CompositeBridge 中集成 Library 导入入口",
+      "files": ["services/composite-knowledge-memory-bridge.ts"],
+      "detail": "添加 importFromLibrary(source) MCP tool 入口，委托 LibraryImportProcessor 处理。"
+    },
+    {
+      "step": 5,
+      "action": "编写测试",
+      "files": ["services/library-import-processor.test.ts"],
+      "detail": "测试: 1) 基本映射转换正确; 2) 批量导入不丢失数据; 3) 去重检测; 4) 导入失败时部分回滚或报告"
+    }
+  ],
+
+  "acceptance_criteria": [
+    "LibraryImportProcessor 实现 importLibrary 方法",
+    "Library item → Entity/Relation 映射规则可配置",
+    "批量导入支持去重检测",
+    "导入结果返回 ImportReport",
+    "测试覆盖正常导入 + 去重 + 错误处理"
+  ],
+
+  "tests": {
+    "existing": [],
+    "new": ["services/library-import-processor.test.ts"],
+    "strategy": "mock INowledgeMemService.importFromLibrary，验证映射和写入"
+  },
+
+  "risks": [
+    {
+      "risk": "Library item 结构不确定，映射规则可能需要调整",
+      "mitigation": "提供默认映射 + 可配置 ImportMapping，运行时按实际数据调整"
+    }
+  ],
+
+  "estimated_effort": "4-5 hours"
+}

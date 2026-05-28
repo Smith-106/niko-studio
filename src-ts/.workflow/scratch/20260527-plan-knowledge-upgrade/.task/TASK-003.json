@@ -1,0 +1,68 @@
+{
+  "id": "TASK-003",
+  "title": "添加 bridge 健康检查和指标暴露",
+  "goal_ref": "G3",
+  "description": "CompositeKnowledgeMemoryBridge 当前无健康检查和指标暴露能力。需要添加健康状态端点和操作指标，便于监控和运维。",
+  "approach": "在 CompositeBridge 中添加 HealthCheck 接口和 MetricsCollector，通过 gateway-control-plane 暴露。",
+
+  "scope": {
+    "in_scope": [
+      "services/composite-knowledge-memory-bridge.ts — 添加 health/metrics 接口",
+      "composition-root/gateway-control-plane.ts — 注册健康检查端点"
+    ],
+    "out_of_scope": [
+      "前端监控面板",
+      "外部监控系统集成（Prometheus 等）"
+    ]
+  },
+
+  "implementation_steps": [
+    {
+      "step": 1,
+      "action": "定义 BridgeHealth 和 BridgeMetrics 接口",
+      "files": ["services/composite-knowledge-memory-bridge.ts"],
+      "detail": "BridgeHealth: { status: 'healthy'|'degraded'|'down', primary: ComponentHealth, secondary: ComponentHealth, lastCheck: Date }. BridgeMetrics: { writes: { primary: number, secondary: number, failures: number }, reads: { primary: number, secondary: number, fallbacks: number }, latency: { primary: P95, secondary: P95 } }"
+    },
+    {
+      "step": 2,
+      "action": "在 CompositeBridge 中实现 healthCheck() 方法",
+      "files": ["services/composite-knowledge-memory-bridge.ts"],
+      "detail": "分别 ping primary 和 secondary 的可用性，汇总为整体健康状态。secondary 不可用 → degraded（非 down）。"
+    },
+    {
+      "step": 3,
+      "action": "在 CompositeBridge 中添加指标收集",
+      "files": ["services/composite-knowledge-memory-bridge.ts"],
+      "detail": "每次 add/get 操作记录: 成功/失败计数、延迟直方图、fallback 计数。提供 getMetrics() 和 resetMetrics() 方法。"
+    },
+    {
+      "step": 4,
+      "action": "通过 gateway-control-plane 注册健康检查端点",
+      "files": ["composition-root/gateway-control-plane.ts"],
+      "detail": "MCP tool: 'knowledge-bridge.health' → healthCheck(), 'knowledge-bridge.metrics' → getMetrics()"
+    },
+    {
+      "step": 5,
+      "action": "编写测试",
+      "files": ["services/composite-knowledge-memory-bridge.test.ts"],
+      "detail": "测试: healthy (both up), degraded (secondary down), down (primary down). 指标: 操作后计数正确, reset 清零."
+    }
+  ],
+
+  "acceptance_criteria": [
+    "healthCheck() 返回 primary/secondary/整体健康状态",
+    "getMetrics() 返回写入/读取/延迟指标",
+    "MCP tool 可查询健康状态和指标",
+    "测试覆盖 healthy/degraded/down 三种状态"
+  ],
+
+  "tests": {
+    "existing": [],
+    "new": [],
+    "strategy": "扩展 composite-bridge 现有测试文件"
+  },
+
+  "risks": [],
+
+  "estimated_effort": "2-3 hours"
+}

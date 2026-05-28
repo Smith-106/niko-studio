@@ -1,0 +1,374 @@
+{
+  "artifact_id": "ANL-20260528-COLLAB",
+  "type": "analyze",
+  "scope": "macro",
+  "created_at": "2026-05-28T03:15:00Z",
+  "session_ref": "maestro-20260528-031500",
+  "intent": "全面查找工作流的协作改进点（全栈协作层 + 工作流引擎 + 外部集成）",
+  "scope_verdict": "large",
+  "conclusions": {
+    "summary": "发现 37 个协作缺口，分布在 5 大领域：服务协作层（17）、工作流引擎（5）、MCP Gateway（4）、LLM 服务链路（4）、搜索混合策略（4）、事件/消息总线（3）。关键路径：3 个快速修复（质量门接线、LLM provider 注册、WebSocket relay 接线）+ 2 个架构级（事件总线、子计划派发）。scope_verdict=large 建议走 roadmap 路径分阶段实施。",
+    "findings": [
+      {
+        "id": "F-S1",
+        "area": "服务协作层",
+        "status": "gap-cluster",
+        "detail": "17 个缺口，核心问题：Search/Knowledge 双系统不互通、三路文件索引独立、Nowledge Bridge 未接线、Personalization/SessionIntelligence 无持久化反馈",
+        "priority": "P0",
+        "complexity": "high",
+        "gap_ids": ["G01","G02","G03","G04","G05","G06","G07","G08","G09","G10","G11","G12","G13","G14","G15","G16","G17"]
+      },
+      {
+        "id": "F-W1",
+        "area": "工作流引擎",
+        "status": "gap-cluster",
+        "detail": "5 个缺口：无并行 delegate、无 artifact 传递、质量门未接线、delegate-orchestrator 不联动、L5 coordinator 无子计划派发",
+        "priority": "P0",
+        "complexity": "medium-high",
+        "gap_ids": ["W1.1","W1.2","W1.3","W1.4","W1.5"]
+      },
+      {
+        "id": "F-M1",
+        "area": "MCP Gateway",
+        "status": "gap-cluster",
+        "detail": "4 个缺口：MCP 服务绕过 DI 容器、无分布式追踪、rate-limit 仅内存、gateway 目录在 mcp/ 下",
+        "priority": "P1",
+        "complexity": "low-medium",
+        "gap_ids": ["M2.1","M2.2","M2.3","M2.4"]
+      },
+      {
+        "id": "F-L1",
+        "area": "LLM 服务链路",
+        "status": "gap-cluster",
+        "detail": "4 个缺口：无 circuit breaker、无跨 provider fallback chain、容器 LLM 无 provider、无 token budget 预检",
+        "priority": "P0",
+        "complexity": "low-medium",
+        "gap_ids": ["L3.1","L3.2","L3.3","L3.4"]
+      },
+      {
+        "id": "F-SH1",
+        "area": "搜索混合策略",
+        "status": "gap-cluster",
+        "detail": "4 个缺口：容器 HybridSearch 无 strategy、三路搜索不协调、SmartSearch 无 graph search、ElasticSearch stub only",
+        "priority": "P1",
+        "complexity": "medium-high",
+        "gap_ids": ["SH4.1","SH4.2","SH4.3","SH4.4"]
+      },
+      {
+        "id": "F-E1",
+        "area": "事件/消息总线",
+        "status": "gap-cluster",
+        "detail": "3 个缺口：无跨服务 event bus、WebSocket relay 未接线到 broker/orchestrator、FileSync 不向下游 emit 事件",
+        "priority": "P0",
+        "complexity": "medium",
+        "gap_ids": ["E5.1","E5.2","E5.3"]
+      }
+    ]
+  },
+  "gaps": [
+    {
+      "id": "G01",
+      "area": "服务协作",
+      "description": "SmartSearch/VectorSearch ↔ KnowledgeService 双系统不互通",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "建立 SearchBridge：KnowledgeService 作为 canonical write path，VectorSearch/SmartSearch 作为 search delegate"
+    },
+    {
+      "id": "G02",
+      "area": "服务协作",
+      "description": "IndexingService/KnowledgeService/AgentKnowledgeLayer 三路索引独立",
+      "impact": "HIGH",
+      "complexity": "HIGH",
+      "fix_approach": "统一为 KnowledgeService canonical write + VectorSearch delegate 搜索"
+    },
+    {
+      "id": "G03",
+      "area": "服务协作",
+      "description": "DistillationNowledgeBridge 未接线",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "fix_approach": "添加 DI binding 并注入 DistillationService"
+    },
+    {
+      "id": "G04",
+      "area": "服务协作",
+      "description": "ConflictNowledgeBridge 未接线",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "fix_approach": "添加 DI binding 并注入 UnifiedMemoryEngine"
+    },
+    {
+      "id": "G05",
+      "area": "服务协作",
+      "description": "PersonalizationService 写入 MemoryEngine 但无回读",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "添加 loadBack() 在初始化时重建信号数组"
+    },
+    {
+      "id": "G06",
+      "area": "服务协作",
+      "description": "SessionIntelligenceService 无持久化 bridge",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "添加 persistenceBridge 接口类似 PersonalizationService"
+    },
+    {
+      "id": "G07",
+      "area": "服务协作",
+      "description": "ObsidianService sync 单向，无反向写回",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "fix_approach": "已在前 session 实现，但 KnowledgeService 生成的非 Obsidian 来源内容仍不回写 vault"
+    },
+    {
+      "id": "G08",
+      "area": "服务协作",
+      "description": "MCP Search 绕过 DI Container 自建 IterativeRetriever",
+      "impact": "HIGH",
+      "complexity": "HIGH",
+      "fix_approach": "重构 MCP search 使用 container.get(SmartSearch)"
+    },
+    {
+      "id": "G09",
+      "area": "服务协作",
+      "description": "MCP Workflow 使用独立 WorkflowEngine 实例",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "fix_approach": "容器 WorkflowEngine 作为默认 provider"
+    },
+    {
+      "id": "G10",
+      "area": "服务协作",
+      "description": "AgentFactory 缺少 Memory/Graph/Knowledge 注入",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "fix_approach": "扩展 AgentFactoryAdapter 注入容器服务"
+    },
+    {
+      "id": "G11",
+      "area": "服务协作",
+      "description": "FileSyncService 不在 DI 容器",
+      "impact": "LOW",
+      "complexity": "LOW",
+      "fix_approach": "添加 ServiceTypes.FileSync binding"
+    },
+    {
+      "id": "G12",
+      "area": "Delegate Broker",
+      "description": "DelegateBroker 无默认 executor，无服务集成",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "创建 DefaultDelegateExecutor 路由到 WorkflowEngine/AgentFactory"
+    },
+    {
+      "id": "G13",
+      "area": "Delegate Broker",
+      "description": "DelegateBroker 无持久化",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "fix_approach": "添加 .writing/delegate/ 持久化"
+    },
+    {
+      "id": "G14",
+      "area": "Delegate Broker",
+      "description": "DelegateBroker 无事件通知",
+      "impact": "LOW",
+      "complexity": "LOW",
+      "fix_approach": "添加 EventEmitter 完成事件"
+    },
+    {
+      "id": "G15",
+      "area": "文件同步",
+      "description": "三路独立文件同步路径",
+      "impact": "HIGH",
+      "complexity": "HIGH",
+      "fix_approach": "统一为 canonical sync pipeline 写入 KnowledgeService + VectorSearch"
+    },
+    {
+      "id": "G16",
+      "area": "文件同步",
+      "description": "无文件变更事件传播",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "fix_approach": "建立 EventBus 广播文件变更到下游服务"
+    },
+    {
+      "id": "G17",
+      "area": "文件同步",
+      "description": "云 SyncEngine 与 knowledge 服务分离",
+      "impact": "LOW",
+      "complexity": "MEDIUM",
+      "fix_approach": "知识感知 storage adapter"
+    },
+    {
+      "id": "W1.1",
+      "area": "工作流引擎",
+      "description": "DelegateBroker 无并行执行",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "ParallelDelegateGroup + barrier/collect 语义"
+    },
+    {
+      "id": "W1.2",
+      "area": "工作流引擎",
+      "description": "无 artifact 传递契约",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "ArtifactStore + typed schema + versioning"
+    },
+    {
+      "id": "W1.3",
+      "area": "工作流引擎",
+      "description": "质量门未接线到 workflow 执行",
+      "impact": "HIGH",
+      "complexity": "LOW",
+      "fix_approach": "将 PhaseOrchestrator 作为 mandatory post-step hook"
+    },
+    {
+      "id": "W1.4",
+      "area": "工作流引擎",
+      "description": "Delegate-Orchestrator 不联动",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "事件桥接层连接 broker 和 orchestrator"
+    },
+    {
+      "id": "W1.5",
+      "area": "工作流引擎",
+      "description": "L5 coordinator 无子计划派发",
+      "impact": "HIGH",
+      "complexity": "HIGH",
+      "fix_approach": "子计划生命周期管理 + 结果聚合"
+    },
+    {
+      "id": "M2.2",
+      "area": "MCP Gateway",
+      "description": "MCP 服务绕过 DI 容器",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "fix_approach": "重构 MCP services 使用容器实例"
+    },
+    {
+      "id": "M2.3",
+      "area": "MCP Gateway",
+      "description": "无分布式追踪传播",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "fix_approach": "context propagation middleware"
+    },
+    {
+      "id": "M2.4",
+      "area": "MCP Gateway",
+      "description": "rate-limit 仅内存",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "fix_approach": "实现 Redis adapter"
+    },
+    {
+      "id": "L3.1",
+      "area": "LLM 服务链路",
+      "description": "无 circuit breaker",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "标准 circuit breaker 模式"
+    },
+    {
+      "id": "L3.2",
+      "area": "LLM 服务链路",
+      "description": "无跨 provider fallback chain",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "FallbackChain + 按优先级尝试 provider"
+    },
+    {
+      "id": "L3.3",
+      "area": "LLM 服务链路",
+      "description": "容器 LLM 无 provider 注册",
+      "impact": "HIGH",
+      "complexity": "LOW",
+      "fix_approach": "binding factory 中按 env var 注册 provider"
+    },
+    {
+      "id": "L3.4",
+      "area": "LLM 服务链路",
+      "description": "无 token budget 预检",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "fix_approach": "withRetry() 中添加 token budget check"
+    },
+    {
+      "id": "SH4.1",
+      "area": "搜索混合策略",
+      "description": "容器 HybridSearch 无 strategy",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "wiring VectorSearch + FTS5 + keyword strategies"
+    },
+    {
+      "id": "SH4.2",
+      "area": "搜索混合策略",
+      "description": "三路搜索不协调",
+      "impact": "MEDIUM",
+      "complexity": "HIGH",
+      "fix_approach": "统一为 composable pipeline"
+    },
+    {
+      "id": "SH4.3",
+      "area": "搜索混合策略",
+      "description": "SmartSearch/HybridSearch 无 graph search",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "fix_approach": "添加 GraphSearchStrategy"
+    },
+    {
+      "id": "SH4.4",
+      "area": "搜索混合策略",
+      "description": "ElasticSearch stub only",
+      "impact": "MEDIUM",
+      "complexity": "HIGH",
+      "fix_approach": "实际 Elasticsearch 客户端实现（延后，非阻塞）"
+    },
+    {
+      "id": "E5.1",
+      "area": "事件总线",
+      "description": "无跨服务 event bus",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "fix_approach": "EventEmitter-based InternalEventBus"
+    },
+    {
+      "id": "E5.2",
+      "area": "事件总线",
+      "description": "WebSocket relay 未接线到 broker/orchestrator",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "fix_approach": "注入 relay 到 broker 和 orchestrator constructor"
+    },
+    {
+      "id": "E5.3",
+      "area": "事件总线",
+      "description": "FileSync 不向下游 emit 事件",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "fix_approach": "sync 成功后 emit 事件"
+    }
+  ],
+  "scope_verdict_reasoning": "37 个缺口横跨 5 个领域，其中 8 个 HIGH impact + HIGH complexity（需架构决策）。关键路径需要分阶段实施：Phase 1 快速修复（3 个 LOW complexity HIGH impact），Phase 2 核心桥梁（event bus + search bridge），Phase 3 高级功能（并行 delegate + 子计划派发）。scope_verdict=large 建议走 roadmap 路径。",
+  "recommended_chain": "roadmap → analyze → plan → execute → verify → review（分 3 phase 实施）",
+  "quick_fixes": [
+    {"id": "Q1", "gap": "W1.3", "description": "接线质量门到 workflow 执行", "complexity": "LOW", "impact": "HIGH"},
+    {"id": "Q2", "gap": "L3.3", "description": "注册 LLM provider 到容器", "complexity": "LOW", "impact": "HIGH"},
+    {"id": "Q3", "gap": "E5.2", "description": "接线 WebSocket relay 到 broker/orchestrator", "complexity": "LOW", "impact": "MEDIUM"},
+    {"id": "Q4", "gap": "G03", "description": "接线 DistillationNowledgeBridge", "complexity": "LOW", "impact": "MEDIUM"},
+    {"id": "Q5", "gap": "G04", "description": "接线 ConflictNowledgeBridge", "complexity": "LOW", "impact": "MEDIUM"},
+    {"id": "Q6", "gap": "G13", "description": "添加 DelegateBroker 持久化", "complexity": "LOW", "impact": "MEDIUM"},
+    {"id": "Q7", "gap": "L3.4", "description": "添加 token budget 预检", "complexity": "LOW", "impact": "MEDIUM"}
+  ],
+  "risk_assessment": {
+    "backward_compatibility": "MEDIUM RISK — 容器 binding 改动可能影响现有 wiring",
+    "test_regression": "LOW RISK — 3005 现有测试不受影响（新增独立测试）",
+    "implementation_complexity": "HIGH — 8 个架构级缺口需设计决策"
+  }
+}

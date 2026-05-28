@@ -1,0 +1,136 @@
+{
+  "analyze_id": "ANL-20260528-P1-QW",
+  "source": "maestro-analyze",
+  "phase": "1",
+  "milestone": "M1",
+  "scope": "phase",
+  "scope_verdict": null,
+  "created_at": "2026-05-28T03:45:00Z",
+  "summary": "Phase 1 deep analysis of 8 quick-win collaboration gaps. All gaps confirmed as LOW complexity with clear code-level changes identified. Key finding: most gaps are DI wiring issues — code exists but container bindings are missing.",
+  "gaps": [
+    {
+      "id": "Q1",
+      "title": "Wire PhaseOrchestrator quality gates into workflow execution",
+      "domain": "workflow",
+      "impact": "HIGH",
+      "complexity": "LOW",
+      "current_state": "PhaseOrchestrator exists in services/phase-orchestrator.ts with quality gate methods (validatePhase, checkQualityGate, getQualityGates) but is NOT injected into any gateway or delegate-broker constructor. It's registered in container/types.ts as IPhaseOrchestrator and has an adapter in container/adapters.ts, but no module actually calls its gate methods during workflow execution.",
+      "target_files": [
+        "services/phase-orchestrator.ts",
+        "gateway/maestro-gateway.ts",
+        "services/delegate-broker.ts"
+      ],
+      "change_plan": "1) Inject IPhaseOrchestrator into MaestroGateway constructor. 2) Call phaseOrchestrator.checkQualityGate(phase, stage) before advancing workflow stages. 3) Add gate-failed error handling that prevents stage transition.",
+      "test_strategy": "Unit test: verify gate check is called during stage transition. Integration test: verify gate failure blocks transition."
+    },
+    {
+      "id": "Q2",
+      "title": "Register LLM providers in DI container",
+      "domain": "collaboration",
+      "impact": "HIGH",
+      "complexity": "LOW",
+      "current_state": "container/bindings.ts has ILLMService bound to LLMService, but LLMService.constructor() accepts optional providers[] parameter that is never populated. No ILLMProvider bindings exist in types.ts or adapters.ts. The LLMService class supports provider registration but the container provides zero providers.",
+      "target_files": [
+        "services/llm-service.ts",
+        "container/types.ts",
+        "container/adapters.ts",
+        "container/bindings.ts"
+      ],
+      "change_plan": "1) Add ILLMProvider symbol to container/types.ts with registerProvider(name, config) method. 2) Create LLMProviderAdapter in container/adapters.ts. 3) In container/bindings.ts, bind default providers (openai, anthropic) from config. 4) LLMService constructor auto-registers bound providers.",
+      "test_strategy": "Unit test: verify providers are registered after container resolution. Test fallback chain works."
+    },
+    {
+      "id": "Q3",
+      "title": "Wire WebSocket relay into workflow notification",
+      "domain": "collaboration",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "current_state": "WebSocketRelayService exists in services/websocket-relay-service.ts with broadcast method. It's bound in container/types.ts as IWebSocketRelayService with adapter. BUT it's not injected into DelegateBroker or PhaseOrchestrator — no one calls broadcast() when delegate events occur.",
+      "target_files": [
+        "services/websocket-relay-service.ts",
+        "services/delegate-broker.ts",
+        "services/phase-orchestrator.ts"
+      ],
+      "change_plan": "1) Inject IWebSocketRelayService into DelegateBroker. 2) Call relay.broadcast('delegate:status', payload) on job start/complete/fail. 3) Inject into PhaseOrchestrator for gate status broadcasts.",
+      "test_strategy": "Unit test: verify broadcast called on delegate status change. Mock WebSocketRelayService."
+    },
+    {
+      "id": "Q4",
+      "title": "Wire DistillationNowledgeBridge (Knowledge → Obsidian)",
+      "domain": "collaboration",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "current_state": "DistillationNowledgeBridge class exists in services/nowledge-bridge.ts with distill() method that reads from KnowledgeService and writes distilled content to ObsidianService. BUT it's NOT bound in container/bindings.ts and NOT listed in container/types.ts interfaces.",
+      "target_files": [
+        "services/nowledge-bridge.ts",
+        "container/types.ts",
+        "container/adapters.ts",
+        "container/bindings.ts"
+      ],
+      "change_plan": "1) Add IDistillationNowledgeBridge to container/types.ts. 2) Create adapter in container/adapters.ts. 3) Bind in container/bindings.ts with KnowledgeService + ObsidianService dependencies. 4) Expose distill() as container-resolved method.",
+      "test_strategy": "Unit test: verify distill() reads from Knowledge and writes to Obsidian. Mock both services."
+    },
+    {
+      "id": "Q5",
+      "title": "Wire ConflictNowledgeBridge (Obsidian → Knowledge conflict detection)",
+      "domain": "collaboration",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "current_state": "ConflictNowledgeBridge class exists in services/nowledge-bridge.ts alongside DistillationNowledgeBridge. Has detectConflicts() and resolveConflict() methods. Same issue: NOT bound in DI container.",
+      "target_files": [
+        "services/nowledge-bridge.ts",
+        "container/types.ts",
+        "container/adapters.ts",
+        "container/bindings.ts"
+      ],
+      "change_plan": "1) Add IConflictNowledgeBridge to container/types.ts. 2) Create adapter. 3) Bind with dependencies. 4) Wire into ObsidianService sync flow to trigger conflict detection on vault changes.",
+      "test_strategy": "Unit test: verify conflict detection triggered on sync. Test resolution path."
+    },
+    {
+      "id": "Q6",
+      "title": "Add delegate broker persistence",
+      "domain": "workflow",
+      "impact": "HIGH",
+      "complexity": "LOW",
+      "current_state": "DelegateBroker in services/delegate-broker.ts stores all job state in-memory (Map<string, DelegateJob>). No persistence to disk. On process restart, all job state is lost. The .writing/delegate/ directory structure exists but broker doesn't write to it.",
+      "target_files": [
+        "services/delegate-broker.ts"
+      ],
+      "change_plan": "1) Add saveJobState(job) method that writes to .writing/delegate/{jobId}.json. 2) Add loadJobStates() on construction that reads from directory. 3) Call saveJobState on every status transition (queued→running→completed/failed). 4) Add job recovery on startup.",
+      "test_strategy": "Unit test: verify job state persisted to disk. Test recovery after simulated restart."
+    },
+    {
+      "id": "Q7",
+      "title": "Add LLM token budget check before request dispatch",
+      "domain": "collaboration",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "current_state": "LLMService.dispatch() calls providers without checking token budget or cost limits. No budget tracking fields exist. The service has a config object but no budget/cost properties.",
+      "target_files": [
+        "services/llm-service.ts"
+      ],
+      "change_plan": "1) Add tokenBudget and tokensUsed fields to LLMService config. 2) Add checkBudget() method that verifies tokensUsed + estimated < tokenBudget before dispatch. 3) Throw BudgetExceededError if over budget. 4) Track cumulative token usage per session.",
+      "test_strategy": "Unit test: verify dispatch blocked when budget exceeded. Verify tracking accumulates correctly."
+    },
+    {
+      "id": "Q8",
+      "title": "Unify three independent FileSync paths into single adapter chain",
+      "domain": "collaboration",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "current_state": "Three independent sync paths exist: (1) ObsidianService.sync() - vault↔local, (2) FileSyncService - local↔cloud, (3) NowledgeBridge sync - Knowledge↔Obsidian. Each has its own sync logic with no shared adapter pattern. FileSyncService in services/file-sync-service.ts, ObsidianService sync in services/obsidian-service.ts, NowledgeBridge in services/nowledge-bridge.ts.",
+      "target_files": [
+        "services/file-sync-service.ts",
+        "services/obsidian-service.ts",
+        "services/nowledge-bridge.ts",
+        "container/types.ts"
+      ],
+      "change_plan": "1) Define IFileSyncAdapter interface in container/types.ts with sync(direction, source, target) method. 2) Create ObsidianSyncAdapter, CloudSyncAdapter, KnowledgeSyncAdapter implementations. 3) Register adapters in container/bindings.ts. 4) FileSyncService delegates to appropriate adapter based on sync type.",
+      "test_strategy": "Unit test: each adapter delegates correctly. Integration test: multi-hop sync chain works."
+    }
+  ],
+  "implementation_order": ["Q6", "Q2", "Q1", "Q7", "Q3", "Q4", "Q5", "Q8"],
+  "rationale": "Q6 (persistence) first as it has no dependencies and enables recovery. Q2 (LLM providers) enables Q7 (budget). Q1 (quality gates) is independent but foundational. Q3/Q4/Q5 are DI wiring with no inter-dependencies. Q8 (unified sync) is last as it requires adapter pattern changes across multiple files.",
+  "risk_assessment": "LOW — all gaps are DI wiring or straightforward feature additions with no architectural risk. Backward compatibility preserved by adding new methods/bindings without modifying existing signatures.",
+  "estimated_effort": "2-3 sessions for all 8 gaps"
+}

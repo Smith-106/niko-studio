@@ -1,0 +1,113 @@
+{
+  "plan_id": "PLN-20260528-P2",
+  "source": "maestro-plan",
+  "phase": "2",
+  "milestone": "M2",
+  "created_at": "2026-05-28T05:00:00Z",
+  "scope": "Architecture Completion - Build Missing Bridges (8 gaps, MEDIUM complexity)",
+  "analysis_ref": "ANL-20260528-P2-ARCH",
+  "tasks": [
+    {
+      "id": "T01",
+      "title": "Implement Cross-service EventBus",
+      "type": "feature",
+      "scope": "services/",
+      "description": "Create IEventBus interface and TypedEventBus implementation. Support typed channels, wildcard subscriptions, synchronous in-process pub/sub. Register in DI container. Wire to IWebSocketRelayService for remote event mirroring.",
+      "depends_on": [],
+      "wave": 1,
+      "files": ["services/event-bus.ts", "container/types.ts", "container/adapters.ts", "container/bindings.ts"],
+      "test_files": ["tests/services/event-bus.test.ts"],
+      "convergence": "IEventBus registered in DI; services can publish/subscribe typed events"
+    },
+    {
+      "id": "T02",
+      "title": "Add LLM circuit breaker + cross-provider fallback",
+      "type": "feature",
+      "scope": "services/llm-service.ts",
+      "description": "Implement CircuitBreaker class with closed→open→half-open state machine. Add per-provider circuit state tracking. Modify LLMServiceImpl.getProvider() to skip open-circuit providers and try fallback chain. Add CircuitOpenError. Configure failure threshold and cooldown period.",
+      "depends_on": [],
+      "wave": 1,
+      "files": ["services/llm-service.ts", "container/types.ts", "container/adapters.ts"],
+      "test_files": ["tests/services/llm-service.test.ts"],
+      "convergence": "LLM calls skip open-circuit providers; automatic fallback to next available provider"
+    },
+    {
+      "id": "T03",
+      "title": "Define ArtifactContract for workflow stage passing",
+      "type": "feature",
+      "scope": "workflow/",
+      "description": "Define IArtifactContract interface with inputSchema/outputSchema per stage. Create ArtifactResolver that validates and resolves references from state.json. Wrap existing handoff_package in typed contract. Backward compatible - existing Record<string,unknown> still works.",
+      "depends_on": [],
+      "wave": 1,
+      "files": ["workflow/artifact-contract.ts", "container/types.ts", "container/adapters.ts", "container/bindings.ts"],
+      "test_files": ["tests/workflow/artifact-contract.test.ts"],
+      "convergence": "Workflow stages can declare typed artifact contracts; resolver validates references"
+    },
+    {
+      "id": "T04",
+      "title": "Add SearchService hybrid strategy config",
+      "type": "feature",
+      "scope": "search/",
+      "description": "Define ISearchStrategyConfig interface with cascade order (local→semantic→external), fallback thresholds, and performance hints. Create SearchProfile presets. Extend HybridSearch to accept strategy config. Register in DI container.",
+      "depends_on": [],
+      "wave": 1,
+      "files": ["search/strategy-config.ts", "container/types.ts", "container/adapters.ts", "container/bindings.ts"],
+      "test_files": ["tests/search/strategy-config.test.ts"],
+      "convergence": "SearchService has configurable strategy cascade with fallback thresholds"
+    },
+    {
+      "id": "T05",
+      "title": "Implement Unified Search Pipeline",
+      "type": "feature",
+      "scope": "search/ + services/",
+      "description": "Create UnifiedSearchPipeline that coordinates KnowledgeService.search(), SmartSearch, HybridSearch, VectorSearch, and ObsidianService.search(). Normalize results, apply hybrid RRF scoring, deduplicate. Expose single search() method. Use strategy config from T04 for routing.",
+      "depends_on": ["T04"],
+      "wave": 2,
+      "files": ["search/unified-pipeline.ts", "container/types.ts", "container/adapters.ts", "container/bindings.ts"],
+      "test_files": ["tests/search/unified-pipeline.test.ts"],
+      "convergence": "Single search endpoint merges all search backends with unified scoring"
+    },
+    {
+      "id": "T06",
+      "title": "Add Delegate broker sub-plan dispatch",
+      "type": "feature",
+      "scope": "workflow/delegate/",
+      "description": "Add SubPlanSpec and SubPlanResult types to DelegateBroker. Implement submitSubPlan() that decomposes a task into parallel sub-tasks, tracks individual completion, and aggregates results. Publish sub-task events via IEventBus (T01).",
+      "depends_on": ["T01"],
+      "wave": 2,
+      "files": ["workflow/delegate/delegate-broker.ts", "workflow/delegate/sub-plan.ts"],
+      "test_files": ["tests/workflow/delegate/sub-plan.test.ts"],
+      "convergence": "DelegateBroker can decompose tasks into parallel sub-tasks with result aggregation"
+    },
+    {
+      "id": "T07",
+      "title": "Add MCP Gateway request routing + provider fallback",
+      "type": "feature",
+      "scope": "gateway/ + mcp/",
+      "description": "Create MCPRequestRouter that maps tool calls to handlers with capability-based routing. Add ProviderFallbackChain that tries providers in order, checking circuit breaker state (T02). Integrate with existing gateway bootstrap.",
+      "depends_on": ["T02"],
+      "wave": 2,
+      "files": ["gateway/mcp-router.ts", "gateway/provider-fallback.ts", "container/types.ts", "container/adapters.ts", "container/bindings.ts"],
+      "test_files": ["tests/gateway/mcp-router.test.ts"],
+      "convergence": "MCP Gateway routes requests to capable providers with automatic fallback"
+    },
+    {
+      "id": "T08",
+      "title": "Implement Nowledge Mem P1 bridge (Knowledge ↔ Graph bidirectional sync)",
+      "type": "feature",
+      "scope": "services/",
+      "description": "Extend NowledgeMemKnowledgeBridge with graph sync methods: syncEntityToGraph(), syncRelationToGraph(), syncGraphToKnowledge(). Add change detection and delta sync. Publish sync events via IEventBus (T01). Handle conflict detection via ConflictNowledgeBridge.",
+      "depends_on": ["T01"],
+      "wave": 2,
+      "files": ["services/nowledge-mem-knowledge-bridge.ts", "services/nowledge-graph-sync.ts", "container/adapters.ts", "container/bindings.ts"],
+      "test_files": ["tests/services/nowledge-graph-sync.test.ts"],
+      "convergence": "Knowledge entities/relations sync bidirectionally with Nowledge Mem graph"
+    }
+  ],
+  "waves": [
+    { "wave": 1, "tasks": ["T01", "T02", "T03", "T04"], "parallel": true },
+    { "wave": 2, "tasks": ["T05", "T06", "T07", "T08"], "parallel": true }
+  ],
+  "estimated_sessions": 3,
+  "risk_level": "MEDIUM"
+}

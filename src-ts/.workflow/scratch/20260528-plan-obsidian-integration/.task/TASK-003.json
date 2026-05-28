@@ -1,0 +1,36 @@
+{
+  "task_id": "TASK-003",
+  "wave": 2,
+  "title": "ObsidianServiceAdapter 双向同步扩展",
+  "action": "Extend ObsidianServiceAdapter.sync to support bidirectional sync including reverse write and frontmatter mapping",
+  "implementation": {
+    "files_to_modify": [
+      "container/adapters.ts"
+    ],
+    "files_to_create": [],
+    "tests_to_modify": [
+      "tests/container/obsidian-service-adapter.test.ts"
+    ],
+    "changes": [
+      "Extend ObsidianServiceAdapter.sync to support direction: 'import' | 'export' | 'bidirectional'",
+      "Add reverse sync: when direction includes 'export', write knowledge layer changes back to vault",
+      "Integrate FrontmatterMapper: during bidirectional sync, map YAML frontmatter ↔ SQLite metadata",
+      "Add change detection: compare mtime/hash on both sides, apply changes only where needed",
+      "Add conflict handling: when both sides modified, prefer newer mtime (configurable strategy)"
+    ]
+  },
+  "read_first": [
+    "container/adapters.ts",
+    "services/file-sync.ts",
+    "tests/container/obsidian-service-adapter.test.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'bidirectional' container/adapters.ts",
+      "grep -q 'reverse' container/adapters.ts",
+      "npx vitest run tests/container/obsidian-service-adapter.test.ts"
+    ]
+  },
+  "complexity": "medium",
+  "estimated_changes": "80 lines to adapters.ts, 80 lines to tests"
+}

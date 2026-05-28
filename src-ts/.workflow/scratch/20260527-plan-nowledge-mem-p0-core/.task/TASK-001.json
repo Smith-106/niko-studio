@@ -1,0 +1,31 @@
+{
+  "task_id": "TASK-001",
+  "title": "importance 类型修复：integer → 0.1-1.0 float",
+  "goal_ref": "G3",
+  "action": "将 NowledgeMemMemory.importance 从 integer 改为 0.1-1.0 float 范围，迁移现有 bridge 调用方",
+  "files_to_edit": [
+    "protocols/nowledge-mem.ts",
+    "services/nowledge-mem-adapter.ts",
+    "services/nowledge-mem-adapter.test.ts",
+    "services/distillation-nowledge-bridge.ts",
+    "services/conflict-nowledge-bridge.ts",
+    "services/nowledge-mem-knowledge-bridge.ts",
+    "services/library-import-processor.ts",
+    "services/composite-knowledge-memory-bridge.ts"
+  ],
+  "steps": [
+    "1. 修改 protocols/nowledge-mem.ts: NowledgeMemMemory.importance 注释说明范围为 0.1-1.0",
+    "2. 修改 services/nowledge-mem-adapter.ts: add() 方法将 importance 除以 10 (8→0.8) 传给 CLI",
+    "3. 修改 4 个 bridge 文件: 将 importance 值从整数改为浮点 (8→0.8, 7→0.7, 5→0.5)",
+    "4. 修改 library-import-processor.ts: importance 从 5 改为 0.5",
+    "5. 更新测试: 适配新的浮点 importance 值"
+  ],
+  "test_criteria": [
+    "所有现有测试通过",
+    "bridge 传递的 importance 为 0.1-1.0 浮点",
+    "adapter 正确将浮点传给 Nowledge Mem CLI"
+  ],
+  "wave": "data-model",
+  "depends_on": [],
+  "blocks": ["TASK-002"]
+}

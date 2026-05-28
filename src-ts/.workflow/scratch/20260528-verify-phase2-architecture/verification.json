@@ -1,0 +1,69 @@
+{
+  "session_id": "maestro-20260528-050000",
+  "phase": "2",
+  "verified_at": "2026-05-28T05:30:00.000Z",
+  "verifier": "maestro-verify",
+  "summary": {
+    "total_truths": 8,
+    "verified": 8,
+    "failed": 0,
+    "stub": 0,
+    "orphaned": 0
+  },
+  "truths": [
+    {
+      "id": "T01",
+      "title": "Cross-service EventBus",
+      "status": "VERIFIED",
+      "evidence": "services/event-bus.ts: IEventBus + TypedEventBus with publish/subscribe/wildcard; container/types.ts: ServiceTypes.EventBus; adapters.ts: EventBusAdapter; bindings.ts: singleton binding"
+    },
+    {
+      "id": "T02",
+      "title": "LLM circuit breaker + cross-provider fallback",
+      "status": "VERIFIED",
+      "evidence": "services/circuit-breaker.ts: CircuitBreaker (CLOSED/OPEN/HALF_OPEN) + CircuitBreakerRegistry; llm-service.ts: CircuitOpenError + fallback chain in provider selection"
+    },
+    {
+      "id": "T03",
+      "title": "ArtifactContract for workflow stage passing",
+      "status": "VERIFIED",
+      "evidence": "workflow/artifact-contract.ts: IArtifactContract + ArtifactResolver + STAGE_CONTRACTS with analyze/plan/execute/verify/review; types exported from container/types.ts"
+    },
+    {
+      "id": "T04",
+      "title": "SearchService hybrid strategy config",
+      "status": "VERIFIED",
+      "evidence": "search/strategy-config.ts: ISearchStrategyConfig + SearchProfile (PRECISE/BROAD/FAST) + DEFAULT_STRATEGY_CONFIG; hybrid-search.ts: optional strategyConfig; registered in DI"
+    },
+    {
+      "id": "T05",
+      "title": "Unified Search Pipeline",
+      "status": "VERIFIED",
+      "evidence": "search/unified-pipeline.ts: IUnifiedSearchPipeline + UnifiedSearchPipeline with search() + RRF fusion + dedup; registered in DI with all search service deps"
+    },
+    {
+      "id": "T06",
+      "title": "Delegate broker sub-plan dispatch",
+      "status": "VERIFIED",
+      "evidence": "workflow/delegate/sub-plan.ts: SubPlanSpec + SubPlanResult + SubPlanDispatcher; parallel/sequential/mixed execution; EventBus integration"
+    },
+    {
+      "id": "T07",
+      "title": "MCP Gateway request routing + provider fallback",
+      "status": "VERIFIED",
+      "evidence": "gateway/mcp-router.ts: IMCPRequestRouter + MCPRequestRouter with capability-based routing; gateway/provider-fallback.ts: ProviderFallbackChain; registered in DI"
+    },
+    {
+      "id": "T08",
+      "title": "Nowledge Mem P1 bridge (Knowledge ↔ Graph bidirectional sync)",
+      "status": "VERIFIED",
+      "evidence": "services/nowledge-graph-sync.ts: INowledgeGraphSync + NowledgeGraphSync with syncEntityToGraph/syncRelationToGraph/syncGraphToKnowledge/syncAll; registered in DI"
+    }
+  ],
+  "compilation": {
+    "tool": "tsc --noEmit",
+    "result": "0 errors"
+  },
+  "gaps": [],
+  "passed": true
+}

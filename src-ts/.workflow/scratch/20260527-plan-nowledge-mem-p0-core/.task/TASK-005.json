@@ -1,0 +1,37 @@
+{
+  "task_id": "TASK-005",
+  "title": "新增 INowledgeMemService 接口方法：get/list/update/delete/move + graph.searchRelations",
+  "goal_ref": "G1",
+  "action": "在 INowledgeMemService 中新增 getMemory/listMemories/updateMemory/deleteMemory/moveMemory + graph.searchRelations 方法，在 NowledgeMemAdapter 中实现",
+  "files_to_edit": [
+    "protocols/nowledge-mem.ts",
+    "services/nowledge-mem-adapter.ts",
+    "services/nowledge-mem-adapter.test.ts"
+  ],
+  "steps": [
+    "1. 在 INowledgeMemService 新增方法:",
+    "   - getMemory(id: string): Promise<NowledgeMemMemory | null>",
+    "   - listMemories(options?: { type?: string, label?: string, since?: string, limit?: number, spaceId?: string }): Promise<NowledgeMemMemory[]>",
+    "   - updateMemory(id: string, updates: { content?: string, title?: string, importance?: number, labels?: string[], unitType?: string }): Promise<NowledgeMemMemory | null>",
+    "   - deleteMemory(id: string): Promise<boolean>",
+    "   - moveMemory(id: string, targetSpaceId: string): Promise<boolean>",
+    "   - searchRelations(options: { type?: NowledgeMemRelationType, fromId?: string, toId?: string, limit?: number }): Promise<NowledgeMemRelation[]>",
+    "2. 在 NowledgeMemAdapter 中实现每个方法，映射到 CLI:",
+    "   - getMemory → memories get --id",
+    "   - listMemories → memories list --type/--label/--since/--limit/--space",
+    "   - updateMemory → memories update --id --content/--title/--importance/--label/--unit-type",
+    "   - deleteMemory → memories delete --id",
+    "   - moveMemory → memories move --id --space",
+    "   - searchRelations → graph search --type/--from/--to/--limit",
+    "3. 新增测试覆盖所有新方法"
+  ],
+  "test_criteria": [
+    "INowledgeMemService 含 getMemory/listMemories/updateMemory/deleteMemory/moveMemory/searchRelations",
+    "每个方法的 adapter 实现正确映射 CLI 参数",
+    "8+ 个新测试覆盖 CRUD + searchRelations",
+    "现有测试不回归"
+  ],
+  "wave": "interface-methods",
+  "depends_on": ["TASK-002", "TASK-003", "TASK-004"],
+  "blocks": []
+}

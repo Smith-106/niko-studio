@@ -1,0 +1,39 @@
+{
+  "task_id": "TASK-004",
+  "wave": 2,
+  "title": "Daily Notes / Templates 对接",
+  "action": "Add Daily Notes creation and template variable substitution to ObsidianService",
+  "implementation": {
+    "files_to_modify": [
+      "services/obsidian-service.ts",
+      "container/types.ts"
+    ],
+    "files_to_create": [],
+    "tests_to_modify": [
+      "tests/services/obsidian-service.test.ts"
+    ],
+    "changes": [
+      "Add createDailyNote(vaultPath, date?, template?): creates YYYY-MM-DD.md in vault's daily notes folder",
+      "Add getDailyNote(vaultPath, date?): reads existing daily note for given date",
+      "Add appendToDailyNote(vaultPath, date?, content): appends content to daily note, creates if not exists",
+      "Add resolveDailyNotesConfig(vaultPath): reads .obsidian/daily-notes.json to find folder + template config",
+      "Add applyTemplate(template, variables): replaces {{date}}, {{time}}, {{title}} etc. in template string",
+      "Extend IObsidianService with createDailyNote, getDailyNote, appendToDailyNote"
+    ]
+  },
+  "read_first": [
+    "services/obsidian-service.ts",
+    "container/types.ts",
+    "tests/services/obsidian-service.test.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'createDailyNote' services/obsidian-service.ts",
+      "grep -q 'applyTemplate' services/obsidian-service.ts",
+      "grep -q 'createDailyNote' container/types.ts",
+      "npx vitest run tests/services/obsidian-service.test.ts"
+    ]
+  },
+  "complexity": "low",
+  "estimated_changes": "60 lines to obsidian-service.ts, 10 lines to types.ts, 50 lines to tests"
+}

@@ -1,0 +1,91 @@
+{
+  "id": "TASK-001",
+  "title": "完善 NowledgeMemAdapter 实现",
+  "goal_ref": "G1",
+  "description": "实现 INowledgeMemService 所有方法。当前 adapter 仅有 protocol 定义和基础测试，缺少实际 CLI 通信实现。",
+  "approach": "基于 INowledgeMemService 接口逐一实现每个方法，通过 Node child_process 调用 Nowledge Mem CLI 命令。每个方法实现后编写单测验证。",
+
+  "scope": {
+    "in_scope": [
+      "services/nowledge-mem-adapter.ts — 全方法实现",
+      "services/nowledge-mem-adapter.test.ts — 补全测试覆盖"
+    ],
+    "out_of_scope": [
+      "protocols/nowledge-mem.ts — 接口定义不改",
+      "其他 adapter 实现文件"
+    ]
+  },
+
+  "implementation_steps": [
+    {
+      "step": 1,
+      "action": "读取 INowledgeMemService 接口，列出所有待实现方法",
+      "files": ["protocols/nowledge-mem.ts"],
+      "detail": "当前接口方法: addMemory, searchMemories, getMemory, updateMemory, deleteMemory, expandGraph, addToLibrary, searchLibrary, getWorkingMemory, setWorkingMemory, listCommunities, getFeed, summarizeMemories, createRelation, getRelatedMemories, addThread, searchThreads, importFromLibrary"
+    },
+    {
+      "step": 2,
+      "action": "实现 NowledgeMemAdapter 类的 CLI 通信基础设施",
+      "files": ["services/nowledge-mem-adapter.ts"],
+      "detail": "添加 execNowledgeMem() 私有方法，封装 CLI 调用 + JSON 解析 + 错误处理。支持 configurable CLI path（默认 'nowledge-mem'）。"
+    },
+    {
+      "step": 3,
+      "action": "逐方法实现 CRUD 操作（addMemory, getMemory, updateMemory, deleteMemory, searchMemories）",
+      "files": ["services/nowledge-mem-adapter.ts"],
+      "detail": "CLI 命令映射: add → `nowledge-mem add`, get → `nowledge-mem get <id>`, search → `nowledge-mem search <query>`, update → `nowledge-mem update <id>`, delete → `nowledge-mem delete <id>`"
+    },
+    {
+      "step": 4,
+      "action": "实现图结构操作（expandGraph, createRelation, getRelatedMemories）",
+      "files": ["services/nowledge-mem-adapter.ts"],
+      "detail": "expandGraph → `nowledge-mem expand`, createRelation → `nowledge-mem relate`, getRelatedMemories → `nowledge-mem related <id>`"
+    },
+    {
+      "step": 5,
+      "action": "实现 Library/Community 操作（addToLibrary, searchLibrary, listCommunities, importFromLibrary）",
+      "files": ["services/nowledge-mem-adapter.ts"],
+      "detail": "Library 相关 CLI 命令封装。importFromLibrary 返回 ImportResult 结构。"
+    },
+    {
+      "step": 6,
+      "action": "实现 Thread 操作（addThread, searchThreads）",
+      "files": ["services/nowledge-mem-adapter.ts"],
+      "detail": "addThread → `nowledge-mem thread add`, searchThreads → `nowledge-mem thread search`"
+    },
+    {
+      "step": 7,
+      "action": "实现摘要和辅助操作（summarizeMemories, getWorkingMemory, setWorkingMemory, getFeed）",
+      "files": ["services/nowledge-mem-adapter.ts"],
+      "detail": "summarizeMemories → `nowledge-mem summarize`, working memory → `nowledge-mem working-memory`, getFeed → `nowledge-mem feed`"
+    },
+    {
+      "step": 8,
+      "action": "编写/补全单元测试",
+      "files": ["services/nowledge-mem-adapter.test.ts"],
+      "detail": "每个方法至少 1 个 happy path + 1 个 error path 测试。mock CLI exec 调用。"
+    }
+  ],
+
+  "acceptance_criteria": [
+    "INowledgeMemService 所有 18 个方法均有实际实现",
+    "每个方法有对应单测（happy path + error path）",
+    "CLI 通信封装健壮：超时、异常输出、非零退出码均处理",
+    "vitest run 通过"
+  ],
+
+  "tests": {
+    "existing": ["services/nowledge-mem-adapter.test.ts"],
+    "new": [],
+    "strategy": "mock CLI child_process.execSync，验证调用参数和返回值解析"
+  },
+
+  "risks": [
+    {
+      "risk": "Nowledge Mem CLI 命令格式不确定",
+      "mitigation": "参考 INowledgeMemService 接口定义推断 CLI 命令格式，运行时验证"
+    }
+  ],
+
+  "estimated_effort": "4-6 hours"
+}

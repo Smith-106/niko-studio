@@ -1,0 +1,107 @@
+{
+  "session_id": "maestro-20260528-050000",
+  "phase": "2",
+  "scope": "phase",
+  "analyzed_at": "2026-05-28T05:00:00.000Z",
+  "analyzer": "maestro-analyze",
+  "scope_verdict": "large",
+  "gaps": [
+    {
+      "id": "A1",
+      "title": "Cross-service EventBus (typed pub/sub)",
+      "domain": "services",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "exists": "No EventBus exists. Services use direct method calls. Some ad-hoc EventEmitter in gateway-ws.ts (WorkflowEventRelay). IWebSocketRelayService registered in DI.",
+      "missing": "New IEventBus interface + TypedEventBus implementation with channel subscription, wildcard support, and DI registration",
+      "deps": ["A5 (circuit breaker can emit events)", "A4 (gateway can publish request events)"],
+      "risk": "LOW — purely additive, no existing code changes"
+    },
+    {
+      "id": "A2",
+      "title": "Unified search pipeline (merge Knowledge + Obsidian + external)",
+      "domain": "search",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "exists": "SmartSearch, HybridSearch, VectorSearch exist in search/. HybridSearch has RRF fusion. IKnowledgeService has search(). IEmbeddingService in DI. IObsidianService has search.",
+      "missing": "UnifiedSearchPipeline that coordinates all search backends, normalizes results, applies hybrid scoring, and exposes single search interface",
+      "deps": ["A8 (search strategy config drives pipeline routing)"],
+      "risk": "MEDIUM — must not break existing SmartSearch/HybridSearch/VectorSearch APIs"
+    },
+    {
+      "id": "A3",
+      "title": "Delegate broker sub-plan dispatch",
+      "domain": "workflow",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "exists": "DelegateBroker has full lifecycle (submit/queue/run/complete/cancel). DelegateHandle has message injection. No sub-task decomposition.",
+      "missing": "SubPlan decomposer that splits a task into parallel sub-tasks, tracks their individual completion, and aggregates results",
+      "deps": ["A1 (EventBus for sub-task status notifications)"],
+      "risk": "LOW — extending DelegateBroker with new method, no breaking changes"
+    },
+    {
+      "id": "A4",
+      "title": "MCP Gateway request routing + provider fallback",
+      "domain": "gateway",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "exists": "MCPGatewayAdapter in DI. mcp/ directory has gateway implementation. No routing or fallback logic visible.",
+      "missing": "RequestRouter that maps tool calls to handlers, ProviderFallbackChain that tries providers in order on failure",
+      "deps": ["A5 (fallback chain reuses circuit breaker state)"],
+      "risk": "MEDIUM — gateway is external-facing, must maintain API contract"
+    },
+    {
+      "id": "A5",
+      "title": "LLM service circuit breaker + cross-provider fallback",
+      "domain": "services",
+      "impact": "HIGH",
+      "complexity": "MEDIUM",
+      "exists": "LLMServiceImpl has Map<string,ILLMProvider> + checkBudget(). No circuit breaker. Provider Map exists but no fallback chain.",
+      "missing": "CircuitBreaker class (closed→open→half-open states), provider health tracking, automatic fallback on provider failure",
+      "deps": [],
+      "risk": "MEDIUM — must not break existing LLM call paths; checkBudget integration"
+    },
+    {
+      "id": "A6",
+      "title": "Artifact passing between workflow stages",
+      "domain": "workflow",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "exists": "state.json tracks artifacts with path/type/milestone/phase. workflow.ts reads state.json. Scratch dirs exist per stage.",
+      "missing": "Formal ArtifactContract interface defining input/output schemas per stage, ArtifactResolver that validates and resolves references",
+      "risk": "LOW — wrapping existing conventions in typed interfaces"
+    },
+    {
+      "id": "A7",
+      "title": "Nowledge Mem P1 bridge (Knowledge ↔ Graph bidirectional sync)",
+      "domain": "knowledge",
+      "impact": "MEDIUM",
+      "complexity": "MEDIUM",
+      "exists": "NowledgeMemServiceAdapter in DI. NowledgeMemKnowledgeBridge exists. DistillationNowledgeBridgeAdapter + ConflictNowledgeBridgeAdapter from Phase 1. GraphEngineAdapter in DI.",
+      "missing": "Bidirectional sync: knowledge changes → graph updates, graph queries → knowledge retrieval. Change detection + delta sync.",
+      "deps": ["A1 (EventBus for change notifications)"],
+      "risk": "MEDIUM — knowledge/graph are core data stores, must not corrupt"
+    },
+    {
+      "id": "A8",
+      "title": "SearchService hybrid strategy config (local → semantic → external)",
+      "domain": "search",
+      "impact": "MEDIUM",
+      "complexity": "LOW",
+      "exists": "HybridSearch has strategies[] + RRF config. VectorSearch has embedding service. SmartSearch has basic search.",
+      "missing": "StrategyConfig that defines cascade order (local→semantic→external), fallback thresholds, and performance hints. SearchProfile for different use cases.",
+      "risk": "LOW — extending HybridSearch config, no breaking changes"
+    }
+  ],
+  "execution_order": [
+    { "wave": 1, "tasks": ["A1", "A5", "A6", "A8"], "reason": "Foundational: no upstream dependencies, enable downstream gaps" },
+    { "wave": 2, "tasks": ["A2", "A3", "A4", "A7"], "reason": "Dependent: build on A1 (EventBus) and A5 (circuit breaker)" }
+  ],
+  "key_insights": [
+    "EventBus (A1) is the keystone — A3, A4, A7 all depend on it",
+    "Circuit breaker (A5) is independent but A4's fallback chain needs it",
+    "Artifact passing (A6) and Search config (A8) are low-complexity quick wins",
+    "All 8 gaps are MEDIUM complexity — no single HIGH complexity blocker",
+    "Risk profile is favorable: 4 LOW, 4 MEDIUM, 0 HIGH"
+  ]
+}

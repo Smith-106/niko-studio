@@ -1,0 +1,29 @@
+{
+  "phase": "P1-timespace",
+  "timestamp": "2026-05-27T23:55:00Z",
+  "passed": true,
+  "typeCheck": {
+    "status": "pass",
+    "errors": 0
+  },
+  "testResults": {
+    "adapter": { "total": 76, "passed": 76, "failed": 0 },
+    "bridge": { "total": 11, "passed": 11, "failed": 0 },
+    "fullSuite": { "total": 2979, "passed": 2977, "failed": 2, "note": "2 S3 parity tests in backup-manager are pre-existing known gaps" }
+  },
+  "layerConsistency": {
+    "protocol": "complete",
+    "adapter": "complete",
+    "containerAdapter": "complete",
+    "tests": "complete",
+    "methods": ["searchByTimeRange", "createSpace", "listSpaces", "getSpace", "switchSpace", "addSpaceMember", "removeSpaceMember", "saveThread", "reconcileTail", "getEvolvesChain(evolvesKind)", "addMemory(bitemporal)", "appendThread(idempotencyKey)"]
+  },
+  "gaps": [
+    {
+      "id": "G5",
+      "description": "S3 parity tests in backup-manager.test.ts",
+      "severity": "low",
+      "status": "known-gap"
+    }
+  ]
+}

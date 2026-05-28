@@ -1,0 +1,68 @@
+{
+  "id": "TASK-004",
+  "title": "利用 summarizeMemories 自动蒸馏创作洞察",
+  "goal_ref": "G4",
+  "description": "ANL-96 识别出 Nowledge Mem 的 summarizeMemories 能力未被 niko-studio 利用。需要桥接 DistillationManager 和 Nowledge Mem 的蒸馏能力，实现 AI 对话 → summarize → knowledge base 回写链路。",
+  "approach": "在 DistillationManager 中添加 Nowledge Mem 蒸馏通道，当 Nowledge Mem 可用时，额外调用 summarizeMemories 获取蒸馏结果并回写到 knowledge base。",
+
+  "scope": {
+    "in_scope": [
+      "memory/distillation-manager.ts — 添加 Nowledge Mem 蒸馏通道",
+      "services/nowledge-mem-knowledge-bridge.ts — 添加蒸馏回写方法"
+    ],
+    "out_of_scope": [
+      "AI 对话层实现（使用现有 LLM 集成）",
+      "Nowledge Mem 服务端改动"
+    ]
+  },
+
+  "implementation_steps": [
+    {
+      "step": 1,
+      "action": "在 NowledgeMemKnowledgeBridge 中添加 distillAndSync 方法",
+      "files": ["services/nowledge-mem-knowledge-bridge.ts"],
+      "detail": "distillAndSync(memoryIds: string[]): 调用 service.summarizeMemories(ids) → 获取蒸馏结果 → 通过 KnowledgeService.addDocument() 回写"
+    },
+    {
+      "step": 2,
+      "action": "在 DistillationManager 中添加 Nowledge Mem 蒸馏通道",
+      "files": ["memory/distillation-manager.ts"],
+      "detail": "新增 distillViaNowledgeMem(sources, sourceIds) 方法。当 Nowledge Mem 可用时，调用 summarizeMemories 作为额外蒸馏通道，结果合并到现有 DistillationResult。"
+    },
+    {
+      "step": 3,
+      "action": "在 CompositeBridge 中集成蒸馏触发",
+      "files": ["services/composite-knowledge-memory-bridge.ts"],
+      "detail": "add() 写入后，可选触发蒸馏：当 importance >= 7 且 content 长度 > 200 chars 时，异步调用 distillAndSync。不阻塞写入返回。"
+    },
+    {
+      "step": 4,
+      "action": "编写测试",
+      "files": ["memory/distillation-manager.test.ts", "services/nowledge-mem-knowledge-bridge.test.ts"],
+      "detail": "测试: 1) summarizeMemories 调用正确; 2) 蒸馏结果回写到 knowledge base; 3) Nowledge Mem 不可用时降级到本地蒸馏"
+    }
+  ],
+
+  "acceptance_criteria": [
+    "DistillationManager 支持 Nowledge Mem 蒸馏通道",
+    "高 importance 写入自动触发蒸馏",
+    "蒸馏结果回写到 knowledge base",
+    "Nowledge Mem 不可用时降级到本地蒸馏",
+    "测试覆盖正常蒸馏 + 降级场景"
+  ],
+
+  "tests": {
+    "existing": [],
+    "new": ["memory/distillation-manager.test.ts"],
+    "strategy": "mock INowledgeMemService.summarizeMemories，验证调用和回写"
+  },
+
+  "risks": [
+    {
+      "risk": "summarizeMemories API 返回格式不确定",
+      "mitigation": "基于 INowledgeMemService 接口定义推断，运行时验证"
+    }
+  ],
+
+  "estimated_effort": "3-4 hours"
+}

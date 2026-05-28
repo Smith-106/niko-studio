@@ -1,0 +1,28 @@
+{
+  "task_id": "TASK-002",
+  "title": "Memory 数据模型补全：新增 10 个字段",
+  "goal_ref": "G1",
+  "action": "扩展 NowledgeMemMemory 类型，新增 title/unitType/when/recordedAt/eventStart/eventEnd/sourceRefs/spaceId/version/frontmatter 字段；扩展 addMemory/searchMemories 接口以支持新字段",
+  "files_to_edit": [
+    "protocols/nowledge-mem.ts",
+    "services/nowledge-mem-adapter.ts",
+    "services/nowledge-mem-adapter.test.ts"
+  ],
+  "steps": [
+    "1. 在 protocols/nowledge-mem.ts NowledgeMemMemory 中新增字段: title?: string, unitType?: 'note'|'decision'|'learning'|'reference'|'task'|'code'|'concept'|'metric', when?: string (ISO datetime), recordedAt?: string, eventStart?: string, eventEnd?: string, sourceRefs?: string[], spaceId?: string, version?: number, frontmatter?: Record<string,unknown>",
+    "2. 在 INowledgeMemService.addMemory options 中新增: title?, unitType?, when?, eventStart?, eventEnd?, sourceRefs?, spaceId?",
+    "3. 在 INowledgeMemService.searchMemories options 中新增: unitType?, eventFrom?, eventTo?, recordedFrom?, recordedTo?, spaceId?",
+    "4. 在 NowledgeMemAdapter.addMemory 中传递新字段: --title, --unit-type, --when, --event-start, --event-end, --space",
+    "5. 在 NowledgeMemAdapter.searchMemories 中传递新过滤: --unit-type, --event-from, --event-to, --recorded-from, --recorded-to, --space",
+    "6. 新增测试覆盖新字段传递"
+  ],
+  "test_criteria": [
+    "NowledgeMemMemory 包含 title/unitType/when/recordedAt/eventStart/eventEnd/sourceRefs/spaceId/version/frontmatter",
+    "addMemory 支持 title/unitType/when/eventStart/eventEnd/spaceId 选项",
+    "searchMemories 支持 unitType/eventFrom/eventTo/recordedFrom/recordedTo/spaceId 过滤",
+    "adapter 正确将新字段映射到 CLI 参数"
+  ],
+  "wave": "data-model",
+  "depends_on": ["TASK-001"],
+  "blocks": ["TASK-005"]
+}

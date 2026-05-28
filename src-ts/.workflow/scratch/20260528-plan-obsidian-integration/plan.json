@@ -1,0 +1,62 @@
+{
+  "plan_id": "PLN-20260528-OBS-INT",
+  "source_artifact": "ANL-20260528-OBS-INT",
+  "scope": "standalone",
+  "intent": "Obsidian 集成改进：反向写入 + 双链桥接 + Frontmatter 映射 + Daily Notes 对接",
+  "created_at": "2026-05-28T02:15:00Z",
+  "summary": "扩展 ObsidianService 和 ObsidianServiceAdapter 以支持 4 个缺口：反向写入（vault CRUD）、Frontmatter 双向映射、双链桥接（wiki-link ↔ GraphEngine）、Daily Notes/Templates 对接。全部基于文件系统层面，不依赖 Obsidian 插件。",
+  "approach": "渐进式扩展：先添加核心写回方法（G1a），再添加 Frontmatter 映射（G1c），然后桥接双链（G1b），最后 Daily Notes（G1d）。每步独立测试，确保不破坏现有 sync/export。",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"],
+  "waves": [
+    {
+      "wave": 1,
+      "label": "core-write",
+      "tasks": ["TASK-001"],
+      "description": "反向写入方法 + Frontmatter 映射器（基础依赖）"
+    },
+    {
+      "wave": 2,
+      "label": "bridge-and-daily",
+      "tasks": ["TASK-002", "TASK-003", "TASK-004"],
+      "description": "双链桥接 + Daily Notes + Adapter 双向同步扩展"
+    }
+  ],
+  "confidence": {
+    "overall": 0.85,
+    "dimensions": {
+      "scope_clarity": 0.95,
+      "implementation_readiness": 0.80,
+      "risk_mitigation": 0.90,
+      "test_coverage": 0.80,
+      "backward_compat": 0.95
+    }
+  },
+  "convergence": {
+    "criteria": [
+      "grep -q 'writeNote' services/obsidian-service.ts",
+      "grep -q 'updateFrontmatter' services/obsidian-service.ts",
+      "grep -q 'syncWikiLinks' services/obsidian-service.ts",
+      "grep -q 'createDailyNote' services/obsidian-service.ts",
+      "grep -q 'writeNote' tests/services/obsidian-service.test.ts",
+      "npx vitest run tests/services/obsidian-service.test.ts --passWithNoTests=false"
+    ]
+  },
+  "boundary_contract": {
+    "in_scope": [
+      "反向写入：ObsidianService.writeNote/updateNote/createNote/deleteNote",
+      "Frontmatter 映射：ObsidianService.updateFrontmatter/mergeFrontmatter/readFrontmatter",
+      "双链桥接：ObsidianService.syncWikiLinks + GraphEngine 投影适配",
+      "Daily Notes：ObsidianService.createDailyNote/getDailyNote + 模板变量替换"
+    ],
+    "out_of_scope": [
+      "Obsidian Plugin 开发",
+      "前端 UI 改动",
+      "Nowledge Mem P2+ 功能"
+    ],
+    "constraints": [
+      "仅文件系统层面集成",
+      "现有 2979 测试不回归",
+      "不破坏现有 ObsidianService sync/export 方法"
+    ]
+  }
+}

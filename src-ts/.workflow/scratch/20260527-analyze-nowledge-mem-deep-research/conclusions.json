@@ -1,0 +1,472 @@
+{
+  "analysis_id": "ANL-nowledge-mem-deep-research-2026-05-27",
+  "scope": "macro",
+  "intent": "全面研究nowledge mem以此改进niko studio",
+  "created_at": "2026-05-27T17:42:00Z",
+
+  "full_command_inventory": {
+    "description": "Nowledge Mem CLI 完整命令清单 vs niko studio 覆盖状态",
+    "command_groups": [
+      {
+        "group": "memories",
+        "commands": [
+          { "command": "memories add", "description": "Add a new memory", "niko_status": "✅ 已覆盖 (add)" },
+          { "command": "memories search", "description": "Search memories (semantic + structured)", "niko_status": "✅ 已覆盖 (searchLibrary)" },
+          { "command": "memories get", "description": "Get memory by ID with metadata", "niko_status": "❌ 未覆盖" },
+          { "command": "memories list", "description": "List memories with filters (type/label/since)", "niko_status": "❌ 未覆盖" },
+          { "command": "memories move", "description": "Move memory between spaces", "niko_status": "❌ 未覆盖" },
+          { "command": "memories delete", "description": "Delete a memory", "niko_status": "❌ 未覆盖" },
+          { "command": "memories update", "description": "Update memory content/metadata", "niko_status": "❌ 未覆盖" },
+          { "command": "memories duplicate", "description": "Duplicate a memory", "niko_status": "❌ 未覆盖" },
+          { "command": "memories version", "description": "Version management for memories", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "2/9 (22%)"
+      },
+      {
+        "group": "threads",
+        "commands": [
+          { "command": "threads add", "description": "Add thread (conversation) with messages", "niko_status": "✅ 已覆盖 (addThread)" },
+          { "command": "threads search", "description": "Search threads", "niko_status": "✅ 已覆盖 (searchThreads)" },
+          { "command": "threads get", "description": "Get thread by ID", "niko_status": "❌ 未覆盖" },
+          { "command": "threads list", "description": "List threads with filters", "niko_status": "❌ 未覆盖" },
+          { "command": "threads save", "description": "Auto-save CLI session (Claude/Codex/Gemini)", "niko_status": "❌ 未覆盖" },
+          { "command": "threads import", "description": "Import thread from Markdown/JSON", "niko_status": "❌ 未覆盖" },
+          { "command": "threads append", "description": "Append messages to existing thread", "niko_status": "❌ 未覆盖" },
+          { "command": "threads reconcile-tail", "description": "Idempotent message reconciliation", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "2/8 (25%)"
+      },
+      {
+        "group": "sources",
+        "commands": [
+          { "command": "sources add", "description": "Add a source (file/URL/reference)", "niko_status": "❌ 未覆盖" },
+          { "command": "sources list", "description": "List tracked sources", "niko_status": "❌ 未覆盖" },
+          { "command": "sources get", "description": "Get source by ID", "niko_status": "❌ 未覆盖" },
+          { "command": "sources search", "description": "Search sources", "niko_status": "❌ 未覆盖" },
+          { "command": "sources delete", "description": "Delete a source", "niko_status": "❌ 未覆盖" },
+          { "command": "sources ingest", "description": "Ingest source content into memories", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "0/6 (0%)"
+      },
+      {
+        "group": "working-memory",
+        "commands": [
+          { "command": "working-memory show", "description": "Display current working memory context", "niko_status": "❌ 未覆盖" },
+          { "command": "working-memory set", "description": "Set working memory manually", "niko_status": "❌ 未覆盖" },
+          { "command": "working-memory edit", "description": "Edit working memory content", "niko_status": "❌ 未覆盖" },
+          { "command": "working-memory patch", "description": "Patch working memory selectively", "niko_status": "❌ 未覆盖" },
+          { "command": "working-memory history", "description": "View working memory evolution", "niko_status": "❌ 未覆盖" },
+          { "command": "working-memory brief", "description": "Get auto-generated brief of working memory", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "0/6 (0%)"
+      },
+      {
+        "group": "graph",
+        "commands": [
+          { "command": "graph expand", "description": "Expand entity graph with related entities", "niko_status": "✅ 已覆盖 (getRelatedMemories)" },
+          { "command": "graph add-relation", "description": "Add relation between entities", "niko_status": "✅ 已覆盖 (createRelation)" },
+          { "command": "graph search", "description": "Search graph by relation type", "niko_status": "❌ 未覆盖" },
+          { "command": "graph evolves", "description": "Manage EVOLVES version chain (Replaces/Enriches/Confirms/Challenges)", "niko_status": "❌ 未覆盖" },
+          { "command": "graph export", "description": "Export graph for visualization", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "2/5 (40%)"
+      },
+      {
+        "group": "spaces",
+        "commands": [
+          { "command": "spaces create", "description": "Create a knowledge space", "niko_status": "❌ 未覆盖" },
+          { "command": "spaces list", "description": "List all spaces", "niko_status": "❌ 未覆盖" },
+          { "command": "spaces get", "description": "Get space details", "niko_status": "❌ 未覆盖" },
+          { "command": "spaces switch", "description": "Switch active space", "niko_status": "❌ 未覆盖" },
+          { "command": "spaces add-member", "description": "Add entity to space", "niko_status": "❌ 未覆盖" },
+          { "command": "spaces remove-member", "description": "Remove entity from space", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "0/6 (0%)"
+      },
+      {
+        "group": "communities",
+        "commands": [
+          { "command": "communities list", "description": "List detected communities", "niko_status": "❌ 未覆盖" },
+          { "command": "communities get", "description": "Get community details with members", "niko_status": "❌ 未覆盖" },
+          { "command": "communities suggest", "description": "Suggest communities for entity", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "0/3 (0%)"
+      },
+      {
+        "group": "feed",
+        "commands": [
+          { "command": "feed show", "description": "Show recent knowledge activity feed", "niko_status": "❌ 未覆盖" },
+          { "command": "feed insights", "description": "Cross-domain insights and connections", "niko_status": "❌ 未覆盖" },
+          { "command": "feed flags", "description": "Quality flags (Contradiction/Stale/NeedsVerification)", "niko_status": "❌ 未覆盖" },
+          { "command": "feed crystals", "description": "Auto-synthesized reference crystals", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "0/4 (0%)"
+      },
+      {
+        "group": "fs",
+        "commands": [
+          { "command": "fs ls", "description": "List knowledge objects as filesystem", "niko_status": "❌ 未覆盖" },
+          { "command": "fs cat", "description": "Read knowledge object content", "niko_status": "❌ 未覆盖" },
+          { "command": "fs find", "description": "Structured search (type/label/since/mentions)", "niko_status": "❌ 未覆盖" },
+          { "command": "fs recall", "description": "Semantic search returning paths", "niko_status": "❌ 未覆盖" },
+          { "command": "fs write", "description": "Write knowledge object", "niko_status": "❌ 未覆盖" },
+          { "command": "fs rm", "description": "Remove knowledge object", "niko_status": "❌ 未覆盖" },
+          { "command": "fs tree", "description": "Tree view of knowledge structure", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "0/7 (0%)"
+      },
+      {
+        "group": "config",
+        "commands": [
+          { "command": "config show", "description": "Show current configuration", "niko_status": "❌ 未覆盖" },
+          { "command": "config set", "description": "Set configuration value", "niko_status": "❌ 未覆盖" },
+          { "command": "config api", "description": "API endpoint configuration", "niko_status": "❌ 未覆盖" }
+        ],
+        "coverage": "0/3 (0%)"
+      }
+    ],
+    "total_commands": 57,
+    "total_covered": 6,
+    "overall_coverage": "10.5%"
+  },
+
+  "data_model": {
+    "description": "Nowledge Mem 核心数据模型 vs niko studio 当前建模",
+    "core_entities": {
+      "Memory": {
+        "nowledge_fields": {
+          "id": "string (unique identifier)",
+          "content": "string (main content)",
+          "title": "string (optional title)",
+          "unitType": "note|decision|learning|reference|task|code|concept|metric",
+          "importance": "0.1-1.0 float (not integer)",
+          "labels": "string[] (tags/categories)",
+          "when": "ISO datetime (event time)",
+          "recordedAt": "ISO datetime (recording time, auto)",
+          "eventStart": "ISO datetime (event period start)",
+          "eventEnd": "ISO datetime (event period end)",
+          "sourceRefs": "string[] (linked source IDs)",
+          "spaceId": "string (owning space)",
+          "version": "integer (version number for EVOLVES chain)",
+          "frontmatter": "object (structured metadata)"
+        },
+        "niko_fields": {
+          "id": "✅",
+          "content": "✅",
+          "title": "❌ 缺失",
+          "unitType": "❌ 缺失 (无类型分类)",
+          "importance": "⚠️ 类型错误 (传整数而非 0.1-1.0 浮点)",
+          "labels": "✅ (via tags)",
+          "when": "❌ 缺失 (无事件时间)",
+          "recordedAt": "❌ 缺失",
+          "eventStart": "❌ 缺失 (无时间段)",
+          "eventEnd": "❌ 缺失",
+          "sourceRefs": "❌ 缺失",
+          "spaceId": "❌ 缺失 (无空间概念)",
+          "version": "❌ 缺失 (无版本链)",
+          "frontmatter": "❌ 缺失"
+        },
+        "coverage": "3/13 (23%)"
+      },
+      "Thread": {
+        "nowledge_fields": {
+          "id": "string",
+          "title": "string",
+          "messages": "Message[]",
+          "source": "string (claude|codex|gemini|manual)",
+          "savedAt": "ISO datetime",
+          "spaceId": "string",
+          "labels": "string[]"
+        },
+        "niko_fields": {
+          "id": "✅",
+          "title": "❌ 缺失",
+          "messages": "✅ (partial)",
+          "source": "❌ 缺失 (无 CLI 来源追踪)",
+          "savedAt": "❌ 缺失",
+          "spaceId": "❌ 缺失",
+          "labels": "❌ 缺失"
+        },
+        "coverage": "2/7 (29%)"
+      },
+      "Source": {
+        "nowledge_fields": {
+          "id": "string",
+          "type": "file|url|reference",
+          "path": "string",
+          "content": "string",
+          "ingestedAt": "ISO datetime",
+          "memoryIds": "string[]"
+        },
+        "niko_fields": {
+          "ALL": "❌ 完全缺失 — Source 实体未建模"
+        },
+        "coverage": "0/6 (0%)"
+      },
+      "Space": {
+        "nowledge_fields": {
+          "id": "string",
+          "name": "string",
+          "description": "string",
+          "members": "string[] (entity IDs)",
+          "recalledFrom": "self|shared|global",
+          "createdAt": "ISO datetime"
+        },
+        "niko_fields": {
+          "ALL": "❌ 完全缺失 — Space 概念未建模"
+        },
+        "coverage": "0/6 (0%)"
+      },
+      "Relation": {
+        "nowledge_fields": {
+          "from": "string (entity ID)",
+          "to": "string (entity ID)",
+          "type": "string (RELATED|CAUSED|ENABLED|PART_OF|PRECEDED|EVOLVES)",
+          "evolvesKind": "Replaces|Enriches|Confirms|Challenges (only when type=EVOLVES)",
+          "strength": "0.0-1.0 float",
+          "recordedAt": "ISO datetime"
+        },
+        "niko_fields": {
+          "from": "✅ (via createRelation)",
+          "to": "✅ (via createRelation)",
+          "type": "✅ (partial — only RELATED type used)",
+          "evolvesKind": "❌ 缺失",
+          "strength": "❌ 缺失",
+          "recordedAt": "❌ 缺失"
+        },
+        "coverage": "3/6 (50%)"
+      },
+      "Community": {
+        "nowledge_fields": {
+          "id": "string",
+          "name": "string",
+          "description": "string",
+          "memberIds": "string[]",
+          "detectedAt": "ISO datetime"
+        },
+        "niko_fields": {
+          "ALL": "❌ 完全缺失"
+        },
+        "coverage": "0/5 (0%)"
+      },
+      "WorkingMemory": {
+        "nowledge_fields": {
+          "content": "string",
+          "brief": "string (auto-generated summary)",
+          "lastUpdated": "ISO datetime",
+          "history": "WMEntry[] (evolution log)"
+        },
+        "niko_fields": {
+          "ALL": "❌ 完全缺失"
+        },
+        "coverage": "0/4 (0%)"
+      }
+    },
+    "temporal_model": {
+      "description": "Nowledge Mem 的 bitemporal 数据模型 — 事件时间 + 记录时间分离",
+      "event_time": "Memory.when / eventStart / eventEnd — 记录事件发生的时间",
+      "recorded_time": "Memory.recordedAt — 记录被创建的时间",
+      "niko_status": "❌ 完全未实现。niko studio 只有 importedAt，没有事件时间/记录时间分离",
+      "impact": "无法进行时间范围搜索（如'上周发生的决策'）、无法追踪知识演变时间线"
+    },
+    "version_chain": {
+      "description": "EVOLVES 关系链 — 知识版本化",
+      "kinds": ["Replaces", "Enriches", "Confirms", "Challenges"],
+      "usage": "一个 Memory 可以 evolve 为新版本，保留完整演变历史",
+      "niko_status": "❌ 完全未实现。distillation-nowledge-bridge 有 summarizeMemories 但不建模版本链",
+      "impact": "无法追踪知识演变、无法自动标记过时知识、无法构建知识演进时间线"
+    }
+  },
+
+  "gap_matrix": {
+    "description": "niko studio vs Nowledge Mem 能力差距矩阵（含 ANL-96 对齐）",
+    "dimensions": [
+      {
+        "dimension": "命令覆盖率",
+        "score": 1.5,
+        "max": 10,
+        "gap": "仅覆盖 6/57 CLI 命令 (10.5%)，6 大命令组完全空白",
+        "anl96_overlap": "ANL-96 识别了基本服务层但未量化覆盖率；本研究补充了精确数字",
+        "priority": "P0",
+        "effort": "高"
+      },
+      {
+        "dimension": "数据模型完整性",
+        "score": 2.0,
+        "max": 10,
+        "gap": "Memory 模型缺失 10/13 字段 (77%)；Source/Space/Community/WorkingMemory 实体完全未建模",
+        "anl96_overlap": "ANL-96 G1 扩展了 INowledgeMemService 接口但未触及底层类型系统",
+        "priority": "P0",
+        "effort": "高"
+      },
+      {
+        "dimension": "时序/Bitemporal 支持",
+        "score": 0.5,
+        "max": 10,
+        "gap": "无事件时间/记录时间分离、无时间范围搜索、无版本链",
+        "anl96_overlap": "ANL-96 未覆盖此维度",
+        "priority": "P1",
+        "effort": "中"
+      },
+      {
+        "dimension": "空间隔离",
+        "score": 0,
+        "max": 10,
+        "gap": "无 Space 概念；项目间知识无隔离机制",
+        "anl96_overlap": "ANL-96 未覆盖此维度",
+        "priority": "P1",
+        "effort": "中"
+      },
+      {
+        "dimension": "Source 管理",
+        "score": 0,
+        "max": 10,
+        "gap": "无 Source 实体；library-import 仅覆盖导入，无源追踪/ingestion",
+        "anl96_overlap": "ANL-96 G6 (LibraryImportProcessor) 部分覆盖导入，但无源追踪",
+        "priority": "P2",
+        "effort": "中"
+      },
+      {
+        "dimension": "Thread 高级功能",
+        "score": 2.0,
+        "max": 10,
+        "gap": "仅基础 addThread/searchThreads；缺 save/import/append/reconcile-tail",
+        "anl96_overlap": "ANL-96 G2 (DistillationBridge) 未关联 thread 功能",
+        "priority": "P1",
+        "effort": "低"
+      },
+      {
+        "dimension": "Graph 关系丰富度",
+        "score": 4.0,
+        "max": 10,
+        "gap": "有 createRelation/getRelatedMemories 但仅用 RELATED 类型；缺 EVOLVES/search/export",
+        "anl96_overlap": "ANL-96 G2 createRelation 是基础，但关系类型严重不足",
+        "priority": "P1",
+        "effort": "中"
+      },
+      {
+        "dimension": "Background Intelligence",
+        "score": 0,
+        "max": 10,
+        "gap": "Crystals/Insights/Flags 完全未集成",
+        "anl96_overlap": "ANL-96 未覆盖此维度；DistillationBridge 可作为 Crystal 消费者",
+        "priority": "P2",
+        "effort": "中"
+      },
+      {
+        "dimension": "Nowledge FS 集成",
+        "score": 0,
+        "max": 10,
+        "gap": "fs ls/cat/find/recall/write/rm 完全未集成",
+        "anl96_overlap": "ANL-96 未覆盖此维度",
+        "priority": "P2",
+        "effort": "低"
+      },
+      {
+        "dimension": "Feed/活动流",
+        "score": 0,
+        "max": 10,
+        "gap": "无知识活动流、无 insights/flags/crystals 展示",
+        "anl96_overlap": "ANL-96 未覆盖此维度",
+        "priority": "P2",
+        "effort": "低"
+      }
+    ],
+    "overall_gap_score": 1.0,
+    "overall_gap_grade": "严重不足",
+    "anl96_alignment": {
+      "anl96_covered": ["基本服务连接", "summarizeMemories/distillation", "createRelation/基础 graph", "importFromLibrary/基础导入", "temporalSync/filterSuperseded", "health/metrics 监控"],
+      "anl96_not_covered": ["数据模型字段补全", "时序/bitemporal 支持", "Space 隔离", "Source 追踪/ingestion", "Thread 高级功能", "EVOLVES 版本链", "Background Intelligence", "Nowledge FS", "Feed/活动流", "Communities"],
+      "superseded_by_this_analysis": ["ANL-96 G1 (扩展接口) — 需要再次扩展以覆盖新发现", "ANL-96 G6 (LibraryImportProcessor) — 需要补充 Source 追踪"]
+    }
+  },
+
+  "roadmap": {
+    "description": "分阶段改进路线图 — 从基础补全到高级特性集成",
+    "phases": [
+      {
+        "phase": "P0-核心补全",
+        "priority": "P0",
+        "effort": "3-4 周",
+        "goals": [
+          "扩展 INowledgeMemService 接口覆盖核心 CRUD (get/list/update/delete/move)",
+          "补全 Memory 数据模型 (title, unitType, importance 浮点, when, recordedAt, frontmatter)",
+          "实现 Source 实体管理 (add/list/get/ingest)",
+          "修复 importance 类型 (integer → 0.1-1.0 float)",
+          "扩展 Relation 类型 (RELATED → 全部6种, 含 evolvesKind)"
+        ],
+        "deliverables": [
+          "INowledgeMemService v2 接口 (含 20+ 新方法)",
+          "NowledgeMemMemory 类型补全 (13 字段全覆盖)",
+          "NowledgeMemSource 类型 (新增实体)",
+          "NowledgeMemRelation 类型增强 (含 EVOLVES)",
+          "NowledgeMemAdapter 实现更新",
+          "测试覆盖 (目标 40+ 新测试)"
+        ],
+        "anl96_alignment": "建立在 ANL-96 G1 扩展之上，补全其遗漏的核心 CRUD 和数据模型"
+      },
+      {
+        "phase": "P1-时序与空间",
+        "priority": "P1",
+        "effort": "2-3 周",
+        "goals": [
+          "实现 Bitemporal 支持 (event time + recorded time 分离)",
+          "实现时间范围搜索 (searchByTimeRange)",
+          "实现 Space 管理 (create/list/get/switch/add-member/remove-member)",
+          "扩展 Thread 高级功能 (save/import/append/reconcile-tail)",
+          "实现 EVOLVES 版本链管理 (graph evolves)"
+        ],
+        "deliverables": [
+          "TemporalSearchService (时间范围搜索 + 时间线构建)",
+          "SpaceService (空间 CRUD + 成员管理 + 召回模式)",
+          "ThreadAdvancedAdapter (save/import/append/reconcile)",
+          "EvolvesChainManager (版本链 CRUD + 查询)",
+          "SpaceAwareBridge (空间感知的知识路由)",
+          "测试覆盖 (目标 30+ 新测试)"
+        ],
+        "anl96_alignment": "扩展 ANL-96 G2 (DistillationBridge) 以利用 EVOLVES 链；ANL-96 G3 (ConflictBridge) 可与 Space 隔离互补"
+      },
+      {
+        "phase": "P2-高级集成",
+        "priority": "P2",
+        "effort": "3-4 周",
+        "goals": [
+          "集成 Background Intelligence (Crystals/Insights/Flags)",
+          "实现 Nowledge FS 接口 (ls/cat/find/recall/write/rm)",
+          "实现 Feed/活动流 (show/insights/flags/crystals)",
+          "实现 Communities 集成 (list/get/suggest)",
+          "引入 TypeScript SDK (@opticlm/nmem) 替代 CLI adapter"
+        ],
+        "deliverables": [
+          "BackgroundIntelligenceBridge (Crystal 消费 + Flag 检测 + Insight 聚合)",
+          "NowledgeFsAdapter (文件系统风格的知识浏览)",
+          "KnowledgeFeedService (活动流 + 洞察 + 旗帜)",
+          "CommunityService (社区检测 + 建议)",
+          "NmemSdkAdapter (TypeScript SDK adapter, 替代 CLI)",
+          "测试覆盖 (目标 25+ 新测试)"
+        ],
+        "anl96_alignment": "ANL-96 G2 (DistillationBridge) 可作为 Crystal 消费者升级；ANL-96 G4 (CompositeBridge) 可增加 Crystal/Insight 层"
+      }
+    ],
+    "total_effort": "8-11 周",
+    "dependencies": "P0 → P1 → P2 (严格顺序，P0 补全是 P1 的前提)",
+    "risk_factors": [
+      "Nowledge Mem API 不稳定或向后不兼容变更",
+      "SDK (@opticlm/nmem) 成熟度不足",
+      "Background Intelligence 可能需要商业许可证",
+      "Space 概念与现有 projectId 映射需设计决策"
+    ]
+  },
+
+  "scope_verdict": "large",
+  "scope_verdict_reason": "57 个 CLI 命令仅覆盖 10.5%，7 大核心实体仅建模 2 个 (29%)，10 个维度平均得分 1.0/10。需要 3 阶段 (P0-P2) 共 8-11 周的系统性升级。",
+
+  "six_dimension_scores": {
+    "command_coverage": { "score": 1.5, "confidence": 95, "evidence": "57 命令精确计数，6 个已覆盖" },
+    "data_model_completeness": { "score": 2.0, "confidence": 90, "evidence": "7 实体模型精确对比" },
+    "temporal_capability": { "score": 0.5, "confidence": 85, "evidence": "bitemporal 模型详细分析" },
+    "spatial_isolation": { "score": 0, "confidence": 95, "evidence": "Space 概念完全缺失" },
+    "graph_richness": { "score": 4.0, "confidence": 90, "evidence": "6 种关系类型仅用 1 种" },
+    "advanced_features": { "score": 0, "confidence": 80, "evidence": "BI/FS/Feed/Communities 完全未集成" }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "phase": null,
+  "status": "passed",
+  "verified_at": "2026-05-27T14:17:00.000Z",
+  "verifier": "workflow-verifier",
+  "must_haves": {
+    "truths": [
+      { "claim": "G1: importance 类型从 integer 改为 0.1-1.0 float", "status": "verified", "evidence": "protocols/nowledge-mem.ts:60 importance?: number (0.1-1.0); bridges 使用 0.7/0.8/0.5; 无残留 integer importance" },
+      { "claim": "G2: NowledgeMemMemory 包含 10 个新字段", "status": "verified", "evidence": "protocols/nowledge-mem.ts:58-69 title/unitType/when/recordedAt/eventStart/eventEnd/sourceRefs/spaceId/version/frontmatter 全部存在" },
+      { "claim": "G3: 6 种 Relation 类型 + evolvesKind + strength", "status": "verified", "evidence": "protocols/nowledge-mem.ts:28-42 NowledgeMemRelationType(6) + NowledgeMemEvolvesKind(4); NowledgeMemRelation 含 evolvesKind/strength; createRelation 签名改为 options object" },
+      { "claim": "G4: Source 实体管理接口完整", "status": "verified", "evidence": "protocols/nowledge-mem.ts:140-150 NowledgeMemSource; nowledge-mem-adapter.ts:292-370 addSource/listSources/getSource/deleteSource/ingestSource/searchSourceChunks 全部实现" },
+      { "claim": "INowledgeMemService 包含 20+ 新方法", "status": "verified", "evidence": "getMemory/listMemories/updateMemory/deleteMemory/moveMemory + createRelation/searchRelations/getEvolvesChain + Source CRUD + WorkingMemory + Communities + Feed + Thread ops" },
+      { "claim": "测试全绿无回归", "status": "verified", "evidence": "126 Nowledge Mem 相关测试全绿; 1189 总测试通过; 2 pre-existing S3 failures (unrelated)" }
+    ],
+    "artifacts": [
+      { "path": "protocols/nowledge-mem.ts", "status": "exists", "substantive": true, "wired": true },
+      { "path": "services/nowledge-mem-adapter.ts", "status": "exists", "substantive": true, "wired": true },
+      { "path": "services/nowledge-mem-adapter.test.ts", "status": "exists", "substantive": true, "wired": true },
+      { "path": "services/distillation-nowledge-bridge.ts", "status": "exists", "substantive": true, "wired": true },
+      { "path": "services/conflict-nowledge-bridge.ts", "status": "exists", "substantive": true, "wired": true },
+      { "path": "services/nowledge-mem-knowledge-bridge.ts", "status": "exists", "substantive": true, "wired": true },
+      { "path": "services/library-import-processor.ts", "status": "exists", "substantive": true, "wired": true }
+    ],
+    "key_links": [
+      { "from": "NowledgeMemAdapter → INowledgeMemService protocol", "status": "wired", "evidence": "adapter implements all 20+ interface methods" },
+      { "from": "DistillationNowledgeBridge → INowledgeMemService.createRelation", "status": "wired", "evidence": "distillation-nowledge-bridge.ts:80 uses { type: 'DISTILLED_FROM' }" },
+      { "from": "ConflictNowledgeBridge → INowledgeMemService.addMemory/deleteMemory", "status": "wired", "evidence": "conflict-nowledge-bridge.ts:39/48 uses updated signatures" },
+      { "from": "NowledgeMemKnowledgeBridge → INowledgeMemService.addMemory", "status": "wired", "evidence": "nowledge-mem-knowledge-bridge.ts:56 passes float importance" }
+    ]
+  },
+  "gaps": [],
+  "constraint_violations": [],
+  "antipatterns": [],
+  "fix_plans": [],
+  "human_verification": [],
+  "coverage_score": 100,
+  "pre_existing_failures": [
+    { "test": "tests/services/backup-manager.test.ts - S3 parity upload/restore", "reason": "S3 client config issue, unrelated to Nowledge Mem changes" }
+  ]
+}
