@@ -26,12 +26,14 @@ import { ShowTellMark } from './editor/extensions/ShowTellMark'
 import { ShowTellDecorations } from './editor/extensions/ShowTellDecorations'
 import { SlashCommandMenu, type SlashMenuItem } from './editor/SlashCommandMenu'
 import { BubbleToolbar, type RewriteOption } from './editor/BubbleToolbar'
+import { KeyboardShortcutsPanel } from './editor/KeyboardShortcutsPanel'
 import { insertPlainText, replaceRange } from './editor/streamToEditor'
 import { useEditorAI } from '../hooks/useEditorAI'
 import { useI18n, type Language } from '../i18n'
 import { setEditorHandle, notifyGeneratingChange, type EditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
 import { getPersistedStyleRequirements } from './editor/WritingStyle'
 import { useAppStore } from '../stores/appStore'
+import { ApiKeyGuideModal } from './ApiKeyGuideModal'
 import {
   buildEditorAIStyleInstruction,
   getEditorActionInstruction,
@@ -43,6 +45,8 @@ export interface NikoEditorProps {
   initialContent?: string | JSONContent
   onUpdate?: (json: JSONContent, text: string) => void
   onOpenWritingHelper: () => void
+  onOpenSettings?: () => void
+  onSave?: () => void
 }
 
 interface SlashState {
@@ -78,8 +82,10 @@ export function getEditorFullArticleInstruction(language: Language): string {
   return getEditorActionInstruction(language, 'full-article')
 }
 
-export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function NikoEditor({ initialContent, onUpdate, onOpenWritingHelper: _onOpenWritingHelper }, ref) {
+export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function NikoEditor({ initialContent, onUpdate, onOpenWritingHelper: _onOpenWritingHelper, onOpenSettings, onSave }, ref) {
   const [showTellEnabled, setShowTellEnabled] = useState(false)
+  const [showApiKeyGuide, setShowApiKeyGuide] = useState(false)
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const { t, language } = useI18n()
   const [slashState, setSlashState] = useState<SlashState>(EMPTY_SLASH)
   const [bubbleState, setBubbleState] = useState<BubbleState>(EMPTY_BUBBLE)
@@ -88,10 +94,12 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
   const slashRef = useRef<SlashState>(EMPTY_SLASH)
   const bubbleRef = useRef<BubbleState>(EMPTY_BUBBLE)
   const editorRef = useRef<HTMLDivElement>(null)
+  const onSaveRef = useRef(onSave)
 
   // Keep refs in sync
   useEffect(() => { slashRef.current = slashState }, [slashState])
   useEffect(() => { bubbleRef.current = bubbleState }, [bubbleState])
+  useEffect(() => { onSaveRef.current = onSave }, [onSave])
 
   const editor = useEditor({
     extensions: [
@@ -125,6 +133,20 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
           'niko-editor-content outline-none min-h-[60vh] text-lg md:text-[21px] leading-[1.8] text-gray-800 dark:text-gray-300 font-serif',
       },
       handleKeyDown: (view, event) => {
+        // Ctrl+S / Cmd+S → save
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+          onSaveRef.current?.()
+          event.preventDefault()
+          return true
+        }
+
+        // Ctrl+/ → keyboard shortcuts panel
+        if ((event.ctrlKey || event.metaKey) && event.key === '/') {
+          setShowShortcuts(true)
+          event.preventDefault()
+          return true
+        }
+
         const currentSlash = slashRef.current
 
         // Handle slash command activation
@@ -218,9 +240,33 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
     replaceSelectionSnapshot: () => false,
     insertBelowSelectionSnapshot: () => false,
     undoLastRevisionApply: () => false,
+    triggerAIContinue: () => {},
     isGenerating: false,
   })
   const lastRevisionApplyRef = useRef<RevisionApplyRecord | null>(null)
+
+  // Sync initialContent changes into the editor after mount (chapter switches)
+  // TipTap's `content` option is only used at initialization, so we need
+  // setContent() to update the document when the parent switches chapters
+  // without remounting this component (stable key by project, not chapter).
+  const prevInitialContentRef = useRef<typeof initialContent>(undefined)
+  useEffect(() => {
+    if (!editor) return
+    // Skip the first render — the editor already used initialContent for init
+    if (prevInitialContentRef.current === undefined) {
+      prevInitialContentRef.current = initialContent
+      return
+    }
+    // Only update when initialContent actually changes
+    if (prevInitialContentRef.current !== initialContent) {
+      prevInitialContentRef.current = initialContent
+      if (initialContent) {
+        editor.commands.setContent(initialContent, { emitUpdate: false })
+      } else {
+        editor.commands.setContent('', { emitUpdate: false })
+      }
+    }
+  }, [editor, initialContent])
 
   useImperativeHandle(ref, () => handleRef.current, [])
 
@@ -312,6 +358,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
     editor,
     language,
     getStyleRequirements,
+    onApiKeyMissing: useCallback(() => setShowApiKeyGuide(true), []),
   })
 
   const handleSlashSelect = useCallback(
@@ -522,6 +569,19 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
           <div className="w-2 h-2 rounded-full bg-red-500" />
           <span className="text-[11px] font-medium text-red-600 dark:text-red-300">{t.inlineActionFailed}</span>
         </div>
+      )}
+
+      {/* API Key Guide Modal */}
+      {showApiKeyGuide && (
+        <ApiKeyGuideModal
+          onClose={() => setShowApiKeyGuide(false)}
+          onOpenSettings={() => { setShowApiKeyGuide(false); onOpenSettings?.(); }}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Panel */}
+      {showShortcuts && (
+        <KeyboardShortcutsPanel onClose={() => setShowShortcuts(false)} />
       )}
     </div>
   )

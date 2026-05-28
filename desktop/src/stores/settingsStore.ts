@@ -5,7 +5,9 @@ import type { SecretsResponse } from '@/contracts/backendConfig'
 import { setRuntimePreferences } from '@/runtime/preferences'
 
 // 防抖写入 localStorage：300ms 内多次设置更新只写一次，避免频繁 JSON.stringify + 写盘
+// pendingValue 保存最近一次待写入的值，removeItem 时一并清空，避免竞态导致已删数据被重新持久化
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
+let pendingValue: { name: string; value: string } | null = null
 
 const debouncedLocalStorage: StateStorage = {
   getItem: (name: string) => {
@@ -13,13 +15,20 @@ const debouncedLocalStorage: StateStorage = {
   },
   setItem: (name: string, value: string) => {
     clearTimeout(debounceTimer)
+    pendingValue = { name, value }
     debounceTimer = setTimeout(() => {
-      localStorage.setItem(name, value)
+      if (typeof localStorage !== 'undefined' && pendingValue) {
+        localStorage.setItem(pendingValue.name, pendingValue.value)
+      }
+      pendingValue = null
     }, 300)
   },
   removeItem: (name: string) => {
     clearTimeout(debounceTimer)
-    localStorage.removeItem(name)
+    pendingValue = null
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(name)
+    }
   },
 }
 

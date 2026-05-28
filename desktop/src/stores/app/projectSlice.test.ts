@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { emptyProjectMeta, type ProjectMeta } from '../../types/project'
 import { createProjectSlice, type ProjectSlice } from './projectSlice'
+import { mysteryDetective } from '../../services/templates/novelTemplates'
 
 type SetFn = Parameters<typeof createProjectSlice>[0]
 
@@ -15,6 +16,7 @@ function createStore(): ProjectSlice {
     currentChapterContent: '',
     loadProjectMeta: () => {},
     createNewProject: () => '',
+    createNewProjectFromTemplate: () => '',
     selectProject: () => {},
     deleteProject: () => {},
     renameProject: () => {},
@@ -71,6 +73,29 @@ describe('projectSlice', () => {
 
       const chapters = s.chaptersByVolumeId[volumes[0].id]
       expect(chapters).toHaveLength(1)
+    })
+  })
+
+  describe('createNewProjectFromTemplate', () => {
+    it('creates project with template name and chapters from outlines', () => {
+      const store = getLiveStore()
+      const projectId = store.getState().createNewProjectFromTemplate(mysteryDetective)
+
+      const s = store.getState()
+      expect(projectId).toBeTruthy()
+      expect(s.allProjectIds).toContain(projectId)
+      expect(s.currentProjectId).toBe(projectId)
+      expect(s.projectsById[projectId].name).toBe(mysteryDetective.nameZh)
+
+      const volumes = s.volumesByProjectId[projectId]
+      expect(volumes).toHaveLength(1)
+
+      const chapters = s.chaptersByVolumeId[volumes[0].id]
+      expect(chapters).toHaveLength(mysteryDetective.chapterOutlines.length)
+      expect(chapters[0].title).toBe(mysteryDetective.chapterOutlines[0].title)
+
+      expect(s.currentChapterId).toBe(chapters[0].id)
+      expect(s.currentChapterContent).toContain(mysteryDetective.chapterOutlines[0].title)
     })
   })
 

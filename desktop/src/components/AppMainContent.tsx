@@ -12,6 +12,9 @@ interface AppMainContentProps {
   restoreStatus: ComponentProps<typeof AppRestoreStatusBanner>['restoreStatus']
   contextEstimatedText: string
   onOpenWritingHelper: () => void
+  onOpenSettings?: () => void
+  onOpenCharacterPanel?: () => void
+  onOpenTemplateBrowser?: () => void
 }
 
 export function AppMainContent({
@@ -19,6 +22,9 @@ export function AppMainContent({
   restoreStatus,
   contextEstimatedText,
   onOpenWritingHelper,
+  onOpenSettings,
+  onOpenCharacterPanel,
+  onOpenTemplateBrowser,
 }: AppMainContentProps) {
   const { language } = useI18n()
   const workspaceSummary = useWriterWorkspaceSummary()
@@ -45,7 +51,7 @@ export function AppMainContent({
 
       <AppRestoreStatusBanner restoreStatus={restoreStatus} />
 
-      <DocumentEditor onOpenWritingHelper={onOpenWritingHelper} />
+      <DocumentEditor onOpenWritingHelper={onOpenWritingHelper} onOpenSettings={onOpenSettings} onOpenCharacterPanel={onOpenCharacterPanel} onOpenTemplateBrowser={onOpenTemplateBrowser} />
 
       <AppContextFooter contextEstimatedText={contextEstimatedText} />
     </main>

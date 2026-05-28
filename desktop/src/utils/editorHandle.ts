@@ -19,6 +19,7 @@ export interface EditorHandle {
   replaceSelectionSnapshot: (snapshot: EditorSelectionSnapshot, text: string) => boolean
   insertBelowSelectionSnapshot: (snapshot: EditorSelectionSnapshot, text: string) => boolean
   undoLastRevisionApply: () => boolean
+  triggerAIContinue: () => void
   isGenerating?: boolean
 }
 

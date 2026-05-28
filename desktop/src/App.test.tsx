@@ -51,6 +51,10 @@ vi.mock('./hooks/useAppStartup', () => ({
   useAppStartup: () => {},
 }))
 
+vi.mock('./hooks/useOnboarding', () => ({
+  useOnboarding: () => ({ isFirstRun: false, markDone: vi.fn(), resetOnboarding: vi.fn() }),
+}))
+
 vi.mock('./hooks/useToast', () => ({
   useToast: () => ({
     toasts: [],

@@ -31,6 +31,7 @@ function createEditorHandle(selectedText = '') {
     replaceSelectionSnapshot: vi.fn(() => false),
     insertBelowSelectionSnapshot: vi.fn(() => false),
     undoLastRevisionApply: vi.fn(() => false),
+    triggerAIContinue: vi.fn(),
   }
 }
 

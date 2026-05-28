@@ -166,6 +166,8 @@ describe('useEditorAI', () => {
   beforeEach(() => {
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
+    useSettingsStore.getState().updateProvider('openai', { enabled: true, apiKey: 'sk-test' })
+    useSettingsStore.getState().updateSettings({ primaryProvider: 'openai' })
     useAppStore.setState((state) => ({
       ...state,
       selectedSkills: ['character-forge', 'dialogue-system'],

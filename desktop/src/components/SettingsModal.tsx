@@ -12,6 +12,7 @@ import { useSettingsProviderModels } from '../hooks/useSettingsProviderModels'
 import { useSettingsDiagnostics } from '../hooks/useSettingsDiagnostics'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import type { SettingsSectionId } from '../hooks/useAppPanelOrchestration'
+import { TemplateManagerPanel } from './TemplateManagerPanel'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -1156,7 +1157,7 @@ export function SettingsModal({
             <div className={activeSection === 'templates' ? 'block' : 'hidden'}>
               <section>
                 <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.templateLibraryTitle}</h3>
-                <p className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.templateLibraryTitle}</p>
+                <TemplateManagerPanel />
               </section>
             </div>
 

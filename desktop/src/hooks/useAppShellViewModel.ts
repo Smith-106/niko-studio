@@ -171,6 +171,9 @@ export function useAppShellViewModel({
       ? `${t.contextEstimated} · ${headerViewModel.contextUsageText}`
       : '',
     onOpenWritingHelper: () => openWritingHelperFreshStart('polish'),
+    onOpenSettings: panelOrchestration.openSettings,
+    onOpenCharacterPanel: () => panelOrchestration.toggleRightPanel('knowledge'),
+    onOpenTemplateBrowser: () => panelOrchestration.toggleRightPanel('templateBrowser'),
   }
 
   const chatSidebarProps = {

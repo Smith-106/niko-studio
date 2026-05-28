@@ -19,6 +19,8 @@ export interface UiSlice {
   personalizedCraftSummary: string | null
   personalizedCraftTrajectory: string | null
   personalizedCraftRecommendations: string[]
+  editorIsDirty: boolean
+  setEditorIsDirty: (value: boolean) => void
   toggleFocusMode: () => void
   setFocusMode: (value: boolean) => void
   updateWordMetrics: (metrics: Partial<WordMetrics>) => void
@@ -49,6 +51,8 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   personalizedCraftSummary: null,
   personalizedCraftTrajectory: null,
   personalizedCraftRecommendations: [],
+  editorIsDirty: false,
+  setEditorIsDirty: (value) => set({ editorIsDirty: value }),
   toggleFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
   setFocusMode: (value) => set({ focusMode: value }),
   updateWordMetrics: (metrics) =>

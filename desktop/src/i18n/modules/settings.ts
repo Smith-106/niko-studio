@@ -148,6 +148,25 @@ type SettingsKeys =
   | 'settingsContextTypeWorld'
   | 'settingsContextTypeCharacter'
   | 'settingsContextTypePlot'
+  | 'templateManagerCategoryAll'
+  | 'templateManagerCategoryStructure'
+  | 'templateManagerCategoryGenre'
+  | 'templateManagerCategoryFormat'
+  | 'templateManagerCategoryCustom'
+  | 'templateManagerBuiltin'
+  | 'templateManagerCustom'
+  | 'templateManagerEmptyList'
+  | 'templateManagerPreviewBack'
+  | 'templateManagerApply'
+  | 'templateManagerSaveAsCustom'
+  | 'templateManagerDuplicate'
+  | 'templateManagerDelete'
+  | 'templateManagerDeleteConfirm'
+  | 'templateManagerNoProject'
+  | 'templateManagerApplied'
+  | 'templateManagerPreviewOutline'
+  | 'templateManagerLoading'
+  | 'templateManagerPlaceholders'
 
 export type Translations = Record<SettingsKeys, string>
 
@@ -301,6 +320,25 @@ export const zhSettings: Translations = {
   settingsContextTypeWorld: '世界观',
   settingsContextTypeCharacter: '角色',
   settingsContextTypePlot: '剧情',
+  templateManagerCategoryAll: '全部',
+  templateManagerCategoryStructure: '结构',
+  templateManagerCategoryGenre: '类型',
+  templateManagerCategoryFormat: '格式',
+  templateManagerCategoryCustom: '自定义',
+  templateManagerBuiltin: '内置',
+  templateManagerCustom: '自定义',
+  templateManagerEmptyList: '暂无模板',
+  templateManagerPreviewBack: '返回列表',
+  templateManagerApply: '应用到当前章节',
+  templateManagerSaveAsCustom: '保存为自定义模板',
+  templateManagerDuplicate: '复制',
+  templateManagerDelete: '删除',
+  templateManagerDeleteConfirm: '确认删除此模板？',
+  templateManagerNoProject: '请先打开一个项目，再应用模板。',
+  templateManagerApplied: '模板已应用',
+  templateManagerPreviewOutline: '结构预览',
+  templateManagerLoading: '加载中...',
+  templateManagerPlaceholders: '模板变量',
 }
 
 export const enSettings: Translations = {
@@ -453,4 +491,23 @@ export const enSettings: Translations = {
   settingsContextTypeWorld: 'World',
   settingsContextTypeCharacter: 'Character',
   settingsContextTypePlot: 'Plot',
+  templateManagerCategoryAll: 'All',
+  templateManagerCategoryStructure: 'Structure',
+  templateManagerCategoryGenre: 'Genre',
+  templateManagerCategoryFormat: 'Format',
+  templateManagerCategoryCustom: 'Custom',
+  templateManagerBuiltin: 'Built-in',
+  templateManagerCustom: 'Custom',
+  templateManagerEmptyList: 'No templates yet',
+  templateManagerPreviewBack: 'Back to list',
+  templateManagerApply: 'Apply to current chapter',
+  templateManagerSaveAsCustom: 'Save as custom template',
+  templateManagerDuplicate: 'Duplicate',
+  templateManagerDelete: 'Delete',
+  templateManagerDeleteConfirm: 'Are you sure you want to delete this template?',
+  templateManagerNoProject: 'Please open a project first before applying a template.',
+  templateManagerApplied: 'Template applied',
+  templateManagerPreviewOutline: 'Structure preview',
+  templateManagerLoading: 'Loading...',
+  templateManagerPlaceholders: 'Template variables',
 }

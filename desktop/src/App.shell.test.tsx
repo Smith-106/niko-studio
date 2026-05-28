@@ -151,6 +151,10 @@ vi.mock('./i18n', () => ({
   useI18n: appShellMocks.useI18nMock,
 }))
 
+vi.mock('./hooks/useOnboarding', () => ({
+  useOnboarding: () => ({ isFirstRun: false, markDone: vi.fn(), resetOnboarding: vi.fn() }),
+}))
+
 import App from './App'
 
 describe('App shell integration', () => {

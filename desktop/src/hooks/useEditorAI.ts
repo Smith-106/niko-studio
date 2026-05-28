@@ -25,11 +25,13 @@ import {
   type EditorAIRequest,
   type EditorAIRewriteVariant,
 } from './editorAIPromptPolicy'
+import { useStoryContext } from './useStoryContext'
 
 export interface UseEditorAIOptions {
   editor: Editor | null
   language: Language
   getStyleRequirements?: () => string | null | undefined
+  onApiKeyMissing?: () => void
 }
 
 interface StreamRecoveryOptions {
@@ -68,6 +70,7 @@ export function useEditorAI({
   editor,
   language,
   getStyleRequirements,
+  onApiKeyMissing,
 }: UseEditorAIOptions): UseEditorAIReturn {
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -83,6 +86,8 @@ export function useEditorAI({
   }, [])
 
   const getSelectedSkillIds = useCallback(() => useAppStore.getState().selectedSkills, [])
+
+  const { getStoryContext } = useStoryContext()
 
   const clearError = useCallback(() => {
     setErrorMessage(null)
@@ -270,6 +275,14 @@ export function useEditorAI({
     async (request: EditorAIRequest, options?: EditorAIRequestOptions) => {
       if (!editor) return
 
+      // Check if API key is configured before starting AI request
+      const provider = getProviderConfig()
+      if (!provider) {
+        onApiKeyMissing?.()
+        setErrorMessage(language === 'zh' ? '请先配置 AI 服务' : 'Please configure AI provider first')
+        return
+      }
+
       const claimedRequest = await claimRequest(options)
       if (!claimedRequest) {
         return
@@ -289,6 +302,7 @@ export function useEditorAI({
       }
 
       const rawStyleRequirements = getStyleRequirements?.() ?? null
+      const storyCtx = getStoryContext()
 
       if (request.action === 'rewrite') {
         const { from, to } = editor.state.selection
@@ -307,6 +321,7 @@ export function useEditorAI({
             language,
             selectedText,
             rawStyleRequirements,
+            storyContext: storyCtx,
           }),
           {
             replaceFrom: from,
@@ -331,10 +346,11 @@ export function useEditorAI({
           language,
           contextBefore,
           rawStyleRequirements,
+          storyContext: storyCtx,
         }),
       )
     },
-    [editor, language, getStyleRequirements, claimRequest, callStream, releaseRequest],
+    [editor, language, getStyleRequirements, getProviderConfig, onApiKeyMissing, getStoryContext, claimRequest, callStream, releaseRequest],
   )
 
   const cancel = useCallback(

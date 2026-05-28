@@ -28,6 +28,8 @@ export const ProjectSidebar = React.memo(function ProjectSidebar() {
     addVolume,
     addChapter,
     createNewProject,
+    editorIsDirty,
+    setEditorIsDirty,
   } = useProjectSidebarState()
 
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({})
@@ -40,6 +42,17 @@ export const ProjectSidebar = React.memo(function ProjectSidebar() {
 
   const toggleVolume = (volumeId: string) => {
     setExpandedVolumes((prev) => ({ ...prev, [volumeId]: !prev[volumeId] }))
+  }
+
+  const handleChapterSelect = (id: string) => {
+    if (editorIsDirty) {
+      const confirmed = window.confirm(
+        '当前章节有未保存的修改，切换章节将丢失这些修改。确定要切换吗？'
+      )
+      if (!confirmed) return
+      setEditorIsDirty(false)
+    }
+    selectChapter(id)
   }
 
   const handleAddProject = async () => {
@@ -158,7 +171,7 @@ export const ProjectSidebar = React.memo(function ProjectSidebar() {
                             {chapters.map((chapter) => (
                               <button
                                 key={chapter.id}
-                                onClick={() => selectChapter(chapter.id)}
+                                onClick={() => handleChapterSelect(chapter.id)}
                                 className={`w-full flex items-center gap-2 px-2 py-1 rounded text-sm transition-colors ${
                                   currentChapterId === chapter.id
                                     ? 'bg-primary-900/20 text-primary-300 font-medium'

@@ -1,6 +1,7 @@
 import type { AppSlice } from '../appStore'
 import type { Chapter, Project, ProjectMeta, Volume } from '../../types/project'
 import { createChapter, createProject, createVolume } from '../../types/project'
+import type { NovelTemplate } from '../../services/templates/novelTemplates'
 
 export interface ProjectSlice {
   projectsById: Record<string, Project>
@@ -15,6 +16,7 @@ export interface ProjectSlice {
 
   loadProjectMeta: (meta: ProjectMeta) => void
   createNewProject: (name: string) => string
+  createNewProjectFromTemplate: (template: NovelTemplate) => string
   selectProject: (id: string) => void
   deleteProject: (id: string) => void
   renameProject: (id: string, name: string) => void
@@ -72,6 +74,29 @@ export const createProjectSlice: AppSlice<ProjectSlice> = (set, get) => ({
       currentProjectId: project.id,
       currentChapterId: chapter.id,
       currentChapterContent: '',
+    }))
+    return project.id
+  },
+
+  createNewProjectFromTemplate: (template) => {
+    const project = createProject(template.nameZh || template.name)
+    const volume = createVolume(project.id, '卷一', 0)
+    const chapters = template.chapterOutlines.map((outline, idx) =>
+      createChapter(volume.id, outline.title, idx)
+    )
+    set((state) => ({
+      projectsById: { ...state.projectsById, [project.id]: project },
+      allProjectIds: [project.id, ...state.allProjectIds],
+      volumesByProjectId: { ...state.volumesByProjectId, [project.id]: [volume] },
+      chaptersByVolumeId: {
+        ...state.chaptersByVolumeId,
+        [volume.id]: chapters,
+      },
+      currentProjectId: project.id,
+      currentChapterId: chapters.length > 0 ? chapters[0].id : null,
+      currentChapterContent: chapters.length > 0
+        ? `<h2>${template.chapterOutlines[0].title}</h2><p>${template.chapterOutlines[0].summary}</p>`
+        : '',
     }))
     return project.id
   },

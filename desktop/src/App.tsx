@@ -7,13 +7,27 @@ import { AppMainContent } from './components/AppMainContent'
 import { ChatSidebar } from './components/ChatSidebar'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ToastContainer } from './components/ToastContainer'
+import { WelcomeWizard } from './components/WelcomeWizard'
 import { useAppViewModel } from './hooks/useAppViewModel'
 import { useAppStartup } from './hooks/useAppStartup'
 import { useToast } from './hooks/useToast'
+import { useOnboarding } from './hooks/useOnboarding'
 import { useI18n } from './i18n'
 import { useSettingsStore } from './stores/settingsStore'
 
 function App() {
+  const { isFirstRun, markDone } = useOnboarding()
+
+  if (isFirstRun) {
+    return (
+      <WelcomeWizard onComplete={markDone} />
+    )
+  }
+
+  return <AppMain />
+}
+
+function AppMain() {
   const { sidebarProps, appRightPanelsProps, appMainContentProps, chatSidebarProps } = useAppViewModel()
   const { toasts, addToast, removeToast } = useToast()
   const { t } = useI18n()

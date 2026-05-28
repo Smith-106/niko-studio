@@ -90,6 +90,10 @@ vi.mock('../api/client', () => ({
   streamWritingHelper: streamWritingHelperMock,
 }))
 
+vi.mock('../hooks/useStoryContext', () => ({
+  useStoryContext: () => ({ getStoryContext: () => null, refreshStoryContext: vi.fn() }),
+}))
+
 import { streamWritingHelper } from '../api/client'
 import {
   buildEditorAIPayload,
@@ -365,6 +369,8 @@ describe('NikoEditor revision handle seam', () => {
   beforeEach(() => {
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
+    useSettingsStore.getState().updateProvider('openai', { enabled: true, apiKey: 'sk-test' })
+    useSettingsStore.getState().updateSettings({ primaryProvider: 'openai' })
     vi.clearAllMocks()
     latestEditorConfig = null
     mockStreamWritingHelper.mockImplementation(async (_payload, callbacks) => {
@@ -405,6 +411,7 @@ describe('NikoEditor revision handle seam', () => {
       replaceSelectionSnapshot: expect.any(Function),
       insertBelowSelectionSnapshot: expect.any(Function),
       undoLastRevisionApply: expect.any(Function),
+      triggerAIContinue: expect.any(Function),
       isGenerating: false,
     })
 

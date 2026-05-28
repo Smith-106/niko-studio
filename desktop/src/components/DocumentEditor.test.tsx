@@ -23,6 +23,9 @@ vi.mock('./NikoEditor', () => ({
 
 vi.mock('../utils/editorHandle', () => ({
   getEditorHandle: vi.fn(() => null),
+  setEditorHandle: vi.fn(),
+  notifyGeneratingChange: vi.fn(),
+  setGeneratingListener: vi.fn(),
 }))
 
 vi.mock('../services/projectFileService', () => ({

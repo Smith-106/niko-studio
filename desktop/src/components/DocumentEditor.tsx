@@ -5,7 +5,8 @@ const StoryBiblePanel = React.lazy(() => import('./StoryBiblePanel').then(m => (
 import { NikoEditor } from './NikoEditor'
 import { HistoryPanel } from './HistoryPanel'
 import { ExportDialog } from './ExportDialog'
-import { setGeneratingListener } from '../utils/editorHandle'
+import { EmptyEditorGuide } from './editor/EmptyEditorGuide'
+import { setGeneratingListener, getEditorHandle } from '../utils/editorHandle'
 import { readChapterContent, writeChapterContent } from '../services/projectFileService'
 import { autoSaveSnapshot } from '../services/versionService'
 import { useDocumentEditorState } from '../stores/selectors'
@@ -21,11 +22,17 @@ import {
   type PersonalizedCraftRecommendation,
 } from '../../../src-ts/analysis/personalized-craft-profile'
 
+// Module-level cache: saves editor JSON + text across chapter switches
+const editorStateCache = new Map<string, { json: JSONContent | null; text: string }>()
+
 interface DocumentEditorProps {
   onOpenWritingHelper: () => void
+  onOpenSettings?: () => void
+  onOpenCharacterPanel?: () => void
+  onOpenTemplateBrowser?: () => void
 }
 
-export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
+export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenCharacterPanel, onOpenTemplateBrowser }: DocumentEditorProps) {
   const { t, language } = useI18n()
   const {
     currentChapterId,
@@ -43,6 +50,7 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
     setPersonalizedCraftSummary,
     setPersonalizedCraftTrajectory,
     setPersonalizedCraftRecommendations,
+    setEditorIsDirty,
   } = useDocumentEditorState()
   const [chapterContent, setChapterContent] = useState<string>('')
   const [contentLoaded, setContentLoaded] = useState(false)
@@ -50,6 +58,7 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const [title, setTitle] = useState(fallbackTitle)
   const [editorText, setEditorText] = useState('')
   const [editorJson, setEditorJson] = useState<JSONContent | null>(null)
+  const [isEditorEmpty, setIsEditorEmpty] = useState(true)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [saveTime, setSaveTime] = useState<string>('')
   const [aiGenerating, setAiGenerating] = useState(false)
@@ -57,6 +66,7 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const craftProfileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editorTextRef = useRef<string>('')
+  const prevChapterIdRef = useRef<string | null>(null)
   const telemetryRef = useRef<WritingSessionTelemetry | null>(null)
   const titleFieldLabel = language === 'zh' ? '文档标题' : 'Document title'
 
@@ -148,7 +158,9 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
     setEditorJson(json)
     setEditorText(text)
     editorTextRef.current = text
+    setIsEditorEmpty(!text.trim())
     setSaveStatus('saving')
+    setEditorIsDirty(true)
     updateSessionTelemetry({
       type: 'editor_update',
       keywordFocus: text.split(/[\s，。！？,.!?\n]+/).filter((item) => item.length >= 2).slice(0, 5),
@@ -160,6 +172,7 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
       const m = now.getMinutes().toString().padStart(2, '0')
       setSaveTime(`${h}:${m}`)
       setSaveStatus('saved')
+      setEditorIsDirty(false)
       // Persist to filesystem
       if (currentProjectId && currentChapterId) {
         writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(json))
@@ -169,6 +182,22 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
       setTimeout(() => setSaveStatus('idle'), 4000)
     }, 1500)
   }, [currentProjectId, currentChapterId, updateSessionTelemetry])
+
+  const handleSave = useCallback(() => {
+    if (currentProjectId && currentChapterId && editorJson) {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(editorJson))
+      autoSaveSnapshot(currentProjectId, currentChapterId)
+      const now = new Date()
+      const h = now.getHours().toString().padStart(2, '0')
+      const m = now.getMinutes().toString().padStart(2, '0')
+      setSaveTime(`${h}:${m}`)
+      setSaveStatus('saved')
+      setEditorIsDirty(false)
+      updateSessionTelemetry({ type: 'save' })
+      setTimeout(() => setSaveStatus('idle'), 4000)
+    }
+  }, [currentProjectId, currentChapterId, editorJson, updateSessionTelemetry])
 
   useEffect(() => {
     if (historyPanelOpen) {
@@ -201,14 +230,33 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   }, [fallbackTitle, currentConversationId])
 
   useEffect(() => {
-    setEditorText('')
-    editorTextRef.current = ''
-    setEditorJson(null)
+    const prevId = prevChapterIdRef.current
+    const currId = currentChapterId
+
+    // Save current state before switching away
+    if (prevId && (editorJson || editorTextRef.current)) {
+      editorStateCache.set(prevId, { json: editorJson, text: editorTextRef.current })
+    }
+
+    // Restore cached state if available, otherwise clear
+    const cached = currId ? editorStateCache.get(currId) : null
+    if (cached) {
+      setEditorJson(cached.json)
+      setEditorText(cached.text)
+      editorTextRef.current = cached.text
+    } else {
+      setEditorText('')
+      editorTextRef.current = ''
+      setEditorJson(null)
+    }
     setSaveStatus('idle')
+    setEditorIsDirty(false)
     if (craftProfileTimerRef.current) {
       clearTimeout(craftProfileTimerRef.current)
       craftProfileTimerRef.current = null
     }
+
+    prevChapterIdRef.current = currId
   }, [currentChapterId])
 
   return (
@@ -228,12 +276,27 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
               placeholder={titleFieldLabel}
             />
             <div className="w-full h-px bg-gray-100 dark:bg-dark-border/50 my-8" />
-            <NikoEditor
-              key={currentChapterId ?? currentConversationId ?? '__global__'}
-              initialContent={contentLoaded ? (chapterContent || undefined) : undefined}
-              onOpenWritingHelper={onOpenWritingHelper}
-              onUpdate={handleEditorUpdate}
-            />
+            <div className="relative flex-1">
+              <NikoEditor
+                key={currentProjectId ?? '__no-project__'}
+                initialContent={contentLoaded
+                  ? (currentChapterId && editorStateCache.has(currentChapterId)
+                    ? editorStateCache.get(currentChapterId)!.json ?? chapterContent
+                    : chapterContent || undefined)
+                  : undefined}
+                onOpenWritingHelper={onOpenWritingHelper}
+                onOpenSettings={onOpenSettings}
+                onUpdate={handleEditorUpdate}
+                onSave={handleSave}
+              />
+              {isEditorEmpty && currentChapterId && (
+                <EmptyEditorGuide
+                  onAIContinue={() => { getEditorHandle()?.triggerAIContinue() }}
+                  onAddCharacter={onOpenCharacterPanel ?? (() => {})}
+                  onFromTemplate={onOpenTemplateBrowser ?? (() => {})}
+                />
+              )}
+            </div>
           </div>
 
           <Suspense fallback={<div className="h-32" />}>

@@ -226,7 +226,7 @@ describe('settingsStore prompt template library', () => {
     expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('standard')
   })
 
-  it('does not persist sensitive api keys to localStorage', () => {
+  it('does not persist sensitive api keys to localStorage', async () => {
     localStorage.clear()
     const store = useSettingsStore.getState()
 
@@ -246,6 +246,9 @@ describe('settingsStore prompt template library', () => {
 
     store.updateSettings({ apiKey: 'top-secret-key' })
     store.updateProvider('anthropic', { apiKey: 'provider-secret-key' })
+
+    // Wait for debounced localStorage write (300ms) to flush
+    await new Promise((r) => setTimeout(r, 400))
 
     const persistedRaw = localStorage.getItem('niko-settings')
     expect(persistedRaw).toBeTruthy()

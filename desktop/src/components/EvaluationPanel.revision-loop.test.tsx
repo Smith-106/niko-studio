@@ -183,6 +183,7 @@ describe('EvaluationPanel revision loop', () => {
       replaceSelectionSnapshot: vi.fn(() => true),
       insertBelowSelectionSnapshot: vi.fn(() => true),
       undoLastRevisionApply: vi.fn(() => true),
+      triggerAIContinue: vi.fn(),
     }
 
     mockedGetEditorHandle.mockReturnValue(editorHandle)
@@ -241,6 +242,7 @@ describe('EvaluationPanel revision loop', () => {
       replaceSelectionSnapshot: vi.fn(() => false),
       insertBelowSelectionSnapshot: vi.fn(() => false),
       undoLastRevisionApply: vi.fn(() => false),
+      triggerAIContinue: vi.fn(),
     }
 
     mockedGetEditorHandle.mockReturnValue(editorHandle)
@@ -326,6 +328,7 @@ describe('EvaluationPanel revision loop', () => {
       replaceSelectionSnapshot: vi.fn(() => true),
       insertBelowSelectionSnapshot: vi.fn(() => true),
       undoLastRevisionApply: vi.fn(() => true),
+      triggerAIContinue: vi.fn(),
     }
 
     mockedGetEditorHandle.mockReturnValue(editorHandle)

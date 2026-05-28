@@ -150,6 +150,8 @@ export function useProjectSidebarState() {
       addVolume: state.addVolume,
       addChapter: state.addChapter,
       createNewProject: state.createNewProject,
+      editorIsDirty: state.editorIsDirty,
+      setEditorIsDirty: state.setEditorIsDirty,
     }))
   )
 }
@@ -178,6 +180,7 @@ export function useDocumentEditorState() {
       setPersonalizedCraftSummary: state.setPersonalizedCraftSummary,
       setPersonalizedCraftTrajectory: state.setPersonalizedCraftTrajectory,
       setPersonalizedCraftRecommendations: state.setPersonalizedCraftRecommendations,
+      setEditorIsDirty: state.setEditorIsDirty,
     }))
   )
 }

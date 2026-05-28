@@ -427,6 +427,7 @@ describe('WritingHelperPanel mode options and payload', () => {
       replaceSelectionSnapshot: vi.fn(() => true),
       insertBelowSelectionSnapshot: vi.fn(() => true),
       undoLastRevisionApply: vi.fn(() => true),
+      triggerAIContinue: vi.fn(),
     }
 
     mockGetEditorHandle.mockReturnValue(editorHandle)
@@ -480,6 +481,7 @@ describe('WritingHelperPanel mode options and payload', () => {
       replaceSelectionSnapshot: vi.fn(() => false),
       insertBelowSelectionSnapshot: vi.fn(() => false),
       undoLastRevisionApply: vi.fn(() => false),
+      triggerAIContinue: vi.fn(),
     }
 
     mockGetEditorHandle.mockReturnValue(editorHandle)

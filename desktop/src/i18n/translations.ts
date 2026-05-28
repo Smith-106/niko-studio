@@ -10,6 +10,7 @@ import type { Translations as SettingsTranslations } from './modules/settings'
 import type { Translations as StyleTranslations } from './modules/style'
 import type { Translations as OptimizerTranslations } from './modules/optimizer'
 import type { Translations as McpTranslations } from './modules/mcp'
+import type { Translations as WelcomeTranslations } from './modules/welcome'
 
 export type Translations = AppTranslations &
   SidebarTranslations &
@@ -20,7 +21,8 @@ export type Translations = AppTranslations &
   SettingsTranslations &
   StyleTranslations &
   OptimizerTranslations &
-  McpTranslations
+  McpTranslations &
+  WelcomeTranslations
 
 import {
   zhApp, enApp,
@@ -33,6 +35,7 @@ import {
   zhStyle, enStyle,
   zhOptimizer, enOptimizer,
   zhMcp, enMcp,
+  zhWelcome, enWelcome,
 } from './modules'
 
 export const translations: Record<Language, Translations> = {
@@ -47,6 +50,7 @@ export const translations: Record<Language, Translations> = {
     ...zhStyle,
     ...zhOptimizer,
     ...zhMcp,
+    ...zhWelcome,
   },
   en: {
     ...enApp,
@@ -59,5 +63,6 @@ export const translations: Record<Language, Translations> = {
     ...enStyle,
     ...enOptimizer,
     ...enMcp,
+    ...enWelcome,
   },
 }
