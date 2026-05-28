@@ -1,5 +1,62 @@
 # RELEASE NOTES
 
+## v10.0.0 — 协作改进三阶段完成 (2026-05-28)
+
+### 概述
+
+v10.0.0 完成了协作改进三阶段实施计划，共计 26 个 gap 全部落地。本版本显著增强了 LLM 跨 provider 容错、EventBus 可靠性、搜索质量、双向同步、工作流并行执行、MCP 服务治理和集成测试覆盖。
+
+### 阶段详情
+
+**Phase 1 — Quick Wins (8 gaps)**
+- EventBus backpressure strategies (Buffer / Sample / DropOldest)
+- Circuit Breaker per-provider tracking (CLOSED→OPEN→HALF_OPEN)
+- SearchHybridResult source tagging (knowledge / obsidian / graph / wiki)
+- NowledgeGraphSync nowledge↔graph bridge
+- LLM ProviderLatencyTracker (sliding window P50/P95)
+- LLM Service per-provider circuit breaker integration
+- MemoryService replayFrom()
+- KnowledgeService schema-validated merge
+
+**Phase 2 — Architecture Completion (8 gaps)**
+- EventLog ring buffer (append-only, replayFrom, getEvents)
+- DeadLetterQueue (retry/retryAll + backoff, eventbus:dead-letter)
+- TypedEventBus extended (EventBusConfig, replayFrom, 3 backpressure strategies)
+- MCPRequestRouter provider routing (weighted + circuit breaker aware)
+- KnowledgeSearchService relevance scoring (4 signals)
+- HybridSearchService LRU + TTL cache + EventBus invalidation
+- WorkflowDelegate parallel result aggregation (4 strategies)
+- DI Container 47 symbols (25→47)
+
+**Phase 3 — Advanced Collaboration (10 gaps)**
+- LLMFallbackChain (跨 provider 自动降级链)
+- EventBus replay + Dead-letter queue (完整可靠性机制)
+- ParallelResultAggregator (4 聚合策略 + EventBus)
+- Obsidian↔Knowledge bidirectional sync (3 conflict strategies)
+- Graph↔Wiki link resolution bridge (bidirectional + orphan detection)
+- MCP Service Discovery + Health Monitoring
+- SearchRelevanceScorer + SearchCacheManager
+- Quality Gate Feedback Loop (detect → remediate → escalate)
+- Wave Execution Engine (parallel/sequential, 4 failure strategies)
+- Full-stack integration test suite (35 tests)
+
+### 质量指标
+
+| 指标 | 值 |
+|------|------|
+| TypeScript 编译错误 | 0 |
+| 测试通过 | 3057 |
+| 测试失败 | 0 |
+| DI Symbols | 47 |
+| 集成测试 suites | 5 (35 tests) |
+| 向后兼容 | 完全兼容 |
+
+### 破坏性变更
+
+无。所有新增功能通过 DI 容器可选注入，不修改现有公共 API。
+
+---
+
 ## v9.27.1 (2026-05-27)
 
 ### Code Quality — HIGH Findings Fix

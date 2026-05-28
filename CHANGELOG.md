@@ -1,5 +1,50 @@
 # Changelog
 
+## [10.0.0] - 2026-05-28
+
+### Added — Phase 1: Quick Wins (8 gaps)
+
+- **EventBus backpressure strategies**: 策略枚举 Buffer / Sample / DropOldest，超阈值自动降级
+- **Circuit Breaker per-provider tracking**: CLOSED→OPEN→HALF_OPEN 状态机，每个 provider 独立追踪
+- **SearchHybridResult source tagging**: 搜索结果携带 `source: 'knowledge' | 'obsidian' | 'graph' | 'wiki'` 标签
+- **NowledgeGraphSync nowledge↔graph bridge**: 双向同步 `nowledge:entity-*` 与 `graph:node-*` 事件
+- **LLM ProviderLatencyTracker**: 滑动窗口延迟追踪，自动统计 P50/P95
+- **LLM Service per-provider circuit breaker integration**: 每个 LLM provider 独立熔断，失败自动跳过
+- **MemoryService replayFrom()**: 基于时间戳的内存快照回放
+- **KnowledgeService schema-validated merge**: 合并时按 schema 校验，非法数据拒绝写入
+
+### Added — Phase 2: Architecture Completion (8 gaps)
+
+- **EventLog (ring buffer)**: IEventLog + EventLogImpl，append-only ring buffer，支持 replayFrom / getEvents / getLatestSeq
+- **DeadLetterQueue**: IDeadLetterQueue + DeadLetterQueueImpl，捕获失败 handler 投递，retry / retryAll + backoff，eventbus:dead-letter 监控
+- **TypedEventBus extended**: EventBusConfig (eventLog / deadLetterQueue / backpressure)，replayFrom() 方法，3 种 backpressure 策略（buffer / sample / drop-oldest）。向后兼容 — 无 config 时行为不变
+- **MCPRequestRouter provider routing**: 按配置权重 + circuit breaker 状态路由请求到健康 provider
+- **KnowledgeSearchService relevance scoring**: 4 信号评分 (RECENCY / SOURCE_AUTHORITY / QUERY_EXPANSION / SELECTION)
+- **HybridSearchService LRU + TTL cache**: LRU eviction + TTL expiration + EventBus-driven source-based invalidation
+- **WorkflowDelegate parallel result aggregation**: 4 策略 (MERGE_ALL / FIRST_N / MAJORITY_VOTE / SCHEMA_VALIDATED)，aggregateWithTimeout() + EventBus 事件
+- **DI Container 47 symbols**: ServiceTypes 从 25 扩展到 47，所有新服务注册到 Inversify 容器
+
+### Added — Phase 3: Advanced Collaboration (10 gaps)
+
+- **LLMFallbackChain**: ILLMFallbackChain + LLMFallbackChainImpl，executeWithFallback 跨 provider 自动降级链，CircuitBreakerRegistry + ProviderLatencyTracker + EventBus 集成
+- **EventBus replay + Dead-letter queue**: EventLog ring buffer replayFrom / DeadLetterQueue retry/retryAll + backoff / eventbus:dead-letter channel / 3 backpressure strategies
+- **ParallelResultAggregator**: IParallelResultAggregator + ParallelResultAggregatorImpl，4 聚合策略，EventBus 集成
+- **Obsidian↔Knowledge bidirectional sync**: IObsidianKnowledgeSync + ObsidianKnowledgeSyncImpl，双向同步，ConflictStrategy (LAST_WRITE_WINS / MERGE / HUMAN_QUEUE)，EventBus subscriptions，debounced batch processing
+- **Graph↔Wiki link resolution bridge**: IGraphWikiLinkBridge + GraphWikiLinkBridgeImpl，bidirectional Maps，fallback resolution，orphan detection，integrity checking
+- **MCP Service Discovery + Health Monitoring**: IMCPServiceDiscovery + MCPServiceDiscoveryImpl (config+env discovery / auto-registration) / IMCPHealthMonitor + MCPHealthMonitorImpl (health probes / degradation tracking / CircuitBreakerRegistry integration)
+- **SearchRelevanceScorer + SearchCacheManager**: 4 signal scoring + LRU+TTL+EventBus-driven invalidation
+- **Quality Gate Feedback Loop**: IQualityGateFeedbackLoop + QualityGateFeedbackLoopImpl，detectGaps / generateRemediation / executeRemediation / runFeedbackLoop / escalation
+- **Wave Execution Engine**: IWaveExecutionEngine + WaveExecutionEngineImpl，parallel/sequential wave execution，4 failure strategies (retry-all / retry-failed / skip / abort)，timeout + AbortController cancellation
+- **Full-stack integration test suite**: 5 integration test files，35 passing tests
+
+### Verification
+
+- TypeScript 编译零错误 (`tsc --noEmit`)
+- 3057 测试全绿，零回归
+- 47 DI symbols 注册完成
+- DI 容器 resolve 全部 47 服务成功
+- 5 full-stack integration test suites 通过 (35 tests)
+
 ## [9.27.0] - 2026-05-26
 
 ### Added
