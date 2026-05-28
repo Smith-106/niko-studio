@@ -79,6 +79,8 @@ export {
   type ICriticAgent,
 } from './modes/plan-act';
 
+export * from './artifact-contract';
+
 export * from './graph';
 export * from './graph-factory';
 export * from './workflow-engine';

@@ -5,10 +5,38 @@
  * Each interface corresponds to a Python service that will be migrated to TypeScript.
  */
 
+export type { ISearchStrategyConfig } from '../search/strategy-config';
+export type { IUnifiedSearchPipeline } from '../search/unified-pipeline';
+export type { ISearchRelevanceScorer, ScoringConfig, ScoredResult, RelevanceSignal } from '../search/relevance-scorer';
+export type { ISearchCacheManager, CacheConfig, CachedSearchResult } from '../search/cache-manager';
+
 export type { INowledgeMemService } from '../protocols/nowledge-mem';
 export type { IRevisionService } from '../protocols/revision';
 export type { ISessionIntelligence } from '../protocols/session-intelligence';
 export type { IPersonalizationService } from '../protocols/personalization';
+export type { IEventBus } from '../services/event-bus';
+export type { IMCPServiceDiscovery, DiscoveredProvider } from '../gateway/service-discovery';
+export type { IMCPHealthMonitor, HealthProbeResult, ProviderHealthState } from '../gateway/health-monitor';
+export type { IEventLog } from '../services/event-log';
+export type { IDeadLetterQueue, DeadLetterEntry } from '../services/dead-letter-queue';
+export type { INowledgeGraphSync } from '../services/nowledge-graph-sync';
+export type { IGraphWikiLinkBridge, LinkIndexEntry, OrphanType, OrphanedLink, IntegrityReport } from '../services/graph-wiki-bridge';
+export type { IObsidianKnowledgeSync, SyncDirectionResult, SyncConflict, ConflictStrategy } from '../services/obsidian-knowledge-sync';
+export type { ILLMFallbackChain } from '../services/llm-fallback-chain';
+export type { SyncResult as NowledgeSyncResult, BatchSyncResult as NowledgeBatchSyncResult, SyncStatus as NowledgeSyncStatus } from '../services/nowledge-graph-sync';
+
+export type { IMCPRequestRouter } from '../gateway/mcp-router';
+
+export type { IArtifactContract, ArtifactResolver, StateArtifact } from '../workflow/artifact-contract';
+export { STAGE_CONTRACTS } from '../workflow/artifact-contract';
+
+export type { SubPlanSpec, SubPlanResult, SubTaskSpec, SubTaskResult } from '../workflow/delegate/sub-plan';
+
+export type { IParallelResultAggregator, AggregationStrategy, AggregationConfig, AggregatedResult } from '../workflow/delegate/result-aggregator';
+
+export type { IWaveExecutionEngine, WaveSpec, WaveResult, WaveExecutionConfig } from '../workflow/wave-engine';
+
+export type { IQualityGateFeedbackLoop, VerificationGap, RemediationPlan, FeedbackLoopResult, RemediationResult, FeedbackLoopConfig } from '../workflow/quality-gate-loop';
 
 export const ServiceTypes = {
   MemoryEngine: Symbol.for('MemoryEngine'),
@@ -36,6 +64,28 @@ export const ServiceTypes = {
   RevisionService: Symbol.for('RevisionService'),
   SessionIntelligenceService: Symbol.for('SessionIntelligenceService'),
   PersonalizationService: Symbol.for('PersonalizationService'),
+  PhaseOrchestrator: Symbol.for('PhaseOrchestrator'),
+  WebSocketRelayService: Symbol.for('WebSocketRelayService'),
+  DistillationNowledgeBridge: Symbol.for('DistillationNowledgeBridge'),
+  ConflictNowledgeBridge: Symbol.for('ConflictNowledgeBridge'),
+  FileSyncService: Symbol.for('FileSyncService'),
+  EventBus: Symbol.for('EventBus'),
+  EventLog: Symbol.for('EventLog'),
+  DeadLetterQueue: Symbol.for('DeadLetterQueue'),
+  SearchStrategyConfig: Symbol.for('SearchStrategyConfig'),
+  UnifiedSearchPipeline: Symbol.for('UnifiedSearchPipeline'),
+  MCPRequestRouter: Symbol.for('MCPRequestRouter'),
+  NowledgeGraphSync: Symbol.for('NowledgeGraphSync'),
+  GraphWikiLinkBridge: Symbol.for('GraphWikiLinkBridge'),
+  ObsidianKnowledgeSync: Symbol.for('ObsidianKnowledgeSync'),
+  LLMFallbackChain: Symbol.for('LLMFallbackChain'),
+  MCPServiceDiscovery: Symbol.for('MCPServiceDiscovery'),
+  MCPHealthMonitor: Symbol.for('MCPHealthMonitor'),
+  SearchRelevanceScorer: Symbol.for('SearchRelevanceScorer'),
+  SearchCacheManager: Symbol.for('SearchCacheManager'),
+  ResultAggregator: Symbol.for('ResultAggregator'),
+  QualityGateFeedbackLoop: Symbol.for('QualityGateFeedbackLoop'),
+  WaveExecutionEngine: Symbol.for('WaveExecutionEngine'),
 } as const;
 
 export type ServiceIdentifier<T = unknown> = symbol;
@@ -417,6 +467,108 @@ export interface IObsidianService {
    * Sync with Obsidian vault
    */
   sync(vaultPath: string): Promise<SyncResult>;
+
+  /**
+   * Read content of a vault note
+   */
+  readNote(vaultPath: string, notePath: string): Promise<string | null>;
+
+  /**
+   * Write content to a vault note (creates if not exists)
+   */
+  writeNote(vaultPath: string, notePath: string, content: string): Promise<void>;
+
+  /**
+   * Update an existing vault note
+   */
+  updateNote(vaultPath: string, notePath: string, content: string): Promise<void>;
+
+  /**
+   * Create a new note with optional frontmatter
+   */
+  createNote(vaultPath: string, notePath: string, content: string, frontmatter?: Record<string, unknown>): Promise<void>;
+
+  /**
+   * Delete a vault note
+   */
+  deleteNote(vaultPath: string, notePath: string): Promise<void>;
+
+  /**
+   * Read YAML frontmatter from a vault note
+   */
+  readFrontmatter(vaultPath: string, notePath: string): Promise<Record<string, unknown> | null>;
+
+  /**
+   * Update YAML frontmatter fields (shallow merge)
+   */
+  updateFrontmatter(vaultPath: string, notePath: string, updates: Record<string, unknown>): Promise<void>;
+
+  /**
+   * Deep-merge frontmatter fields
+   */
+  mergeFrontmatter(vaultPath: string, notePath: string, data: Record<string, unknown>): Promise<void>;
+
+  /**
+   * Resolve a wiki-link to an actual file path
+   */
+  resolveWikiLink(vaultPath: string, link: string): Promise<string | null>;
+
+  /**
+   * Get all notes that link back to the given note
+   */
+  getBacklinks(vaultPath: string, notePath: string): Promise<Array<{ name: string; path: string; relativePath: string }>>;
+
+  /**
+   * Create a daily note for a given date
+   */
+  createDailyNote(vaultPath: string, date?: Date, template?: string): Promise<string>;
+
+  /**
+   * Read a daily note for a given date
+   */
+  getDailyNote(vaultPath: string, date?: Date): Promise<string | null>;
+
+  /**
+   * Append content to a daily note (creates if not exists)
+   */
+  appendToDailyNote(vaultPath: string, content: string, date?: Date): Promise<string>;
+
+  // ── Search & enumeration ────────────────────────────────────────────
+
+  /** Search notes by query (delegates to underlying searchNotes) */
+  search(vaultPath: string, query: string, searchContent?: boolean, limit?: number): Array<{ name: string; path: string; relativePath: string }>;
+
+  /** List files in vault matching a glob pattern */
+  getFiles(vaultPath: string, pattern?: string): string[];
+}
+
+export interface IPhaseOrchestrator {
+  validatePhase(phase: string, stage: string): Promise<boolean>;
+  checkQualityGate(phase: string, stage: string): Promise<boolean>;
+  getQualityGates(phase: string): string[];
+  advancePhase(phase: string, nextStage: string): Promise<boolean>;
+}
+
+export interface IWebSocketRelayService {
+  broadcast(channel: string, payload: unknown): void;
+  subscribe(channel: string, handler: (payload: unknown) => void): () => void;
+  isConnected(): boolean;
+}
+
+export interface IDistillationNowledgeBridge {
+  distill(knowledgeId: string, targetVaultPath?: string): Promise<string>;
+  getDistillationStatus(knowledgeId: string): Promise<'pending' | 'completed' | 'failed' | 'not_found'>;
+}
+
+export interface IConflictNowledgeBridge {
+  detectConflicts(vaultPath: string, notePath?: string): Promise<Array<{ localPath: string; knowledgeId: string; conflictType: string }>>;
+  resolveConflict(conflictId: string, resolution: 'local' | 'knowledge' | 'merge'): Promise<boolean>;
+}
+
+export interface IFileSyncAdapter {
+  sync(direction: 'push' | 'pull' | 'bidirectional', source: string, target: string): Promise<{ synced: number; conflicts: number }>;
+  getSyncHistory(source: string): Promise<Array<{ timestamp: string; direction: string; filesCount: number }>>;
+  getIndexedFiles(source: string): Promise<string[]>;
 }
 
 export interface ExportOptions {

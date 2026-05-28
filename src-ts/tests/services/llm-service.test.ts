@@ -518,7 +518,7 @@ describe('LLMServiceImpl', () => {
         { retry: { maxRetries: 2, baseDelay: 10 } }
       );
 
-      await expect(svc.generate('test')).rejects.toThrow(RateLimitError);
+      await expect(svc.generate('test')).rejects.toThrow(ProviderUnavailableError);
     });
 
     it('should not retry on non-retryable errors', async () => {

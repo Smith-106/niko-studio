@@ -28,6 +28,7 @@ import {
   ISmartSearch,
   IHybridSearch,
   IVectorSearch,
+  IPhaseOrchestrator,
 } from './types';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 import { registerCanonicalBindings } from './bindings';
@@ -253,6 +254,13 @@ export class ServiceContainer {
       return this.mocks.get(ServiceTypes.VectorSearch) as IVectorSearch;
     }
     return this.container.get<IVectorSearch>(ServiceTypes.VectorSearch);
+  }
+
+  get phaseOrchestrator(): IPhaseOrchestrator {
+    if (this.mocks.has(ServiceTypes.PhaseOrchestrator)) {
+      return this.mocks.get(ServiceTypes.PhaseOrchestrator) as IPhaseOrchestrator;
+    }
+    return this.container.get<IPhaseOrchestrator>(ServiceTypes.PhaseOrchestrator);
   }
 
   /**

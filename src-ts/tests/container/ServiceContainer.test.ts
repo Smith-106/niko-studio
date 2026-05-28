@@ -578,9 +578,9 @@ describe('ServiceContainer', () => {
       expect(typeof ServiceTypes.AgentFactory).toBe('symbol');
     });
 
-    it('should have all 25 service symbols defined', () => {
+    it('should have all 47 service symbols defined', () => {
       const symbols = Object.values(ServiceTypes);
-      expect(symbols).toHaveLength(25);
+      expect(symbols).toHaveLength(47);
       symbols.forEach(symbol => {
         expect(typeof symbol).toBe('symbol');
       });
@@ -864,7 +864,7 @@ describe('ServiceContainer', () => {
 
       it('should have all 25 service symbols defined', () => {
         const symbols = Object.values(ServiceTypes);
-        expect(symbols).toHaveLength(25);
+        expect(symbols).toHaveLength(47);
         symbols.forEach(symbol => {
           expect(typeof symbol).toBe('symbol');
         });

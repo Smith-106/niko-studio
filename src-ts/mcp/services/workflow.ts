@@ -24,6 +24,8 @@ import {
   resetWorkflowEngineRuntimeProvider as resetContainerWorkflowEngineRuntimeProvider,
   type WorkflowEngineRuntimeProvider,
 } from '../../container/workflow-runtime-provider.js';
+import type { IPhaseOrchestrator } from '../../container/types';
+import { getContainer } from '../../container/ServiceContainer.js';
 
 // ---------------------------------------------------------------
 // Engine accessor
@@ -1077,6 +1079,27 @@ export async function workflowLifecycle(
   const engine = getEngine(workspaceRoot);
   if (!engine) return { error: 'Workflow engine unavailable' };
   const authority = resolveWorkflowAuthority(workspace);
+
+  // Quality gate check for stage-advancing actions
+  const phaseAdvancingActions = ['advance', 'complete', 'resume'];
+  if (phaseAdvancingActions.includes(action)) {
+    try {
+      const container = getContainer();
+      const phaseOrchestrator = container.phaseOrchestrator;
+      const gatePassed = await phaseOrchestrator.checkQualityGate('1', action);
+      if (!gatePassed) {
+        return {
+          error: 'Quality gate blocked stage transition',
+          action,
+          gateBlocked: true,
+          planId,
+        };
+      }
+    } catch {
+      // PhaseOrchestrator unavailable — allow transition (graceful degradation)
+    }
+  }
+
   return engine.lifecycle(planId, action, authority);
 }
 

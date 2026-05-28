@@ -71,3 +71,20 @@ export {
   type RetrievalTrace,
   type IterativeRetrieveResult,
 } from './retrieval-types';
+
+export {
+  SearchStrategyType,
+  SearchProfile,
+  DEFAULT_STRATEGY_CONFIG,
+  type SearchCascadeStep,
+  type ISearchStrategyConfig,
+} from './strategy-config';
+
+export {
+  UnifiedSearchPipeline,
+  type IUnifiedSearchPipeline,
+  type UnifiedSearchOptions,
+  type UnifiedSearchResult,
+  type RankedSearchResult,
+  type UnifiedPipelineDeps,
+} from './unified-pipeline';

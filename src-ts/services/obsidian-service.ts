@@ -13,6 +13,8 @@ import {
   readdirSync,
   statSync,
   readFileSync,
+  writeFileSync,
+  unlinkSync,
 } from 'node:fs';
 import { platform } from 'node:os';
 
@@ -493,6 +495,414 @@ export class ObsidianService {
       return null;
     }
   }
+
+  // -----------------------------------------------------------------
+  // Write operations (reverse write to vault)
+  // -----------------------------------------------------------------
+
+  writeNote(vaultPath: string, notePath: string, content: string): void {
+    let fullPath = resolve(vaultPath, notePath);
+    if (!extname(fullPath)) {
+      fullPath += '.md';
+    }
+    mkdirSync(dirname(fullPath), { recursive: true });
+    writeFileSync(fullPath, content, 'utf-8');
+  }
+
+  updateNote(vaultPath: string, notePath: string, content: string): void {
+    let fullPath = resolve(vaultPath, notePath);
+    if (!extname(fullPath)) {
+      fullPath += '.md';
+    }
+    if (!existsSync(fullPath)) {
+      throw new Error(`Note not found: ${notePath}`);
+    }
+    writeFileSync(fullPath, content, 'utf-8');
+  }
+
+  createNote(
+    vaultPath: string,
+    notePath: string,
+    content: string,
+    frontmatter?: Record<string, unknown>,
+  ): void {
+    let fullPath = resolve(vaultPath, notePath);
+    if (!extname(fullPath)) {
+      fullPath += '.md';
+    }
+    if (existsSync(fullPath)) {
+      throw new Error(`Note already exists: ${notePath}`);
+    }
+    mkdirSync(dirname(fullPath), { recursive: true });
+
+    const body = frontmatter
+      ? `---\n${yamlDump(frontmatter)}\n---\n${content}`
+      : content;
+    writeFileSync(fullPath, body, 'utf-8');
+  }
+
+  deleteNote(vaultPath: string, notePath: string): void {
+    let fullPath = resolve(vaultPath, notePath);
+    if (!extname(fullPath)) {
+      fullPath += '.md';
+    }
+    if (!existsSync(fullPath)) {
+      throw new Error(`Note not found: ${notePath}`);
+    }
+    unlinkSync(fullPath);
+  }
+
+  // -----------------------------------------------------------------
+  // Frontmatter operations
+  // -----------------------------------------------------------------
+
+  readFrontmatter(vaultPath: string, notePath: string): Record<string, unknown> | null {
+    const content = this.readNote(vaultPath, notePath);
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+    if (!fmMatch) return null;
+    return yamlSafeLoad(fmMatch[1]);
+  }
+
+  updateFrontmatter(
+    vaultPath: string,
+    notePath: string,
+    updates: Record<string, unknown>,
+  ): void {
+    let fullPath = resolve(vaultPath, notePath);
+    if (!extname(fullPath)) {
+      fullPath += '.md';
+    }
+    if (!existsSync(fullPath)) {
+      throw new Error(`Note not found: ${notePath}`);
+    }
+
+    const content = readFileSync(fullPath, 'utf-8');
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n?/);
+    let existingFm: Record<string, unknown> = {};
+    let body = content;
+
+    if (fmMatch) {
+      existingFm = yamlSafeLoad(fmMatch[1]);
+      body = content.slice(fmMatch[0].length);
+    }
+
+    const merged = { ...existingFm, ...updates };
+    const newContent = `---\n${yamlDump(merged)}\n---\n${body}`;
+    writeFileSync(fullPath, newContent, 'utf-8');
+  }
+
+  mergeFrontmatter(
+    vaultPath: string,
+    notePath: string,
+    data: Record<string, unknown>,
+  ): void {
+    let fullPath = resolve(vaultPath, notePath);
+    if (!extname(fullPath)) {
+      fullPath += '.md';
+    }
+    if (!existsSync(fullPath)) {
+      throw new Error(`Note not found: ${notePath}`);
+    }
+
+    const content = readFileSync(fullPath, 'utf-8');
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n?/);
+    let existingFm: Record<string, unknown> = {};
+    let body = content;
+
+    if (fmMatch) {
+      existingFm = yamlSafeLoad(fmMatch[1]);
+      body = content.slice(fmMatch[0].length);
+    }
+
+    const merged = deepMerge(existingFm, data);
+    const newContent = `---\n${yamlDump(merged)}\n---\n${body}`;
+    writeFileSync(fullPath, newContent, 'utf-8');
+  }
+
+  // -----------------------------------------------------------------
+  // Wiki-link operations (dual-link bridge)
+  // -----------------------------------------------------------------
+
+  resolveWikiLink(vaultPath: string, link: string): string | null {
+    const resolved = resolve(vaultPath, link);
+    if (existsSync(resolved + '.md')) return resolved + '.md';
+    if (existsSync(resolved)) return resolved;
+
+    // Search vault for matching note name
+    const linkBasename = basename(link);
+    for (const file of this.getFiles(vaultPath, '*.md')) {
+      if (basename(file, '.md').toLowerCase() === linkBasename.toLowerCase()) {
+        return file;
+      }
+    }
+    return null;
+  }
+
+  getBacklinks(vaultPath: string, notePath: string): NoteInfo[] {
+    let fullPath = resolve(vaultPath, notePath);
+    if (!extname(fullPath)) {
+      fullPath += '.md';
+    }
+    const noteName = basename(fullPath, extname(fullPath));
+    const backlinks: NoteInfo[] = [];
+
+    for (const file of this.getFiles(vaultPath, '*.md')) {
+      if (file === fullPath) continue;
+      try {
+        const content = readFileSync(file, 'utf-8');
+        const links = extractLinks(content);
+        if (links.some((l) => l.toLowerCase() === noteName.toLowerCase())) {
+          const stat = statSync(file);
+          backlinks.push({
+            name: basename(file, '.md'),
+            path: file,
+            relativePath: relative(resolve(vaultPath), file),
+            sizeBytes: stat.size,
+            modifiedAt: new Date(stat.mtimeMs),
+            tags: extractTags(content),
+            links,
+          });
+        }
+      } catch { /* skip */ }
+    }
+
+    return backlinks;
+  }
+
+  // -----------------------------------------------------------------
+  // Daily Notes / Templates
+  // -----------------------------------------------------------------
+
+  resolveDailyNotesConfig(vaultPath: string): DailyNotesConfig {
+    const obsidianDir = join(resolve(vaultPath), '.obsidian');
+    const configPath = join(obsidianDir, 'daily-notes.json');
+
+    if (existsSync(configPath)) {
+      try {
+        const data = JSON.parse(readFileSync(configPath, 'utf-8'));
+        return {
+          folder: data.folder ?? '',
+          template: data.template ?? '',
+          format: data.format ?? 'YYYY-MM-DD',
+        };
+      } catch { /* fallback to defaults */ }
+    }
+
+    // Check community plugin config
+    const communityPlugins = join(obsidianDir, 'community-plugins.json');
+    if (existsSync(communityPlugins)) {
+      try {
+        const plugins: string[] = JSON.parse(readFileSync(communityPlugins, 'utf-8'));
+        if (plugins.includes('daily-notes')) {
+          return { folder: '', template: '', format: 'YYYY-MM-DD' };
+        }
+      } catch { /* fallback */ }
+    }
+
+    return { folder: '', template: '', format: 'YYYY-MM-DD' };
+  }
+
+  createDailyNote(
+    vaultPath: string,
+    date?: Date,
+    template?: string,
+  ): string {
+    const d = date ?? new Date();
+    const config = this.resolveDailyNotesConfig(vaultPath);
+    const dateStr = formatDate(d, config.format);
+    const folder = config.folder || '';
+    const notePath = folder ? join(folder, `${dateStr}.md`) : `${dateStr}.md`;
+    const fullPath = resolve(vaultPath, notePath);
+
+    if (existsSync(fullPath)) {
+      throw new Error(`Daily note already exists: ${notePath}`);
+    }
+
+    const templateContent = template ?? config.template ?? '';
+    const content = templateContent
+      ? applyTemplate(templateContent, { date: dateStr, time: formatTime(d), title: dateStr })
+      : `# ${dateStr}\n`;
+
+    mkdirSync(dirname(fullPath), { recursive: true });
+    writeFileSync(fullPath, content, 'utf-8');
+    return fullPath;
+  }
+
+  getDailyNote(vaultPath: string, date?: Date): string | null {
+    const d = date ?? new Date();
+    const config = this.resolveDailyNotesConfig(vaultPath);
+    const dateStr = formatDate(d, config.format);
+    const folder = config.folder || '';
+    const notePath = folder ? join(folder, `${dateStr}.md`) : `${dateStr}.md`;
+    const fullPath = resolve(vaultPath, notePath);
+
+    if (!existsSync(fullPath)) return null;
+    return readFileSync(fullPath, 'utf-8');
+  }
+
+  appendToDailyNote(
+    vaultPath: string,
+    date: Date | undefined,
+    content: string,
+  ): string {
+    const d = date ?? new Date();
+    const config = this.resolveDailyNotesConfig(vaultPath);
+    const dateStr = formatDate(d, config.format);
+    const folder = config.folder || '';
+    const notePath = folder ? join(folder, `${dateStr}.md`) : `${dateStr}.md`;
+    let fullPath = resolve(vaultPath, notePath);
+
+    if (!existsSync(fullPath)) {
+      this.createDailyNote(vaultPath, d);
+    }
+
+    const existing = readFileSync(fullPath, 'utf-8');
+    const updated = existing.endsWith('\n')
+      ? `${existing}${content}`
+      : `${existing}\n${content}`;
+    writeFileSync(fullPath, updated, 'utf-8');
+    return fullPath;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// YAML frontmatter utilities (minimal, no external dependency)
+// ---------------------------------------------------------------------------
+
+function yamlDump(obj: Record<string, unknown>): string {
+  const lines: string[] = [];
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        lines.push(`${key}: []`);
+      } else {
+        lines.push(`${key}:`);
+        for (const item of value) {
+          lines.push(`  - ${JSON.stringify(item)}`);
+        }
+      }
+    } else if (typeof value === 'object') {
+      lines.push(`${key}: ${JSON.stringify(value)}`);
+    } else if (typeof value === 'string') {
+      if (value.includes(':') || value.includes('#') || value.includes("'") || value.includes('\n')) {
+        lines.push(`${key}: ${JSON.stringify(value)}`);
+      } else {
+        lines.push(`${key}: ${value}`);
+      }
+    } else {
+      lines.push(`${key}: ${value}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+function yamlSafeLoad(text: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const lines = text.split('\n');
+  let currentKey: string | null = null;
+  let currentArray: unknown[] | null = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    if (!line) continue;
+
+    const arrayMatch = line.match(/^(\s*)- (.*)$/);
+    if (arrayMatch && currentArray !== null) {
+      let val: unknown = arrayMatch[2].trim();
+      try { val = JSON.parse(val as string); } catch { /* keep raw string */ }
+      currentArray.push(val);
+      continue;
+    }
+
+    const kvMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*):\s*(.*)$/);
+    if (kvMatch) {
+      if (currentKey && currentArray !== null) {
+        result[currentKey] = currentArray;
+      }
+
+      currentKey = kvMatch[1];
+      const rawVal = kvMatch[2].trim();
+
+      if (rawVal === '' || rawVal === '[]') {
+        if (rawVal === '[]') {
+          result[currentKey] = [];
+          currentArray = null;
+        } else {
+          currentArray = [];
+        }
+      } else {
+        let parsed: unknown = rawVal;
+        try { parsed = JSON.parse(rawVal); } catch { /* keep raw string */ }
+        result[currentKey] = parsed;
+        currentArray = null;
+      }
+    }
+  }
+
+  if (currentKey && currentArray !== null) {
+    result[currentKey] = currentArray;
+  }
+
+  return result;
+}
+
+function deepMerge(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = { ...target };
+  for (const [key, value] of Object.entries(source)) {
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      result[key] !== null &&
+      typeof result[key] === 'object' &&
+      !Array.isArray(result[key])
+    ) {
+      result[key] = deepMerge(
+        result[key] as Record<string, unknown>,
+        value as Record<string, unknown>,
+      );
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Daily Notes types and helpers
+// ---------------------------------------------------------------------------
+
+export interface DailyNotesConfig {
+  folder: string;
+  template: string;
+  format: string;
+}
+
+function formatDate(date: Date, format: string): string {
+  const y = date.getFullYear().toString();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  return format
+    .replace('YYYY', y)
+    .replace('MM', m)
+    .replace('DD', d);
+}
+
+function formatTime(date: Date): string {
+  const h = date.getHours().toString().padStart(2, '0');
+  const m = date.getMinutes().toString().padStart(2, '0');
+  return `HH:${h}:${m}`;
+}
+
+function applyTemplate(
+  template: string,
+  variables: Record<string, string>,
+): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] ?? '');
 }
 
 // ---------------------------------------------------------------------------

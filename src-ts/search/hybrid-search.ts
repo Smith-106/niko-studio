@@ -14,6 +14,7 @@
 import type { SearchInterface } from '../protocols/search';
 import { rrfMerge as rrfMergeUtil, type RrfSource } from './utils/rrf-fusion';
 import { createLogger } from '../logger/index.js';
+import { SearchStrategyType, type ISearchStrategyConfig, type SearchCascadeStep } from './strategy-config';
 
 const _log = createLogger('search-hybrid');
 
@@ -34,6 +35,7 @@ export interface HybridSearchConfig {
   rrfK?: number;
   defaultTopK?: number;
   parallelExecution?: boolean;
+  strategyConfig?: ISearchStrategyConfig;
 }
 
 /**
@@ -75,6 +77,7 @@ export class HybridSearch implements SearchInterface {
   private readonly rrfK: number;
   private readonly defaultTopK: number;
   private readonly parallelExecution: boolean;
+  private readonly _strategyConfig?: ISearchStrategyConfig;
 
   constructor(config: HybridSearchConfig) {
     if (!config.strategies || config.strategies.length === 0) {
@@ -91,10 +94,19 @@ export class HybridSearch implements SearchInterface {
     this.rrfK = config.rrfK ?? 60;
     this.defaultTopK = config.defaultTopK ?? 10;
     this.parallelExecution = config.parallelExecution ?? true;
+    this._strategyConfig = config.strategyConfig;
   }
 
   /**
-   * Execute hybrid search combining all strategies
+   * Execute hybrid search combining all strategies.
+   *
+   * When a strategyConfig is provided, the search follows the cascade order
+   * defined in the config. If a cascade step returns fewer results than
+   * fallbackThreshold, the next step is invoked. Weights from the cascade
+   * steps are used for hybrid scoring.
+   *
+   * Without a strategyConfig, the existing RRF-based behavior is preserved
+   * (backward compatible).
    */
   async search(
     query: string,
@@ -108,16 +120,178 @@ export class HybridSearch implements SearchInterface {
     const typeFilter = options?.typeFilter;
     const minScore = options?.minScore ?? 0.0;
 
-    // Execute searches (parallel or sequential)
+    // If strategyConfig is provided, use cascade-driven search
+    if (this._strategyConfig) {
+      const results = await this.executeCascadeSearch(
+        query,
+        { topK, typeFilter, minScore },
+      );
+      return results
+        .filter(r => (r.score as number) >= minScore)
+        .slice(0, topK)
+        .map(r => this.resultToDict(r as unknown as HybridSearchResult));
+    }
+
+    // Default: existing RRF-based behavior (backward compatible)
     const results = await this.executeSearches(query, { topK: topK * 2, typeFilter });
-
-    // RRF Fusion
     const merged = this.rrfMerge(results);
-
-    // Apply min_score filter and limit
     const filtered = merged.filter(r => r.score >= minScore);
-
     return filtered.slice(0, topK).map(r => this.resultToDict(r));
+  }
+
+  /**
+   * Execute cascade-driven search using strategy config.
+   *
+   * Walks through cascade steps in order. Each step is mapped to a registered
+   * strategy. If a step returns fewer results than fallbackThreshold, the
+   * next cascade step is invoked. All gathered results are merged with RRF
+   * using the cascade step weights.
+   */
+  private async executeCascadeSearch(
+    query: string,
+    options: { topK?: number; typeFilter?: string; minScore?: number },
+  ): Promise<Record<string, unknown>[]> {
+    const config = this._strategyConfig!;
+    const minScore = options.minScore ?? config.minScore;
+    const topK = options.topK ?? config.defaultTopK;
+
+    // Map SearchStrategyType to registered strategies
+    const strategyMap = new Map<string, StrategyWeight>();
+    for (const s of this._strategies) {
+      strategyMap.set(s.name, s);
+    }
+
+    // Resolve cascade step → strategy mapping
+    // LOCAL maps to strategies named "keyword" or "local"
+    // SEMANTIC maps to strategies named "semantic" or "vector"
+    // EXTERNAL maps to strategies named "external"
+    const resolveStrategy = (type: SearchStrategyType): StrategyWeight | null => {
+      const nameMap: Record<string, string[]> = {
+        [SearchStrategyType.LOCAL]: ['keyword', 'local', 'fuzzy'],
+        [SearchStrategyType.SEMANTIC]: ['semantic', 'vector'],
+        [SearchStrategyType.EXTERNAL]: ['external', 'elasticsearch'],
+      };
+      const candidates = nameMap[type] ?? [];
+      for (const name of candidates) {
+        const found = strategyMap.get(name);
+        if (found) return found;
+      }
+      // Fallback: if no named match, use first strategy
+      if (this._strategies.length > 0) return this._strategies[0];
+      return null;
+    };
+
+    // Execute cascade steps with fallback threshold
+    const allResults: Map<string, { weight: number; items: HybridSearchResult[] }> = new Map();
+    const executedSteps: SearchCascadeStep[] = [];
+
+    for (const step of config.cascade) {
+      const strategy = resolveStrategy(step.strategy);
+      if (!strategy) {
+        _log.warn(`Cascade step ${step.strategy}: no matching strategy found`);
+        continue;
+      }
+
+      // Execute with timeout
+      const stepResults = await this.executeStepWithTimeout(
+        query,
+        strategy,
+        step,
+        { topK: step.topK, typeFilter: options.typeFilter },
+      );
+
+      executedSteps.push(step);
+      allResults.set(strategy.name, { weight: step.weight, items: stepResults });
+
+      // Check fallback threshold
+      if (stepResults.length >= config.fallbackThreshold) {
+        // Enough results — skip remaining cascade steps
+        break;
+      }
+
+      _log.info(`Cascade step ${step.strategy} returned ${stepResults.length} results (threshold: ${config.fallbackThreshold}), invoking next step`);
+    }
+
+    // Merge all gathered results using RRF with cascade weights
+    const sources: RrfSource[] = [];
+    for (const step of executedSteps) {
+      const strategy = resolveStrategy(step.strategy);
+      if (!strategy) continue;
+      const entry = allResults.get(strategy.name);
+      if (!entry) continue;
+
+      sources.push({
+        name: strategy.name,
+        weight: step.weight,
+        items: entry.items.map(r => ({ id: r.id, score: r.score })),
+      });
+    }
+
+    // Normalize weights across executed steps
+    const totalWeight = sources.reduce((sum, s) => sum + s.weight, 0);
+    for (const source of sources) {
+      source.weight = source.weight / totalWeight;
+    }
+
+    const merged = rrfMergeUtil(sources, this.rrfK);
+
+    // Enrich merged results with full data
+    const resultMap = new Map<string, HybridSearchResult>();
+    for (const [, entry] of allResults) {
+      for (const r of entry.items) {
+        if (!resultMap.has(r.id)) resultMap.set(r.id, r);
+      }
+    }
+
+    return merged.map(({ id, score }) => {
+      const result = resultMap.get(id);
+      if (!result) return { id, score, content: '', type: 'unknown', source: 'hybrid', strategy: 'cascade', metadata: {} };
+      return {
+        id: result.id,
+        content: result.content,
+        score,
+        type: result.type,
+        source: 'hybrid',
+        strategy: result.strategy,
+        metadata: result.metadata,
+        loc: result.loc,
+      };
+    });
+  }
+
+  /**
+   * Execute a single cascade step with timeout.
+   * If the search exceeds timeoutMs, return empty results.
+   */
+  private async executeStepWithTimeout(
+    query: string,
+    strategy: StrategyWeight,
+    step: SearchCascadeStep,
+    options: { topK?: number; typeFilter?: string },
+  ): Promise<HybridSearchResult[]> {
+    const timeoutMs = step.timeoutMs;
+
+    const searchPromise = strategy.search.search(query, {
+      topK: options.topK ?? step.topK,
+      typeFilter: options.typeFilter,
+    });
+
+    const timeoutPromise = new Promise<Record<string, unknown>[]>((resolve) => {
+      setTimeout(() => resolve([]), timeoutMs);
+    });
+
+    const results = await Promise.race([searchPromise, timeoutPromise]);
+
+    return results.map(r => ({
+      id: r.id as string,
+      content: r.content as string,
+      score: (r.score as number) * step.weight,
+      type: (r.type as string) ?? 'chunk',
+      metadata: (r.metadata as Record<string, unknown>) ?? {},
+      source: r.source as string,
+      strategy: strategy.name,
+      loc: r.loc as HybridSearchResult['loc'],
+    }));
   }
 
   /**
@@ -323,6 +497,7 @@ export class HybridSearch implements SearchInterface {
       rrfK: this.rrfK,
       defaultTopK: this.defaultTopK,
       parallelExecution: this.parallelExecution,
+      strategyConfig: this._strategyConfig,
     });
   }
 

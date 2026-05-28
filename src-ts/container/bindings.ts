@@ -24,6 +24,28 @@ import {
   type IRevisionService,
   type ISessionIntelligence,
   type IPersonalizationService,
+  type IPhaseOrchestrator,
+  type IWebSocketRelayService,
+  type IDistillationNowledgeBridge,
+  type IConflictNowledgeBridge,
+  type IFileSyncAdapter,
+  type IEventBus,
+  type IEventLog,
+  type IDeadLetterQueue,
+  type ISearchStrategyConfig,
+  type IUnifiedSearchPipeline,
+  type IMCPRequestRouter,
+  type INowledgeGraphSync,
+  type IObsidianKnowledgeSync,
+  type ILLMFallbackChain,
+  type IMCPServiceDiscovery,
+  type IMCPHealthMonitor,
+  type ISearchRelevanceScorer,
+  type ISearchCacheManager,
+  type IParallelResultAggregator,
+  type IQualityGateFeedbackLoop,
+  type IWaveExecutionEngine,
+  type IGraphWikiLinkBridge,
 } from './types';
 import {
   DistillationService,
@@ -55,8 +77,35 @@ import {
   MCPGatewayAdapter,
   NowledgeMemServiceAdapter,
 } from './adapters';
+import {
+  PhaseOrchestratorAdapter,
+  WebSocketRelayServiceAdapter,
+  DistillationNowledgeBridgeAdapter,
+  ConflictNowledgeBridgeAdapter,
+  ObsidianSyncAdapter,
+  CloudSyncAdapter,
+  KnowledgeSyncAdapter,
+  EventBusAdapter,
+  SearchStrategyConfigAdapter,
+  UnifiedSearchPipelineAdapter,
+  MCPRequestRouterAdapter,
+  NowledgeGraphSyncAdapter,
+  ObsidianKnowledgeSyncAdapter,
+  LLMFallbackChainAdapter,
+  EventLogAdapter,
+  DeadLetterQueueAdapter,
+  MCPServiceDiscoveryAdapter,
+  MCPHealthMonitorAdapter,
+  SearchRelevanceScorerAdapter,
+  SearchCacheManagerAdapter,
+  ResultAggregatorAdapter,
+  QualityGateFeedbackLoopAdapter,
+  WaveExecutionEngineAdapter,
+  GraphWikiLinkBridgeAdapter,
+} from './adapters';
 import { NowledgeMemKnowledgeBridge } from '../services/nowledge-mem-knowledge-bridge';
 import { CompositeKnowledgeMemoryBridge } from '../services/composite-knowledge-memory-bridge';
+import { CircuitBreakerRegistry } from '../services/circuit-breaker';
 import {
   LearningOrchestrator,
   ImportLearningPipeline,
@@ -326,5 +375,202 @@ export function registerCanonicalBindings(
     (context) => new PersonalizationServiceImpl({
       persistenceBridge: context.container.get<IMemoryEngine>(ServiceTypes.MemoryEngine) as unknown as import('../protocols/knowledge').KnowledgeMemoryEngineAdapter,
     }),
+  );
+
+  // ─── Collaboration Layer (Phase 1 Quick Wins) ────────────────────
+
+  bindSingleton<IPhaseOrchestrator>(
+    ServiceTypes.PhaseOrchestrator,
+    () => new PhaseOrchestratorAdapter(),
+  );
+
+  bindSingleton<IWebSocketRelayService>(
+    ServiceTypes.WebSocketRelayService,
+    () => new WebSocketRelayServiceAdapter(),
+  );
+
+  bindSingleton<IDistillationNowledgeBridge>(
+    ServiceTypes.DistillationNowledgeBridge,
+    (context) => new DistillationNowledgeBridgeAdapter(
+      context.container.get<INowledgeMemService>(ServiceTypes.NowledgeMemService),
+    ),
+  );
+
+  bindSingleton<IConflictNowledgeBridge>(
+    ServiceTypes.ConflictNowledgeBridge,
+    (context) => new ConflictNowledgeBridgeAdapter(
+      context.container.get<INowledgeMemService>(ServiceTypes.NowledgeMemService),
+    ),
+  );
+
+  // ─── File Sync Adapters (T08) ─────────────────────────────────────
+
+  bindSingleton<IFileSyncAdapter>(
+    ServiceTypes.FileSyncService,
+    (context) => new ObsidianSyncAdapter(
+      context.container.get<IObsidianService>(ServiceTypes.ObsidianService),
+    ),
+  );
+
+  // ─── EventBus (T01) ────────────────────────────────────────────────
+
+  bindSingleton<IEventBus>(
+    ServiceTypes.EventBus,
+    (context) => new EventBusAdapter(
+      context.container.get<IWebSocketRelayService>(ServiceTypes.WebSocketRelayService),
+    ),
+  );
+
+  // ─── EventLog & DeadLetterQueue ─────────────────────────────────────
+
+  bindSingleton<IEventLog>(
+    ServiceTypes.EventLog,
+    () => new EventLogAdapter(),
+  );
+
+  bindSingleton<IDeadLetterQueue>(
+    ServiceTypes.DeadLetterQueue,
+    (context) => new DeadLetterQueueAdapter({
+      eventBus: context.container.get<IEventBus>(ServiceTypes.EventBus),
+    }),
+  );
+
+  // ─── SearchStrategyConfig (T04) ───────────────────────────────────────
+
+  bindSingleton<ISearchStrategyConfig>(
+    ServiceTypes.SearchStrategyConfig,
+    () => new SearchStrategyConfigAdapter(),
+  );
+
+  // ─── UnifiedSearchPipeline (T05) ────────────────────────────────────────
+
+  bindSingleton<IUnifiedSearchPipeline>(
+    ServiceTypes.UnifiedSearchPipeline,
+    (context) => new UnifiedSearchPipelineAdapter({
+      knowledgeService: context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+      smartSearch: context.container.get<ISmartSearch>(ServiceTypes.SmartSearch),
+      hybridSearch: context.container.get<IHybridSearch>(ServiceTypes.HybridSearch),
+      vectorSearch: context.container.get<IVectorSearch>(ServiceTypes.VectorSearch),
+      obsidianService: context.container.get<IObsidianService>(ServiceTypes.ObsidianService),
+      strategyConfig: context.container.get<ISearchStrategyConfig>(ServiceTypes.SearchStrategyConfig),
+    }),
+  );
+
+  // ─── MCPRequestRouter (T07) ────────────────────────────────────────────
+
+  bindSingleton<IMCPRequestRouter>(
+    ServiceTypes.MCPRequestRouter,
+    () => new MCPRequestRouterAdapter(),
+  );
+
+  // ─── NowledgeGraphSync (T08 — Knowledge ↔ Graph bidirectional sync) ──────
+
+  bindSingleton<INowledgeGraphSync>(
+    ServiceTypes.NowledgeGraphSync,
+    (context) => new NowledgeGraphSyncAdapter(
+      context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+      context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+      context.container.get<IConflictNowledgeBridge>(ServiceTypes.ConflictNowledgeBridge),
+    ),
+  );
+
+  // ─── ObsidianKnowledgeSync (Obsidian ↔ Knowledge bidirectional sync) ──────
+
+  bindSingleton<IObsidianKnowledgeSync>(
+    ServiceTypes.ObsidianKnowledgeSync,
+    (context) => new ObsidianKnowledgeSyncAdapter(
+      context.container.get<IObsidianService>(ServiceTypes.ObsidianService),
+      context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
+  );
+
+  // ─── GraphWikiLinkBridge (Graph entity ID ↔ Wiki page path resolution) ──────
+
+  bindSingleton<IGraphWikiLinkBridge>(
+    ServiceTypes.GraphWikiLinkBridge,
+    (context) => new GraphWikiLinkBridgeAdapter(
+      context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
+      context.container.get<IObsidianService>(ServiceTypes.ObsidianService),
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
+  );
+
+  // ─── LLMFallbackChain ─────────────────────────────────────────────────────
+
+  bindSingleton<ILLMFallbackChain>(
+    ServiceTypes.LLMFallbackChain,
+    (context) => new LLMFallbackChainAdapter(
+      undefined,
+      undefined,
+      undefined,
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
+  );
+
+  // ─── SearchRelevanceScorer ──────────────────────────────────────────────
+
+  bindSingleton<ISearchRelevanceScorer>(
+    ServiceTypes.SearchRelevanceScorer,
+    () => new SearchRelevanceScorerAdapter(),
+  );
+
+  // ─── SearchCacheManager ─────────────────────────────────────────────────
+
+  bindSingleton<ISearchCacheManager>(
+    ServiceTypes.SearchCacheManager,
+    (context) => new SearchCacheManagerAdapter(
+      undefined,
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
+  );
+
+  // ─── MCPServiceDiscovery ──────────────────────────────────────────────
+
+  bindSingleton<IMCPServiceDiscovery>(
+    ServiceTypes.MCPServiceDiscovery,
+    (context) => new MCPServiceDiscoveryAdapter(
+      context.container.get<IMCPRequestRouter>(ServiceTypes.MCPRequestRouter),
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
+  );
+
+  // ─── MCPHealthMonitor ─────────────────────────────────────────────────
+
+  bindSingleton<IMCPHealthMonitor>(
+    ServiceTypes.MCPHealthMonitor,
+    (context) => new MCPHealthMonitorAdapter(
+      context.container.get<IMCPRequestRouter>(ServiceTypes.MCPRequestRouter),
+      new CircuitBreakerRegistry(),
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
+  );
+
+  // ─── ResultAggregator ─────────────────────────────────────────────────────
+
+  bindSingleton<IParallelResultAggregator>(
+    ServiceTypes.ResultAggregator,
+    (context) => new ResultAggregatorAdapter(
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
+  );
+
+  // ─── QualityGateFeedbackLoop ──────────────────────────────────────────────────
+
+  bindSingleton<IQualityGateFeedbackLoop>(
+    ServiceTypes.QualityGateFeedbackLoop,
+    (context) => new QualityGateFeedbackLoopAdapter(
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
+  );
+
+  // ─── WaveExecutionEngine ────────────────────────────────────────────────────
+
+  bindSingleton<IWaveExecutionEngine>(
+    ServiceTypes.WaveExecutionEngine,
+    (context) => new WaveExecutionEngineAdapter(
+      context.container.get<IEventBus>(ServiceTypes.EventBus),
+    ),
   );
 }

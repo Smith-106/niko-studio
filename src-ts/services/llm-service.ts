@@ -15,6 +15,7 @@
 
 import type { LLMService, LLMProvider, LLMRequest, LLMResponse, StreamChunk } from '../protocols/llm';
 import { HookRegistry, HookType, createHookContext, type HookResult } from '../hooks/writing-hooks.js';
+import { CircuitBreakerRegistry, CircuitState } from './circuit-breaker.js';
 
 import { createLogger } from "../logger/index.js";
 const _log = createLogger("svc-llm");
@@ -112,6 +113,35 @@ export interface LLMServiceConfig {
   defaultProvider?: ProviderType;
   retry?: Partial<RetryConfig>;
   hooks?: HookRegistry;
+  tokenBudget?: number;
+}
+
+/**
+ * Budget exceeded error
+ */
+export class BudgetExceededError extends LLMError {
+  constructor(
+    message: string = 'Token budget exceeded',
+    public readonly used: number,
+    public readonly budget: number
+  ) {
+    super(message);
+    this.name = 'BudgetExceededError';
+  }
+}
+
+export class CircuitOpenError extends LLMError {
+  constructor(
+    public readonly providerName: string,
+    public readonly circuitState: CircuitState,
+    message?: string
+  ) {
+    super(
+      message ?? `Circuit is ${circuitState} for provider "${providerName}"`,
+      providerName as ProviderType
+    );
+    this.name = 'CircuitOpenError';
+  }
 }
 
 /**
@@ -125,6 +155,9 @@ export class LLMServiceImpl implements LLMService {
   private readonly defaultProvider: ProviderType;
   private readonly retryConfig: RetryConfig;
   private readonly _hooks: HookRegistry | null;
+  private readonly _tokenBudget: number | null;
+  private _tokensUsed = 0;
+  private readonly _circuitBreakerRegistry: CircuitBreakerRegistry;
 
   constructor(
     providers: Map<ProviderType, LLMProvider> | Record<ProviderType, LLMProvider>,
@@ -137,6 +170,7 @@ export class LLMServiceImpl implements LLMService {
 
     this.defaultProvider = config.defaultProvider ?? ProviderType.OPENAI;
     this._hooks = config.hooks ?? null;
+    this._tokenBudget = config.tokenBudget ?? null;
 
     this.retryConfig = {
       maxRetries: config.retry?.maxRetries ?? 3,
@@ -144,6 +178,12 @@ export class LLMServiceImpl implements LLMService {
       maxDelay: config.retry?.maxDelay ?? 60000,
       exponentialBase: config.retry?.exponentialBase ?? 2,
     };
+
+    this._circuitBreakerRegistry = new CircuitBreakerRegistry({
+      failureThreshold: 5,
+      cooldownMs: 60000,
+      halfOpenMaxCalls: 3,
+    });
   }
 
   /**
@@ -188,6 +228,102 @@ export class LLMServiceImpl implements LLMService {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Get ordered list of provider types for fallback, starting with preferred.
+   * Circuit-open providers are skipped unless all are open.
+   */
+  private getProviderFallbackOrder(preferred?: ProviderType): ProviderType[] {
+    const all = Array.from(this.providers.keys());
+
+    // If no preferred, use default
+    const start = preferred ?? this.defaultProvider;
+
+    // Reorder so preferred is first
+    const ordered: ProviderType[] = [];
+    const remaining: ProviderType[] = [];
+    for (const p of all) {
+      if (p === start) {
+        ordered.push(p);
+      } else {
+        remaining.push(p);
+      }
+    }
+    ordered.push(...remaining);
+
+    // Separate into available (circuit allows) and blocked
+    const available = ordered.filter(p => this._circuitBreakerRegistry.allow(p));
+    const blocked = ordered.filter(p => !this._circuitBreakerRegistry.allow(p));
+
+    // If at least one provider is available, use only available ones
+    if (available.length > 0) {
+      return available;
+    }
+
+    // All circuits are open — return the full list so we can attempt
+    // the preferred provider and produce a clear error if it fails
+    return ordered;
+  }
+
+  /**
+   * Execute an LLM operation with cross-provider fallback.
+   * Tries providers in fallback order; on failure, records it in the
+   * circuit breaker and moves to the next provider.
+   */
+  private async executeWithFallback<T>(
+    operation: (provider: LLMProvider) => Promise<T>,
+    operationName: string,
+    preferredProvider?: ProviderType
+  ): Promise<T> {
+    const fallbackOrder = this.getProviderFallbackOrder(preferredProvider);
+    const errors: Error[] = [];
+
+    for (const providerType of fallbackOrder) {
+      // Check circuit breaker before attempting
+      if (!this._circuitBreakerRegistry.allow(providerType)) {
+        const state = this._circuitBreakerRegistry.getState(providerType);
+        _log.warn(
+          `${operationName}: skipping provider "${providerType}" — circuit is ${state}`
+        );
+        errors.push(new CircuitOpenError(providerType, state));
+        continue;
+      }
+
+      const provider = this.providers.get(providerType)!;
+
+      try {
+        const result = await operation(provider);
+        this._circuitBreakerRegistry.recordSuccess(providerType);
+        return result;
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        this._circuitBreakerRegistry.recordFailure(providerType);
+        _log.warn(
+          `${operationName}: provider "${providerType}" failed: ${err.message}, ` +
+          `trying next provider`
+        );
+        errors.push(err);
+      }
+    }
+
+    // All providers exhausted
+    const openProviders = this._circuitBreakerRegistry.getOpenCircuitProviders();
+    if (openProviders.length > 0 && errors.every(e => e instanceof CircuitOpenError)) {
+      throw new CircuitOpenError(
+        openProviders[0],
+        this._circuitBreakerRegistry.getState(openProviders[0]),
+        `All provider circuits are open [${openProviders.join(', ')}]. ` +
+        `No providers available.`
+      );
+    }
+
+    throw new ProviderUnavailableError(
+      `All providers failed for ${operationName}: ` +
+      errors.map(e => e.message).join('; '),
+      undefined,
+      false
+    );
   }
 
   /**
@@ -270,39 +406,45 @@ export class LLMServiceImpl implements LLMService {
    * Generate text response with full metadata
    */
   async generateWithMetadata(request: LLMRequest): Promise<LLMResponse> {
-    const provider = this.getProvider();
-    const modelName = this.resolveModel(request.model, provider);
+    // Budget pre-check (estimate from maxTokens or prompt length)
+    this.checkBudget(request.maxTokens ?? Math.ceil(request.prompt.length / 4));
 
-    // Hook: BEFORE_LLM_CALL
-    if (this._hooks) {
-      const hookCtx = createHookContext({ content: request.prompt, metadata: { model: modelName, operation: 'generate' } });
-      await this._hooks.execute(HookType.BEFORE_LLM_CALL, hookCtx);
-    }
+    const response = await this.executeWithFallback(
+      async (provider) => {
+        const modelName = this.resolveModel(request.model, provider);
 
-    const response = await this.withRetry(
-      async () => {
-        const result = await provider.complete(
-          request.prompt,
-          modelName,
-          {
-            temperature: request.temperature,
-            maxTokens: request.maxTokens,
-            systemPrompt: request.systemPrompt,
-            stopSequences: request.stopSequences,
-          }
+        // Hook: BEFORE_LLM_CALL
+        if (this._hooks) {
+          const hookCtx = createHookContext({ content: request.prompt, metadata: { model: modelName, operation: 'generate' } });
+          await this._hooks.execute(HookType.BEFORE_LLM_CALL, hookCtx);
+        }
+
+        const result = await this.withRetry(
+          async () => provider.complete(
+            request.prompt,
+            modelName,
+            {
+              temperature: request.temperature,
+              maxTokens: request.maxTokens,
+              systemPrompt: request.systemPrompt,
+              stopSequences: request.stopSequences,
+            }
+          ),
+          'generateWithMetadata'
         );
+
+        // Hook: AFTER_LLM_CALL
+        if (this._hooks) {
+          const hookCtx = createHookContext({ content: result.content, metadata: { model: modelName, tokens: result.usage?.totalTokens } });
+          await this._hooks.execute(HookType.AFTER_LLM_CALL, hookCtx);
+        }
 
         return result;
       },
       'generateWithMetadata'
     );
 
-    // Hook: AFTER_LLM_CALL
-    if (this._hooks) {
-      const hookCtx = createHookContext({ content: response.content, metadata: { model: modelName, tokens: response.usage?.totalTokens } });
-      await this._hooks.execute(HookType.AFTER_LLM_CALL, hookCtx);
-    }
-
+    this.trackTokenUsage(response.usage);
     return response;
   }
 
@@ -318,8 +460,8 @@ export class LLMServiceImpl implements LLMService {
       systemPrompt?: string;
     }
   ): Promise<Record<string, unknown>> {
-    const provider = this.getProvider();
-    const modelName = this.resolveModel(options?.model, provider);
+    // Budget pre-check
+    this.checkBudget(options?.maxTokens ?? Math.ceil(prompt.length / 4));
 
     // Add JSON format instruction
     let jsonSystem = options?.systemPrompt ?? '';
@@ -327,14 +469,19 @@ export class LLMServiceImpl implements LLMService {
       jsonSystem = (jsonSystem + '\n\nRespond with valid JSON only.').trim();
     }
 
-    const response = await this.withRetry(
-      async () => {
-        return provider.complete(prompt, modelName, {
-          temperature: options?.temperature ?? 0.3, // Lower temperature for structured output
-          maxTokens: options?.maxTokens,
-          systemPrompt: jsonSystem,
-          responseFormat: { type: 'json' },
-        });
+    const { response, provider } = await this.executeWithFallback(
+      async (prov) => {
+        const modelName = this.resolveModel(options?.model, prov);
+        const result = await this.withRetry(
+          async () => prov.complete(prompt, modelName, {
+            temperature: options?.temperature ?? 0.3, // Lower temperature for structured output
+            maxTokens: options?.maxTokens,
+            systemPrompt: jsonSystem,
+            responseFormat: { type: 'json' },
+          }),
+          'generateJson'
+        );
+        return { response: result, provider: prov };
       },
       'generateJson'
     );
@@ -356,6 +503,9 @@ export class LLMServiceImpl implements LLMService {
    * On retryable errors (network timeout, 429, 5xx), the stream is
    * reconnected from the beginning. Non-retryable errors (4xx except 429)
    * fail immediately.
+   *
+   * If the primary provider's circuit is open or the stream fails,
+   * falls back to the next available provider.
    */
   async *stream(
     prompt: string,
@@ -366,60 +516,98 @@ export class LLMServiceImpl implements LLMService {
       systemPrompt?: string;
     }
   ): AsyncIterableIterator<StreamChunk> {
-    const provider = this.getProvider();
-    const modelName = this.resolveModel(options?.model, provider);
-    const maxStreamRetries = 2;
+    const fallbackOrder = this.getProviderFallbackOrder();
+    const errors: Error[] = [];
 
-    // Hook: BEFORE_LLM_CALL (stream)
-    if (this._hooks) {
-      const hookCtx = createHookContext({ content: prompt, metadata: { model: modelName, operation: 'stream' } });
-      await this._hooks.execute(HookType.BEFORE_LLM_CALL, hookCtx);
-    }
+    for (const providerType of fallbackOrder) {
+      if (!this._circuitBreakerRegistry.allow(providerType)) {
+        const state = this._circuitBreakerRegistry.getState(providerType);
+        _log.warn(`stream: skipping provider "${providerType}" — circuit is ${state}`);
+        errors.push(new CircuitOpenError(providerType, state));
+        continue;
+      }
 
-    for (let attempt = 0; attempt <= maxStreamRetries; attempt++) {
+      const provider = this.providers.get(providerType)!;
+      const modelName = this.resolveModel(options?.model, provider);
+      const maxStreamRetries = 2;
+
+      // Hook: BEFORE_LLM_CALL (stream)
+      if (this._hooks) {
+        const hookCtx = createHookContext({ content: prompt, metadata: { model: modelName, operation: 'stream' } });
+        await this._hooks.execute(HookType.BEFORE_LLM_CALL, hookCtx);
+      }
+
       try {
-        const stream = provider.streamComplete(prompt, modelName, {
-          temperature: options?.temperature,
-          maxTokens: options?.maxTokens,
-          systemPrompt: options?.systemPrompt,
-        });
+        for (let attempt = 0; attempt <= maxStreamRetries; attempt++) {
+          try {
+            const stream = provider.streamComplete(prompt, modelName, {
+              temperature: options?.temperature,
+              maxTokens: options?.maxTokens,
+              systemPrompt: options?.systemPrompt,
+            });
 
-        for await (const chunk of stream) {
-          yield chunk;
+            for await (const chunk of stream) {
+              yield chunk;
+            }
+
+            // Hook: AFTER_LLM_CALL (stream completed)
+            if (this._hooks) {
+              const hookCtx = createHookContext({ content: '', metadata: { model: modelName, operation: 'stream', status: 'completed' } });
+              await this._hooks.execute(HookType.AFTER_LLM_CALL, hookCtx);
+            }
+
+            this._circuitBreakerRegistry.recordSuccess(providerType);
+            return; // Stream completed successfully
+          } catch (error: any) {
+            const isRetryable =
+              error?.status === 429 ||
+              (error?.status >= 500 && error?.status < 600) ||
+              error?.code === 'ECONNRESET' ||
+              error?.code === 'ETIMEDOUT' ||
+              error?.code === 'ENOTFOUND' ||
+              error?.name === 'AbortError';
+
+            if (!isRetryable || attempt >= maxStreamRetries) {
+              throw error;
+            }
+
+            const delay = Math.min(
+              this.retryConfig.baseDelay * Math.pow(this.retryConfig.exponentialBase, attempt),
+              this.retryConfig.maxDelay
+            );
+
+            // For 429, respect retry-after header if present
+            const retryAfter = error?.headers?.['retry-after'];
+            const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : delay;
+
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
+          }
         }
-
-        // Hook: AFTER_LLM_CALL (stream completed)
-        if (this._hooks) {
-          const hookCtx = createHookContext({ content: '', metadata: { model: modelName, operation: 'stream', status: 'completed' } });
-          await this._hooks.execute(HookType.AFTER_LLM_CALL, hookCtx);
-        }
-
-        return; // Stream completed successfully
-      } catch (error: any) {
-        const isRetryable =
-          error?.status === 429 ||
-          (error?.status >= 500 && error?.status < 600) ||
-          error?.code === 'ECONNRESET' ||
-          error?.code === 'ETIMEDOUT' ||
-          error?.code === 'ENOTFOUND' ||
-          error?.name === 'AbortError';
-
-        if (!isRetryable || attempt >= maxStreamRetries) {
-          throw error;
-        }
-
-        const delay = Math.min(
-          this.retryConfig.baseDelay * Math.pow(this.retryConfig.exponentialBase, attempt),
-          this.retryConfig.maxDelay
-        );
-
-        // For 429, respect retry-after header if present
-        const retryAfter = error?.headers?.['retry-after'];
-        const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : delay;
-
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        this._circuitBreakerRegistry.recordFailure(providerType);
+        _log.warn(`stream: provider "${providerType}" failed: ${err.message}, trying next provider`);
+        errors.push(err);
+        continue; // Try next provider
       }
     }
+
+    // All providers exhausted
+    const openProviders = this._circuitBreakerRegistry.getOpenCircuitProviders();
+    if (openProviders.length > 0 && errors.every(e => e instanceof CircuitOpenError)) {
+      throw new CircuitOpenError(
+        openProviders[0],
+        this._circuitBreakerRegistry.getState(openProviders[0]),
+        `All provider circuits are open [${openProviders.join(', ')}]. No providers available.`
+      );
+    }
+
+    throw new ProviderUnavailableError(
+      `All providers failed for stream: ` +
+      errors.map(e => e.message).join('; '),
+      undefined,
+      false
+    );
   }
 
   /**
@@ -480,5 +668,43 @@ export class LLMServiceImpl implements LLMService {
    */
   getDefaultProvider(): ProviderType {
     return this.defaultProvider;
+  }
+
+  /**
+   * Get token budget status
+   */
+  getBudgetStatus(): { used: number; budget: number | null; remaining: number | null } {
+    return {
+      used: this._tokensUsed,
+      budget: this._tokenBudget,
+      remaining: this._tokenBudget != null ? this._tokenBudget - this._tokensUsed : null,
+    };
+  }
+
+  /**
+   * Register a provider dynamically
+   */
+  registerProvider(type: ProviderType, provider: LLMProvider): void {
+    this.providers.set(type, provider);
+  }
+
+  /**
+   * Check budget before dispatching
+   */
+  private checkBudget(estimatedTokens: number): void {
+    if (this._tokenBudget == null) return;
+
+    if (this._tokensUsed + estimatedTokens > this._tokenBudget) {
+      throw new BudgetExceededError(
+        `Token budget exceeded: used ${this._tokensUsed}, estimated ${estimatedTokens}, budget ${this._tokenBudget}`,
+        this._tokensUsed,
+        this._tokenBudget
+      );
+    }
+  }
+
+  private trackTokenUsage(usage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined): void {
+    if (!usage || this._tokenBudget == null) return;
+    this._tokensUsed += usage.totalTokens ?? (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0);
   }
 }

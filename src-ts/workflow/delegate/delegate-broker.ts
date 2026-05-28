@@ -7,6 +7,9 @@
  */
 
 import { createLogger } from '../../logger/index.js';
+import { writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
+import { join } from 'node:path';
+import type { IWebSocketRelayService } from '../../container/types';
 
 const _log = createLogger('delegate-broker');
 
@@ -84,11 +87,20 @@ export class DelegateBroker {
   private readonly handles: Map<string, DelegateHandle> = new Map();
   private readonly executor: DelegateExecutor;
   private readonly defaultTimeout: number;
+  private readonly persistDir: string | null;
+  private readonly relay: IWebSocketRelayService | null;
   private nextId = 1;
 
-  constructor(executor: DelegateExecutor, options?: { defaultTimeout?: number }) {
+  constructor(executor: DelegateExecutor, options?: { defaultTimeout?: number; persistDir?: string; relay?: IWebSocketRelayService }) {
     this.executor = executor;
     this.defaultTimeout = options?.defaultTimeout ?? 300_000; // 5 min
+    this.persistDir = options?.persistDir ?? null;
+    this.relay = options?.relay ?? null;
+
+    if (this.persistDir) {
+      if (!existsSync(this.persistDir)) mkdirSync(this.persistDir, { recursive: true });
+      this._hydrateFromStore();
+    }
   }
 
   /**
@@ -113,6 +125,8 @@ export class DelegateBroker {
 
     this.delegates.set(id, record);
     _log.info('Delegate queued', { id, task: spec.task });
+    this._broadcast('status', { id, status: 'queued', task: spec.task });
+    this._saveJobState(id);
 
     // Auto-start
     setImmediate(() => this._start(id));
@@ -171,6 +185,7 @@ export class DelegateBroker {
     this.handles.delete(id);
 
     _log.info('Delegate cancelled', { id });
+    this._broadcast('status', { id, status: 'cancelled' });
     return true;
   }
 
@@ -217,6 +232,12 @@ export class DelegateBroker {
 
   // ─── Internal ────────────────────────────────────────────────────────
 
+  private _broadcast(event: string, payload: Record<string, unknown>): void {
+    if (this.relay) {
+      this.relay.broadcast(`delegate:${event}`, payload);
+    }
+  }
+
   private async _start(id: string): Promise<void> {
     const record = this.delegates.get(id);
     if (!record || record.status !== 'queued') return;
@@ -227,6 +248,8 @@ export class DelegateBroker {
     record.status = 'running';
     record.startedAt = new Date().toISOString();
     _log.info('Delegate started', { id });
+    this._broadcast('status', { id, status: 'running' });
+    this._saveJobState(id);
 
     // Timeout guard
     const timeoutId = setTimeout(() => {
@@ -236,6 +259,8 @@ export class DelegateBroker {
         record.error = `Timeout after ${record.timeout}ms`;
         record.completedAt = new Date().toISOString();
         _log.warn('Delegate timed out', { id });
+        this._broadcast('status', { id, status: 'failed', error: `Timeout after ${record.timeout}ms` });
+        this._saveJobState(id);
       }
     }, record.timeout);
 
@@ -249,6 +274,8 @@ export class DelegateBroker {
         record.result = result;
         record.completedAt = new Date().toISOString();
         _log.info('Delegate completed', { id });
+        this._broadcast('status', { id, status: 'completed' });
+        this._saveJobState(id);
       }
     } catch (err) {
       clearTimeout(timeoutId);
@@ -258,9 +285,59 @@ export class DelegateBroker {
         record.error = String(err);
         record.completedAt = new Date().toISOString();
         _log.error('Delegate failed', { id, error: String(err) });
+        this._broadcast('status', { id, status: 'failed', error: String(err) });
       }
     } finally {
       this.handles.delete(id);
+    }
+  }
+
+  // ─── Persistence ────────────────────────────────────────────────────
+
+  private _saveJobState(id: string): void {
+    if (!this.persistDir) return;
+    const record = this.delegates.get(id);
+    if (!record) return;
+
+    try {
+      writeFileSync(join(this.persistDir, `${id}.json`), JSON.stringify(record), 'utf-8');
+    } catch (err) {
+      _log.warn('Failed to persist job state', { id, error: String(err) });
+    }
+  }
+
+  private _hydrateFromStore(): void {
+    if (!this.persistDir || !existsSync(this.persistDir)) return;
+
+    try {
+      const files = readdirSync(this.persistDir).filter(f => f.endsWith('.json'));
+      for (const file of files) {
+        try {
+          const raw = readFileSync(join(this.persistDir, file), 'utf-8');
+          const record: DelegateRecord = JSON.parse(raw);
+          // Only recover terminal state jobs (completed/failed/cancelled)
+          if (record.status === 'completed' || record.status === 'failed' || record.status === 'cancelled') {
+            this.delegates.set(record.id, record);
+            // Parse nextId from delegate IDs: "del-{N}"
+            const num = parseInt(record.id.replace('del-', ''), 10);
+            if (num >= this.nextId) this.nextId = num + 1;
+          } else {
+            // Non-terminal jobs were interrupted — mark as failed
+            record.status = 'failed';
+            record.error = 'Process interrupted (recovered from persistence)';
+            record.completedAt = new Date().toISOString();
+            this.delegates.set(record.id, record);
+            const num = parseInt(record.id.replace('del-', ''), 10);
+            if (num >= this.nextId) this.nextId = num + 1;
+            this._saveJobState(record.id);
+          }
+        } catch {
+          // Skip corrupt files
+        }
+      }
+      _log.info('Hydrated delegates from store', { count: this.delegates.size });
+    } catch {
+      // Directory read failure — start fresh
     }
   }
 }

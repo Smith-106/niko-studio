@@ -7,6 +7,7 @@
 
 import { writeFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import type { IWebSocketRelayService } from '../../container/types';
 import {
   evaluatePhaseGate,
   MAX_FIX_ATTEMPTS,
@@ -26,10 +27,12 @@ export class PhaseOrchestrator {
   private _fixAttempts = 0;
   private _history: PhaseTransitionRecord[] = [];
   private _jsonlPath: string | null;
+  private readonly _relay: IWebSocketRelayService | null;
 
-  constructor(initialPhase: TeamPhase = TeamPhase.planning, jsonlDir?: string) {
+  constructor(initialPhase: TeamPhase = TeamPhase.planning, jsonlDir?: string, relay?: IWebSocketRelayService) {
     this._phase = initialPhase;
     this._jsonlPath = jsonlDir ? join(jsonlDir, 'phase-transitions.jsonl') : null;
+    this._relay = relay ?? null;
 
     if (this._jsonlPath) {
       const dir = join(this._jsonlPath, '..');

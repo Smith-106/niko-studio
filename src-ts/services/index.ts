@@ -19,12 +19,32 @@ export {
   RateLimitError,
   TokenLimitError,
   ProviderUnavailableError,
+  BudgetExceededError,
+  CircuitOpenError,
 } from './llm-service';
 export type {
   TokenUsage,
   RetryConfig,
   LLMServiceConfig,
 } from './llm-service';
+
+export {
+  CircuitState,
+  CircuitBreaker,
+  CircuitBreakerRegistry,
+} from './circuit-breaker';
+export type {
+  CircuitBreakerConfig,
+} from './circuit-breaker';
+
+export {
+  LLMFallbackChainImpl,
+  ProviderLatencyTracker,
+} from './llm-fallback-chain';
+export type {
+  ILLMFallbackChain,
+  FallbackChainConfig,
+} from './llm-fallback-chain';
 
 export {
   EmbeddingServiceImpl,
