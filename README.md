@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 9.27.0 (Platform Edition)
+> **Version**: 10.0.0 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -37,8 +37,22 @@ Deprecated release surface (removed)
 
 ## Current Release Snapshot
 
-- Current release tag: `v9.27.0`
-- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v9.27.0`
+### v10.0.0 (2026-05-28)
+
+- 新手引导系统：首次启动自动检测配置状态，引导用户完成 LLM 提供商设置和模板选择
+- 模板管理增强：支持模板收藏、最近使用记录、变量预设持久化
+- 跨章节 AI 上下文：写作助手自动携带前 N 章节摘要作为上下文，提升长篇连贯性
+- 编辑器状态持久化：自动保存编辑器滚动位置、光标位置和折叠状态
+- localStorage 防抖写入：减少频繁 JSON.stringify + 写盘，修复 removeItem/setItem 竞态条件
+- jsdom 测试环境兼容：debounce 定时器增加 localStorage 存在性守卫，消除测试 teardown 后的未捕获异常
+- E2E 写作流验证：完整的稿件创建→编辑→AI 辅助→导出链路测试覆盖
+- UI/UX 打磨：设置面板布局优化、模板选择交互改进、加载状态反馈增强
+- 依赖与版本同步：desktop/package.json、Cargo.toml、tauri.conf.json 版本号统一至 10.0.0
+
+---
+
+- Current release tag: `v10.0.0`
+- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v10.0.0`
 - Current local sign-off status: `GO` on current HEAD
 
 如果你只想下载当前正式发布版，直接进入 GitHub Releases 页面获取 Windows 安装包。
@@ -340,4 +354,4 @@ Built on concepts from:
 
 ---
 
-*Version 9.27.0 Platform Edition | Updated: 2026-05-26*
+*Version 10.0.0 Platform Edition | Updated: 2026-05-28*

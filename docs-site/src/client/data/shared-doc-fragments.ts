@@ -12,20 +12,30 @@ export const outputFieldGlossaryMiniSection = `
 
 export const releaseSnapshotMiniSection = `
 <h2>当前发布快照</h2>
-<p><strong>当前推荐版本：</strong><code>v9.27.0</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.27.0">Niko-Studio v9.27.0</a>。</p>
+<p><strong>当前推荐版本：</strong><code>v10.0.0</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v10.0.0">Niko-Studio v10.0.0</a>。</p>
 <table>
-  <thead><tr><th>资产</th><th>用途</th><th>说明</th></tr></thead>
+  <thead><tr><th>版本</th><th>日期</th><th>核心更新</th></tr></thead>
   <tbody>
-    <tr><td><code>Niko-Studio_9.26.2_x64-setup.exe</code></td><td>标准安装入口</td><td>推荐大多数 Windows 用户使用；已完成 packaged smoke 与 package E2E 验证。</td></tr>
-    <tr><td><code>Niko-Studio_9.26.2_x64_en-US.msi</code></td><td>MSI 安装包（en-US）</td><td>适合企业环境或偏好 MSI 部署的场景。</td></tr>
-    <tr><td><code>Niko-Studio_9.26.2_x64_zh-CN.msi</code></td><td>MSI 安装包（zh-CN）</td><td>适合中文环境下的 MSI 部署。</td></tr>
+    <tr><td><code>v10.0.0</code></td><td>2026-05-28</td><td>新手引导系统、模板管理增强、跨章节 AI 上下文、编辑器状态持久化、localStorage 防抖写入</td></tr>
+    <tr><td><code>v9.27.0</code></td><td>2026-05-26</td><td>知识图谱 + AI 辅助写作 + 工作流引擎</td></tr>
   </tbody>
 </table>
+<h2>v10.0.0 变更日志</h2>
+<ul>
+  <li><strong>新手引导系统</strong> — 首次启动自动检测配置状态，引导用户完成 LLM 提供商设置和模板选择</li>
+  <li><strong>模板管理增强</strong> — 支持模板收藏、最近使用记录、变量预设持久化</li>
+  <li><strong>跨章节 AI 上下文</strong> — 写作助手自动携带前 N 章节摘要作为上下文，提升长篇连贯性</li>
+  <li><strong>编辑器状态持久化</strong> — 自动保存编辑器滚动位置、光标位置和折叠状态</li>
+  <li><strong>localStorage 防抖写入</strong> — 减少频繁 JSON.stringify + 写盘，修复 removeItem/setItem 竞态条件</li>
+  <li><strong>jsdom 测试兼容</strong> — debounce 定时器增加 localStorage 存在性守卫</li>
+  <li><strong>E2E 写作流验证</strong> — 完整的稿件创建→编辑→AI 辅助→导出链路测试覆盖</li>
+  <li><strong>UI/UX 打磨</strong> — 设置面板布局优化、模板选择交互改进、加载状态反馈增强</li>
+  <li><strong>版本同步</strong> — desktop/package.json、Cargo.toml、tauri.conf.json 版本号统一至 10.0.0</li>
+</ul>
 <h2>当前交付状态</h2>
 <ul>
   <li>Current-head local sign-off：<strong>GO</strong></li>
-  <li>GitHub release tag：<code>v9.26.2</code></li>
-  <li>Current release commit：<code>7578745</code></li>
+  <li>GitHub release tag：<code>v10.0.0</code></li>
 </ul>
 `;
 
