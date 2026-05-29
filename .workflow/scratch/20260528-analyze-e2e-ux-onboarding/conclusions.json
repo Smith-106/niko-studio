@@ -1,0 +1,100 @@
+{
+  "session_id": "maestro-20260528-114322",
+  "analyzed_at": "2026-05-28T11:43:22.000Z",
+  "analyzer": "maestro-analyze",
+  "scope": "macro",
+  "scope_verdict": "medium",
+  "intent": "端到端写作流程验证+UI/UX打磨+入门引导",
+  "summary": {
+    "total_gaps": 10,
+    "critical": 3,
+    "high": 4,
+    "medium": 3
+  },
+  "gaps": [
+    {
+      "id": "E2E-01",
+      "title": "章节切换丢失编辑器状态",
+      "category": "end-to-end",
+      "severity": "critical",
+      "evidence": "ProjectSidebar.tsx 切换章节时 editor key 变更导致 Tiptap 完全重建，光标位置/undo history/scroll position 丢失",
+      "fix": "持久化编辑器状态（selection + history + scroll），切换时恢复而非重建"
+    },
+    {
+      "id": "E2E-02",
+      "title": "AI 续写缺少跨章节上下文",
+      "category": "end-to-end",
+      "severity": "critical",
+      "evidence": "useEditorAI.ts 构建续写 prompt 只取当前文档 ~3000 字，不含前文章节摘要、角色设定、情节线索",
+      "fix": "组装 rich context：前章摘要 + 角色卡 + 伏笔状态 + 世界观要素，发给 LLM"
+    },
+    {
+      "id": "E2E-03",
+      "title": "LLM API Key 无配置引导",
+      "category": "onboarding",
+      "severity": "critical",
+      "evidence": "AI 功能依赖 API key 配置，但首次启动无任何引导提示用户去 Settings 填写 key，导致 AI 功能静默失败",
+      "fix": "首次使用 AI 功能时检测 key 是否配置，未配置则弹引导面板"
+    },
+    {
+      "id": "UX-01",
+      "title": "缺少 Ctrl+S 手动保存快捷键",
+      "category": "ui-ux",
+      "severity": "high",
+      "evidence": "NikoEditor.tsx 无 save 快捷键绑定，用户无法主动触发保存",
+      "fix": "添加 Ctrl+S 快捷键调用保存逻辑"
+    },
+    {
+      "id": "UX-02",
+      "title": "无未保存变更警告",
+      "category": "ui-ux",
+      "severity": "high",
+      "evidence": "切换章节时无 dirty check，未保存内容可能丢失",
+      "fix": "切换前检测 dirty 状态，提示保存"
+    },
+    {
+      "id": "UX-03",
+      "title": "无快捷键面板/Cheatsheet",
+      "category": "ui-ux",
+      "severity": "medium",
+      "evidence": "编辑器有 slash commands 但无快捷键帮助面板，用户不知道可用快捷键",
+      "fix": "添加 Ctrl+/ 快捷键面板，展示所有可用快捷键和 slash commands"
+    },
+    {
+      "id": "UX-04",
+      "title": "TemplateManagerPanel 是 stub",
+      "category": "ui-ux",
+      "severity": "high",
+      "evidence": "desktop/src/components/TemplateManagerPanel.tsx 基本为空壳 UI，未连接后端模板服务",
+      "fix": "连接后端 PlotTemplateService + ChapterTemplateService，实现模板选择和应用"
+    },
+    {
+      "id": "OB-01",
+      "title": "无首次启动欢迎/引导流程",
+      "category": "onboarding",
+      "severity": "high",
+      "evidence": "App.tsx 无 first-run 检测，新用户直接看到空项目列表，不知道如何开始",
+      "fix": "新建 WelcomeWizard 组件，首次启动时引导创建第一个项目 + 配置 API key"
+    },
+    {
+      "id": "OB-02",
+      "title": "无预置小说模板项目",
+      "category": "onboarding",
+      "severity": "medium",
+      "evidence": "后端有 PlotTemplateService（20种经典情节模式）+ ChapterTemplateService（7种网文类型）+ CharacterArchetypeRegistry（12种角色原型），但前端无法让新用户一键创建含角色/情节/设定的示例项目",
+      "fix": "提供 '从模板创建' 选项，预填充角色、情节骨架、章节大纲"
+    },
+    {
+      "id": "OB-03",
+      "title": "空项目状态无引导",
+      "category": "onboarding",
+      "severity": "medium",
+      "evidence": "新建项目后编辑器为空，无提示告诉用户下一步该做什么（添加角色？写大纲？直接开始写？）",
+      "fix": "空编辑器状态显示引导卡片：'试试 AI 续写' / '先创建角色' / '从模板开始'"
+    }
+  ],
+  "recommendations": {
+    "phasing": "3 phases: (1) Critical E2E fixes, (2) UX polish, (3) Onboarding",
+    "estimated_effort": "medium — 10 gaps, most are UI-level changes with existing backend support"
+  }
+}

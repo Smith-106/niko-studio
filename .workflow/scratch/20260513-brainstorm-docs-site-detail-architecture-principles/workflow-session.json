@@ -1,0 +1,20 @@
+{
+  "id": "brainstorm-docs-site-detail-architecture-principles-20260513",
+  "type": "brainstorm",
+  "mode": "auto",
+  "status": "completed",
+  "topic": "文档站内容更详细，补充架构、原理，参考 Maestro Flow role-routing 风格",
+  "created_at": "2026-05-13T00:00:00+08:00",
+  "completed_at": "2026-05-13T00:00:00+08:00",
+  "selected_roles": ["product-manager", "system-architect", "ux-expert"],
+  "features": ["F-001", "F-002", "F-003", "F-004", "F-005"],
+  "complexity_score": 5,
+  "review_status": "self-checked",
+  "outputs": {
+    "guidance": "guidance-specification.md",
+    "design_research": "design-research.md",
+    "feature_index": "feature-index.json",
+    "synthesis_changelog": "synthesis-changelog.md",
+    "feature_specs": "feature-specs/"
+  }
+}

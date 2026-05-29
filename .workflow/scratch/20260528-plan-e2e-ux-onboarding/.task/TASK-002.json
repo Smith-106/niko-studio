@@ -1,0 +1,23 @@
+{
+  "id": "TASK-002",
+  "title": "AI 续写添加跨章节上下文",
+  "description": "当前 AI 续写/改写只发送当前文档 ~3000 字，缺少前章摘要、角色设定、情节线索等关键上下文。需要新建 useStoryContext hook 并在 useEditorAI 中使用。",
+  "category": "enhancement",
+  "priority": 1,
+  "wave": 1,
+  "complexity": "medium",
+  "estimated_time": "45min",
+  "files": [
+    {"path": "desktop/src/hooks/useStoryContext.ts", "action": "create", "reason": "新 hook：从 zustand/API 读取当前项目角色卡、伏笔状态、世界观要素、前章摘要，组装为结构化 context"},
+    {"path": "desktop/src/hooks/useEditorAI.ts", "action": "modify", "reason": "在 generateAtCursor/continueWriting 中注入 storyContext 到 contextBefore 字段"},
+    {"path": "desktop/src/api/writing.ts", "action": "modify", "reason": "添加 storyContext 字段到 streamWritingHelper 请求 payload"}
+  ],
+  "acceptance_criteria": [
+    "AI 续写请求包含角色、伏笔、世界观、前章摘要",
+    "不破坏现有 AI 功能（无 storyContext 时回退到纯文档上下文）",
+    "storyContext 按需加载，不阻塞编辑器"
+  ],
+  "implementation_notes": "useStoryContext(projectId) 内部：1) 从 projectSlice 获取所有章节 ID 列表；2) 并行请求 characterManager.getCharacters()、foreshadowing.getActive()、worldview.getElements()；3) 对前章（非当前章）取前 200 字摘要。返回格式：{ characters: string, foreshadowing: string, worldview: string, prevChapterSummary: string }。useEditorAI 中将 storyContext 拼接到 contextBefore 之前，用 --- 分隔。后端 writing-helper.ts 已支持 contextBefore 字段，无需修改。",
+  "dependencies": [],
+  "goal_ref": "G1"
+}

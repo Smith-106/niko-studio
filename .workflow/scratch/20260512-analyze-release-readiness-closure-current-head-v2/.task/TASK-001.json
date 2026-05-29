@@ -1,0 +1,50 @@
+{
+  "id": "TASK-001",
+  "title": "统一 release version authority 并锁定回归校验",
+  "status": "completed",
+  "target_module": "scripts/check_versions.py",
+  "read_first": [
+    "scripts/check_versions.py",
+    "src-ts/config/index.ts",
+    "src-ts/package.json",
+    "config/niko-studio.yaml",
+    "config/niko-studio.production.yaml",
+    "desktop/package.json",
+    "desktop/src-tauri/tauri.conf.json",
+    "desktop/src-tauri/Cargo.toml",
+    "tests/unit/scripts/test_ci_checks.py",
+    "release-check-summary.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "python scripts/check_versions.py → 版本一致性检查通过",
+      "grep '9\\.13\\.0\\|9\\.2\\.5' src-ts/config/index.ts desktop/package.json desktop/src-tauri/tauri.conf.json desktop/src-tauri/Cargo.toml config/niko-studio.yaml config/niko-studio.production.yaml src-ts/package.json → 仅剩一个统一版本值",
+      "python -m pytest tests/unit/scripts/test_ci_checks.py -q → 相关回归测试通过"
+    ]
+  },
+  "action": {
+    "detailed_plan": "选定单一 release authority，并把所有版本源、check_versions 契约与回归测试一起收束到同一个 truth。不得只改某一个 package manifest 而保留 split authority。"
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "action": "确定本仓 current-head 的 authoritative version，并同步 src-ts/config/index.ts、src-ts/package.json、config/niko-studio.yaml、config/niko-studio.production.yaml、desktop/package.json、desktop/src-tauri/tauri.conf.json、desktop/src-tauri/Cargo.toml。",
+      "file": "src-ts/config/index.ts"
+    },
+    {
+      "step": 2,
+      "action": "如有必要，更新 scripts/check_versions.py 或其注释，使 authority 语义与 chosen version truth 一致，但不要引入第二套判断逻辑。",
+      "file": "scripts/check_versions.py"
+    },
+    {
+      "step": 3,
+      "action": "补强 tests/unit/scripts/test_ci_checks.py，覆盖 chosen authority 路径，防止 future split version regression。",
+      "file": "tests/unit/scripts/test_ci_checks.py"
+    }
+  ],
+  "priority": "critical",
+  "estimated_minutes": 45,
+  "_metadata": {
+    "wave": 1
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "session_id": "maestro-20260512-accuracy-docs-lint",
+  "created_at": "2026-05-12T00:00:00+08:00",
+  "intent": "做 内容准确性 + docs lint",
+  "task_type": "quick",
+  "chain_name": "docs-accuracy-lint",
+  "phase": null,
+  "auto_mode": true,
+  "exec_mode": "auto",
+  "cli_tool": "claude",
+  "context": {
+    "issue_id": null,
+    "milestone_num": null,
+    "spec_session_id": null,
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null
+  },
+  "source": "maestro",
+  "updated_at": "2026-05-12T00:00:00+08:00",
+  "milestone": null,
+  "lifecycle_position": null,
+  "target": "docs-site content accuracy and docs lint",
+  "waves": [],
+  "steps": [
+    {
+      "index": 0,
+      "skill": "maestro-quick",
+      "args": "\"做 内容准确性 + docs lint\"",
+      "type": "skill",
+      "status": "completed",
+      "started_at": "2026-05-12T00:00:00+08:00",
+      "completed_at": "2026-05-12T00:00:00+08:00",
+      "error": null
+    }
+  ],
+  "current_step": 0,
+  "status": "completed"
+}

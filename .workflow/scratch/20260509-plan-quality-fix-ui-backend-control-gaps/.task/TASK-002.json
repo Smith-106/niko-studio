@@ -1,0 +1,43 @@
+{
+  "id": "TASK-002",
+  "title": "锁定 desktop writing-craft bridge contract",
+  "status": "pending",
+  "target_module": "desktop/src/api/writing-craft.test.ts",
+  "read_first": [
+    "desktop/src/api/writing-craft.ts",
+    "desktop/src/api/core.test.ts",
+    "desktop/src/api/contracts.test.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep '/writing-craft/analyze' desktop/src/api/writing-craft.test.ts → analyze endpoint contract 有测试覆盖",
+      "grep '/writing-craft/llm-analyze' desktop/src/api/writing-craft.test.ts → llm endpoint contract 有测试覆盖",
+      "npx vitest run desktop/src/api/writing-craft.test.ts → bridge contract 测试通过"
+    ]
+  },
+  "action": {
+    "detailed_plan": "新增专门的 desktop bridge test，mock callApi 或 transport 边界，验证 analyzeWritingCraft 与 analyzeWritingCraftLLM 的 request shape、endpoint path 以及 response passthrough。不要依赖真实后端。"
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "action": "新增 desktop/src/api/writing-craft.test.ts，复用现有 api 测试的 vitest mock 风格。",
+      "file": "desktop/src/api/writing-craft.test.ts"
+    },
+    {
+      "step": 2,
+      "action": "覆盖 analyzeWritingCraft 的 text + dimensions payload，以及 analyzeWritingCraftLLM 的 llmConfig spread 行为。",
+      "file": "desktop/src/api/writing-craft.test.ts"
+    },
+    {
+      "step": 3,
+      "action": "断言成功响应与失败响应都按 ApiResponse 原样向上游透传，避免 bridge contract 回归。",
+      "file": "desktop/src/api/writing-craft.test.ts"
+    }
+  ],
+  "priority": "high",
+  "estimated_minutes": 25,
+  "_metadata": {
+    "wave": 1
+  }
+}

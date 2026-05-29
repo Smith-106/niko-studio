@@ -1,0 +1,4 @@
+id,skill,args,wave_n,status,findings,artifacts,error
+"1","maestro-analyze","\"Close current-head release-readiness blockers: unify version consistency, reconcile desktop capability contract, rerun desktop gates, refresh current-head release evidence, resolve unresolved triage blocker semantics, and align readiness docs.\" -y",1,"completed","NO_GO blockers concentrated in version split, desktop capability/sidecar gate failure, stale retained evidence, and triage blocker semantics.",".workflow/scratch/20260512-analyze-release-readiness-closure-current-head-v2",""
+"2","maestro-plan","--dir .workflow/scratch/20260512-analyze-release-readiness-closure-current-head-v2 -y",2,"completed","Generated 4-task release-readiness closure plan in 3 waves.",".workflow/scratch/20260512-analyze-release-readiness-closure-current-head-v2/plan.json",""
+"3","maestro-execute","--dir .workflow/scratch/20260512-analyze-release-readiness-closure-current-head-v2 -y",,"pending",,,

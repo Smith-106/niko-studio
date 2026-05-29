@@ -1,0 +1,100 @@
+{
+  "id": "TASK-005",
+  "title": "F-005: craft-catalog 外置为 JSON + 热加载 loader",
+  "description": "将 1584 行的 craft-catalog.ts 中的数据（enum 值描述、评估标准等）外置为 JSON 文件，TypeScript 仅保留类型定义和 loader。",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "refactor",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "1) 提取 craft-catalog.ts 中的纯数据（enum 描述映射、评估标准数组、技巧定义对象）为 src-ts/narrative/writing-craft/catalog-data/*.json。2) 保留所有 enum 定义和 TypeScript 类型在 craft-catalog.ts 中。3) 创建 src-ts/narrative/writing-craft/catalog-loader.ts 负责加载 JSON 并提供类型安全的访问接口。4) craft-catalog.ts 的所有现有 export 保持不变（re-export from loader）。5) 支持热加载：loader 提供 reloadCatalog() 方法。",
+  "status": "completed",
+  "completed_at": "2026-05-17T14:52:10+08:00",
+  "actual_duration": null,
+
+  "scope": "src-ts/narrative/writing-craft",
+  "focus_paths": [
+    "src-ts/narrative/writing-craft/craft-catalog.ts",
+    "src-ts/narrative/writing-craft/catalog-data/",
+    "src-ts/narrative/writing-craft/catalog-loader.ts"
+  ],
+
+  "read_first": [
+    "src-ts/narrative/writing-craft/craft-catalog.ts",
+    "src-ts/tests/narrative/craft-catalog-m15.test.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": "wave-2",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-ts/narrative/writing-craft/catalog-data/ directory exists with >= 3 .json files",
+      "src-ts/narrative/writing-craft/catalog-loader.ts exists and exports reloadCatalog function",
+      "src-ts/narrative/writing-craft/craft-catalog.ts is <= 400 lines (enums + types + re-exports only)",
+      "grep 'export enum' src-ts/narrative/writing-craft/craft-catalog.ts returns >= 5 matches (enums preserved)",
+      "npx vitest run src-ts/tests/narrative/craft-catalog-m15.test.ts exits 0",
+      "npx tsc --noEmit exits 0"
+    ],
+    "verification": "npx tsc --noEmit && npx vitest run src-ts/tests/narrative/craft-catalog-m15.test.ts",
+    "definition_of_done": "craft-catalog 数据外置为 JSON，支持热加载，现有引用透明迁移"
+  },
+
+  "files": [
+    { "path": "src-ts/narrative/writing-craft/craft-catalog.ts", "action": "modify", "target": "entire file", "change": "保留 enum + type 定义，数据部分移除，添加 re-export from loader" },
+    { "path": "src-ts/narrative/writing-craft/catalog-loader.ts", "action": "create", "target": "loader module", "change": "JSON 加载 + 类型校验 + reloadCatalog() 热加载" },
+    { "path": "src-ts/narrative/writing-craft/catalog-data/satisfaction-patterns.json", "action": "create", "target": "data", "change": "SatisfactionPattern 相关数据" },
+    { "path": "src-ts/narrative/writing-craft/catalog-data/narrative-techniques.json", "action": "create", "target": "data", "change": "叙事技巧数据" },
+    { "path": "src-ts/narrative/writing-craft/catalog-data/evaluation-criteria.json", "action": "create", "target": "data", "change": "评估标准数据" }
+  ],
+
+  "implementation": [
+    "读取 craft-catalog.ts 完整内容，区分 enum 定义（保留）和数据对象/数组（外置）",
+    "创建 catalog-data/ 目录，按主题分组导出 JSON 文件",
+    "创建 catalog-loader.ts：import fs/path，readFileSync 加载 JSON，提供 getCatalogData() + reloadCatalog()",
+    "修改 craft-catalog.ts：保留 enum + interface/type，数据访问改为调用 loader",
+    "确保所有现有 export（enum 值、函数、类型）签名不变",
+    "运行现有测试 craft-catalog-m15.test.ts 确认无回归"
+  ],
+
+  "test": {
+    "commands": ["npx tsc --noEmit", "npx vitest run src-ts/tests/narrative/craft-catalog-m15.test.ts"],
+    "unit": ["loader 正确加载 JSON", "reloadCatalog 刷新缓存"],
+    "integration": ["现有 craft-catalog 测试全部通过"],
+    "success_metrics": ["craft-catalog.ts <= 400 lines", "all exports preserved", "tests pass"]
+  },
+
+  "reference": {
+    "pattern": "JSON 数据 + TypeScript loader 模式",
+    "files": ["src-ts/narrative/writing-craft/craft-catalog.ts", "src-ts/tests/narrative/craft-catalog-m15.test.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "JSON 外置 + 同步 loader，保持简单可预测",
+    "decision_factors": ["热加载需求", "类型安全", "向后兼容"],
+    "tradeoffs": "同步加载（readFileSync）简单但阻塞——catalog 数据量小可接受"
+  },
+
+  "risks": ["JSON schema 需与 TypeScript 类型保持一致", "热加载在测试环境需特殊处理"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["writing-craft", "craft-catalog"],
+    "affected_components": ["src-ts/narrative/writing-craft"],
+    "affected_requirements": ["F-005"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "50min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

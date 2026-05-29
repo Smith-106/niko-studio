@@ -1,0 +1,41 @@
+{
+  "session_id": "brainstorm-docs-site-detail-architecture-principles-20260513",
+  "topic": "文档站内容更详细，补充架构、原理，参考 Maestro Flow role-routing 风格",
+  "features": [
+    {
+      "id": "F-001",
+      "slug": "capability-routing-guide",
+      "priority": "P0",
+      "path": "feature-specs/F-001-capability-routing-guide.md",
+      "summary": "Role-routing-inspired capability routing guide for Niko Studio docs."
+    },
+    {
+      "id": "F-002",
+      "slug": "architecture-principles-deep-dive",
+      "priority": "P0",
+      "path": "feature-specs/F-002-architecture-principles-deep-dive.md",
+      "summary": "Runtime layers, boundaries, data flow, and authority deep dives."
+    },
+    {
+      "id": "F-003",
+      "slug": "docs-learning-paths",
+      "priority": "P1",
+      "path": "feature-specs/F-003-docs-learning-paths.md",
+      "summary": "Role-based learning paths for writers, developers, integrators, and maintainers."
+    },
+    {
+      "id": "F-004",
+      "slug": "capability-status-matrix",
+      "priority": "P1",
+      "path": "feature-specs/F-004-capability-status-matrix.md",
+      "summary": "Status matrix for supported, partial, experimental, historical, and roadmap capabilities."
+    },
+    {
+      "id": "F-005",
+      "slug": "diagram-and-example-system",
+      "priority": "P1",
+      "path": "feature-specs/F-005-diagram-and-example-system.md",
+      "summary": "Reusable diagram, example, and troubleshooting content patterns."
+    }
+  ]
+}

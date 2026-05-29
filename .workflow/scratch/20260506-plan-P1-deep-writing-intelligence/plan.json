@@ -1,0 +1,75 @@
+{
+  "summary": "M10 Phase 1: Deep Writing Intelligence — autonomous multi-pass revision, style learning, cross-chapter consistency, and context-aware suggestions built on M9's agent/workflow infrastructure.",
+  "approach": "Three parallel backend services (Wave 1) + unified frontend integration (Wave 2) + test coverage (Wave 3). Backend services are decoupled from UI state and communicate via MCP endpoints. Frontend connects through existing API client patterns. Each backend module includes its own MCP endpoint registration.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"],
+  "task_count": 5,
+  "complexity": "high",
+  "estimated_time": "4-6 hours",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"],
+      "label": "Backend Services"
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-004"],
+      "label": "Frontend Integration"
+    },
+    {
+      "wave": 3,
+      "tasks": ["TASK-005"],
+      "label": "Test Coverage"
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "RevisionOrchestrator <-> MCP / StyleProfile <-> MCP / ConsistencyContext <-> MCP -> Frontend API Client -> EvaluationPanel + AnalysisPanel + ChatArea",
+    "stages": [
+      "Agent generates/revises text via existing /agent/write and /agent/revise",
+      "RevisionOrchestrator orchestrates evaluate->revise->verify loop",
+      "StyleProfile extracts patterns and injects into agent prompts",
+      "ConsistencyContext assembles cross-chapter knowledge for checking",
+      "Frontend panels consume new MCP endpoints via api/client.ts"
+    ]
+  },
+
+  "design_decisions": [
+    "RevisionOrchestrator is a standalone service, not a React hook — autonomous agent must work without UI",
+    "Style profiles stored per-project in projects/{id}/style-profiles/ alongside existing analysis cache",
+    "Consistency engine reuses existing runConsistencyCheck MCP endpoint, adds cross-chapter aggregation",
+    "All new MCP endpoints follow existing /agent/* and /analysis/* patterns",
+    "Frontend uses existing callApi() pattern from desktop/src/api/core.ts"
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "callApi(endpoint, method, body) from desktop/src/api/core.ts for all HTTP calls",
+      "MCP endpoint registration in src-ts/mcp/endpoints/*.ts",
+      "Service pattern: desktop/src/services/*.ts for business logic, hooks for UI binding",
+      "Analysis caching via content hashes in intelligenceService.ts"
+    ],
+    "conventions": [
+      "TypeScript strict mode, no any types",
+      "Existing i18n pattern: useI18n() hook with t.* keys",
+      "Test files colocated: *.test.ts alongside source"
+    ],
+    "dependencies": [
+      "src-ts/mcp/ — MCP endpoint framework",
+      "desktop/src/api/client.ts — existing API client with processWritingHelper, runConsistencyCheck",
+      "desktop/src/services/workflowService.ts — workflow execution model",
+      "desktop/src/hooks/useEvaluationData.ts — evaluation hook"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-06T13:27:00+08:00",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": "29f3e58"
+  }
+}

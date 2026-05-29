@@ -1,0 +1,23 @@
+{
+  "id": "TASK-005",
+  "title": "章节切换前未保存变更警告",
+  "description": "切换章节时无 dirty check，用户未保存的内容可能丢失。需要在 selectChapter 之前检测 dirty 状态并提示。",
+  "category": "enhancement",
+  "priority": 2,
+  "wave": 2,
+  "complexity": "low",
+  "estimated_time": "15min",
+  "files": [
+    {"path": "desktop/src/components/DocumentEditor.tsx", "action": "modify", "reason": "在章节切换前检测 saveStatus === 'saving' || editorTextRef !== persistedContent，弹出确认对话框"},
+    {"path": "desktop/src/components/ProjectSidebar.tsx", "action": "modify", "reason": "章节点击事件改为先检查 dirty 状态再调用 selectChapter"}
+  ],
+  "acceptance_criteria": [
+    "有未保存内容时切换章节弹出确认弹窗",
+    "确认后先保存再切换",
+    "取消后停留在当前章节",
+    "已保存时直接切换无弹窗"
+  ],
+  "implementation_notes": "在 DocumentEditor 中暴露 isDirty 状态（saveStatus !== 'saved' 或 editorTextRef !== lastSavedContentRef）。ProjectSidebar 的 handleChapterClick 改为：if (isDirty) → 确认弹窗（保存并切换/不保存切换/取消），else → selectChapter(id)。使用 zustand 的 projectSlice 添加 isDirty getter。",
+  "dependencies": ["TASK-001"],
+  "goal_ref": "G2"
+}

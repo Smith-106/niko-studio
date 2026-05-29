@@ -1,0 +1,22 @@
+{
+  "id": "TASK-004",
+  "title": "添加 Ctrl+S 手动保存快捷键",
+  "description": "编辑器无 Ctrl+S 快捷键，用户无法主动触发保存。需要在 NikoEditor 或 DocumentEditor 中添加 Ctrl+S/Cmd+S 键绑定。",
+  "category": "enhancement",
+  "priority": 2,
+  "wave": 2,
+  "complexity": "low",
+  "estimated_time": "15min",
+  "files": [
+    {"path": "desktop/src/components/NikoEditor.tsx", "action": "modify", "reason": "在 Tiptap editor 的 addKeymap 扩展中绑定 Ctrl+S/Cmd+S 到 save handler"},
+    {"path": "desktop/src/components/DocumentEditor.tsx", "action": "modify", "reason": "暴露 saveChapter 函数给 NikoEditor，供快捷键调用"}
+  ],
+  "acceptance_criteria": [
+    "Ctrl+S (Windows) / Cmd+S (Mac) 触发保存",
+    "保存后显示 save status bar 更新",
+    "浏览器默认 Ctrl+S 行为（保存网页）被阻止"
+  ],
+  "implementation_notes": "在 NikoEditor.tsx 中创建 TipTap Keymap 扩展：addKeymap({ 'Mod-s': () => { onSave?.(); return true; } })。onSave prop 由 DocumentEditor 传入，调用 writeChapterContent + autoSaveSnapshot。return true 阻止浏览器默认保存行为。",
+  "dependencies": [],
+  "goal_ref": "G2"
+}

@@ -1,0 +1,95 @@
+{
+  "id": "PLN-20260515-novel-quality-reader-experience",
+  "type": "plan",
+  "milestone": null,
+  "phase": null,
+  "scope": "standalone",
+  "status": "completed",
+  "created_at": "2026-05-15T03:10:00+08:00",
+  "completed_at": "2026-05-15T03:10:00+08:00",
+  "description": "Plan: novel quality & reader experience enhancement — 8 tasks in 3 waves from brainstorm",
+  "brainstorm_context": {
+    "P0": ["B. Hook & Cliffhanger Scorer", "C. Character Voice Fingerprint"],
+    "P1": ["E. Emotional Arc Timeline", "D. Show vs Tell Balancer"],
+    "P2": ["A. Reader Immersion Engine", "F. Pacing Navigator"]
+  },
+  "tasks": [
+    {
+      "id": "T1",
+      "wave": 1,
+      "title": "Extend WritingCraftDimension with hook & cliffhanger types",
+      "description": "Add 'hook' and 'cliffhanger' to WritingCraftDimension enum. Create prompt templates for chapter opening (first 200 chars) and ending (last 200 chars) scoring. Hook dimensions: conflict_hint, info_gap, sensory_impact, pacing_entry. Cliffhanger dimensions: unresolved_questions, emotional_peak, twist_impact, anticipation.",
+      "files": ["api/writing-craft.ts", "types/writing-craft.ts"],
+      "priority": "P0",
+      "direction": "B"
+    },
+    {
+      "id": "T2",
+      "wave": 1,
+      "title": "Implement hook & cliffhanger scoring service",
+      "description": "Create scoring logic that extracts chapter boundaries, runs LLM analysis per dimension, returns scores 0-100. Integrate with existing WritingCraftResult structure. Add caching via intelligenceService.",
+      "files": ["services/hookCliffhangerScorer.ts"],
+      "priority": "P0",
+      "direction": "B"
+    },
+    {
+      "id": "T3",
+      "wave": 1,
+      "title": "Add character voice fingerprint extraction",
+      "description": "Extend consistencyEngine to extract all dialogue per character, build voice fingerprint (sentence_length_preference, catchphrases, formality_level, emotional_expression_tendency, rhetorical_habits). Store in StoryBible character entries.",
+      "files": ["services/consistencyEngine.ts", "services/characterVoiceFingerprint.ts"],
+      "priority": "P0",
+      "direction": "C"
+    },
+    {
+      "id": "T4",
+      "wave": 2,
+      "title": "Add voice consistency check to dialogue analysis",
+      "description": "Implement real-time dialogue consistency check against stored voice fingerprints. Flag when dialogue deviates from character's established speech patterns. Show warnings in editor via TipTap extension.",
+      "files": ["services/characterVoiceFingerprint.ts", "components/editor/VoiceConsistencyExtension.ts"],
+      "priority": "P0",
+      "direction": "C"
+    },
+    {
+      "id": "T5",
+      "wave": 2,
+      "title": "Build emotional arc timeline component",
+      "description": "Create EmotionalArcChart component for WritingDashboard. Aggregate emotion dimension scores across chapters, render as interactive timeline. Highlight emotional peaks/valleys, detect 'tension deserts' (N+ chapters without emotional movement). Compare against classic narrative curves.",
+      "files": ["components/analysis/EmotionalArcChart.tsx"],
+      "priority": "P1",
+      "direction": "E"
+    },
+    {
+      "id": "T6",
+      "wave": 2,
+      "title": "Implement Show vs Tell analysis",
+      "description": "Extend styleProfile with showTellRatio and sensoryCoverage metrics. Analyze sensory description density (5 senses), abstract vs concrete statement ratio, emotional expression method (direct statement vs behavioral demonstration). Generate paragraph-level heat map data.",
+      "files": ["services/styleProfile.ts", "services/showTellAnalyzer.ts"],
+      "priority": "P1",
+      "direction": "D"
+    },
+    {
+      "id": "T7",
+      "wave": 3,
+      "title": "Add reader immersion engine foundation",
+      "description": "Create reader_state model with curiosity, emotional_investment, cognitive_load, suspense_tension, immersion metrics. Build cross-chapter tracking infrastructure. Generate 'reader dropout risk' scores per chapter.",
+      "files": ["services/readerImmersionEngine.ts"],
+      "priority": "P2",
+      "direction": "A"
+    },
+    {
+      "id": "T8",
+      "wave": 3,
+      "title": "Add pacing navigator with prescription capability",
+      "description": "Extend intelligence pacing module with forward-looking analysis. Generate 'pacing prescriptions' — recommend where to add climax/turning_point/breathing_room. Integrate with ForeshadowingTracker to recommend harvest timing.",
+      "files": ["services/pacingNavigator.ts"],
+      "priority": "P2",
+      "direction": "F"
+    }
+  ],
+  "waves": [
+    { "wave": 1, "tasks": ["T1", "T2", "T3"], "description": "P0 core: hook/cliffhanger scoring + voice fingerprint extraction" },
+    { "wave": 2, "tasks": ["T4", "T5", "T6"], "description": "P0 completion + P1: voice consistency UI + emotional arc + show/tell" },
+    { "wave": 3, "tasks": ["T7", "T8"], "description": "P2 advanced: reader immersion + pacing navigator" }
+  ]
+}

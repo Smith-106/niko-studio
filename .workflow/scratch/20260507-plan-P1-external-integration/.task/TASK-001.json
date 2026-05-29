@@ -1,0 +1,125 @@
+{
+  "id": "TASK-001",
+  "title": "Agent Lifecycle Plugin System",
+  "description": "Add lifecycle hook middleware to BaseAgent enabling perception→planning→execution→reflection pipeline. Inspired by OpenStory's plugin architecture. Existing agents work unchanged — lifecycle participation is opt-in via addHook().",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create src-ts/agents/lifecycle-hooks.ts with AgentLifecycleHook type and LifecycleStage enum (perception, planning, execution, reflection). Add addHook(stage, handler) and runLifecycle(context) methods to BaseAgent in src-ts/agents/base.ts. Hook handlers receive AgentContext and return modified AgentContext. Update factory.ts to accept lifecycle config during agent creation. Export from agents/index.ts.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "src-ts/agents/",
+  "focus_paths": ["src-ts/agents/base.ts", "src-ts/agents/lifecycle-hooks.ts", "src-ts/agents/factory.ts", "src-ts/agents/index.ts"],
+
+  "read_first": [
+    "src-ts/agents/base.ts",
+    "src-ts/agents/factory.ts",
+    "src-ts/agents/index.ts",
+    "src-ts/agents/sequential-thinking.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "foundation",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-ts/agents/lifecycle-hooks.ts contains 'export enum LifecycleStage'",
+      "src-ts/agents/lifecycle-hooks.ts contains 'PERCEPTION = 'perception''",
+      "src-ts/agents/lifecycle-hooks.ts contains 'PLANNING = 'planning''",
+      "src-ts/agents/lifecycle-hooks.ts contains 'EXECUTION = 'execution''",
+      "src-ts/agents/lifecycle-hooks.ts contains 'REFLECTION = 'reflection''",
+      "src-ts/agents/lifecycle-hooks.ts contains 'export type AgentLifecycleHook'",
+      "src-ts/agents/base.ts contains 'addHook('",
+      "src-ts/agents/base.ts contains 'runLifecycle('",
+      "src-ts/agents/index.ts contains 'lifecycle-hooks'",
+      "cd src-ts && npx tsc --noEmit exits 0"
+    ],
+    "verification": "Import { LifecycleStage, AgentLifecycleHook } from agents/lifecycle-hooks. Create a test agent extending BaseAgent, register hooks via addHook(), call runLifecycle() and verify hooks execute in order.",
+    "definition_of_done": "BaseAgent supports optional lifecycle hooks that agents can register for perception, planning, execution, and reflection stages. Existing agents compile and pass tests unchanged."
+  },
+
+  "files": [
+    {
+      "path": "src-ts/agents/lifecycle-hooks.ts",
+      "action": "create",
+      "target": "module",
+      "change": "New file: LifecycleStage enum, AgentLifecycleHook type, LifecycleHookRegistry class"
+    },
+    {
+      "path": "src-ts/agents/base.ts",
+      "action": "modify",
+      "target": "BaseAgent",
+      "change": "Add protected hooks: LifecycleHookRegistry field, addHook(stage, handler) method, protected async runLifecycle(context) method that runs hooks for given stage"
+    },
+    {
+      "path": "src-ts/agents/factory.ts",
+      "action": "modify",
+      "target": "AgentFactory",
+      "change": "Accept optional lifecycleConfig in agent creation options, register hooks on created agent"
+    },
+    {
+      "path": "src-ts/agents/index.ts",
+      "action": "modify",
+      "target": "barrel exports",
+      "change": "Add re-export from lifecycle-hooks.ts"
+    }
+  ],
+
+  "implementation": [
+    "Create src-ts/agents/lifecycle-hooks.ts: define LifecycleStage enum { PERCEPTION, PLANNING, EXECUTION, REFLECTION }, AgentLifecycleHook type as (context: AgentContext) => Promise<AgentContext>, and LifecycleHookRegistry class with register(stage, hook) and async execute(stage, context) methods",
+    "In src-ts/agents/base.ts: add protected hookRegistry = new LifecycleHookRegistry() field, add addHook(stage: LifecycleStage, handler: AgentLifecycleHook): void method, add protected async runLifecycle(stage: LifecycleStage, context: AgentContext): Promise<AgentContext> that delegates to hookRegistry.execute()",
+    "In src-ts/agents/factory.ts: extend AgentCreationOptions with optional lifecycleHooks: Array<{stage: LifecycleStage, handler: AgentLifecycleHook}>, after creating agent instance call agent.addHook() for each configured hook",
+    "In src-ts/agents/index.ts: add export { LifecycleStage, AgentLifecycleHook, LifecycleHookRegistry } from './lifecycle-hooks'",
+    "Verify: cd src-ts && npx tsc --noEmit passes with no errors"
+  ],
+
+  "test": {
+    "commands": ["cd src-ts && npx vitest run tests/agents/lifecycle-hooks.test.ts"],
+    "unit": [
+      "LifecycleHookRegistry: register hook → execute runs it in order",
+      "LifecycleHookRegistry: no hooks → execute returns context unchanged",
+      "BaseAgent: addHook stores hook, runLifecycle executes it",
+      "Factory: lifecycleHooks config → agent has hooks registered"
+    ],
+    "integration": [],
+    "success_metrics": ["All new tests pass", "Existing agent tests still pass", "tsc --noEmit clean"]
+  },
+
+  "reference": {
+    "pattern": "OpenStory Agent-Kernel lifecycle: perception → planning → execution → reflection as pluggable stages",
+    "files": ["src-ts/agents/base.ts", "src-ts/agents/sequential-thinking.ts"],
+    "examples": "sequential-thinking.ts already implements a form of multi-step reasoning — lifecycle hooks generalize this pattern"
+  },
+
+  "rationale": {
+    "chosen_approach": "Opt-in middleware on existing BaseAgent rather than new base class",
+    "decision_factors": ["Zero breaking changes to existing agents", "Aligns with OpenStory's proven plugin pattern", "Enables future agents to participate in structured reasoning pipeline"],
+    "tradeoffs": "Slightly more indirection than direct method calls, but enables powerful composable behaviors"
+  },
+
+  "risks": ["Hook execution order must be deterministic — use array, not Set"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["agent-system"],
+    "affected_components": ["BaseAgent", "AgentFactory"],
+    "affected_requirements": [],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "45 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

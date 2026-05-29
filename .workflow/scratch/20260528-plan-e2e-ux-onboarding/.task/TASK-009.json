@@ -1,0 +1,24 @@
+{
+  "id": "TASK-009",
+  "title": "预置小说模板项目",
+  "description": "后端有 PlotTemplateService（20种经典情节）+ ChapterTemplateService（7种网文类型）+ CharacterArchetypeRegistry（12种角色原型），但前端无法让新用户一键创建含角色/情节/设定的示例项目。",
+  "category": "feature",
+  "priority": 3,
+  "wave": 3,
+  "complexity": "medium",
+  "estimated_time": "30min",
+  "files": [
+    {"path": "desktop/src/services/templates/novelTemplates.ts", "action": "create", "reason": "项目级模板定义：预填充角色、情节骨架、章节大纲、世界观要素"},
+    {"path": "desktop/src/components/WelcomeWizard.tsx", "action": "modify", "reason": "Step 1 添加'从模板创建'选项"},
+    {"path": "desktop/src/stores/projectSlice.ts", "action": "modify", "reason": "createNewProjectFromTemplate 函数：基于模板创建完整项目"}
+  ],
+  "acceptance_criteria": [
+    "WelcomeWizard Step 1 提供'从模板创建'选项",
+    "至少 3 个预置模板（悬疑/言情/奇幻）",
+    "选择模板后创建项目包含：角色卡、情节骨架、章节大纲、世界观设定",
+    "可以跳过模板直接创建空项目"
+  ],
+  "implementation_notes": "novelTemplates.ts 定义 3 个项目级模板：1) 悬疑推理（3角色+伏笔骨架+5章大纲），2) 都市言情（4角色+情感弧线+8章大纲），3) 奇幻冒险（5角色+世界观设定+10章大纲）。每个模板含 name, description, characters[], plotSkeleton[], chapterOutlines[], worldviewElements[]。createNewProjectFromTemplate 遍历模板数据，调用 projectSlice 批量创建章节 + story-bible 写入角色/设定。",
+  "dependencies": ["TASK-008"],
+  "goal_ref": "G3"
+}

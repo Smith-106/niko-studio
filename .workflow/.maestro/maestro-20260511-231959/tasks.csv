@@ -1,0 +1,5 @@
+id,skill,args,wave_n,status,findings,artifacts,error
+"1","maestro-analyze","--gaps \"Close current-head release-readiness blockers: version consistency, desktop capability contract, desktop gates, stale release evidence, unresolved triage blocker, and readiness docs alignment.\"",,"pending",,,
+"2","maestro-plan","--gaps",,"pending",,,
+"3","maestro-execute","",,"pending",,,
+"4","maestro-verify","1",,"pending",,,

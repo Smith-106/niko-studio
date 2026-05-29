@@ -1,0 +1,23 @@
+{
+  "id": "TASK-007",
+  "title": "TemplateManagerPanel 从 stub 到功能实现",
+  "description": "SettingsModal 中的模板管理部分是空壳。需要连接后端模板服务，实现模板浏览、应用和管理。",
+  "category": "enhancement",
+  "priority": 2,
+  "wave": 2,
+  "complexity": "medium",
+  "estimated_time": "30min",
+  "files": [
+    {"path": "desktop/src/components/TemplateManagerPanel.tsx", "action": "modify", "reason": "从空壳改为功能性组件，复用 TemplateBrowserPanel 的 UI 模式"},
+    {"path": "desktop/src/components/SettingsModal.tsx", "action": "modify", "reason": "替换 stub section 为 TemplateManagerPanel"}
+  ],
+  "acceptance_criteria": [
+    "Settings 模板部分显示可用模板列表",
+    "可以浏览、预览和应用章节模板",
+    "可以创建自定义模板并保存",
+    "现有 TemplateBrowserPanel 不受影响"
+  ],
+  "implementation_notes": "SettingsModal 中模板 section (line 1156-1161) 替换为 TemplateManagerPanel。TemplateManagerPanel 复用 builtins.ts 的 ALL_BUILTINS + 自定义模板列表。UI：模板卡片网格 + 点击展开预览 + 应用按钮。与 TemplateBrowserPanel 共享 template 数据加载逻辑。",
+  "dependencies": [],
+  "goal_ref": "G2"
+}

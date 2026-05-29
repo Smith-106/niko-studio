@@ -1,0 +1,27 @@
+{
+  "task_id": "TASK-001",
+  "title": "Add workspace-scoped mutex for checkpoint/restore/quickRollback",
+  "status": "completed",
+  "priority": "P0",
+  "owner": "unassigned",
+  "parallel_group": "A",
+  "problem": "Recovery operations mutate shared workspace state via git checkout/reset paths without explicit per-workspace serialization.",
+  "target_files": [
+    "src-ts/workflow/workflow-engine.ts"
+  ],
+  "implementation_outline": [
+    "Introduce workspace-level async mutex map in workflow engine runtime domain.",
+    "Wrap git-mutating sections in checkpoint restore/rollback paths with mutex guard.",
+    "Ensure lock release on success and failure paths."
+  ],
+  "acceptance_criteria": [
+    "Concurrent restore/rollback on same workspace are serialized.",
+    "Different workspaces are not globally blocked.",
+    "No deadlock/leak under exceptions."
+  ],
+  "evidence_refs": [
+    "src-ts/workflow/workflow-engine.ts:1119-1125",
+    "src-ts/workflow/workflow-engine.ts:1162-1165"
+  ],
+  "depends_on": []
+}

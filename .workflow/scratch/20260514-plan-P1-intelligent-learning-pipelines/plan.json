@@ -1,0 +1,245 @@
+{
+  "summary": "M22 Phase 1 implements three intelligent learning pipelines: import learning (CAP-001), self-evolving writing (CAP-002), and reading learning (CAP-003). Shared interfaces and knowledge layer integration enable parallel pipeline development in a single phase.",
+  "approach": "Create src-ts/learning/ module with shared types and orchestration infrastructure first, then implement three independent pipelines in parallel, expose via MCP endpoints, and validate with ≥80% test coverage. All pipelines integrate with existing GraphManager, KnowledgeService, DistillationService, and the 30-dimensional StyleSystem — no modifications to existing public interfaces.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009", "TASK-010"],
+  "task_count": 10,
+  "complexity": "high",
+  "estimated_time": "6-10 hours",
+  "recommended_execution": "Agent",
+  "waves": [
+    {
+      "wave": 1,
+      "name": "Shared infrastructure and DI registration",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"]
+    },
+    {
+      "wave": 2,
+      "name": "Three learning pipelines",
+      "tasks": ["TASK-005", "TASK-006", "TASK-007"],
+      "depends_on": [1]
+    },
+    {
+      "wave": 3,
+      "name": "MCP endpoints and integration",
+      "tasks": ["TASK-008", "TASK-009"],
+      "depends_on": [2]
+    },
+    {
+      "wave": 4,
+      "name": "Unit tests for coverage target",
+      "tasks": ["TASK-010"],
+      "depends_on": [3]
+    }
+  ],
+  "data_flow": {
+    "diagram": "Input documents/chapters → ExtractionUtils → Pipeline (Import|Writing|Reading) → KnowledgeService/GraphManager/StyleSystem → MCP endpoint → Desktop",
+    "stages": ["Parse input", "Extract features", "Distill knowledge", "Store in knowledge layer", "Expose via API"]
+  },
+  "design_decisions": [
+    "All learning code lives in src-ts/learning/ — no modifications to existing module public interfaces.",
+    "Shared interfaces (ILearningPipeline, IExtractionResult) enable DI container per-pipeline enable/disable.",
+    "ImportLearningPipeline reuses existing StyleSystem's 30-dimensional vector for style extraction.",
+    "SelfEvolvingWritingAgent uses Generator-Reflector-Curator pattern from ACE reference with evidence-threshold rule evolution.",
+    "ReadingLearningPipeline uses SpoilerGate chapter-gating with light/heavy extraction tiers from marginalia reference.",
+    "MCP endpoints follow existing per-feature file pattern in src-ts/mcp/endpoints/."
+  ],
+  "shared_context": {
+    "patterns": [
+      "DI registration: bindSingleton<T>(ServiceTypes.Symbol, () => new Impl(config)) in container/bindings.ts",
+      "MCP endpoints: per-feature files with named exports, barrel re-exported from index.ts",
+      "Style system: StyleDimension enum with 30 dimensions in narrative/style-system.ts",
+      "Distillation: DistillationTemplate enum + DistillationManager in memory/distillation-manager.ts",
+      "Knowledge layer: IKnowledgeService (addDocument, addEntity, addRelation, search, distillKnowledge) in container/types.ts"
+    ],
+    "conventions": [
+      "Enum + interface + Record pattern for extensible type-safe registries",
+      "Service types as Symbol.for('Name') in container/types.ts ServiceTypes object",
+      "MCP endpoint handlers use HttpRequest/HttpResponse from mcp/http-types",
+      "Tests use Vitest with describe/it/expect in src-ts/tests/"
+    ],
+    "dependencies": [
+      "src-ts/container/types.ts — ServiceTypes symbols and service interfaces",
+      "src-ts/container/bindings.ts — registerCanonicalBindings for DI registration",
+      "src-ts/mcp/endpoints/index.ts — barrel exports for endpoint discovery",
+      "src-ts/narrative/style-system.ts — 30-dimensional StyleProfile for style extraction",
+      "src-ts/memory/distillation-manager.ts — DistillationTemplate and distillation logic",
+      "src-ts/graph/graph-manager.ts — graph storage for entity/relation persistence"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Create learning module shared types",
+      "wave": 1,
+      "files": ["src-ts/learning/learning-types.ts"],
+      "description": "Define all shared types, interfaces, and enums for the learning module: LearningCapability enum, ILearningPipeline interface, IExtractionResult, IStyleFeature, IEntityExtraction, IWorldviewElement, IInsight, IStyleRule, IStyleDriftReport, ISpoilerGate, PipelineStatus enum, LearningConfig type.",
+      "acceptance": [
+        "LearningCapability enum with IMPORT, SELF_EVOLVING, READING values",
+        "ILearningPipeline interface with execute(), getStatus(), enable(), disable() methods",
+        "IExtractionResult generic interface with entities, styleFeatures, worldviewElements",
+        "IStyleFeature interface matching 30-dimensional StyleDimension vector",
+        "IStyleRule with evidence threshold and evolution metadata",
+        "ISpoilerGate with chapter gating and light/heavy extraction tiers",
+        "All types exported from src-ts/learning/index.ts barrel"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "title": "Create shared extraction utilities",
+      "wave": 1,
+      "files": ["src-ts/learning/extraction-utils.ts"],
+      "description": "Implement shared text extraction utilities used by all three pipelines: document parsing (TXT/MD/PDF/DOCX), text segmentation, entity extraction helpers, style feature calculation from existing StyleSystem, and worldview element detection.",
+      "acceptance": [
+        "parseDocument() handles TXT, MD, PDF (via pdf-parse), DOCX (via mammoth)",
+        "segmentText() splits into paragraphs/chapters with metadata preservation",
+        "extractEntities() returns IEntityExtraction[] using existing KnowledgeService patterns",
+        "calculateStyleFeatures() leverages existing StyleSystem's 30-dimensional analysis",
+        "detectWorldviewElements() identifies world-building components",
+        "All functions are pure/stateless — no side effects, suitable for parallel pipeline use"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "title": "Create learning orchestrator",
+      "wave": 1,
+      "files": ["src-ts/learning/learning-orchestrator.ts"],
+      "description": "Implement LearningOrchestrator that coordinates pipeline execution, manages pipeline lifecycle (enable/disable per pipeline), and provides unified status reporting. Coordinates with existing KnowledgeService and GraphManager.",
+      "acceptance": [
+        "LearningOrchestrator accepts ILearningPipeline[] and manages their lifecycle",
+        "enable/disable per LearningCapability controls which pipelines are active",
+        "getStatus() returns unified status across all active pipelines",
+        "Integrates with IKnowledgeService for knowledge storage and retrieval",
+        "Integrates with IGraphEngine for entity/relation graph operations",
+        "Thread-safe: concurrent pipeline execution supported"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "title": "Register learning services in DI container",
+      "wave": 1,
+      "files": ["src-ts/container/types.ts", "src-ts/container/bindings.ts"],
+      "description": "Add LearningOrchestrator and three pipeline service types to the DI container. Follow existing bindSingleton pattern. Each pipeline independently enable/disable via config.",
+      "acceptance": [
+        "ServiceTypes gains LearningOrchestrator, ImportLearning, SelfEvolvingWriting, ReadingLearning symbols",
+        "registerCanonicalBindings() updated with new bindSingleton entries",
+        "Each pipeline resolves its dependencies (KnowledgeService, GraphEngine, etc.) from container",
+        "ILearningOrchestrator interface added to types.ts",
+        "Existing service registrations unchanged — only additive changes"
+      ]
+    },
+    {
+      "id": "TASK-005",
+      "title": "Implement Import Learning Pipeline (CAP-001)",
+      "wave": 2,
+      "files": ["src-ts/learning/import-pipeline.ts"],
+      "description": "Implement ImportLearningPipeline: accepts document input (TXT/MD/PDF/DOCX), parses via ExtractionUtils, extracts entities/style/worldview, distills via DistillationManager, and writes structured knowledge to GraphManager. Full pipeline: DocumentParser → EntityExtractor → StyleExtractor → WorldviewExtractor → DistillationPipeline → GraphManager.",
+      "acceptance": [
+        "processDocument(filePath) accepts all supported formats and returns IExtractionResult",
+        "Entity extraction identifies characters, locations, organizations, items",
+        "Style extraction produces 30-dimensional IStyleFeature vector",
+        "Worldview extraction identifies rules, settings, cultural elements",
+        "Results persisted via IKnowledgeService.addDocument/addEntity/addRelation",
+        "Progress reporting via ILearningPipeline.getStatus()",
+        "Error handling: malformed documents, unsupported formats return graceful failures"
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "title": "Implement Self-Evolving Writing Agent (CAP-002)",
+      "wave": 2,
+      "files": ["src-ts/learning/self-evolving-agent.ts", "src-ts/learning/rule-evolver.ts", "src-ts/learning/preference-tracker.ts"],
+      "description": "Implement SelfEvolvingWritingAgent with Generator-Reflector-Curator pattern. RuleEvolver manages evidence-threshold style rule evolution (threshold ≥3). PreferenceTracker tracks user preferences over time. StyleDriftDetector detects and reports style divergence.",
+      "acceptance": [
+        "SelfEvolvingWritingAgent implements ILearningPipeline with Generator-Reflector-Curator loop",
+        "RuleEvolver.accumulateEvidence() collects feedback; evolves rule when evidence count ≥3",
+        "RuleEvolver tracks rule version history with before/after snapshots",
+        "PreferenceTracker records user preference signals (accept/reject/modify actions)",
+        "StyleDriftDetector.compare() detects drift between current and baseline style vectors",
+        "StyleDriftDetector.report() produces IStyleDriftReport with severity and suggestions",
+        "Integration with existing StyleSystem for vector comparison"
+      ]
+    },
+    {
+      "id": "TASK-007",
+      "title": "Implement Reading Learning Pipeline (CAP-003)",
+      "wave": 2,
+      "files": ["src-ts/learning/reading-pipeline.ts", "src-ts/learning/spoiler-gate.ts", "src-ts/learning/insight-distiller.ts"],
+      "description": "Implement ReadingLearningPipeline with chapter-gated extraction. SpoilerGate controls light/heavy extraction tiers based on reading progress. InsightDistiller follows 6-stage marginalia pipeline. CrossReference supports cross-book knowledge linking.",
+      "acceptance": [
+        "ReadingLearningPipeline implements ILearningPipeline",
+        "SpoilerGate.gate(chapterRead, chapterTarget) returns allowed extraction tier (light|heavy|blocked)",
+        "Light extraction: summary, key entities, tone — no plot revelations",
+        "Heavy extraction: full analysis including plot, themes, character arcs",
+        "InsightDistiller follows 6-stage pipeline: capture → annotate → connect → question → synthesize → distill",
+        "CrossReference.link(sourceBook, targetBook) creates cross-book knowledge edges in GraphManager",
+        "Session tracking preserves reading position for resumable analysis"
+      ]
+    },
+    {
+      "id": "TASK-008",
+      "title": "Add learning MCP endpoints",
+      "wave": 3,
+      "files": ["src-ts/mcp/endpoints/learning.ts", "src-ts/mcp/endpoints/index.ts"],
+      "description": "Add four MCP endpoints for learning capabilities: POST /import/learn, POST /writing/evolve, POST /reading/learn, GET /learning/status. Follow existing per-feature endpoint pattern with barrel export.",
+      "acceptance": [
+        "POST /import/learn accepts {filePath, options?} and triggers ImportLearningPipeline",
+        "POST /writing/evolve accepts {action, content, feedback?} for SelfEvolvingWritingAgent",
+        "POST /reading/learn accepts {bookId, chapter, content} for ReadingLearningPipeline",
+        "GET /learning/status returns unified status from LearningOrchestrator",
+        "learning.ts exports named handlers following writing-craft.ts pattern",
+        "index.ts barrel updated with re-exports from learning.ts",
+        "All endpoints use parseBody/jsonResponse from http-types"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "title": "Integration tests",
+      "wave": 3,
+      "files": ["src-ts/tests/learning/integration.test.ts"],
+      "description": "Integration tests covering end-to-end pipeline execution, DI container resolution, and MCP endpoint routing. Validates that all three pipelines work together through the orchestrator.",
+      "acceptance": [
+        "DI container resolves all learning services correctly",
+        "Import pipeline processes a test TXT file through full extraction → storage flow",
+        "Self-evolving agent accumulates evidence and evolves a style rule",
+        "Reading pipeline respects SpoilerGate tiers and produces distilled insights",
+        "MCP endpoints return correct HTTP responses with expected payload shapes",
+        "LearningOrchestrator enable/disable controls pipeline availability"
+      ]
+    },
+    {
+      "id": "TASK-010",
+      "title": "Unit tests for ≥80% coverage",
+      "wave": 4,
+      "files": [
+        "src-ts/tests/learning/learning-types.test.ts",
+        "src-ts/tests/learning/extraction-utils.test.ts",
+        "src-ts/tests/learning/import-pipeline.test.ts",
+        "src-ts/tests/learning/self-evolving-agent.test.ts",
+        "src-ts/tests/learning/reading-pipeline.test.ts",
+        "src-ts/tests/learning/spoiler-gate.test.ts",
+        "src-ts/tests/learning/insight-distiller.test.ts",
+        "src-ts/tests/learning/rule-evolver.test.ts",
+        "src-ts/tests/learning/preference-tracker.test.ts"
+      ],
+      "description": "Comprehensive unit tests for all learning module components targeting ≥80% coverage. Tests cover extraction logic, pipeline state machines, rule evolution, spoiler gating, and edge cases.",
+      "acceptance": [
+        "All extraction-utils functions tested with various input formats",
+        "Import pipeline tested with mock documents (TXT, MD)",
+        "RuleEvolver tested: evidence accumulation, threshold triggering, version history",
+        "PreferenceTracker tested: signal recording, preference aggregation",
+        "SpoilerGate tested: all tier transitions, edge cases (chapter 0, beyond end)",
+        "InsightDistiller tested: each of 6 stages independently",
+        "LearningOrchestrator tested: enable/disable, status aggregation",
+        "npm --prefix src-ts run check:local passes"
+      ]
+    }
+  ],
+  "_metadata": {
+    "timestamp": "2026-05-14T20:00:00+08:00",
+    "source": "maestro-plan",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

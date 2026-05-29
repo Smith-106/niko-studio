@@ -1,0 +1,23 @@
+{
+  "id": "TASK-010",
+  "title": "空编辑器状态引导卡片",
+  "description": "新建项目后编辑器为空，无提示告诉用户下一步做什么。需要在空编辑器状态显示引导卡片。",
+  "category": "enhancement",
+  "priority": 3,
+  "wave": 3,
+  "complexity": "low",
+  "estimated_time": "15min",
+  "files": [
+    {"path": "desktop/src/components/DocumentEditor.tsx", "action": "modify", "reason": "当 editorText 为空时显示引导卡片而非空白编辑器"},
+    {"path": "desktop/src/components/editor/EmptyEditorGuide.tsx", "action": "create", "reason": "引导卡片组件：3 个入口按钮（AI 续写/创建角色/从模板开始）"}
+  ],
+  "acceptance_criteria": [
+    "编辑器内容为空时显示引导卡片",
+    "卡片有 3 个行动按钮：'试试 AI 续写' / '添加角色' / '从模板开始'",
+    "点击按钮执行对应动作（打开 AI slash / 打开 CharacterTab / 打开 TemplateBrowser）",
+    "编辑器有内容后引导卡片自动消失"
+  ],
+  "implementation_notes": "EmptyEditorGuide 是 Overlay 组件，在 Tiptap 编辑器内容为空时覆盖显示。使用 editor.isEmpty 检测。3 个按钮：1) '试试 AI 续写' → 触发 /continue slash command；2) '添加角色' → 打开 CharacterTab panel；3) '从模板开始' → 打开 TemplateBrowserPanel。样式：居中卡片 + 图标 + 简短描述。",
+  "dependencies": ["TASK-008", "TASK-009"],
+  "goal_ref": "G3"
+}

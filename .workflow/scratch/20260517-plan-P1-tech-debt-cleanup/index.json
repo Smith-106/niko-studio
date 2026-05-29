@@ -1,0 +1,71 @@
+{
+  "plan_dir": ".workflow/scratch/20260517-plan-P1-tech-debt-cleanup",
+  "status": "executing",
+  "started_at": "2026-05-17T05:30:00+08:00",
+  "updated_at": "2026-05-25T22:00:00+08:00",
+  "completed_at": null,
+  "execution": {
+    "method": "agent",
+    "default_executor": "agent",
+    "current_wave": 2,
+    "tasks_completed": [
+      "TASK-001",
+      "TASK-003",
+      "TASK-005",
+      "TASK-004",
+      "TASK-002",
+      "TASK-006A",
+      "TASK-006B"
+    ],
+    "tasks_blocked": [],
+    "commits": [],
+    "delegate_ids": {}
+  },
+  "verification": {
+    "status": "passed",
+    "verified_at": "2026-05-25T18:30:00+08:00",
+    "must_haves_summary": "7/7 truths verified, 6/6 artifacts verified, 5/5 key links wired",
+    "gaps": []
+  },
+  "review": {
+    "status": "completed",
+    "verdict": "WARN",
+    "reviewed_at": "2026-05-25T20:00:00+08:00",
+    "findings_summary": "0 critical, 11 high, 16 medium, 8 low — all pre-existing tech debt except REV-016",
+    "path": ".workflow/scratch/20260525-review-P1-tech-debt-cleanup/review.json"
+  },
+  "uat": {
+    "status": "completed",
+    "tested_at": "2026-05-25T22:00:00+08:00",
+    "tests_passed": 12,
+    "tests_total": 12,
+    "confidence": 0.97,
+    "path": ".workflow/scratch/20260525-test-P1-tech-debt-cleanup/uat.md"
+  },
+  "plan": {
+    "task_ids": [
+      "TASK-006A",
+      "TASK-006B"
+    ],
+    "task_count": 2,
+    "complexity": "medium",
+    "waves": [
+      {
+        "wave": 1,
+        "label": "恢复 src-ts 测试环境",
+        "tasks": [
+          "TASK-006A"
+        ]
+      },
+      {
+        "wave": 2,
+        "label": "统一 workflow-engine API 契约",
+        "tasks": [
+          "TASK-006B"
+        ]
+      }
+    ],
+    "executor_assignments": {},
+    "confidence": 0.89
+  }
+}

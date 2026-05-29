@@ -1,0 +1,23 @@
+{
+  "id": "TASK-001",
+  "title": "修复章节切换丢失编辑器状态",
+  "description": "切换章节时 DocumentEditor 的 key prop 变更导致 Tiptap 完全重建，丢失光标位置、undo history 和 scroll position。需要在 DocumentEditor 中实现编辑器状态缓存机制。",
+  "category": "bug-fix",
+  "priority": 1,
+  "wave": 1,
+  "complexity": "medium",
+  "estimated_time": "30min",
+  "files": [
+    {"path": "desktop/src/components/DocumentEditor.tsx", "action": "modify", "reason": "添加 editorStateCache Map + 切换时保存/恢复状态 + 移除强制 key 重建"},
+    {"path": "desktop/src/stores/projectSlice.ts", "action": "modify", "reason": "确认 selectChapter 逻辑不变，无需修改"}
+  ],
+  "acceptance_criteria": [
+    "切换章节后编辑器保留光标位置",
+    "切换回之前章节时 undo history 不丢失",
+    "切换后 scroll position 恢复",
+    "现有测试不受影响"
+  ],
+  "implementation_notes": "在 DocumentEditor 中维护 useRef<Map<string, {json: any, text: string, selection: {from: number, to: number}, scrollY: number}>>。章节切换前保存当前状态到 cache，切换后从 cache 恢复。当 cache 中有目标章节状态时，不改变 key prop（避免 Tiptap remount），而是通过 editor.commands.setContent + editor.commands.setTextSelection 恢复。cache 中无状态时才用新 key 触发首次加载。",
+  "dependencies": [],
+  "goal_ref": "G1"
+}

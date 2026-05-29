@@ -1,0 +1,23 @@
+{
+  "id": "TASK-006",
+  "title": "快捷键帮助面板 (Ctrl+/)",
+  "description": "用户不知道可用的快捷键和 slash commands。需要添加 Ctrl+/ 快捷键面板，展示所有可用快捷键。",
+  "category": "enhancement",
+  "priority": 2,
+  "wave": 2,
+  "complexity": "low",
+  "estimated_time": "20min",
+  "files": [
+    {"path": "desktop/src/components/editor/KeyboardShortcutsPanel.tsx", "action": "create", "reason": "新组件：浮动面板显示所有快捷键和 slash commands 列表"},
+    {"path": "desktop/src/components/NikoEditor.tsx", "action": "modify", "reason": "绑定 Ctrl+/ 到 toggle shortcuts panel"}
+  ],
+  "acceptance_criteria": [
+    "Ctrl+/ 打开/关闭快捷键面板",
+    "面板列出所有编辑器快捷键（Ctrl+B/I/U/S/Z 等）",
+    "面板列出所有 slash commands（/generate /continue /rewrite 等）",
+    "面板点击快捷键项可执行对应命令"
+  ],
+  "implementation_notes": "KeyboardShortcutsPanel 组件：固定位置浮动面板（类似 VS Code Command Palette），分组显示快捷键。数据来源：1) Tiptap StarterKit 内置快捷键列表；2) SlashCommandExtension 注册的 commands；3) 自定义快捷键（Ctrl+S）。样式：Tailwind + 半透明背景 + 键盘图标。",
+  "dependencies": ["TASK-004"],
+  "goal_ref": "G2"
+}

@@ -1,0 +1,147 @@
+{
+  "id": "TASK-005",
+  "title": "Test Coverage & Regression Verification",
+  "description": "Achieve ≥80% test coverage for all M10 modules. Write integration tests validating agent end-to-end flows. Verify no regression in existing M1-M9 capabilities by running full test suite.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Write integration tests for: (1) RevisionOrchestrator full loop with mocked LLM responses, (2) StyleExtractor + ContextAssembler pipeline, (3) CrossChapterConsistencyChecker with multi-chapter test fixtures, (4) M10 API client functions. Run full test suites for both desktop and src-ts to verify no regressions.",
+  "status": "completed",
+  "completed_at": "2026-05-06T14:57:00+08:00",
+  "actual_duration": null,
+  "scope": "tests/",
+  "focus_paths": [
+    "src-ts/src/",
+    "desktop/src/"
+  ],
+  "read_first": [
+    "src-ts/src/agents/revision-orchestrator.ts (created by TASK-001)",
+    "src-ts/src/agents/style-profile.ts (created by TASK-002)",
+    "src-ts/src/agents/consistency-engine.ts (created by TASK-003)",
+    "src-ts/src/agents/context-assembler.ts (created by TASK-003)",
+    "desktop/src/api/m10-apis.ts (created by TASK-004)",
+    "desktop/src/api/core.ts (reference: callApi mock pattern for tests)",
+    "src-ts/vitest.config.ts (reference: test configuration)"
+  ],
+  "depends_on": [
+    "TASK-001",
+    "TASK-002",
+    "TASK-003",
+    "TASK-004"
+  ],
+  "wave": 3,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "npm test --prefix src-ts exits 0",
+      "cd desktop && npm test exits 0",
+      "find src-ts/src/agents -name '*.test.ts' | wc -l >= 4",
+      "All M10 unit test files exist: revision-orchestrator.test.ts, style-profile.test.ts, consistency-engine.test.ts, context-assembler.test.ts"
+    ],
+    "verification": "Run full test suites for both src-ts and desktop. Check that all new tests pass and existing tests are not broken.",
+    "definition_of_done": "≥80% test coverage for all M10 modules. Full test suite passes with no regressions."
+  },
+  "files": [
+    {
+      "path": "src-ts/src/agents/revision-orchestrator.test.ts",
+      "action": "create",
+      "target": "integration tests",
+      "change": "Full loop test: mock LLM returning incremental scores, verify convergence, verify revert on degradation"
+    },
+    {
+      "path": "src-ts/src/agents/style-profile.test.ts",
+      "action": "create",
+      "target": "tests",
+      "change": "Extraction metrics, profile persistence, style injection into prompt"
+    },
+    {
+      "path": "src-ts/src/agents/consistency-engine.test.ts",
+      "action": "create",
+      "target": "tests",
+      "change": "Multi-chapter test fixtures with known conflicts, verify all detection methods"
+    },
+    {
+      "path": "src-ts/src/agents/context-assembler.test.ts",
+      "action": "create",
+      "target": "tests",
+      "change": "Context assembly with entity mentions, story bible integration"
+    },
+    {
+      "path": "desktop/src/api/m10-apis.test.ts",
+      "action": "create",
+      "target": "API tests",
+      "change": "Test all M10 API client functions with mocked callApi responses"
+    }
+  ],
+  "implementation": [
+    "Ensure all unit test files from TASK-001/002/003 are comprehensive. Add missing edge cases: empty text, single character text, very long text, text with no dialogue, text with only dialogue.",
+    "Write integration test for RevisionOrchestrator full loop: mock the evaluation API to return scores [6.0, 7.5, 8.2], mock the revision API to return improved text, verify the orchestrator converges at iteration 3.",
+    "Write integration test for StyleExtractor → ContextAssembler pipeline: extract style from sample text, verify profile metrics, then pass profile to context assembler and verify context string includes style guidance.",
+    "Write integration test for CrossChapterConsistencyChecker with 3-chapter test fixture containing: name conflict (character referred differently), timeline issue (event ordering), unresolved thread (plot element introduced but not resolved), trait drift (character changes personality).",
+    "Write API client tests for desktop/src/api/m10-apis.ts: mock callApi, verify each function sends correct endpoint and payload.",
+    "Run full test suites: npm test --prefix src-ts && cd desktop && npm test",
+    "Verify no regression: all existing tests still pass"
+  ],
+  "test": {
+    "commands": [
+      "npm test --prefix src-ts",
+      "cd desktop && npm test"
+    ],
+    "unit": [],
+    "integration": [
+      "revision-orchestrator full loop",
+      "style pipeline",
+      "consistency checker with multi-chapter data",
+      "API client functions"
+    ],
+    "success_metrics": [
+      "All tests pass",
+      "No TypeScript compilation errors",
+      "No regressions in existing tests"
+    ]
+  },
+  "reference": {
+    "pattern": "Follow existing test patterns from desktop/src/api/*.test.ts and src-ts test files",
+    "files": [
+      "desktop/src/api/client.test.ts",
+      "desktop/src/api/agents.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Dedicated test task ensures comprehensive coverage after all implementation is complete, avoiding the overhead of maintaining tests during rapid development.",
+    "decision_factors": [
+      "Roadmap requires ≥80% coverage",
+      "Need regression verification for M1-M9"
+    ],
+    "tradeoffs": "Test task at the end risks discovering integration issues late — mitigate by having basic unit tests in each implementation task"
+  },
+  "risks": [
+    "Integration issues discovered late may require going back to earlier tasks — mitigate with unit tests in each task"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "All M10 features"
+    ],
+    "affected_components": [
+      "src-ts/agents",
+      "desktop/src/api"
+    ],
+    "affected_requirements": [
+      "M10-REQ-006: Test coverage ≥80%",
+      "M10-REQ-007: No regression"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45-60 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

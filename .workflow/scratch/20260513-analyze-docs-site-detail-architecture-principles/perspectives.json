@@ -1,0 +1,54 @@
+{
+  "session_id": "ANL-docs-site-detail-architecture-principles-2026-05-13",
+  "perspectives": [
+    {
+      "name": "Technical",
+      "focus": "实现落点与最小改动路径",
+      "findings": [
+        "优先复用现有 architecture 分类和 content-architecture.ts，避免新增 concepts/guides 分类带来的 tintColors、导航文案和信息架构扩散。",
+        "F-001、F-002、F-004、F-005 可作为 architecture 下新增页面；F-003 的 compact learning paths 放在 LandingPage.tsx。",
+        "DocPage.tsx 已支持 h2/h3 目录、表格、pre/code、endpoint card 与 callout，Mermaid 可保持 copyable code block。"
+      ]
+    },
+    {
+      "name": "Architecture",
+      "focus": "权威源、边界、当前/历史状态",
+      "findings": [
+        "README.md、docs/API_REFERENCE.md、docs/CAPABILITY_MATRIX.md 是当前 runtime/API/status 真源。",
+        "最大架构风险不是代码复杂度，而是 docs-site 手写内容复制权威矩阵和 API 细节后发生漂移。",
+        "F-002 应在每个架构深页显式标注 current runtime truth，并把 historical/compatibility surfaces 与 shipped runtime 分离。"
+      ]
+    },
+    {
+      "name": "UX",
+      "focus": "读者路径与认知负担",
+      "findings": [
+        "首页已有快速入口、主路径、推荐文档和主题浏览，适合增加 4 个 persona learning paths。",
+        "能力路由页应以 writer-facing labels 优先，再补 developer labels/API links，避免把 Maestro Flow 角色路由术语原样搬入 Niko Studio。",
+        "状态矩阵应解释 supported/partial/experimental/disabled/historical 的用户含义，减少过度承诺。"
+      ]
+    }
+  ],
+  "synthesis": {
+    "convergent_themes": [
+      "实现范围以内容增强为主，React 组件改动较小。",
+      "应复用现有静态 HTML 内容系统，不引入新渲染依赖。",
+      "权威源漂移是 P0 风险，必须通过引用和状态页边界控制。"
+    ],
+    "conflicts": [
+      "新增 guides/concepts 分类可提升 IA 清晰度，但会扩大 UI 改动面；本轮建议先放入现有 architecture 分类。",
+      "完整复制 API/能力矩阵可让页面更自足，但维护风险高；本轮建议摘要 + 链接权威源。"
+    ],
+    "technical_solutions": [
+      {
+        "solution": "在 architecture 分类新增 capability-routing、runtime-layers/request-lifecycle/data-authority/status-matrix、diagram-examples 等页面，并在 LandingPage 加 persona paths。",
+        "status": "validated",
+        "problem": "满足 F-001..F-005，同时控制分类和渲染系统改动面。",
+        "rationale": "inventory.ts + content-architecture.ts 已是当前架构文档扩展点。",
+        "alternatives": "新增 guides 分类；代价是额外 IA、tint 与导航维护。",
+        "evidence": ["docs-site/src/client/data/inventory.ts:158", "docs-site/src/client/data/content-architecture.ts:2", "docs-site/src/client/pages/LandingPage.tsx:20"],
+        "next_action": "进入 maestro-plan 生成 wave 任务。"
+      }
+    ]
+  }
+}

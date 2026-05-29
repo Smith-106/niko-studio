@@ -1,0 +1,26 @@
+{
+  "id": "TASK-008",
+  "title": "首次启动欢迎引导流程 (WelcomeWizard)",
+  "description": "新用户首次打开 app 无任何引导，不知道如何开始。需要创建 WelcomeWizard 组件，引导创建第一个项目 + 配置 API key。",
+  "category": "feature",
+  "priority": 3,
+  "wave": 3,
+  "complexity": "medium",
+  "estimated_time": "45min",
+  "files": [
+    {"path": "desktop/src/components/WelcomeWizard.tsx", "action": "create", "reason": "3步引导组件：Step1 创建项目 → Step2 配置 API key → Step3 开始写作"},
+    {"path": "desktop/src/App.tsx", "action": "modify", "reason": "添加首次启动检测，未完成 onboarding 时显示 WelcomeWizard 而非主界面"},
+    {"path": "desktop/src/hooks/useOnboarding.ts", "action": "create", "reason": "管理 onboarding 状态（localStorage key 'niko-onboarding-done'）"}
+  ],
+  "acceptance_criteria": [
+    "首次启动自动显示 WelcomeWizard",
+    "Step 1: 输入小说名称 → 创建项目",
+    "Step 2: 选择 provider + 输入 API key → 保存",
+    "Step 3: 显示'开始写作'按钮 → 关闭 wizard 进入主界面",
+    "完成 wizard 后 localStorage 标记已完成，下次不再显示",
+    "SettingsModal 可重新触发 wizard（帮助新用户）"
+  ],
+  "implementation_notes": "WelcomeWizard 是全屏 Modal（非 sidebar），覆盖 App.tsx 的主布局。Step 组件用 stepper UI（3 个步骤指示器）。Step1 复用 projectSlice.createNewProject。Step2 复用 SettingsModal 的 provider 配置 UI（简化版）。Step3 展示编辑器 + AI slash command 提示。useOnboarding hook：检测 localStorage('niko-onboarding-done') === 'true'，提供 markDone() 和 resetOnboarding()。",
+  "dependencies": ["TASK-003"],
+  "goal_ref": "G3"
+}

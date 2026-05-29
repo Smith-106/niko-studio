@@ -1,0 +1,24 @@
+{
+  "id": "TASK-003",
+  "title": "LLM API Key 缺失时引导配置",
+  "description": "AI 功能依赖 API key 配置，但首次使用时无任何引导，导致静默失败。需要在用户首次尝试 AI 功能时检测 key 是否已配置，未配置则弹出引导面板。",
+  "category": "enhancement",
+  "priority": 1,
+  "wave": 1,
+  "complexity": "low",
+  "estimated_time": "20min",
+  "files": [
+    {"path": "desktop/src/hooks/useEditorAI.ts", "action": "modify", "reason": "在 executeAIAction 入口添加 API key 检测，未配置时显示引导而非执行"},
+    {"path": "desktop/src/components/ApiKeyGuideModal.tsx", "action": "create", "reason": "小型弹窗引导用户去 Settings → Provider 页面配置 API key"},
+    {"path": "desktop/src/stores/settingsStore.ts", "action": "read", "reason": "确认 API key 存储位置和读取方式"}
+  ],
+  "acceptance_criteria": [
+    "未配置 API key 时点击 AI slash command 显示引导弹窗",
+    "引导弹窗提供一键跳转 Settings 按钮",
+    "已有 API key 时不显示引导",
+    "Toast 提示'请先配置 API Key'而非静默失败"
+  ],
+  "implementation_notes": "在 settingsStore 中找到 provider 配置字段（如 providers.openai.apiKey）。useEditorAI 的 executeAIAction 函数开头添加检查：if (!hasApiKey) { setShowApiKeyGuide(true); return; }。ApiKeyGuideModal 简单 Modal，文案：'使用 AI 功能需要先配置 API Key' + 按钮'前往设置'（关闭弹窗后打开 SettingsModal）。",
+  "dependencies": [],
+  "goal_ref": "G1"
+}

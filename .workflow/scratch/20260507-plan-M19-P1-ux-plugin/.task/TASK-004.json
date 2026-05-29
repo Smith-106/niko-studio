@@ -1,0 +1,27 @@
+{
+  "id": "TASK-004",
+  "title": "Plugin 核心架构",
+  "status": "pending",
+  "target_module": "src-ts/plugins/plugin-engine.ts",
+  "read_first": [
+    "src-ts/mcp/endpoints/writing-craft.ts",
+    "src-ts/narrative/writing-craft/craft-catalog.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'PluginEngine\\|WritingPlugin' src-ts/plugins/plugin-engine.ts → 存在核心类型",
+      "grep 'registerPlugin\\|executePlugin' src-ts/plugins/plugin-engine.ts → 存在注册和执行函数"
+    ]
+  },
+  "action": {
+    "detailed_plan": "创建 Plugin 核心架构：WritingPlugin interface（id, name, version, dimension, detect(text) → PluginResult）。PluginEngine class（register, unregister, list, execute, executeAll）。PluginResult 继承 DimensionResult 格式。内置 2 个示例 Plugin（节奏检测器、风格一致性检测器）。"
+  },
+  "implementation": [
+    { "step": 1, "action": "创建 src-ts/plugins/plugin-engine.ts：WritingPlugin interface + PluginEngine class + PluginResult 类型", "file": "src-ts/plugins/plugin-engine.ts" },
+    { "step": 2, "action": "创建 src-ts/plugins/builtins/ 目录，内置 rhythm-checker 和 style-consistency 两个示例 Plugin", "file": "src-ts/plugins/builtins/rhythm-checker.ts" },
+    { "step": 3, "action": "创建 src-ts/plugins/index.ts barrel export", "file": "src-ts/plugins/index.ts" }
+  ],
+  "priority": "high",
+  "estimated_minutes": 50,
+  "_metadata": { "wave": 2 }
+}

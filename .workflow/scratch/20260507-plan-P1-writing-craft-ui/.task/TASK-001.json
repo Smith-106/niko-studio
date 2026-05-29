@@ -1,0 +1,40 @@
+{
+  "id": "TASK-001",
+  "title": "Writing Craft MCP Endpoint",
+  "status": "pending",
+  "target_module": "src-ts/mcp/endpoints/writing-craft.ts",
+  "test_file": "src-ts/tests/mcp/endpoints/writing-craft.test.ts",
+  "read_first": [
+    "src-ts/mcp/endpoints/m10-consistency.ts",
+    "src-ts/mcp/endpoints/index.ts",
+    "src-ts/mcp/http-types.ts",
+    "src-ts/narrative/suspense-analyzer.ts",
+    "src-ts/narrative/character-depth.ts",
+    "src-ts/narrative/reader-satisfaction-analyzer.ts",
+    "src-ts/narrative/dialogue-analyzer.ts",
+    "src-ts/narrative/writing-craft/emotion-craft.ts",
+    "src-ts/narrative/scene-coherence.ts",
+    "src-ts/narrative/premise-validator.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'writingCraftAnalyzeEndpoint' src-ts/mcp/endpoints/writing-craft.ts → 存在导出函数",
+      "grep 'writingCraftAnalyzeEndpoint' src-ts/mcp/endpoints/index.ts → 存在 re-export",
+      "grep 'structure\\|character\\|suspense\\|emotion\\|dialogue\\|webnovel' src-ts/mcp/endpoints/writing-craft.ts → 6 个维度全部存在",
+      "npx vitest run src-ts/tests/mcp/endpoints/writing-craft.test.ts → 所有测试通过"
+    ]
+  },
+  "action": {
+    "detailed_plan": "创建 MCP endpoint writing-craft.ts，提供 POST /writing-craft/analyze 端点。接收 { text: string, dimensions: string[] } 参数，调用对应的 narrative 分析函数，返回统一格式结果。6 个维度：structure (suspense-analyzer: analyzeThreeActStructure + analyzeEdsonSequence + detectAntiPatterns), character (character-depth: assessCharacterArc + assessCharacterCreation + evaluatePlotCharacterBalance), suspense (suspense-analyzer: detectNarrativeTechniques + detectNarrativeTricks + detectMysterySubtype + analyzeDeductionChain), emotion (emotion-craft: analyzeEmotionCraft + analyzeEmotionLayers + assessDescriptionQuality), dialogue (dialogue-analyzer: analyzeDialogue), webnovel (reader-satisfaction-analyzer: detectUpgradePattern + analyzeGoldenFinger + analyzeWebNovelCurve + assessOutlineQuality)。"
+  },
+  "implementation": [
+    { "step": 1, "action": "创建 src-ts/mcp/endpoints/writing-craft.ts，导出 writingCraftAnalyzeEndpoint 函数。接收 HTTP POST 请求，body 含 text 和可选 dimensions 数组", "file": "src-ts/mcp/endpoints/writing-craft.ts" },
+    { "step": 2, "action": "实例化各分析器（SuspenseAnalyzer, CharacterDepthSystem, ReaderSatisfactionAnalyzer, DialogueAnalyzer, SceneCoherenceDetector），根据 dimensions 参数选择性调用", "file": "src-ts/mcp/endpoints/writing-craft.ts" },
+    { "step": 3, "action": "定义统一的 DimensionResult { dimension: string, score: number, maxScore: number, evidence: string[], suggestions: string[], details: Record<string,unknown> } 返回格式", "file": "src-ts/mcp/endpoints/writing-craft.ts" },
+    { "step": 4, "action": "在 index.ts 中 re-export writingCraftAnalyzeEndpoint", "file": "src-ts/mcp/endpoints/index.ts" },
+    { "step": 5, "action": "创建测试文件验证端点对 6 个维度的分析结果格式正确", "file": "src-ts/tests/mcp/endpoints/writing-craft.test.ts" }
+  ],
+  "priority": "high",
+  "estimated_minutes": 45,
+  "_metadata": { "wave": 1 }
+}

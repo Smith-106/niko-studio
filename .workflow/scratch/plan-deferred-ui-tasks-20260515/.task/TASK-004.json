@@ -1,0 +1,47 @@
+{
+  "task_id": "TASK-004",
+  "title": "Reader Immersion 仪表盘 + Pacing 处方面板",
+  "description": "组合 Reader Immersion Engine 和 Pacing Navigator 的数据构建双面板 UI。左面板：Reader Immersion 仪表盘（跨章节沉浸度曲线、dropout risk 热力图、trajectory 指示器、highRiskChapters 高亮列表）。右面板：Pacing Prescription 卡片列表（按 priority 排序，每张卡片显示 type label + reason + chapterIndex）。两个新 MCP endpoint。",
+  "type": "feature",
+  "complexity": "medium",
+  "estimated_time": "30-45min",
+  "depends_on": [],
+  "files": [
+    "src-ts/mcp/endpoints/writing-craft.ts",
+    "desktop/src/api/writing-craft.ts",
+    "desktop/src/components/intelligence/ReaderImmersionDashboard.tsx",
+    "desktop/src/components/intelligence/PacingPrescriptionPanel.tsx",
+    "desktop/src/components/intelligence/index.ts"
+  ],
+  "read_first": [
+    "src-ts/narrative/reader-immersion-engine.ts",
+    "src-ts/narrative/pacing-navigator.ts",
+    "desktop/src/components/intelligence/TrendChart.tsx",
+    "desktop/src/components/intelligence/ProgressBar.tsx",
+    "desktop/src/components/intelligence/SectionHeader.tsx",
+    "desktop/src/components/intelligence/IntelligenceBadge.tsx",
+    "desktop/src/api/writing-craft.ts",
+    "src-ts/mcp/endpoints/writing-craft.ts"
+  ],
+  "action": "1) 在 writing-craft.ts 添加 reader-immersion endpoint — 调用 analyzeReaderImmersion(chapters)，返回 ImmersionResult\n2) 在 writing-craft.ts 添加 pacing-navigator endpoint — 调用 navigatePacing(chapters)，返回 PacingNavigatorResult\n3) 在 frontend API 添加 analyzeReaderImmersion(chapters) 和 navigatePacing(chapters) 函数及类型\n4) 创建 ReaderImmersionDashboard.tsx — SVG 沉浸度曲线 + dropout risk 热力条 + trajectory badge + highRiskChapters 列表\n5) 创建 PacingPrescriptionPanel.tsx — Prescription 卡片列表（priority 颜色编码：high=red, medium=yellow, low=green）",
+  "implementation": [
+    "Backend: 添加 POST /writing-craft/reader-immersion handler — 接受 { chapters: [{ content, chapterIndex }] }，调用 analyzeReaderImmersion()，返回 ImmersionResult",
+    "Backend: 添加 POST /writing-craft/pacing-navigator handler — 接受 { chapters: [{ content, chapterIndex }] }，调用 navigatePacing()，返回 PacingNavigatorResult",
+    "Frontend API: 添加 ReaderState, ChapterReaderState, ImmersionResult 类型；添加 PacingPrescription, PacingNavigatorResult 类型；添加 analyzeReaderImmersion() 和 navigatePacing() 函数",
+    "ReaderImmersionDashboard.tsx: SVG 折线图显示 immersion 曲线（0-1）；底部 dropout risk 热力条（每章一色块：绿<0.3 / 黄0.3-0.6 / 红>0.6）；顶部 trajectory badge (rising=绿色↑ / stable=灰色→ / declining=红色↓ / volatile=黄色↕)；下方 highRiskChapters 列表 + suggestions",
+    "PacingPrescriptionPanel.tsx: 按 priority 排序的 Prescription 卡片列表，每张卡片：左侧 priority 色块 + type label + chapterIndex badge + reason 文本；底部 pacingScore + suggestions"
+  ],
+  "convergence": {
+    "criteria": [
+      "writing-craft.ts contains 'reader-immersion' or 'readerImmersion' endpoint handler",
+      "writing-craft.ts contains 'pacing-navigator' or 'pacingNavigator' endpoint handler",
+      "desktop/src/api/writing-craft.ts contains analyzeReaderImmersion function",
+      "desktop/src/api/writing-craft.ts contains navigatePacing function",
+      "desktop/src/components/intelligence/ReaderImmersionDashboard.tsx exists",
+      "desktop/src/components/intelligence/PacingPrescriptionPanel.tsx exists",
+      "ReaderImmersionDashboard.tsx contains '<svg' tag",
+      "PacingPrescriptionPanel.tsx contains 'prescription' or 'Prescription' reference",
+      "desktop/src/components/intelligence/index.ts contains both new exports"
+    ]
+  }
+}

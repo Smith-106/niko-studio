@@ -1,0 +1,47 @@
+{
+  "session_id": "maestro-20260517-023700",
+  "created_at": "2026-05-17T02:37:00+08:00",
+  "intent": "完成待处理的技术债",
+  "task_type": "refactor",
+  "chain_name": "quality-refactor",
+  "phase": null,
+  "auto_mode": true,
+  "exec_mode": "auto",
+  "cli_tool": "claude",
+  "context": {
+    "issue_id": null,
+    "milestone_num": "M22",
+    "spec_session_id": null,
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null,
+    "tech_debt_items": [
+      "EvaluationPanel/StoryBiblePanel 拆分 (1600+ 行)",
+      "workflow-engine 剩余逻辑下沉到 levels/",
+      "console 散落收口 (30+ 文件)",
+      "as any 清理 (87 后端 + 25 前端)",
+      "translations.ts 拆分 + craft-catalog 外置"
+    ]
+  },
+  "source": "maestro",
+  "updated_at": "2026-05-17T02:37:00+08:00",
+  "milestone": "M22",
+  "lifecycle_position": null,
+  "target": null,
+  "waves": [],
+  "steps": [
+    {
+      "index": 0,
+      "skill": "quality-refactor",
+      "args": "\"完成待处理的技术债: console收口、巨型组件拆分、as any清理\"",
+      "type": "skill",
+      "status": "completed",
+      "started_at": "2026-05-17T02:37:00+08:00",
+      "completed_at": "2026-05-17T03:40:00+08:00",
+      "error": null
+    }
+  ],
+  "current_step": 0,
+  "status": "completed"
+}

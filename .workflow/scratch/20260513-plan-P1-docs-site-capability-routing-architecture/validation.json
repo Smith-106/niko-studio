@@ -1,0 +1,20 @@
+{
+  "phase": 1,
+  "status": "passed",
+  "validated_at": "2026-05-13T00:00:00+08:00",
+  "test_framework": "docs-site npm build",
+  "coverage": {
+    "statements": null,
+    "branches": null,
+    "functions": null,
+    "lines": null
+  },
+  "requirement_coverage": [
+    { "requirement": "F-001 capability-routing-guide", "tests": ["npm --prefix docs-site run build", "docs-site/scripts/docs-lint.mjs"], "status": "covered" },
+    { "requirement": "F-002 architecture-principles-deep-dive", "tests": ["npm --prefix docs-site run build"], "status": "covered" },
+    { "requirement": "F-003 docs-learning-paths", "tests": ["npm --prefix docs-site run build"], "status": "covered" },
+    { "requirement": "F-004 capability-status-matrix", "tests": ["npm --prefix docs-site run build"], "status": "covered" },
+    { "requirement": "F-005 diagram-and-example-system", "tests": ["npm --prefix docs-site run build"], "status": "covered" }
+  ],
+  "gaps": []
+}

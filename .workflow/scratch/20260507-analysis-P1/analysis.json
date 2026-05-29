@@ -1,0 +1,302 @@
+{
+  "id": "m11-phase1-external-integration-analysis",
+  "type": "analysis",
+  "status": "completed",
+  "phase": 1,
+  "milestone": "M11",
+  "created_at": "2026-05-07T01:01:00+08:00",
+  "description": "Analysis of MiroFish, BookWorld, OpenStory integration into niko-studio for M11 Phase 1",
+
+  "external_sources": {
+    "mirofish": {
+      "url": "https://github.com/666ghj/MiroFish",
+      "type": "swarm_intelligence_engine",
+      "core_capabilities": [
+        "Seed information extraction from real-world data",
+        "GraphRAG construction from seed materials",
+        "God's-eye view dynamic variable injection",
+        "Dual-platform parallel simulation",
+        "Thousands of agents with independent personalities + long-term memory",
+        "Social evolution and collective emergence",
+        "ReportAgent for deep post-simulation interaction"
+      ]
+    },
+    "bookworld": {
+      "url": "https://arxiv.org/html/2504.14538v1",
+      "type": "book_based_multi_agent_society",
+      "core_capabilities": [
+        "Worldview data extraction (term/nature/detail/source)",
+        "Role agents with static + dynamic attributes",
+        "STM (short-term) + LTM (long-term) memory with capacity limits",
+        "Open-domain natural language action space",
+        "Scene-based simulation (minimal narrative unit)",
+        "Free Mode (autonomous) + Script Mode (guided)",
+        "Geospatial map modeling (weighted undirected graph)",
+        "World Agent for environmental management",
+        "Retrieval-augmented role-playing (ChatHaruhi method)",
+        "Story rephrasing from simulation records",
+        "Incremental character profile extraction from source text"
+      ],
+      "validation": {
+        "win_rate_vs_baselines": "75.36%",
+        "evaluated_dimensions": ["Anthropomorphism", "Character Fidelity", "Immersion & Setting", "Writing Quality", "Storyline Quality", "Creativity"],
+        "ablation_key_finding": "Removing environment response significantly hurts immersion; removing scene mode hurts all dimensions"
+      }
+    },
+    "openstory": {
+      "url": "https://github.com/ZJU-LLMs/OpenStory",
+      "type": "agent_kernel_simulation_framework",
+      "core_capabilities": [
+        "Agent-Kernel dynamic architecture (runtime add/remove agents)",
+        "Lifecycle plugins: perception → planning → execution → reflection",
+        "YAML-based configuration (system, environment, action, agent)",
+        "1:1 visual frontend with map-based agent tracking",
+        "Story branching and backtracking mechanism",
+        "Character profile generation from source materials",
+        "Redis-based data bus for distributed simulation"
+      ]
+    }
+  },
+
+  "integration_mapping": {
+    "tier1_architecture": [
+      {
+        "source": "bookworld",
+        "capability": "worldview_data_extraction",
+        "target_modules": [
+          "src-ts/knowledge/manager.ts",
+          "src-ts/services/knowledge-service.ts",
+          "src-ts/mcp/endpoints/wiki.ts"
+        ],
+        "integration": "Add worldview extraction pipeline: chunk → atomic facts → filter → cluster → terminology. Extract term/nature/detail/source from user's novel chapters. Inject into Agent prompts as context.",
+        "effort": "medium",
+        "risk": "low",
+        "dependency": null
+      },
+      {
+        "source": "bookworld",
+        "capability": "scene_based_simulation",
+        "target_modules": [
+          "src-ts/workflow/engine/flow-control.ts",
+          "src-ts/workflow/engine/lifecycle.ts",
+          "src-ts/workflow/adapters/novel-adapter.ts"
+        ],
+        "integration": "Add scene-driven simulation mode to workflow engine. Scene = minimal narrative unit. Multiple role agents act per scene. Dynamic initiator selection based on character state.",
+        "effort": "high",
+        "risk": "medium",
+        "dependency": "worldview_data_extraction"
+      },
+      {
+        "source": "bookworld",
+        "capability": "role_agent_enhancement",
+        "target_modules": [
+          "src-ts/agents/character.ts",
+          "src-ts/narrative/character-depth.ts",
+          "src-ts/narrative/cross-chapter-character-tracker.ts"
+        ],
+        "integration": "Enhance character agent with: 1) static/dynamic attribute separation, 2) open-domain natural language action space, 3) STM+LTM memory with capacity limits and auto-abstraction. Leverage existing memory/six-dimensional-memory.ts for LTM.",
+        "effort": "medium",
+        "risk": "low",
+        "dependency": null
+      },
+      {
+        "source": "openstory",
+        "capability": "agent_lifecycle_plugins",
+        "target_modules": [
+          "src-ts/agents/base.ts",
+          "src-ts/agents/factory.ts",
+          "src-ts/skills/skill-loader.ts"
+        ],
+        "integration": "Refactor agent base to support lifecycle hooks: perception → planning → execution → reflection. Make existing agent capabilities (sequential-thinking.ts, critic.ts etc.) into pluggable lifecycle stages.",
+        "effort": "medium",
+        "risk": "medium",
+        "dependency": null
+      },
+      {
+        "source": "bookworld",
+        "capability": "world_agent_pattern",
+        "target_modules": [
+          "src-ts/agents/worldbuilding.ts",
+          "src-ts/narrative/worldview-coherence-validator.ts"
+        ],
+        "integration": "Enhance worldbuilding agent with: 1) environmental response generation based on worldview settings, 2) event generation and dynamic updates for story stimulation, 3) NPC management (temporary memoryless agents).",
+        "effort": "medium",
+        "risk": "low",
+        "dependency": "worldview_data_extraction"
+      }
+    ],
+
+    "tier2_features": [
+      {
+        "source": "openstory",
+        "capability": "story_branching_backtracking",
+        "target_modules": [
+          "src-ts/workflow/session/",
+          "src-ts/workflow/engine/persistence.ts"
+        ],
+        "integration": "Add branch point markers to workflow sessions. Support backtracking to past nodes with alternative choices. Visualize as tree structure.",
+        "effort": "high",
+        "risk": "medium",
+        "dependency": "scene_based_simulation"
+      },
+      {
+        "source": "bookworld",
+        "capability": "geospatial_map",
+        "target_modules": [
+          "src-ts/graph/graph-engine.ts",
+          "src-ts/graph/graph-manager.ts"
+        ],
+        "integration": "Add weighted undirected graph for location distances. Track character positions. Scene participant selection based on co-location. Movement consumes scene turns.",
+        "effort": "medium",
+        "risk": "low",
+        "dependency": "scene_based_simulation"
+      },
+      {
+        "source": "mirofish",
+        "capability": "graphrag_from_writing",
+        "target_modules": [
+          "src-ts/knowledge/manager.ts",
+          "src-ts/search/hybrid-search.ts",
+          "src-ts/graph/graph-engine.ts"
+        ],
+        "integration": "Auto-construct GraphRAG from novel chapters. Extract seed entities/relationships. Enable graph-enhanced retrieval for agent prompts.",
+        "effort": "high",
+        "risk": "medium",
+        "dependency": "worldview_data_extraction"
+      },
+      {
+        "source": "bookworld",
+        "capability": "story_rephrasing",
+        "target_modules": [
+          "src-ts/services/writing-helper.ts",
+          "src-ts/mcp/endpoints/writing.ts"
+        ],
+        "integration": "Post-simulation LLM rephrasing: convert simulation records (structured action logs) into novel-style narrative prose. Adds 'simulation → narrative' pipeline.",
+        "effort": "medium",
+        "risk": "low",
+        "dependency": "scene_based_simulation"
+      },
+      {
+        "source": "openstory",
+        "capability": "visual_agent_tracking",
+        "target_modules": [
+          "desktop/src/components/CharacterRelationshipsPanel.tsx",
+          "desktop/src/components/StoryBiblePanel.tsx"
+        ],
+        "integration": "Add map-based character tracking UI. Show character positions on geospatial map. Click to view character details and status.",
+        "effort": "high",
+        "risk": "low",
+        "dependency": "geospatial_map"
+      }
+    ],
+
+    "tier3_strategic": [
+      {
+        "source": "mirofish",
+        "capability": "swarm_emergence_sandbox",
+        "target_modules": ["src-ts/agents/"],
+        "integration": "Sandbox mode: multiple character agents interact freely in virtual world, observe emergent plot lines. For plot preview and character behavior validation.",
+        "effort": "very_high",
+        "risk": "high",
+        "dependency": "scene_based_simulation, geospatial_map"
+      },
+      {
+        "source": "mirofish",
+        "capability": "what_if_exploration",
+        "target_modules": ["src-ts/workflow/", "desktop/src/components/"],
+        "integration": "God's-eye view: user defines hypothetical conditions, system simulates multiple possible story trajectories. Generate narrative paths for user selection.",
+        "effort": "very_high",
+        "risk": "high",
+        "dependency": "swarm_emergence_sandbox"
+      },
+      {
+        "source": "openstory",
+        "capability": "dynamic_agent_management",
+        "target_modules": ["src-ts/agents/factory.ts"],
+        "integration": "Runtime dynamic agent add/remove. User can introduce new characters during simulation without restart.",
+        "effort": "medium",
+        "risk": "low",
+        "dependency": "agent_lifecycle_plugins"
+      },
+      {
+        "source": "openstory",
+        "capability": "yaml_config_system",
+        "target_modules": ["src-ts/config/"],
+        "integration": "YAML-based story world configuration: system rules, environment settings, action definitions, agent profiles. User-editable without code changes.",
+        "effort": "medium",
+        "risk": "low",
+        "dependency": null
+      }
+    ]
+  },
+
+  "phased_implementation_roadmap": {
+    "phase_1_foundation": {
+      "focus": "Data extraction + agent enhancement (no UI changes)",
+      "items": [
+        "worldview_data_extraction",
+        "role_agent_enhancement (static/dynamic attributes + STM/LTM)",
+        "agent_lifecycle_plugins (perception→planning→execution→reflection)",
+        "world_agent_pattern (environmental responses + event generation)"
+      ],
+      "estimated_files_changed": "12-18",
+      "risk": "low"
+    },
+    "phase_2_simulation": {
+      "focus": "Scene-based simulation engine",
+      "items": [
+        "scene_based_simulation (workflow engine enhancement)",
+        "geospatial_map (location tracking + graph)",
+        "story_rephrasing (simulation → narrative pipeline)"
+      ],
+      "estimated_files_changed": "15-20",
+      "risk": "medium",
+      "depends_on": "phase_1_foundation"
+    },
+    "phase_3_intelligence": {
+      "focus": "Advanced intelligence features",
+      "items": [
+        "graphrag_from_writing",
+        "story_branching_backtracking",
+        "yaml_config_system",
+        "dynamic_agent_management"
+      ],
+      "estimated_files_changed": "10-15",
+      "risk": "medium",
+      "depends_on": "phase_2_simulation"
+    },
+    "phase_4_emergence": {
+      "focus": "Emergent storytelling (strategic)",
+      "items": [
+        "swarm_emergence_sandbox",
+        "what_if_exploration",
+        "visual_agent_tracking (map UI)"
+      ],
+      "estimated_files_changed": "20-30",
+      "risk": "high",
+      "depends_on": "phase_3_intelligence"
+    }
+  },
+
+  "risk_assessment": {
+    "backward_compatibility": {
+      "level": "low_risk",
+      "reason": "All integrations are additive. Existing M1-M12 features are not modified. New capabilities are opt-in via configuration."
+    },
+    "performance": {
+      "level": "medium_risk",
+      "reason": "Scene simulation + multi-agent interaction increases LLM API calls. Need debouncing, caching, and lazy loading for large projects.",
+      "mitigation": "Virtualize simulation results, debounce style extraction (already done in M12), batch API calls where possible."
+    },
+    "llm_dependency": {
+      "level": "medium_risk",
+      "reason": "Worldview extraction and scene simulation heavily depend on LLM quality. BookWorld paper shows Llama-3.3-70B underperforms on complex multi-agent tasks.",
+      "mitigation": "Use strongest available model for extraction/simulation. Provide manual override/edit for extracted data. Cache extraction results."
+    },
+    "scope_creep": {
+      "level": "high_risk",
+      "reason": "Three external projects represent massive scope. Risk of over-engineering or feature bloat.",
+      "mitigation": "Strict phased implementation. Each phase delivers standalone value. Tier 3 items are explicitly strategic (not immediate)."
+    }
+  }
+}

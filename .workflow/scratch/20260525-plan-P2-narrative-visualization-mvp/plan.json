@@ -1,0 +1,62 @@
+{
+  "plan_dir": ".workflow/scratch/20260525-plan-P2-narrative-visualization-mvp",
+  "status": "planning",
+  "started_at": "2026-05-25T22:15:00+08:00",
+  "updated_at": "2026-05-25T22:15:00+08:00",
+  "completed_at": null,
+  "execution": {
+    "method": "agent",
+    "default_executor": "agent",
+    "current_wave": null,
+    "tasks_completed": [],
+    "tasks_blocked": [],
+    "commits": [],
+    "delegate_ids": {}
+  },
+  "verification": {
+    "status": null,
+    "verified_at": null,
+    "gaps": []
+  },
+  "plan": {
+    "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"],
+    "task_count": 5,
+    "complexity": "medium",
+    "waves": [
+      {
+        "wave": 1,
+        "label": "类型基础设施",
+        "tasks": ["TASK-001"]
+      },
+      {
+        "wave": 2,
+        "label": "可视化交互增强",
+        "tasks": ["TASK-002", "TASK-003", "TASK-004"]
+      },
+      {
+        "wave": 3,
+        "label": "测试覆盖验证",
+        "tasks": ["TASK-005"]
+      }
+    ],
+    "executor_assignments": {},
+    "confidence": {
+      "overall": 0.85,
+      "dimensions": {
+        "requirements_coverage": 0.90,
+        "task_quality": 0.85,
+        "dependency_correctness": 0.88,
+        "estimation_accuracy": 0.75,
+        "collision_safety": 0.90
+      },
+      "pressure_pass": {
+        "task": "TASK-003",
+        "result": "ReaderState集成路径清晰：immersion-engine已冻结接口，TensionCurveView只需增加数据字段映射。风险可控。",
+        "confidence": 0.82
+      }
+    }
+  },
+  "summary": "Phase 2 视化 MVP 增强计划：类型去重 → Timeline缩放+筛选 + ReaderState集成张力曲线 + CharacterGraph互动频率 → 测试覆盖",
+  "approach": "基于现有可视化模块的增强而非重建。Wave 1 先建立共享类型基础设施，Wave 2 并行增强三个视图组件，Wave 3 补充测试覆盖。",
+  "source_artifact": "ANL-20260525-P2-narrative-visualization-mvp"
+}

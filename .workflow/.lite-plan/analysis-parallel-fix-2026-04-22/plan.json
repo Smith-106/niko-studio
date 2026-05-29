@@ -1,0 +1,91 @@
+{
+  "session_id": "analysis-parallel-fix-2026-04-22",
+  "created_at": "2026-04-22T21:12:00+08:00",
+  "topic": "Recovery chain parallel fixes from ANL findings",
+  "source_analysis": {
+    "analysis_session": "ANL-2026-04-22-分模块功能实现分析验证nikostudio状态",
+    "files": [
+      ".workflow/.analysis/ANL-2026-04-22-分模块功能实现分析验证nikostudio状态/discussion.md",
+      ".workflow/.analysis/ANL-2026-04-22-分模块功能实现分析验证nikostudio状态/perspectives.json",
+      ".workflow/.analysis/ANL-2026-04-22-分模块功能实现分析验证nikostudio状态/research.json",
+      ".workflow/.analysis/ANL-2026-04-22-分模块功能实现分析验证nikostudio状态/explorations/recovery-round2.json"
+    ]
+  },
+  "objective": "Deliver minimal, parallelizable fixes that harden checkpoint/restore/quickRollback correctness and test confidence.",
+  "scope": [
+    "workspace-level concurrency guard for recovery operations",
+    "quickRollback state atomicity and failure consistency",
+    "recovery failure/concurrency/destructive-confirm test coverage expansion"
+  ],
+  "non_goals": [
+    "container composition-root unification",
+    "workspace contract unification across frontend/backend",
+    "full observability stack rollout"
+  ],
+  "workstreams": [
+    {
+      "id": "WS1",
+      "task_ref": ".task/TASK-001.json",
+      "title": "Add workspace-scoped mutex for recovery operations",
+      "parallelizable": true,
+      "priority": "P0"
+    },
+    {
+      "id": "WS2",
+      "task_ref": ".task/TASK-002.json",
+      "title": "Make quickRollback state persistence atomic",
+      "parallelizable": true,
+      "priority": "P0"
+    },
+    {
+      "id": "WS3",
+      "task_ref": ".task/TASK-003.json",
+      "title": "Expand recovery test matrix for failure and concurrency",
+      "parallelizable": false,
+      "priority": "P1"
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "TASK-001",
+      "to": "TASK-003",
+      "type": "behavior-foundation"
+    },
+    {
+      "from": "TASK-002",
+      "to": "TASK-003",
+      "type": "behavior-foundation"
+    }
+  ],
+  "risks": [
+    {
+      "id": "R1",
+      "risk": "Lock scope too coarse may reduce throughput",
+      "mitigation": "Limit lock domain to git-mutating critical sections only"
+    },
+    {
+      "id": "R2",
+      "risk": "Failure-path semantics may break existing UI assumptions",
+      "mitigation": "Preserve response contract and add explicit failure reason assertions"
+    },
+    {
+      "id": "R3",
+      "risk": "New tests may be flaky under concurrent filesystem operations",
+      "mitigation": "Use deterministic temp workspaces and strict teardown"
+    }
+  ],
+  "success_criteria": [
+    "No incorrect success-state persistence when restore fails",
+    "Concurrent restore/rollback scenarios are serialized per workspace",
+    "New recovery tests pass consistently in CI and local runs"
+  ],
+  "artifacts": {
+    "planning_context": "planning-context.md",
+    "plan": "plan.json",
+    "tasks": [
+      ".task/TASK-001.json",
+      ".task/TASK-002.json",
+      ".task/TASK-003.json"
+    ]
+  }
+}

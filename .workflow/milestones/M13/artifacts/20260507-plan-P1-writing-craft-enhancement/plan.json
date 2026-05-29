@@ -1,0 +1,63 @@
+{
+  "summary": "M13 Phase 1 — 写作知识引擎增强：情节模板、人物原型、体裁陈词滥调、悬疑流派分析",
+  "approach": "基于差距分析的前4项最高优先级改进，以数据结构+检测逻辑为原则，扩展writing-craft模块和关联分析器。每个任务新增结构化知识数据+检测函数+测试。",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"],
+  "task_count": 4,
+  "complexity": "medium",
+  "estimated_time": "3-4 hours",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"]
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-004"]
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "writing-craft/plot-templates.ts + archetype-catalog.ts → narrative/index.ts → tests\nwriting-craft/craft-catalog.ts → cliche-detector.ts integration → tests\nwriting-craft/craft-catalog.ts → suspense-subgenre-analyzer.ts → tests",
+    "stages": [
+      "Wave 1: 新增知识数据结构 + 检测逻辑 (3个并行任务)",
+      "Wave 2: 悬疑流派分析 (依赖craft-catalog扩展)"
+    ]
+  },
+
+  "design_decisions": [
+    "新知识模块放在 writing-craft/ 目录下，保持模块化",
+    "每个知识模块 = enum + interface + DATA record + 检测函数",
+    "体裁陈词滥调通过扩展现有cliche-detector实现，不新建文件",
+    "悬疑流派作为 suspense-analyzer.ts 的扩展方法"
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "知识数据用 Record<Enum, Interface> 模式 (参考 SATISFACTION_PATTERNS, GENRE_TEMPLATES)",
+      "检测函数基于关键词匹配 + 权重评分 (参考现有 analyzer 模式)",
+      "barrel export 通过 writing-craft/index.ts"
+    ],
+    "conventions": [
+      "中文label + 英文enum值",
+      "每个检测函数返回结构化结果对象",
+      "测试用 vitest"
+    ],
+    "dependencies": [
+      "writing-craft/craft-catalog.ts (现有)",
+      "writing-craft/genre-templates.ts (现有)",
+      "evaluators/cliche-detector.ts (现有，需扩展)",
+      "suspense-analyzer.ts (现有，需扩展)"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-07T08:20:00+08:00",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

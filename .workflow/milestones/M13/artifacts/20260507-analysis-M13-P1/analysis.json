@@ -1,0 +1,387 @@
+{
+  "phase": 1,
+  "milestone": "M13",
+  "timestamp": "2026-05-07T03:30:00+08:00",
+  "analyst": "in-session (delegate fallback)",
+  "intent": "根据三个写作知识库改进niko-studio写作技能",
+
+  "knowledge_sources": {
+    "writing_craft": {
+      "path": "H:/写作/写作技巧",
+      "count": 54,
+      "key_books": [
+        "大师写作班：情节与结构+人物对话+描写与背景 (Bell)",
+        "冲突与悬念 (Bell)",
+        "经典情节20种 (Tobias)",
+        "经典人物原型45种 (Schmidt)",
+        "故事策略：23个故事段落 (Schellhardt)",
+        "救猫咪 (Snyder)",
+        "对白 (McKee)",
+        "故事写作大师班 (Truby)",
+        "畅销作家写作全技巧 (大泽在昌)",
+        "蔡骏24堂写作课",
+        "故事写作：小说写作实用指南 (蔡骏)",
+        "创造难忘的人物 (Seger)",
+        "弗雷的小说写作坊：劲爆小说秘境游走",
+        "弗雷的小说写作坊：悬疑小说创作指导",
+        "哈佛非虚构写作课",
+        "开始写吧！虚构/非虚构/推理/科幻创作",
+        "剧本游戏写作入门",
+        "韩剧如何讲故事"
+      ],
+      "extracted_principles": [
+        {
+          "id": "WC-01",
+          "principle": "Bell三幕结构 + 扰动事件",
+          "source": "大师写作班：情节与结构",
+          "description": "故事分三幕，第一幕扰动事件打破平衡，第二幕中点转折，第三幕高潮决战。15%扰动事件，50%中点，75%失去一切时刻",
+          "applicable_modules": ["suspense-analyzer", "scene-coherence"]
+        },
+        {
+          "id": "WC-02",
+          "principle": "McKee对白三功能",
+          "source": "对白：文字、舞台、银幕的言语行为艺术",
+          "description": "每句对白必须同时完成至少两个：推动情节、揭示角色、表达主题、制造冲突。避免解释性对白（tell），用潜台词（show）",
+          "applicable_modules": ["evaluators/subtext-evaluator", "evaluators/character-evaluator"]
+        },
+        {
+          "id": "WC-03",
+          "principle": "45种角色原型体系",
+          "source": "经典人物原型45种",
+          "description": "8大原型（英雄、导师、边界守卫、信使、变形者、阴影、盟友、骗子）×细分变体。每个原型有成长弧线和阴暗面",
+          "applicable_modules": ["character-manager", "character-depth"]
+        },
+        {
+          "id": "WC-04",
+          "principle": "20种经典情节模式",
+          "source": "经典情节20种",
+          "description": "探索、冒险、追寻、解救、逃脱、复仇、谜题、敌对、压力、诱惑、变形、转变、成熟、爱情、禁恋、牺牲、发现、贪婪、上升、堕落",
+          "applicable_modules": ["narrative-voice", "premise-validator"]
+        },
+        {
+          "id": "WC-05",
+          "principle": "Snyder节拍表 (Save the Cat)",
+          "source": "救猫咪",
+          "description": "15个节拍：开场画面→铺垫→催化事件→争论→进入第二幕→B故事→游戏乐趣→中点→敌人逼近→失去一切→灵魂黑夜→进入第三幕→高潮→终场画面",
+          "applicable_modules": ["suspense-analyzer", "scene-coherence"]
+        },
+        {
+          "id": "WC-06",
+          "principle": "Truby22步故事结构",
+          "source": "故事写作大师班",
+          "description": "从故事前提→七关键步骤(弱点/需求/欲望/对手/计划/决战/自我揭示)→22个结构节拍。强调道德论证和主题递进",
+          "applicable_modules": ["premise-validator", "evaluators/critic-engine"]
+        },
+        {
+          "id": "WC-07",
+          "principle": "蔡骏故事写作三法则",
+          "source": "蔡骏24堂写作课/故事写作",
+          "description": "中国悬疑写作核心：1)设局-解局循环 2)人物命运张力 3)信息控制(读者知道vs角色知道的不对称)",
+          "applicable_modules": ["suspense-analyzer", "foreshadowing"]
+        },
+        {
+          "id": "WC-08",
+          "principle": "大泽在昌写作全技巧",
+          "source": "畅销作家写作全技巧",
+          "description": "角色塑造第一法则：每个角色必须有独特的说话方式。通过对话展示性格差异。视角选择的叙事效果",
+          "applicable_modules": ["character-manager", "evaluators/voice-evaluator"]
+        },
+        {
+          "id": "WC-09",
+          "principle": "描写五感层次",
+          "source": "描写与背景 (Rozelle)",
+          "description": "不只是视觉描写，要调动五感。环境描写服务于情感——每个场景环境都应映射角色的内心状态",
+          "applicable_modules": ["analyzers/sensory-analyzer", "fictional_dream/empathy"]
+        },
+        {
+          "id": "WC-10",
+          "principle": "23段故事策略",
+          "source": "故事策略——电影剧本必备的23个故事段落",
+          "description": "7个核心装置：英雄引入、催化事件、争论与挣扎、故事转折1、中间点、故事转折2、高潮。每个装置有具体功能定义",
+          "applicable_modules": ["scene-coherence", "suspense-analyzer"]
+        }
+      ]
+    },
+
+    "suspense": {
+      "path": "H:/写作/悬疑",
+      "learning_paths": [
+        {
+          "id": "SP-01",
+          "name": "本格推理+暴风雪山庄",
+          "classics": ["Agatha Christie - 无人生还"],
+          "principles": [
+            "公平线索规则：所有线索必须提前展示给读者",
+            "封闭空间：有限角色+有限空间制造最大张力",
+            "连环事件递进：每个死亡/事件提高危险等级",
+            "推理链：读者可以参与推理，伏笔和线索的一致性"
+          ],
+          "applicable_modules": ["foreshadowing", "scene-coherence", "suspense-analyzer"]
+        },
+        {
+          "id": "SP-02",
+          "name": "社会派悬疑+动机挖掘",
+          "classics": ["东野圭吾 - 白夜行"],
+          "principles": [
+            "社会背景驱动：犯罪动机来自社会结构问题",
+            "双线叙事：表面故事和隐藏真相并行推进",
+            "角色灰色地带：没有纯粹的善恶，只有处境选择",
+            "读者共情悖论：同情加害者同时谴责行为"
+          ],
+          "applicable_modules": ["character-depth", "evaluators/four-selves-evaluator", "fictional_dream/sympathy"]
+        },
+        {
+          "id": "SP-03",
+          "name": "硬汉派+氛围描写",
+          "classics": ["Raymond Chandler - 漫长的告别"],
+          "principles": [
+            "氛围即角色：城市环境本身就是叙事驱动力",
+            "硬派叙事声音：简短有力的句子，冰冷观察",
+            "道德模糊性：主角在灰色地带行动",
+            "比喻驱动的描写：用奇特的比喻创造独特的叙事声音"
+          ],
+          "applicable_modules": ["narrative-voice", "style-system", "analyzers/sensory-analyzer"]
+        },
+        {
+          "id": "SP-04",
+          "name": "惊悚悬疑+不可靠叙述者",
+          "classics": ["Gone Girl - 消失的爱人"],
+          "principles": [
+            "不可靠叙述者：读者不能信任叙述者提供的信息",
+            "视角操控：通过选择性揭示制造误判",
+            "反转结构：中点大反转颠覆之前所有认知",
+            "心理操控：角色操控读者如同操控其他角色"
+          ],
+          "applicable_modules": ["narrative-voice", "evaluators/subtext-evaluator", "suspense-analyzer"]
+        }
+      ]
+    },
+
+    "web_novel_trends": {
+      "path": "H:/写作/中国网络文学阅读潮流研究",
+      "volumes": [
+        {
+          "id": "WN-01",
+          "title": "爽文时代 (S1)",
+          "principles": [
+            "爽点设计：读者期待→延迟满足→爆发释放的节奏",
+            "金手指体系：主角独特能力的规则设计和成长曲线",
+            "打脸节奏：压制→反抗→碾压的三拍子节奏",
+            "代入感机制：读者自我投射到主角的心理通道"
+          ],
+          "applicable_modules": ["suspense-analyzer", "fictional_dream/identification", "analyzers/tension-curve-analyzer"]
+        },
+        {
+          "id": "WN-02",
+          "title": "爽点宇宙 (S2)",
+          "principles": [
+            "爽点分类学：生理爽/心理爽/社交爽/成就爽的4层模型",
+            "爽点密度控制：每N章一个小爽点，每M章一个大爽点",
+            "多线程爽点：主线爽+支线爽+伏笔爽的交织",
+            "读者期待管理：预告→铺垫→兑现的期待循环"
+          ],
+          "applicable_modules": ["analyzers/tension-curve-analyzer", "fictional_dream/engine"]
+        },
+        {
+          "id": "WN-03",
+          "title": "爽感爆款系统 (S3)",
+          "principles": [
+            "爆款公式：核心爽点+差异化设定+共鸣情感",
+            "设定创新：在已知框架上的微创新比全创新更有效",
+            "情感共鸣锚点：每3章一个读者情感共鸣的锚点场景",
+            "留存设计：章节末尾的钩子(hook)设计确保追读"
+          ],
+          "applicable_modules": ["scene-coherence", "evaluators/premise-evaluator", "suspense-analyzer"]
+        },
+        {
+          "id": "WN-04",
+          "title": "文运迷楼说 (S4)",
+          "principles": [
+            "文运周期：网络文学的流行周期和代际变化规律",
+            "类型融合：不同类型的组合产生新子类型的模式",
+            "IP转化价值：从文字到影视/游戏的叙事要素保留",
+            "读者分层：不同年龄/性别/阅读经验的读者偏好差异"
+          ],
+          "applicable_modules": ["style-system", "premise-validator"]
+        },
+        {
+          "id": "WN-05",
+          "title": "蚂蚁哲学 (S5)",
+          "principles": [
+            "群体创作智慧：读者反馈驱动的写作策略",
+            "网感培养：对读者心理的直觉性把握能力",
+            "连载节奏控制：日更/周更的内容密度和节奏安排",
+            "评论价值挖掘：从读者评论中提取改进信号"
+          ],
+          "applicable_modules": ["analyzers/tension-curve-analyzer", "scene-coherence"]
+        }
+      ]
+    }
+  },
+
+  "module_mapping": {
+    "existing_enhancements": [
+      {
+        "module": "suspense-analyzer.ts",
+        "current": "Frey三柱(Story Question/Threat/Lit Fuse)",
+        "enhancement": "增加Bell三幕结构检查、Snyder节拍表匹配、蔡骏设局-解局循环检测、爽文爽点密度分析",
+        "impact": "high",
+        "effort": "medium"
+      },
+      {
+        "module": "foreshadowing.ts",
+        "current": "PLANTED→HINTED→HARVESTED状态机",
+        "enhancement": "增加公平线索规则验证(本格推理)、信息不对称度评估(读者vs角色知情差)、伏笔到兑现的间隔建议",
+        "impact": "high",
+        "effort": "small"
+      },
+      {
+        "module": "character-depth.ts + character-manager.ts",
+        "current": "5维评分 + 人格类型 + 关系管理",
+        "enhancement": "增加45种原型匹配、独特对话方式检测、灰色地带道德分析(社会派)、不可靠叙述者识别",
+        "impact": "high",
+        "effort": "medium"
+      },
+      {
+        "module": "analyzers/tension-curve-analyzer.ts",
+        "current": "张力曲线分析",
+        "enhancement": "增加爽文爽点密度控制(每N章小爽/每M章大爽)、章节钩子(hook)检测、期待→延迟→释放节奏分析",
+        "impact": "high",
+        "effort": "medium"
+      },
+      {
+        "module": "narrative-voice.ts",
+        "current": "叙事声音检测",
+        "enhancement": "增加不可靠叙述者检测(Gone Girl模式)、硬汉派叙事声音识别(短句/冷观察/奇比喻)、叙事者可信度评分",
+        "impact": "medium",
+        "effort": "medium"
+      },
+      {
+        "module": "evaluators/subtext-evaluator.ts",
+        "current": "潜台词评估",
+        "enhancement": "增加McKee对白三功能检查(情节/角色/主题至少满足二)、解释性对白检测(tell vs show)、对话性格差异化评估",
+        "impact": "medium",
+        "effort": "small"
+      },
+      {
+        "module": "analyzers/sensory-analyzer.ts",
+        "current": "感官描写分析",
+        "enhancement": "增加五感覆盖率检查、环境-情感映射评估(场景环境是否反映角色内心)、氛围即角色的模式识别",
+        "impact": "medium",
+        "effort": "small"
+      },
+      {
+        "module": "premise-validator.ts",
+        "current": "前提验证",
+        "enhancement": "增加20种经典情节模式匹配、爆款公式评估(核心爽点+差异化+共鸣)、Truby道德论证检查",
+        "impact": "medium",
+        "effort": "medium"
+      }
+    ],
+    "new_modules": [
+      {
+        "name": "story-structure-analyzer.ts",
+        "description": "故事结构分析器：三幕结构检查、Snyder节拍表匹配、Truby22步评估、23段故事策略",
+        "impact": "high",
+        "effort": "large",
+        "depends_on": ["suspense-analyzer", "scene-coherence"]
+      },
+      {
+        "name": "reader-satisfaction-analyzer.ts",
+        "description": "读者满意度分析器：爽点密度检测、章节钩子评分、期待-延迟-释放节奏分析、读者留存设计评估",
+        "impact": "high",
+        "effort": "medium",
+        "depends_on": ["tension-curve-analyzer", "fictional_dream/engine"]
+      },
+      {
+        "name": "unreliable-narrator-detector.ts",
+        "description": "不可靠叙述者检测器：叙述者可信度评分、信息不对称度评估、视角操控识别、反转结构验证",
+        "impact": "medium",
+        "effort": "medium",
+        "depends_on": ["narrative-voice", "suspense-analyzer"]
+      }
+    ]
+  },
+
+  "gap_analysis": {
+    "critical_gaps": [
+      "缺少故事结构分析 — 没有三幕/节拍表/故事策略的结构检查器",
+      "缺少读者满意度分析 — 没有爽点密度/章节钩子/追读设计分析（对中文网文特别重要）",
+      "suspense-analyzer只有Frey模型 — 缺少Bell冲突悬念、蔡骏设局解局、本格推理公平线索规则"
+    ],
+    "important_gaps": [
+      "没有不可靠叙述者检测 — 悬疑小说的核心技术之一",
+      "对白评估缺少McKee三功能法则 — 只看潜台词不够",
+      "角色分析缺少原型匹配 — 45种原型的成长弧线非常有用",
+      "没有章节钩子(hook)分析 — 网络文学连载的关键技术"
+    ],
+    "minor_gaps": [
+      "感官分析缺少五感覆盖率和环境-情感映射",
+      "premise-validator缺少经典情节模式匹配",
+      "风格系统缺少硬汉派/本格推理等类型化声音识别"
+    ]
+  },
+
+  "implementation_priority": {
+    "tier1_high_impact": [
+      {
+        "task": "增强suspense-analyzer：增加Bell三幕结构+蔡骏设局解局+爽点密度",
+        "effort": "medium",
+        "files": ["src-ts/narrative/suspense-analyzer.ts"],
+        "principles": ["WC-01", "WC-05", "WC-07", "WN-01", "WN-02"]
+      },
+      {
+        "task": "创建reader-satisfaction-analyzer：爽点密度+章节钩子+期待节奏",
+        "effort": "medium",
+        "files": ["src-ts/narrative/reader-satisfaction-analyzer.ts"],
+        "principles": ["WN-01", "WN-02", "WN-03"]
+      },
+      {
+        "task": "增强foreshadowing：公平线索规则+信息不对称度+兑现间隔",
+        "effort": "small",
+        "files": ["src-ts/narrative/foreshadowing.ts"],
+        "principles": ["SP-01", "WC-07"]
+      }
+    ],
+    "tier2_medium_impact": [
+      {
+        "task": "创建unreliable-narrator-detector：叙述者可信度+视角操控+反转验证",
+        "effort": "medium",
+        "files": ["src-ts/narrative/unreliable-narrator-detector.ts"],
+        "principles": ["SP-04", "WC-08"]
+      },
+      {
+        "task": "增强对白评估：McKee三功能+解释性对白检测+对话性格差异化",
+        "effort": "small",
+        "files": ["src-ts/narrative/evaluators/subtext-evaluator.ts"],
+        "principles": ["WC-02", "WC-08"]
+      },
+      {
+        "task": "增强角色分析：45种原型匹配+独特对话方式+道德灰色地带",
+        "effort": "medium",
+        "files": ["src-ts/narrative/character-depth.ts", "src-ts/narrative/character-manager.ts"],
+        "principles": ["WC-03", "SP-02"]
+      }
+    ],
+    "tier3_nice_to_have": [
+      {
+        "task": "增强感官分析：五感覆盖率+环境情感映射",
+        "effort": "small",
+        "files": ["src-ts/narrative/analyzers/sensory-analyzer.ts"],
+        "principles": ["WC-09", "SP-03"]
+      },
+      {
+        "task": "增强premise-validator：20种经典情节模式匹配",
+        "effort": "medium",
+        "files": ["src-ts/narrative/premise-validator.ts"],
+        "principles": ["WC-04", "WC-06"]
+      }
+    ]
+  },
+
+  "recommended_scope": {
+    "phase_1_focus": "tier1_high_impact (3 tasks) — 立即可实现的高价值改进",
+    "estimated_time": "2-3 hours",
+    "rationale": "聚焦在suspense/foreshadowing/reader-satisfaction三个方向，直接影响写作分析质量，特别是中文网络文学场景"
+  }
+}

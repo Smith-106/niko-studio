@@ -1,0 +1,134 @@
+{
+  "$schema_version": "2026-05",
+  "session_id": "BRN-20260517-m24-milestone-direction",
+  "topic": "M24 里程碑方向探索：技术债清理 + 新功能方向",
+  "mode": "auto",
+  "roles": ["system-architect", "product-manager", "data-architect"],
+  "features": [
+    {
+      "id": "F-001",
+      "slug": "frontend-console-logger",
+      "title": "前端 Console 收口到结构化 Logger",
+      "priority": "P1",
+      "phase": 1,
+      "status": "spec-complete",
+      "risk": "low",
+      "effort_days": 2,
+      "depends_on": []
+    },
+    {
+      "id": "F-002",
+      "slug": "giant-component-split",
+      "title": "EvaluationPanel + StoryBiblePanel 巨型组件拆分",
+      "priority": "P1",
+      "phase": 3,
+      "status": "spec-complete",
+      "risk": "medium",
+      "effort_days": 5,
+      "depends_on": ["F-001"]
+    },
+    {
+      "id": "F-003",
+      "slug": "type-safety-cleanup",
+      "title": "as any 清理与类型安全加固",
+      "priority": "P2",
+      "phase": 1,
+      "status": "spec-complete",
+      "risk": "low",
+      "effort_days": 2,
+      "depends_on": []
+    },
+    {
+      "id": "F-004",
+      "slug": "translations-modularize",
+      "title": "translations.ts 按模块拆分",
+      "priority": "P2",
+      "phase": 2,
+      "status": "spec-complete",
+      "risk": "low",
+      "effort_days": 3,
+      "depends_on": []
+    },
+    {
+      "id": "F-005",
+      "slug": "craft-catalog-externalize",
+      "title": "craft-catalog 数据外置为 JSON",
+      "priority": "P2",
+      "phase": 2,
+      "status": "spec-complete",
+      "risk": "low-medium",
+      "effort_days": 4,
+      "depends_on": []
+    },
+    {
+      "id": "F-006",
+      "slug": "workflow-engine-refactor",
+      "title": "workflow-engine 逻辑分层与策略模式提取",
+      "priority": "P2",
+      "phase": 4,
+      "status": "spec-complete",
+      "risk": "high",
+      "effort_days": 7,
+      "depends_on": ["F-003"]
+    },
+    {
+      "id": "F-007",
+      "slug": "narrative-visualization",
+      "title": "叙事结构可视化（时间轴 + 张力曲线 + 角色图谱）",
+      "priority": "P3",
+      "phase": 5,
+      "status": "spec-complete",
+      "risk": "medium",
+      "effort_days": 7,
+      "depends_on": ["F-002", "F-006"]
+    },
+    {
+      "id": "F-008",
+      "slug": "revision-workflow-enhance",
+      "title": "智能修订工作流增强（M24 仅设计）",
+      "priority": "P3-deferred",
+      "phase": null,
+      "status": "design-only",
+      "risk": "medium",
+      "effort_days": 0,
+      "depends_on": ["F-005", "F-006"]
+    }
+  ],
+  "execution_plan": {
+    "total_effort_days": 30,
+    "batches": [
+      {
+        "batch": 1,
+        "name": "Quick Wins",
+        "weeks": "1-2",
+        "features": ["F-001", "F-003"],
+        "gate": "零 console 泄露 + 零 as any + 全部测试通过"
+      },
+      {
+        "batch": 2,
+        "name": "Data Externalization",
+        "weeks": "3-4",
+        "features": ["F-004", "F-005"],
+        "gate": "翻译 key 不变 + catalog 加载测试通过"
+      },
+      {
+        "batch": 3,
+        "name": "Structural + New Feature",
+        "weeks": "5-8",
+        "features": ["F-002", "F-006", "F-007"],
+        "gate": "组件快照通过 + workflow API 兼容 + 可视化功能验收"
+      }
+    ]
+  },
+  "enhancements_applied": ["EP-001", "EP-002", "EP-003", "EP-004", "EP-005", "EP-006"],
+  "confidence": {
+    "overall": 0.88,
+    "role_coverage": 1.0,
+    "cross_role_consistency": 0.85,
+    "feature_completeness": 1.0,
+    "spec_quality": 0.80,
+    "design_feasibility": 0.75
+  },
+  "complexity_score": 5,
+  "created_at": "2026-05-17T03:51:00+08:00"
+}

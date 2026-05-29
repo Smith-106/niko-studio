@@ -1,0 +1,29 @@
+{
+  "id": "TASK-004",
+  "title": "Unify workspace contract to single source of truth",
+  "description": "Converge backend and desktop workspace contract definitions to one authoritative model and adapter path.",
+  "depends_on": [],
+  "convergence": {
+    "criteria": [
+      "workspace contract fields come from one source path",
+      "desktop mapping no longer has divergent schema logic",
+      "legacy fields remain supported by explicit adapter"
+    ]
+  },
+  "files": [
+    {
+      "path": "src-ts/project/workspace-model.ts",
+      "change": "Harden authoritative contract and export adapter utilities"
+    },
+    {
+      "path": "desktop/src/types/workspace.ts",
+      "change": "Consume authoritative mapping and remove duplicate schema conversion"
+    }
+  ],
+  "implementation": [
+    "Define authoritative contract and compatibility adapter",
+    "Replace desktop duplicate mapping with adapter usage",
+    "Validate serialization parity across backend and desktop"
+  ],
+  "test": "Run workspace API and desktop contract tests for parity and compatibility"
+}
