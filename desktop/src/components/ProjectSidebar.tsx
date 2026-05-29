@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   FolderOpen,
   BookOpen,
@@ -7,11 +7,13 @@ import {
   ChevronDown,
   Plus,
   PanelLeftClose,
-  PanelLeft,
+  Folder,
 } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useProjectSidebarState } from '../stores/selectors'
 import { writeChapterContent, writeProjectMeta } from '../services/projectFileService'
+
+type UnsavedToast = { visible: boolean; pendingChapterId: string | null }
 
 export const ProjectSidebar = React.memo(function ProjectSidebar() {
   const {
@@ -34,6 +36,7 @@ export const ProjectSidebar = React.memo(function ProjectSidebar() {
 
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({})
   const [expandedVolumes, setExpandedVolumes] = useState<Record<string, boolean>>({})
+  const [unsavedToast, setUnsavedToast] = useState<UnsavedToast>({ visible: false, pendingChapterId: null })
 
   const toggleProject = (projectId: string) => {
     setExpandedProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }))
@@ -44,16 +47,24 @@ export const ProjectSidebar = React.memo(function ProjectSidebar() {
     setExpandedVolumes((prev) => ({ ...prev, [volumeId]: !prev[volumeId] }))
   }
 
-  const handleChapterSelect = (id: string) => {
+  const handleChapterSelect = useCallback((id: string) => {
     if (editorIsDirty) {
-      const confirmed = window.confirm(
-        '当前章节有未保存的修改，切换章节将丢失这些修改。确定要切换吗？'
-      )
-      if (!confirmed) return
-      setEditorIsDirty(false)
+      setUnsavedToast({ visible: true, pendingChapterId: id })
+      return
     }
     selectChapter(id)
-  }
+  }, [editorIsDirty, selectChapter])
+
+  const handleDiscardAndSwitch = useCallback(() => {
+    const id = unsavedToast.pendingChapterId
+    setEditorIsDirty(false)
+    setUnsavedToast({ visible: false, pendingChapterId: null })
+    if (id) selectChapter(id)
+  }, [unsavedToast.pendingChapterId, setEditorIsDirty, selectChapter])
+
+  const handleCancelSwitch = useCallback(() => {
+    setUnsavedToast({ visible: false, pendingChapterId: null })
+  }, [])
 
   const handleAddProject = async () => {
     const id = createNewProject('新项目')
@@ -90,14 +101,21 @@ export const ProjectSidebar = React.memo(function ProjectSidebar() {
     }
   }
 
+  const currentProject = currentProjectId ? projectsById[currentProjectId] : null
+
   if (!sidebarExpanded) {
     return (
       <button
         onClick={toggleSidebar}
-        className="flex items-center justify-center w-10 h-10 text-dark-text-secondary hover:text-dark-text hover:bg-dark-surface rounded-lg transition-colors"
+        className="flex flex-col items-center justify-center gap-1 w-10 py-2 text-dark-text-secondary hover:text-dark-text hover:bg-dark-surface rounded-lg transition-colors"
         title="展开项目面板"
       >
-        <PanelLeft size={18} />
+        <Folder size={16} />
+        {currentProject && (
+          <span className="text-[9px] font-medium leading-none truncate max-w-[36px]">
+            {(currentProject.name || '?').charAt(0)}
+          </span>
+        )}
       </button>
     )
   }
@@ -207,6 +225,27 @@ export const ProjectSidebar = React.memo(function ProjectSidebar() {
           )
         })}
       </div>
+
+      {/* Unsaved changes toast */}
+      {unsavedToast.visible && (
+        <div className="shrink-0 border-t border-amber-500/30 bg-amber-900/20 px-3 py-2.5">
+          <p className="text-xs text-amber-200 font-medium mb-2">当前章节有未保存的修改，切换将丢弃。</p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDiscardAndSwitch}
+              className="text-xs px-2.5 py-1 rounded bg-amber-600/80 text-white font-medium hover:bg-amber-500 transition-colors"
+            >
+              放弃并切换
+            </button>
+            <button
+              onClick={handleCancelSwitch}
+              className="text-xs px-2.5 py-1 rounded border border-dark-border2 text-dark-text-secondary hover:text-dark-text hover:bg-dark-surface2 transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   )
 })

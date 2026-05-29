@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain } from 'lucide-react'
+import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain, Activity } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
 import { useConversationList, useCurrentConversationId, useCreateConversation, useSelectConversation } from '../stores/selectors'
@@ -294,47 +294,65 @@ export const Sidebar = React.memo(function Sidebar({
           <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2">Writer Intelligence</div>
         </div>
       )}
-      <div className="border-t border-dark-border p-3 space-y-0.5 shrink-0">
-        <button onClick={onOpenForeshadowingTracker} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Foreshadowing" type="button">
-          <Eye size={18} />
-          {!collapsed && <span className="text-sm font-medium">Foreshadowing</span>}
-        </button>
-        <button onClick={onOpenPatternDashboard} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Patterns" type="button">
-          <LayoutGrid size={18} />
-          {!collapsed && <span className="text-sm font-medium">Patterns</span>}
-        </button>
-        <button onClick={onOpenSessionAnalytics} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Analytics" type="button">
-          <PieChart size={18} />
-          {!collapsed && <span className="text-sm font-medium">Analytics</span>}
-        </button>
-        <button onClick={onOpenAnalysis} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="智能分析" type="button">
-          <Brain size={18} />
-          {!collapsed && <span className="text-sm font-medium">智能分析</span>}
-        </button>
-        <button onClick={onOpenEvaluationDrillDown} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Evaluation" type="button">
-          <Scaling size={18} />
-          {!collapsed && <span className="text-sm font-medium">Evaluation</span>}
-        </button>
-        <button onClick={onOpenCharacterRelationships} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Characters" type="button">
-          <Users size={18} />
-          {!collapsed && <span className="text-sm font-medium">Characters</span>}
-        </button>
-        <button onClick={onOpenNarrativeVisualization} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={t.sidebarNarrativeVisualization} type="button">
-          <BarChart3 size={18} />
-          {!collapsed && <span className="text-sm font-medium">{t.sidebarNarrativeVisualization}</span>}
-        </button>
-      </div>
+      <div className="border-t border-dark-border shrink-0">
+        {/* 分析组 */}
+        {!collapsed && (
+          <div className="px-5 pt-3 pb-1">
+            <span className="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70">分析</span>
+          </div>
+        )}
+        <div className="px-3 space-y-0.5">
+          <button onClick={onOpenAnalysis} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="智能分析" type="button">
+            <Brain size={18} />
+            {!collapsed && <span className="text-sm font-medium">智能分析</span>}
+          </button>
+          <button onClick={onOpenEvaluationDrillDown} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="深度评估" type="button">
+            <Scaling size={18} />
+            {!collapsed && <span className="text-sm font-medium">深度评估</span>}
+          </button>
+          <button onClick={onOpenEvaluation} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={t.sidebarEvaluationPanel} type="button">
+            <BarChart3 size={18} />
+            {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationPanel}</span>}
+          </button>
+        </div>
 
-      {/* Footer Tools - Console Status Tags */}
-      <div className="border-t border-dark-border p-3 flex flex-wrap gap-2 shrink-0 bg-dark-bg">
-        <button
-          onClick={onOpenEvaluation}
-          className="flex items-center gap-2 px-2 py-1 bg-dark-surface border border-dark-border2 rounded hover:bg-dark-surface2 transition-colors text-dark-text-secondary hover:text-dark-text"
-          title={t.sidebarEvaluationPanel}
-        >
-          <BarChart3 size={14} />
-          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">{t.sidebarEvaluationPanel}</span>}
-        </button>
+        {/* 叙事组 */}
+        {!collapsed && (
+          <div className="px-5 pt-3 pb-1">
+            <span className="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70">叙事</span>
+          </div>
+        )}
+        <div className="px-3 space-y-0.5">
+          <button onClick={onOpenForeshadowingTracker} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="伏笔追踪" type="button">
+            <Eye size={18} />
+            {!collapsed && <span className="text-sm font-medium">伏笔追踪</span>}
+          </button>
+          <button onClick={onOpenCharacterRelationships} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="角色关系" type="button">
+            <Users size={18} />
+            {!collapsed && <span className="text-sm font-medium">角色关系</span>}
+          </button>
+          <button onClick={onOpenNarrativeVisualization} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={t.sidebarNarrativeVisualization} type="button">
+            <Activity size={18} />
+            {!collapsed && <span className="text-sm font-medium">{t.sidebarNarrativeVisualization}</span>}
+          </button>
+        </div>
+
+        {/* 数据组 */}
+        {!collapsed && (
+          <div className="px-5 pt-3 pb-1">
+            <span className="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70">数据</span>
+          </div>
+        )}
+        <div className="px-3 pb-3 space-y-0.5">
+          <button onClick={onOpenPatternDashboard} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="模式面板" type="button">
+            <LayoutGrid size={18} />
+            {!collapsed && <span className="text-sm font-medium">模式面板</span>}
+          </button>
+          <button onClick={onOpenSessionAnalytics} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="会话统计" type="button">
+            <PieChart size={18} />
+            {!collapsed && <span className="text-sm font-medium">会话统计</span>}
+          </button>
+        </div>
       </div>
 
       {!collapsed && (

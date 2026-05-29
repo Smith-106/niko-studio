@@ -254,322 +254,349 @@ exports[`Sidebar > matches snapshot 1`] = `
     </div>
   </div>
   <div
-    class="border-t border-dark-border p-3 space-y-0.5 shrink-0"
+    class="border-t border-dark-border shrink-0"
   >
-    <button
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-      title="Foreshadowing"
-      type="button"
+    <div
+      class="px-5 pt-3 pb-1"
     >
-      <svg
-        class="lucide lucide-eye "
-        fill="none"
-        height="18"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="18"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"
-        />
-        <circle
-          cx="12"
-          cy="12"
-          r="3"
-        />
-      </svg>
       <span
-        class="text-sm font-medium"
+        class="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70"
       >
-        Foreshadowing
+        分析
       </span>
-    </button>
-    <button
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-      title="Patterns"
-      type="button"
+    </div>
+    <div
+      class="px-3 space-y-0.5"
     >
-      <svg
-        class="lucide lucide-layout-grid "
-        fill="none"
-        height="18"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="18"
-        xmlns="http://www.w3.org/2000/svg"
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        title="智能分析"
+        type="button"
       >
-        <rect
-          height="7"
-          rx="1"
-          width="7"
-          x="3"
-          y="3"
-        />
-        <rect
-          height="7"
-          rx="1"
-          width="7"
-          x="14"
-          y="3"
-        />
-        <rect
-          height="7"
-          rx="1"
-          width="7"
-          x="14"
-          y="14"
-        />
-        <rect
-          height="7"
-          rx="1"
-          width="7"
-          x="3"
-          y="14"
-        />
-      </svg>
-      <span
-        class="text-sm font-medium"
+        <svg
+          class="lucide lucide-brain "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"
+          />
+          <path
+            d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"
+          />
+          <path
+            d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"
+          />
+          <path
+            d="M17.599 6.5a3 3 0 0 0 .399-1.375"
+          />
+          <path
+            d="M6.003 5.125A3 3 0 0 0 6.401 6.5"
+          />
+          <path
+            d="M3.477 10.896a4 4 0 0 1 .585-.396"
+          />
+          <path
+            d="M19.938 10.5a4 4 0 0 1 .585.396"
+          />
+          <path
+            d="M6 18a4 4 0 0 1-1.967-.516"
+          />
+          <path
+            d="M19.967 17.484A4 4 0 0 1 18 18"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          智能分析
+        </span>
+      </button>
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        title="深度评估"
+        type="button"
       >
-        Patterns
-      </span>
-    </button>
-    <button
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-      title="Analytics"
-      type="button"
+        <svg
+          class="lucide lucide-scaling "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+          />
+          <path
+            d="M14 15H9v-5"
+          />
+          <path
+            d="M16 3h5v5"
+          />
+          <path
+            d="M21 3 9 15"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          深度评估
+        </span>
+      </button>
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        title="Reply Review"
+        type="button"
+      >
+        <svg
+          class="lucide lucide-bar-chart3 "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M3 3v18h18"
+          />
+          <path
+            d="M18 17V9"
+          />
+          <path
+            d="M13 17V5"
+          />
+          <path
+            d="M8 17v-3"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          Reply Review
+        </span>
+      </button>
+    </div>
+    <div
+      class="px-5 pt-3 pb-1"
     >
-      <svg
-        class="lucide lucide-pie-chart "
-        fill="none"
-        height="18"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="18"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M21.21 15.89A10 10 0 1 1 8 2.83"
-        />
-        <path
-          d="M22 12A10 10 0 0 0 12 2v10z"
-        />
-      </svg>
       <span
-        class="text-sm font-medium"
+        class="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70"
       >
-        Analytics
+        叙事
       </span>
-    </button>
-    <button
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-      title="智能分析"
-      type="button"
+    </div>
+    <div
+      class="px-3 space-y-0.5"
     >
-      <svg
-        class="lucide lucide-brain "
-        fill="none"
-        height="18"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="18"
-        xmlns="http://www.w3.org/2000/svg"
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        title="伏笔追踪"
+        type="button"
       >
-        <path
-          d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"
-        />
-        <path
-          d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"
-        />
-        <path
-          d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"
-        />
-        <path
-          d="M17.599 6.5a3 3 0 0 0 .399-1.375"
-        />
-        <path
-          d="M6.003 5.125A3 3 0 0 0 6.401 6.5"
-        />
-        <path
-          d="M3.477 10.896a4 4 0 0 1 .585-.396"
-        />
-        <path
-          d="M19.938 10.5a4 4 0 0 1 .585.396"
-        />
-        <path
-          d="M6 18a4 4 0 0 1-1.967-.516"
-        />
-        <path
-          d="M19.967 17.484A4 4 0 0 1 18 18"
-        />
-      </svg>
-      <span
-        class="text-sm font-medium"
+        <svg
+          class="lucide lucide-eye "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="3"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          伏笔追踪
+        </span>
+      </button>
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        title="角色关系"
+        type="button"
       >
-        智能分析
-      </span>
-    </button>
-    <button
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-      title="Evaluation"
-      type="button"
+        <svg
+          class="lucide lucide-users "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+          />
+          <circle
+            cx="9"
+            cy="7"
+            r="4"
+          />
+          <path
+            d="M22 21v-2a4 4 0 0 0-3-3.87"
+          />
+          <path
+            d="M16 3.13a4 4 0 0 1 0 7.75"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          角色关系
+        </span>
+      </button>
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        title="Narrative Visualization"
+        type="button"
+      >
+        <svg
+          class="lucide lucide-activity "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M22 12h-4l-3 9L9 3l-3 9H2"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          Narrative Visualization
+        </span>
+      </button>
+    </div>
+    <div
+      class="px-5 pt-3 pb-1"
     >
-      <svg
-        class="lucide lucide-scaling "
-        fill="none"
-        height="18"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="18"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
-        />
-        <path
-          d="M14 15H9v-5"
-        />
-        <path
-          d="M16 3h5v5"
-        />
-        <path
-          d="M21 3 9 15"
-        />
-      </svg>
       <span
-        class="text-sm font-medium"
+        class="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70"
       >
-        Evaluation
+        数据
       </span>
-    </button>
-    <button
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-      title="Characters"
-      type="button"
+    </div>
+    <div
+      class="px-3 pb-3 space-y-0.5"
     >
-      <svg
-        class="lucide lucide-users "
-        fill="none"
-        height="18"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="18"
-        xmlns="http://www.w3.org/2000/svg"
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        title="模式面板"
+        type="button"
       >
-        <path
-          d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
-        />
-        <circle
-          cx="9"
-          cy="7"
-          r="4"
-        />
-        <path
-          d="M22 21v-2a4 4 0 0 0-3-3.87"
-        />
-        <path
-          d="M16 3.13a4 4 0 0 1 0 7.75"
-        />
-      </svg>
-      <span
-        class="text-sm font-medium"
+        <svg
+          class="lucide lucide-layout-grid "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="7"
+            rx="1"
+            width="7"
+            x="3"
+            y="3"
+          />
+          <rect
+            height="7"
+            rx="1"
+            width="7"
+            x="14"
+            y="3"
+          />
+          <rect
+            height="7"
+            rx="1"
+            width="7"
+            x="14"
+            y="14"
+          />
+          <rect
+            height="7"
+            rx="1"
+            width="7"
+            x="3"
+            y="14"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          模式面板
+        </span>
+      </button>
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        title="会话统计"
+        type="button"
       >
-        Characters
-      </span>
-    </button>
-    <button
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-      title="Narrative Visualization"
-      type="button"
-    >
-      <svg
-        class="lucide lucide-bar-chart3 "
-        fill="none"
-        height="18"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="18"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M3 3v18h18"
-        />
-        <path
-          d="M18 17V9"
-        />
-        <path
-          d="M13 17V5"
-        />
-        <path
-          d="M8 17v-3"
-        />
-      </svg>
-      <span
-        class="text-sm font-medium"
-      >
-        Narrative Visualization
-      </span>
-    </button>
-  </div>
-  <div
-    class="border-t border-dark-border p-3 flex flex-wrap gap-2 shrink-0 bg-dark-bg"
-  >
-    <button
-      class="flex items-center gap-2 px-2 py-1 bg-dark-surface border border-dark-border2 rounded hover:bg-dark-surface2 transition-colors text-dark-text-secondary hover:text-dark-text"
-      title="Reply Review"
-    >
-      <svg
-        class="lucide lucide-bar-chart3 "
-        fill="none"
-        height="14"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        width="14"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M3 3v18h18"
-        />
-        <path
-          d="M18 17V9"
-        />
-        <path
-          d="M13 17V5"
-        />
-        <path
-          d="M8 17v-3"
-        />
-      </svg>
-      <span
-        class="text-[10px] font-medium tracking-wide uppercase"
-      >
-        Reply Review
-      </span>
-    </button>
+        <svg
+          class="lucide lucide-pie-chart "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21.21 15.89A10 10 0 1 1 8 2.83"
+          />
+          <path
+            d="M22 12A10 10 0 0 0 12 2v10z"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          会话统计
+        </span>
+      </button>
+    </div>
   </div>
   <div
     aria-orientation="vertical"

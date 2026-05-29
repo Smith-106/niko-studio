@@ -37,10 +37,10 @@ describe('ChatAreaModeControls', () => {
     vi.clearAllMocks()
   })
 
-  it('renders the mode label and current mode summary', () => {
+  it('renders the mode summary badge and presets', () => {
     render(<ChatAreaModeControls {...defaultProps} />)
-    expect(screen.getByText('Mode')).toBeInTheDocument()
     expect(screen.getByText('Normal')).toBeInTheDocument()
+    expect(screen.getByText('Focus Writing')).toBeInTheDocument()
   })
 
   it('renders mode presets', () => {
@@ -69,31 +69,38 @@ describe('ChatAreaModeControls', () => {
 
   it('renders agent mode summary with action label', () => {
     render(<ChatAreaModeControls {...defaultProps} chatMode="agent" agentAction="revise" />)
-    // Summary badge shows "Agent . Revise"
     expect(screen.getByText('Agent · Revise')).toBeInTheDocument()
   })
 
-  it('renders primary skill-pack chips when provided', () => {
+  it('renders collapsible skill-pack section (collapsed by default)', () => {
     render(<ChatAreaModeControls {...defaultProps} />)
     expect(screen.getByText('Skills')).toBeInTheDocument()
+    // Skill chips are hidden by default
+    expect(screen.queryByRole('button', { name: 'character-forge' })).not.toBeInTheDocument()
+  })
+
+  it('shows skill-pack chips when skills section is expanded', () => {
+    render(<ChatAreaModeControls {...defaultProps} />)
+    // Click expand button
+    const expandButton = screen.getByText('Skills').closest('button')
+    if (expandButton) fireEvent.click(expandButton)
     expect(screen.getByRole('button', { name: 'character-forge' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'dialogue-system' })).toBeInTheDocument()
   })
 
   it('calls onToggleSkill when a skill-pack chip is clicked', () => {
     render(<ChatAreaModeControls {...defaultProps} />)
+    // Expand skills section first
+    const expandButton = screen.getByText('Skills').closest('button')
+    if (expandButton) fireEvent.click(expandButton)
     fireEvent.click(screen.getByRole('button', { name: 'character-forge' }))
     expect(defaultProps.onToggleSkill).toHaveBeenCalledWith('character-forge')
   })
 
-  it('does not render selectedSkillsLabel when not provided', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    expect(screen.queryByText('2 skills selected')).not.toBeInTheDocument()
-  })
-
-  it('renders selected skill label when provided', () => {
-    render(<ChatAreaModeControls {...defaultProps} selectedSkillsLabel="2 active" />)
-    expect(screen.getByText('2 active')).toBeInTheDocument()
+  it('shows selected skill count badge when skills are selected', () => {
+    render(<ChatAreaModeControls {...defaultProps} selectedSkillIds={['character-forge']} />)
+    // Badge shows count
+    expect(screen.getByText('1')).toBeInTheDocument()
   })
 
   it('does not render show-more/show-less toggle button', () => {
@@ -104,8 +111,6 @@ describe('ChatAreaModeControls', () => {
 
   it('does not render mode buttons (Normal/Agent)', () => {
     render(<ChatAreaModeControls {...defaultProps} />)
-    // Normal appears in the mode summary chip, but NOT as a clickable button in an advanced section
-    // The only buttons are: template library, presets, skills
     const normalButtons = screen.queryAllByRole('button', { name: 'Normal' })
     expect(normalButtons).toHaveLength(0)
   })
