@@ -76,14 +76,14 @@ export const WikilinkMark = Mark.create<WikilinkMarkOptions>({
       new Plugin({
         key: new PluginKey('wikilinkClick'),
         props: {
-          handleClick: (view, pos, event) => {
+          handleClick: (_view, _pos, event) => {
             const target = event.target as HTMLElement
             if (target?.closest('.wikilink')) {
               const wikilinkEl = target.closest('.wikilink') as HTMLElement
               const linkTarget = wikilinkEl.getAttribute('data-target')
               if (linkTarget) {
                 // Dispatch custom event for the app to handle
-                view.dom.dispatchEvent(
+                _view.dom.dispatchEvent(
                   new CustomEvent('wikilink-click', {
                     bubbles: true,
                     detail: { target: linkTarget },
@@ -93,21 +93,6 @@ export const WikilinkMark = Mark.create<WikilinkMarkOptions>({
               return true
             }
             return false
-          },
-          handleMouseover: (view, pos, event) => {
-            const target = event.target as HTMLElement
-            if (target?.closest('.wikilink')) {
-              const wikilinkEl = target.closest('.wikilink') as HTMLElement
-              const linkTarget = wikilinkEl.getAttribute('data-target')
-              if (linkTarget) {
-                view.dom.dispatchEvent(
-                  new CustomEvent('wikilink-hover', {
-                    bubbles: true,
-                    detail: { target: linkTarget },
-                  }),
-                )
-              }
-            }
           },
         },
       }),

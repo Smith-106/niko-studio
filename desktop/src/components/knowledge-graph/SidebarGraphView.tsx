@@ -1,7 +1,5 @@
-import { useKnowledgeGraphStore, type KnowledgeGraphNode } from '@/stores/knowledgeGraphStore'
+import { useKnowledgeGraphStore } from '@/stores/knowledgeGraphStore'
 import { useCytoscape } from './useCytoscape'
-import { KnowledgeGraphToolbar } from './KnowledgeGraphToolbar'
-import { GraphMinimap } from './GraphMinimap'
 import { GraphContextMenu } from './GraphContextMenu'
 import { useState, useCallback, useRef } from 'react'
 
@@ -12,10 +10,7 @@ export function SidebarGraphView() {
   const {
     nodes,
     edges,
-    layoutAlgorithm,
-    filterState,
     selectedNodeId,
-    obsidianVaultPath,
     selectNode,
   } = useKnowledgeGraphStore()
 
@@ -34,7 +29,7 @@ export function SidebarGraphView() {
       displayNodes.some((n) => n.id === e.target),
   )
 
-  const { cyRef, zoomToFit } = useCytoscape({
+  useCytoscape({
     containerRef,
     nodes: displayNodes,
     edges: displayEdges,

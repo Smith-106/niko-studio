@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
-import cytoscape, { type Core, type NodeSingular } from 'cytoscape'
+import cytoscape, { type Core } from 'cytoscape'
+// @ts-expect-error cytoscape-cose-bilkent has no type declarations
 import coseBilkent from 'cytoscape-cose-bilkent'
 import type {
   KnowledgeGraphNode,
@@ -9,7 +10,7 @@ import type {
 
 cytoscape.use(coseBilkent)
 
-const graphStylesheet: cytoscape.Stylesheet[] = [
+const graphStylesheet: cytoscape.StylesheetStyle[] = [
   {
     selector: 'node',
     style: {
@@ -89,9 +90,9 @@ const graphStylesheet: cytoscape.Stylesheet[] = [
 ]
 
 const layoutConfigs: Record<GraphLayoutAlgorithm, cytoscape.LayoutOptions> = {
-  'force-directed': { name: 'cose-bilkent', animate: true, animationDuration: 500 },
-  radial: { name: 'concentric', animate: true },
-  hierarchical: { name: 'breadthfirst', animate: true, spacingFactor: 1.5 },
+  'force-directed': { name: 'cose-bilkent', animate: true, animationDuration: 500 } as cytoscape.LayoutOptions,
+  radial: { name: 'concentric', animate: true } as cytoscape.LayoutOptions,
+  hierarchical: { name: 'breadthfirst', animate: true, spacingFactor: 1.5 } as cytoscape.LayoutOptions,
 }
 
 interface UseCytoscapeOptions {
@@ -120,11 +121,11 @@ export function useCytoscape({
       container: containerRef.current,
       elements: [
         ...nodes.map((n) => ({
-          data: { id: n.id, label: n.label, size: Math.max(20, n.size * 10), ...n },
+          data: { ...n, size: Math.max(20, n.size * 10) },
           classes: n.type,
         })),
         ...edges.map((e) => ({
-          data: { id: e.id, source: e.source, target: e.target, ...e },
+          data: { ...e },
           classes: e.type,
         })),
       ],
@@ -138,13 +139,13 @@ export function useCytoscape({
     cyRef.current = cy
 
     if (onNodeClick) {
-      cy.on('tap', 'node', (evt) => {
+      cy.on('tap', 'node', (evt: cytoscape.EventObject) => {
         onNodeClick(evt.target.id())
       })
     }
 
     if (onNodeHover) {
-      cy.on('mouseover', 'node', (evt) => onNodeHover(evt.target.id()))
+      cy.on('mouseover', 'node', (evt: cytoscape.EventObject) => onNodeHover(evt.target.id()))
       cy.on('mouseout', 'node', () => onNodeHover(null))
     }
 
@@ -159,11 +160,11 @@ export function useCytoscape({
     cy.elements().remove()
     cy.add([
       ...nodes.map((n) => ({
-        data: { id: n.id, label: n.label, size: Math.max(20, n.size * 10), ...n },
+        data: { ...n, size: Math.max(20, n.size * 10) },
         classes: n.type,
       })),
       ...edges.map((e) => ({
-        data: { id: e.id, source: e.source, target: e.target, ...e },
+        data: { ...e },
         classes: e.type,
       })),
     ])
@@ -188,7 +189,7 @@ export function useCytoscape({
     if (!cy) return
     cy.nodes().removeClass('filtered-out')
     if (ids.length > 0) {
-      cy.nodes().not(cy.collection(ids.map((id) => cy.$(`node[id="${id}"]`))).addClass('filtered-out'))
+      cy.nodes().not(cy.collection(ids.map((id) => cy.$(`node[id="${id}"]`)))).addClass('filtered-out')
     }
   }, [])
 

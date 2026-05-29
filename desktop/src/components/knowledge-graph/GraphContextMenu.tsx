@@ -1,13 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useKnowledgeGraphStore } from '@/stores/knowledgeGraphStore'
 import {
   FileText,
-  Link2,
   Sparkles,
   Copy,
   Eye,
   ZoomIn,
-  ExternalLink,
 } from 'lucide-react'
 
 interface ContextMenuProps {

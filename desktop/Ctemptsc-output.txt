@@ -1,0 +1,156 @@
+[96msrc/components/AiTextOptimizer.test.tsx[0m:[93m48[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m48[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m  [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/AiTextOptimizer.test.tsx[0m:[93m60[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m60[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m  [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/AiTextOptimizer.test.tsx[0m:[93m72[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m72[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m  [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/AiTextOptimizer.test.tsx[0m:[93m89[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m89[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m  [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/AiTextOptimizer.test.tsx[0m:[93m109[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m109[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/AiTextOptimizer.test.tsx[0m:[93m128[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m128[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/AiTextOptimizer.test.tsx[0m:[93m151[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m151[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/AiTextOptimizer.test.tsx[0m:[93m164[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m164[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/editor/KeyboardShortcutsPanel.tsx[0m:[93m1[0m:[93m1[0m - [91merror[0m[90m TS6133: [0m'React' is declared but its value is never read.
+
+[7m1[0m import React from 'react'
+[7m [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/EvaluationPanel.revision-loop.test.tsx[0m:[93m188[0m:[93m43[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => { from: number; to: number; text: string; }>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<.....' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => { from: number; to: number; text: string; }>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<.....' but required in type 'EditorHandle'.
+
+[7m188[0m     mockedGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                          ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/EvaluationPanel.revision-loop.test.tsx[0m:[93m246[0m:[93m43[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m246[0m     mockedGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                          ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/EvaluationPanel.revision-loop.test.tsx[0m:[93m331[0m:[93m43[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => { from: number; to: number; text: string; }>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<.....' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => { from: number; to: number; text: string; }>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<.....' but required in type 'EditorHandle'.
+
+[7m331[0m     mockedGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                          ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/WritingHelperPanel.test.tsx[0m:[93m432[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => { from: number; to: number; text: string; }>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<.....' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => { from: number; to: number; text: string; }>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<.....' but required in type 'EditorHandle'.
+
+[7m432[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+[96msrc/components/WritingHelperPanel.test.tsx[0m:[93m485[0m:[93m41[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' is not assignable to parameter of type 'EditorHandle'.
+  Property 'triggerAIContinue' is missing in type '{ insertText: Mock<Procedure>; getSelectedText: Mock<() => string>; getJSON: Mock<() => { type: string; content: never[]; }>; captureSelectionSnapshot: Mock<() => null>; replaceSelectionSnapshot: Mock<...>; insertBelowSelectionSnapshot: Mock<...>; undoLastRevisionApply: Mock<...>; }' but required in type 'EditorHandle'.
+
+[7m485[0m     mockGetEditorHandle.mockReturnValue(editorHandle)
+[7m   [0m [91m                                        ~~~~~~~~~~~~[0m
+
+  [96msrc/utils/editorHandle.ts[0m:[93m22[0m:[93m3[0m
+    [7m22[0m   triggerAIContinue: () => void
+    [7m  [0m [96m  ~~~~~~~~~~~~~~~~~[0m
+    'triggerAIContinue' is declared here.
+
+
+Found 14 errors in 4 files.
+
+Errors  Files
+     8  src/components/AiTextOptimizer.test.tsx[90m:48[0m
+     1  src/components/editor/KeyboardShortcutsPanel.tsx[90m:1[0m
+     3  src/components/EvaluationPanel.revision-loop.test.tsx[90m:188[0m
+     2  src/components/WritingHelperPanel.test.tsx[90m:432[0m

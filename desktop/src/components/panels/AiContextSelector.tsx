@@ -4,7 +4,7 @@ import { Send, X } from 'lucide-react'
 const TOKEN_BUDGET = 4000
 
 export function AiContextSelector() {
-  const { contextNotes, aiSelectedNoteIds, getSelectedTokenCount, clearAiSelection } =
+  const { aiSelectedNoteIds, getSelectedTokenCount, clearAiSelection } =
     useWritingContextStore()
 
   const totalTokens = getSelectedTokenCount()

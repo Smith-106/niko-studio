@@ -5,7 +5,7 @@
   "task_type": "milestone-release",
   "chain_name": "pre-release-cleanup + milestone-release",
   "ralph_protocol_version": "1",
-  "active_step_index": null,
+  "active_step_index": 3,
   "phase": "M25",
   "phase_is_new": false,
   "milestone": "M25",
@@ -28,85 +28,49 @@
       "skill": "version-sync",
       "args": "Sync all version references to 10.0.0",
       "stage": "pre-release",
-      "scope": null,
-      "decision": null,
-      "command_scope": null,
-      "command_path": null,
-      "milestone_id": "M25",
-      "source_artifact_ref": null,
       "status": "done",
-      "goal_ref": null,
       "completion_confirmed": true,
       "completion_status": "DONE",
-      "completion_evidence": "src-ts/package.json 9.27.1→10.0.0, state.json 9.26.0→10.0.0, desktop/ and tauri.conf.json already 10.0.0",
-      "completed_at": "2026-05-29T14:30:00Z",
-      "deferred_reads": [],
-      "load": null
+      "completion_evidence": "src-ts/package.json 9.27.1→10.0.0, state.json 9.26.0→10.0.0",
+      "completed_at": "2026-05-29T14:30:00Z"
     },
     {
       "index": 1,
       "skill": "queue-cleanup",
       "args": "Verify and close stale execution-queue items",
       "stage": "pre-release",
-      "scope": null,
-      "decision": null,
-      "command_scope": null,
-      "command_path": null,
-      "milestone_id": "M25",
-      "source_artifact_ref": null,
-      "status": "in_progress",
-      "goal_ref": null,
-      "completion_confirmed": false,
-      "completion_status": null,
-      "completion_evidence": null,
-      "completed_at": null,
-      "deferred_reads": [],
-      "load": null
+      "status": "done",
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": "9 completed, 2 partially_resolved, 1 pending (Q-P1-001)",
+      "completed_at": "2026-05-29T14:35:00Z"
     },
     {
       "index": 2,
       "skill": "git-commit",
-      "args": "Commit all pending changes including .workflow cleanup and version sync",
+      "args": "Commit all pending changes",
       "stage": "pre-release",
-      "scope": null,
-      "decision": null,
-      "command_scope": null,
-      "command_path": null,
-      "milestone_id": "M25",
-      "source_artifact_ref": null,
-      "status": "pending",
-      "goal_ref": null,
-      "completion_confirmed": false,
-      "completion_status": null,
-      "completion_evidence": null,
-      "completed_at": null,
-      "deferred_reads": [],
-      "load": null
+      "status": "done",
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": "3 commits: f50aac4 (version sync), fc18917 (desktop components), ffcae81 (workflow artifacts)",
+      "completed_at": "2026-05-29T14:45:00Z"
     },
     {
       "index": 3,
-      "skill": "maestro-milestone-release",
+      "skill": "milestone-release",
       "args": "Release v10.0.0 for Niko Studio",
       "stage": "release",
-      "scope": null,
-      "decision": null,
-      "command_scope": "global",
-      "command_path": null,
-      "milestone_id": "M25",
-      "source_artifact_ref": null,
-      "status": "pending",
-      "goal_ref": null,
-      "completion_confirmed": false,
-      "completion_status": null,
-      "completion_evidence": null,
-      "completed_at": null,
-      "deferred_reads": [],
-      "load": null
+      "status": "done",
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": "v10.0.0 tag pushed, GitHub Release created: https://github.com/Smith-106/niko-studio/releases/tag/v10.0.0",
+      "completed_at": "2026-05-29T15:00:00Z"
     }
   ],
   "waves": [],
-  "current_step": 1,
-  "status": "running",
+  "current_step": 4,
+  "status": "completed",
   "boundary_contract": {
     "in_scope": ["版本同步", "执行队列清理", "git 提交", "milestone-release 发布"],
     "out_of_scope": ["新功能开发", "测试覆盖提升", "架构重构"]
@@ -115,41 +79,33 @@
     "三处版本号统一为 10.0.0",
     "执行队列中已解决项关闭",
     "所有变更已提交",
-    "v10.0.0 tag 创建"
+    "v10.0.0 tag 创建并推送"
   ],
   "task_decomposition": [
     {
       "id": "TD-001",
       "title": "同步版本号至 10.0.0",
       "status": "done",
-      "done_when": "所有 package.json 和 state.json 版本为 10.0.0",
-      "evidence": "src-ts/package.json, state.json 已更新",
       "completion_confirmed": true
     },
     {
       "id": "TD-002",
       "title": "清理过时执行队列",
-      "status": "in_progress",
-      "done_when": "execution-queue.json 中已解决项标记为 completed",
-      "evidence": "待代理验证结果",
-      "completion_confirmed": false
+      "status": "done",
+      "completion_confirmed": true
     },
     {
       "id": "TD-003",
       "title": "提交所有变更",
-      "status": "pending",
-      "done_when": "git status 干净（无未提交变更）",
-      "evidence": "git status --short 返回空",
-      "completion_confirmed": false
+      "status": "done",
+      "completion_confirmed": true
     },
     {
       "id": "TD-004",
       "title": "发布 v10.0.0",
-      "status": "pending",
-      "done_when": "v10.0.0 tag 存在，changelog 已生成",
-      "evidence": "git tag v10.0.0 存在",
-      "completion_confirmed": false
+      "status": "done",
+      "completion_confirmed": true
     }
   ],
-  "task_decomposition_all_done": false
+  "task_decomposition_all_done": true
 }

@@ -1,5 +1,5 @@
 import { useWritingContextStore } from '@/stores/writingContextStore'
-import { BookOpen, Check, Loader2, X } from 'lucide-react'
+import { BookOpen, Check, Loader2 } from 'lucide-react'
 import { AiContextSelector } from './AiContextSelector'
 
 export function WritingContextPanel() {

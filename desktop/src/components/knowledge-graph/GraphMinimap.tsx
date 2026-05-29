@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import type { Core } from 'cytoscape'
+import type { Core, NodeSingular } from 'cytoscape'
 
 interface GraphMinimapProps {
   cyRef: React.RefObject<Core | null>
@@ -38,7 +38,7 @@ export function GraphMinimap({ cyRef, width = 140, height = 100 }: GraphMinimapP
 
       // Draw nodes
       ctx.fillStyle = '#4a5568'
-      cy.nodes().forEach((node) => {
+      cy.nodes().forEach((node: NodeSingular) => {
         const pos = node.position()
         const x = (pos.x - extent.x1) * scale + offsetX
         const y = (pos.y - extent.y1) * scale + offsetY

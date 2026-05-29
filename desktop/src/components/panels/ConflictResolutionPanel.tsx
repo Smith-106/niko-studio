@@ -12,8 +12,8 @@ interface ConflictItem {
 export function ConflictResolutionPanel() {
   const [conflicts, setConflicts] = useState<ConflictItem[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [vaultContent, setVaultContent] = useState('')
-  const [knowledgeContent, setKnowledgeContent] = useState('')
+  const [vaultContent, _setVaultContent] = useState('')
+  const [knowledgeContent, _setKnowledgeContent] = useState('')
   const { obsidianVaultPath } = useKnowledgeGraphStore()
 
   const loadConflicts = async () => {
