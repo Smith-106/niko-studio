@@ -249,28 +249,23 @@ exports[`Sidebar > matches snapshot 1`] = `
   >
     <div
       class="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2"
-    >
-      Writer Intelligence
-    </div>
+    />
   </div>
   <div
     class="border-t border-dark-border shrink-0"
   >
     <div
-      class="px-5 pt-3 pb-1"
+      class="px-4 pt-3 pb-0.5"
     >
       <span
-        class="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70"
-      >
-        分析
-      </span>
+        class="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60"
+      />
     </div>
     <div
       class="px-3 space-y-0.5"
     >
       <button
         class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        title="智能分析"
         type="button"
       >
         <svg
@@ -315,13 +310,10 @@ exports[`Sidebar > matches snapshot 1`] = `
         </svg>
         <span
           class="text-sm font-medium"
-        >
-          智能分析
-        </span>
+        />
       </button>
       <button
         class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        title="深度评估"
         type="button"
       >
         <svg
@@ -351,9 +343,7 @@ exports[`Sidebar > matches snapshot 1`] = `
         </svg>
         <span
           class="text-sm font-medium"
-        >
-          深度评估
-        </span>
+        />
       </button>
       <button
         class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
@@ -393,20 +383,17 @@ exports[`Sidebar > matches snapshot 1`] = `
       </button>
     </div>
     <div
-      class="px-5 pt-3 pb-1"
+      class="px-4 pt-3 pb-0.5"
     >
       <span
-        class="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70"
-      >
-        叙事
-      </span>
+        class="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60"
+      />
     </div>
     <div
       class="px-3 space-y-0.5"
     >
       <button
         class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        title="伏笔追踪"
         type="button"
       >
         <svg
@@ -432,13 +419,10 @@ exports[`Sidebar > matches snapshot 1`] = `
         </svg>
         <span
           class="text-sm font-medium"
-        >
-          伏笔追踪
-        </span>
+        />
       </button>
       <button
         class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        title="角色关系"
         type="button"
       >
         <svg
@@ -470,9 +454,7 @@ exports[`Sidebar > matches snapshot 1`] = `
         </svg>
         <span
           class="text-sm font-medium"
-        >
-          角色关系
-        </span>
+        />
       </button>
       <button
         class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
@@ -503,20 +485,17 @@ exports[`Sidebar > matches snapshot 1`] = `
       </button>
     </div>
     <div
-      class="px-5 pt-3 pb-1"
+      class="px-4 pt-3 pb-0.5"
     >
       <span
-        class="shell-text-ui text-[11px] font-medium uppercase tracking-widest text-dark-text-muted/70"
-      >
-        数据
-      </span>
+        class="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60"
+      />
     </div>
     <div
       class="px-3 pb-3 space-y-0.5"
     >
       <button
         class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        title="模式面板"
         type="button"
       >
         <svg
@@ -562,13 +541,10 @@ exports[`Sidebar > matches snapshot 1`] = `
         </svg>
         <span
           class="text-sm font-medium"
-        >
-          模式面板
-        </span>
+        />
       </button>
       <button
         class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        title="会话统计"
         type="button"
       >
         <svg
@@ -592,9 +568,7 @@ exports[`Sidebar > matches snapshot 1`] = `
         </svg>
         <span
           class="text-sm font-medium"
-        >
-          会话统计
-        </span>
+        />
       </button>
     </div>
   </div>

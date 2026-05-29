@@ -260,7 +260,8 @@ describe('ChatArea P0 flows', () => {
   it('shows voice input as coming soon status text instead of a disabled button', () => {
     render(<ChatArea />)
 
-    expect(screen.getByRole('status', { name: `${zh.composerVoiceInput}: ${zh.voiceInputStatusLabel}` })).toBeInTheDocument()
+    // Voice input chip was removed to reduce visual clutter
+    expect(screen.queryByRole('status', { name: `${zh.composerVoiceInput}: ${zh.voiceInputStatusLabel}` })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: zh.composerVoiceInput })).not.toBeInTheDocument()
   })
 

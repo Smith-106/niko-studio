@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { RefObject } from 'react'
-import { BookmarkPlus, Check, Copy, MicOff, Paperclip, Send, Square, Trash2, X } from 'lucide-react'
+import { BookmarkPlus, Check, Copy, Paperclip, Send, Square, Trash2, X } from 'lucide-react'
 
 interface ChatAreaComposerProps {
   input: string
@@ -8,8 +8,8 @@ interface ChatAreaComposerProps {
   sendDisabled: boolean
   inputPlaceholder: string
   uploadLabel: string
-  voiceInputLabel: string
-  voiceInputStatusLabel: string
+  voiceInputLabel?: string
+  voiceInputStatusLabel?: string
   sendLabel: string
   cancelLabel: string
   sendShortcutLabel: string
@@ -33,8 +33,8 @@ export function ChatAreaComposer({
   sendDisabled,
   inputPlaceholder,
   uploadLabel,
-  voiceInputLabel,
-  voiceInputStatusLabel,
+  voiceInputLabel: _voiceInputLabel,
+  voiceInputStatusLabel: _voiceInputStatusLabel,
   sendLabel,
   cancelLabel,
   sendShortcutHint,
@@ -97,15 +97,15 @@ export function ChatAreaComposer({
   }, [copied])
 
   return (
-    <div className="flex items-end gap-3 mt-4">
+    <div className="flex items-end gap-2 mt-2">
       <div
-        className={`flex-1 rounded-2xl border bg-white px-4 py-3 shadow-sm dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all relative ${isDragging ? 'border-primary-500 ring-2 ring-primary-500/30' : 'border-gray-200 dark:border-dark-border'}`}
+        className={`flex-1 rounded-xl border bg-white px-3 py-2.5 dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all relative ${isDragging ? 'border-primary-500 ring-2 ring-primary-500/30' : 'border-gray-200 dark:border-dark-border'}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {isDragging && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-primary-50/80 dark:bg-primary-900/20 pointer-events-none">
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-primary-50/80 dark:bg-primary-900/20 pointer-events-none">
             <span className="text-sm font-medium text-primary-600 dark:text-primary-400">Drop files here</span>
           </div>
         )}
@@ -140,8 +140,8 @@ export function ChatAreaComposer({
             ))}
           </div>
         )}
-        <div className="mt-2 flex items-center justify-between gap-2 px-1 border-t border-gray-100 dark:border-dark-border/50 pt-2">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-2 px-0 pt-1.5">
+          <div className="flex items-center gap-0.5">
             <input
               id="chat-composer-upload-input"
               name="chat-composer-upload-input"
@@ -157,20 +157,20 @@ export function ChatAreaComposer({
               onClick={onOpenFilePicker}
               aria-label={uploadLabel}
               title={uploadLabel}
-              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+              className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
               type="button"
             >
-              <Paperclip size={15} />
+              <Paperclip size={14} />
             </button>
             {onToggleKnowledgePanel && (
               <button
                 onClick={onToggleKnowledgePanel}
                 aria-label="attach context"
                 title="attach context"
-                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
                 type="button"
               >
-                <BookmarkPlus size={15} />
+                <BookmarkPlus size={14} />
               </button>
             )}
             {onClearDraft && (
@@ -179,10 +179,10 @@ export function ChatAreaComposer({
                 aria-label="clear draft"
                 tabIndex={input.length === 0 ? -1 : undefined}
                 title="clear draft"
-                className={`rounded-lg p-1.5 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${input.length > 0 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                className={`rounded-md p-1 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${input.length > 0 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                 type="button"
               >
-                <Trash2 size={15} />
+                <Trash2 size={14} />
               </button>
             )}
             {lastAssistantContent && (
@@ -191,22 +191,14 @@ export function ChatAreaComposer({
                   onClick={copyLastReply}
                   aria-label={copied ? 'copied!' : 'copy last reply'}
                   title="copy last reply"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                  className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
                   type="button"
                 >
-                  {copied ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
+                  {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                 </button>
                 {copied !== undefined && <span role="status" className="sr-only">{copied ? 'Copied!' : ''}</span>}
               </>
             )}
-            <div
-              role="status"
-              aria-label={`${voiceInputLabel}: ${voiceInputStatusLabel}`}
-              title={`${voiceInputLabel}: ${voiceInputStatusLabel}`}
-              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-400 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-muted"
-            >
-              <MicOff size={11} />
-            </div>
           </div>
           <span className="text-[10px] text-gray-400 dark:text-dark-text-muted shrink-0">
             {sendShortcutHint}
@@ -218,10 +210,10 @@ export function ChatAreaComposer({
           onClick={onCancelStream}
           aria-label={cancelLabel}
           title={cancelLabel}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-500 text-white transition-all hover:bg-danger-600 active:scale-95 shadow-sm"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger-500 text-white transition-all hover:bg-danger-600 active:scale-95 shadow-sm"
           type="button"
         >
-          <Square size={18} className="fill-current" />
+          <Square size={16} className="fill-current" />
         </button>
       ) : (
         <button
@@ -233,10 +225,10 @@ export function ChatAreaComposer({
           aria-label={sendLabel}
           title={sendLabel}
           disabled={sendDisabled}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white transition-colors hover:bg-primary-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm cursor-pointer"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white transition-colors hover:bg-primary-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm cursor-pointer"
           type="button"
         >
-          <Send size={18} className="ml-0.5" />
+          <Send size={16} className="ml-0.5" />
         </button>
       )}
     </div>

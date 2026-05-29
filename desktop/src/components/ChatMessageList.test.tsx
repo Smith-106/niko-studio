@@ -99,7 +99,7 @@ describe('ChatMessageList', () => {
     render(<ChatMessageList {...defaultProps} />)
 
     expect(screen.getByText('开始创作')).toBeInTheDocument()
-    expect(screen.getByText('选择一个快捷操作开始写作')).toBeInTheDocument()
+    expect(screen.getByText('提示文字')).toBeInTheDocument()
   })
 
   it('renders messages when present', () => {

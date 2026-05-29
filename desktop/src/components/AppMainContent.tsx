@@ -39,13 +39,15 @@ export function AppMainContent({
       <AppHeader {...headerProps} />
 
       {workspaceSummary.hasMeaningfulScope && (
-        <div className="shell-text-compact border-b border-gray-100 bg-white/80 px-4 py-2 text-gray-600 shadow-sm dark:border-dark-border dark:bg-dark-surface/70 dark:text-dark-text-secondary">
-          <span className="font-semibold text-gray-800 dark:text-dark-text">
-            {isZh ? '当前写作上下文' : 'Current writing context'}
+        <div className="shell-text-compact border-b border-gray-100 bg-white/80 px-4 py-1.5 text-gray-500 dark:border-dark-border dark:bg-dark-surface/70 dark:text-dark-text-secondary flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-gray-600 dark:text-dark-text-secondary uppercase tracking-wider">
+            {isZh ? '上下文' : 'Context'}
           </span>
-          <span className="ml-2">
-            {workspaceSummary.scopeChips.join(' · ')}
-          </span>
+          {workspaceSummary.scopeChips.slice(0, 3).map((chip) => (
+            <span key={chip} className="rounded-md bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 text-[11px] text-primary-700 dark:text-primary-300">
+              {chip}
+            </span>
+          ))}
         </div>
       )}
 

@@ -44,6 +44,16 @@ type SidebarKeys =
   | 'sidebarMcpStatus'
   | 'sidebarEvaluationPanel'
   | 'sidebarNarrativeVisualization'
+  | 'sidebarWriterIntelligence'
+  | 'sidebarGroupAnalysis'
+  | 'sidebarGroupNarrative'
+  | 'sidebarGroupData'
+  | 'sidebarAnalysis'
+  | 'sidebarEvaluationDrillDown'
+  | 'sidebarForeshadowingTracker'
+  | 'sidebarCharacterRelationships'
+  | 'sidebarPatternDashboard'
+  | 'sidebarSessionAnalytics'
   | 'skillGroupCore'
   | 'skillGroupStory'
   | 'skillGroupQuality'
@@ -125,6 +135,16 @@ export const zhSidebar: Translations = {
   sidebarMcpStatus: '服务诊断',
   sidebarEvaluationPanel: '回复评估',
   sidebarNarrativeVisualization: '叙事可视化',
+  sidebarWriterIntelligence: '写作智能',
+  sidebarGroupAnalysis: '分析',
+  sidebarGroupNarrative: '叙事',
+  sidebarGroupData: '数据',
+  sidebarAnalysis: '智能分析',
+  sidebarEvaluationDrillDown: '深度评估',
+  sidebarForeshadowingTracker: '伏笔追踪',
+  sidebarCharacterRelationships: '角色关系',
+  sidebarPatternDashboard: '模式面板',
+  sidebarSessionAnalytics: '会话统计',
   skillGroupCore: '核心',
   skillGroupStory: '故事',
   skillGroupQuality: '质量',
@@ -205,6 +225,16 @@ export const enSidebar: Translations = {
   sidebarMcpStatus: 'Service Diagnostics',
   sidebarEvaluationPanel: 'Reply Review',
   sidebarNarrativeVisualization: 'Narrative Visualization',
+  sidebarWriterIntelligence: 'Writer Intelligence',
+  sidebarGroupAnalysis: 'Analysis',
+  sidebarGroupNarrative: 'Narrative',
+  sidebarGroupData: 'Data',
+  sidebarAnalysis: 'Smart Analysis',
+  sidebarEvaluationDrillDown: 'Deep Evaluation',
+  sidebarForeshadowingTracker: 'Foreshadowing',
+  sidebarCharacterRelationships: 'Characters',
+  sidebarPatternDashboard: 'Patterns',
+  sidebarSessionAnalytics: 'Session Stats',
   skillGroupCore: 'Core',
   skillGroupStory: 'Story',
   skillGroupQuality: 'Quality',

@@ -71,10 +71,10 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   const activeSkillCount = selectedSkillIds?.length ?? 0
 
   return (
-    <div className="mb-3 rounded-xl border border-gray-200 bg-white/80 dark:border-dark-border dark:bg-dark-surface/80 backdrop-blur-sm shadow-sm">
-      {/* Mode + Presets — compact single-row */}
-      <div className="flex flex-wrap items-center gap-1.5 px-3 py-2.5">
-        <span className="inline-flex items-center rounded-full border border-primary-100 bg-primary-50 px-2.5 py-1 text-[11px] font-semibold text-primary-700 dark:border-primary-500/20 dark:bg-primary-900/20 dark:text-primary-300">
+    <div className="mb-2 rounded-lg border border-gray-200 bg-white/80 dark:border-dark-border dark:bg-dark-surface/80 backdrop-blur-sm">
+      {/* Mode badge + Presets — single-row compact */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        <span className="inline-flex items-center rounded-md bg-primary-50 dark:bg-primary-900/20 px-2 py-1 text-[11px] font-semibold text-primary-700 dark:text-primary-300 ring-1 ring-primary-100 dark:ring-primary-500/20">
           {activeModeSummary}
         </span>
         {modePresets.map((preset) => (
@@ -82,7 +82,7 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
             key={preset.id}
             type="button"
             onClick={() => onApplyPreset(preset.id)}
-            className="px-2.5 py-1 text-[11px] font-medium rounded-full transition-all active:scale-95 bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text"
+            className="px-2 py-1 text-[11px] font-medium rounded-md transition-all active:scale-95 bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text-secondary ring-1 ring-gray-200/80 dark:ring-dark-border/80"
           >
             {preset.label}
           </button>
@@ -91,7 +91,7 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
           onClick={onOpenTemplateLibrary}
           aria-label={templateLibraryEntryLabel}
           title={templateLibraryEntryLabel}
-          className="px-2.5 py-1 text-[11px] font-medium rounded-full transition-all active:scale-95 bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text"
+          className="px-2 py-1 text-[11px] font-medium rounded-md transition-all active:scale-95 bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text-secondary ring-1 ring-gray-200/80 dark:ring-dark-border/80"
           type="button"
         >
           {templateLibraryEntryLabel}
@@ -104,7 +104,7 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
           <button
             type="button"
             onClick={() => setSkillsExpanded((prev) => !prev)}
-            className="w-full flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted hover:text-gray-700 dark:hover:text-dark-text transition-colors"
+            className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-dark-text-muted hover:text-gray-600 dark:hover:text-dark-text transition-colors"
           >
             {skillsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             <Sparkles size={12} />
@@ -116,7 +116,7 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
             )}
           </button>
           {skillsExpanded && (
-            <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2.5">
+            <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2">
               {availableSkillIds.slice(0, 8).map((skillId) => {
                 const selected = selectedSkillIds?.includes(skillId) ?? false
                 return (
@@ -125,10 +125,10 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
                     type="button"
                     onClick={() => onToggleSkill(skillId)}
                     aria-pressed={selected}
-                    className={`px-2.5 py-1 text-[11px] font-medium rounded-full transition-all active:scale-95 border ${
+                    className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all active:scale-95 ${
                       selected
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text border-gray-200 dark:border-dark-border'
+                        ? 'bg-primary-600 text-white ring-1 ring-primary-600'
+                        : 'bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text-secondary ring-1 ring-gray-200/80 dark:ring-dark-border/80'
                     }`}
                   >
                     {skillId}

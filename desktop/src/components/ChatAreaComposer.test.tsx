@@ -44,7 +44,8 @@ describe('ChatAreaComposer accessibility semantics', () => {
   it('surfaces voice input as a status chip instead of a disabled action button', () => {
     render(<ChatAreaComposer {...baseProps} />)
 
-    expect(screen.getByRole('status', { name: '语音输入: 暂未开放' })).toBeInTheDocument()
+    // Voice input chip was removed to reduce visual clutter
+    expect(screen.queryByRole('status', { name: '语音输入: 暂未开放' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '语音输入' })).not.toBeInTheDocument()
   })
 })
@@ -178,7 +179,7 @@ describe('ChatAreaComposer clipboard tests', () => {
 describe('ChatAreaComposer drag-drop file attachment', () => {
   it('shows drop zone overlay on drag over', () => {
     render(<ChatAreaComposer {...baseProps} />)
-    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-2xl"]')!
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-xl"]')!
 
     fireEvent.dragOver(composer, { dataTransfer: { files: [] } })
     expect(screen.getByText('Drop files here')).toBeInTheDocument()
@@ -189,7 +190,7 @@ describe('ChatAreaComposer drag-drop file attachment', () => {
 
   it('captures files on drop and shows attachment chips', () => {
     render(<ChatAreaComposer {...baseProps} />)
-    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-2xl"]')!
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-xl"]')!
 
     const file = new File(['test content'], 'test.md', { type: 'text/markdown' })
     fireEvent.drop(composer, { dataTransfer: { files: [file] } })
@@ -201,7 +202,7 @@ describe('ChatAreaComposer drag-drop file attachment', () => {
   it('removes attachment when chip X button is clicked', async () => {
     const user = userEvent.setup()
     render(<ChatAreaComposer {...baseProps} />)
-    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-2xl"]')!
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-xl"]')!
 
     const file = new File(['test content'], 'test.md', { type: 'text/markdown' })
     fireEvent.drop(composer, { dataTransfer: { files: [file] } })
@@ -213,7 +214,7 @@ describe('ChatAreaComposer drag-drop file attachment', () => {
 
   it('rejects unsupported file types on drop', () => {
     render(<ChatAreaComposer {...baseProps} />)
-    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-2xl"]')!
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-xl"]')!
 
     const file = new File(['malicious'], 'virus.exe', { type: 'application/x-msdownload' })
     fireEvent.drop(composer, { dataTransfer: { files: [file] } })

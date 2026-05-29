@@ -124,7 +124,7 @@ export function AppHeader({
           onOpenTextOptimizer={onOpenTextOptimizer}
         />
       </div>
-      <div className="flex items-center gap-4 relative">
+      <div className="flex items-center gap-3 relative">
         <button
           onClick={onToggleChatSidebar}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 dark:text-dark-text-secondary transition-colors hover:bg-gray-100 dark:hover:bg-dark-surface hover:text-gray-700 dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
@@ -133,20 +133,22 @@ export function AppHeader({
         >
           {chatSidebarCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
         </button>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-dark-surface2 shadow-inner border border-gray-200 dark:border-dark-border2">
-          <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} />
-          <span className="shell-text-compact font-medium text-gray-600 dark:text-dark-text">{headerConnectionText}</span>
-        </div>
-        {headerConnectionState !== 'connected' && (
-          <button
-            type="button"
-            onClick={onOpenDiagnostics}
-            className="shell-text-compact rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
-            aria-label={t.settingsCheckConnection}
-            title={t.settingsCheckConnection}
-          >
-            {t.settingsCheckConnection}
-          </button>
+        {headerConnectionState === 'connected' ? (
+          <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} title={headerConnectionText} />
+        ) : (
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-dark-surface2 border border-gray-200 dark:border-dark-border2">
+            <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} />
+            <span className="shell-text-compact font-medium text-gray-600 dark:text-dark-text">{headerConnectionText}</span>
+            <button
+              type="button"
+              onClick={onOpenDiagnostics}
+              className="shell-text-compact rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
+              aria-label={t.settingsCheckConnection}
+              title={t.settingsCheckConnection}
+            >
+              {t.settingsCheckConnection}
+            </button>
+          </div>
         )}
         {contextUsageVisible && (
           <div className="flex items-center gap-2">
