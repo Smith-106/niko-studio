@@ -165,14 +165,17 @@ export class CoreMemoryStore {
   private _vectorSearch: CoreSearchInterface | null;
   private _summaryGenerator: ((content: string) => string) | null;
   private _dbPath: string;
+  private _ownsVectorSearch: boolean;
 
   constructor(params: {
     vectorSearch?: CoreSearchInterface | null;
     summaryGenerator?: ((content: string) => string) | null;
     dbPath?: string | null;
+    ownsVectorSearch?: boolean;
   }) {
     this._vectorSearch = params.vectorSearch ?? null;
     this._summaryGenerator = params.summaryGenerator ?? null;
+    this._ownsVectorSearch = params.ownsVectorSearch ?? false;
 
     let dbPath = params.dbPath ?? null;
     if (dbPath === null) {
@@ -202,6 +205,17 @@ export class CoreMemoryStore {
 
   private _getCoreConnection(): DatabaseType {
     return new BetterSqlite3(this._dbPath);
+  }
+
+  /**
+   * Close a database connection only if this store owns the vector search.
+   * Borrowed/shared connections (from an external VectorSearch) must not be closed,
+   * as they are managed by their owner and reused across calls.
+   */
+  private _closeOwnedConnection(conn: unknown): void {
+    if (this._ownsVectorSearch && conn && typeof (conn as any).close === 'function') {
+      (conn as any).close();
+    }
   }
 
   private _initSchema(): void {
@@ -753,7 +767,7 @@ export class CoreMemoryStore {
         );
       }
     } finally {
-      conn.close();
+      this._closeOwnedConnection(conn);
     }
   }
 
@@ -776,7 +790,7 @@ export class CoreMemoryStore {
         );
       }
     } finally {
-      conn.close();
+      this._closeOwnedConnection(conn);
     }
   }
 
@@ -1264,7 +1278,7 @@ export class CoreMemoryStore {
 
       return memories;
     } finally {
-      conn.close();
+      this._closeOwnedConnection(conn);
     }
   }
 }

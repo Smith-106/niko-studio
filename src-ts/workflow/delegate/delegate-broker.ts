@@ -11,6 +11,53 @@ import { writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync, unlink
 import { join } from 'node:path';
 import type { IWebSocketRelayService } from '../../container/types';
 
+/**
+ * IPersistentStorage — minimal persistence interface for DelegateBroker.
+ * Abstracts file/SQLite storage so job state survives process restarts.
+ */
+export interface IPersistentStorage {
+  save(key: string, value: string): Promise<void>;
+  load(key: string): Promise<string | null>;
+  remove(key: string): Promise<void>;
+  listKeys(): Promise<string[]>;
+}
+
+/**
+ * Default file-based persistence adapter.
+ * Uses the same `.writing/delegate-jobs/` directory structure
+ * as the original raw-fs implementation — backward compatible.
+ */
+export class FileJobPersistence implements IPersistentStorage {
+  private readonly dir: string;
+
+  constructor(dir: string = '.writing/delegate-jobs') {
+    this.dir = dir;
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  }
+
+  async save(key: string, value: string): Promise<void> {
+    writeFileSync(join(this.dir, `${key}.json`), value, 'utf-8');
+  }
+
+  async load(key: string): Promise<string | null> {
+    const filePath = join(this.dir, `${key}.json`);
+    if (!existsSync(filePath)) return null;
+    return readFileSync(filePath, 'utf-8');
+  }
+
+  async remove(key: string): Promise<void> {
+    const filePath = join(this.dir, `${key}.json`);
+    try { unlinkSync(filePath); } catch { /* already gone */ }
+  }
+
+  async listKeys(): Promise<string[]> {
+    if (!existsSync(this.dir)) return [];
+    return readdirSync(this.dir)
+      .filter(f => f.endsWith('.json'))
+      .map(f => f.replace(/\.json$/, ''));
+  }
+}
+
 const _log = createLogger('delegate-broker');
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -87,20 +134,17 @@ export class DelegateBroker {
   private readonly handles: Map<string, DelegateHandle> = new Map();
   private readonly executor: DelegateExecutor;
   private readonly defaultTimeout: number;
-  private readonly persistDir: string | null;
+  private readonly storage: IPersistentStorage;
   private readonly relay: IWebSocketRelayService | null;
   private nextId = 1;
 
-  constructor(executor: DelegateExecutor, options?: { defaultTimeout?: number; persistDir?: string; relay?: IWebSocketRelayService }) {
+  constructor(executor: DelegateExecutor, options?: { defaultTimeout?: number; persistDir?: string; relay?: IWebSocketRelayService; storage?: IPersistentStorage }) {
     this.executor = executor;
     this.defaultTimeout = options?.defaultTimeout ?? 300_000; // 5 min
-    this.persistDir = options?.persistDir ?? null;
     this.relay = options?.relay ?? null;
+    this.storage = options?.storage ?? new FileJobPersistence(options?.persistDir);
 
-    if (this.persistDir) {
-      if (!existsSync(this.persistDir)) mkdirSync(this.persistDir, { recursive: true });
-      this._hydrateFromStore();
-    }
+    this._hydrateFromStore();
   }
 
   /**
@@ -295,32 +339,34 @@ export class DelegateBroker {
   // ─── Persistence ────────────────────────────────────────────────────
 
   private _saveJobState(id: string): void {
-    if (!this.persistDir) return;
     const record = this.delegates.get(id);
     if (!record) return;
 
-    try {
-      writeFileSync(join(this.persistDir, `${id}.json`), JSON.stringify(record), 'utf-8');
-    } catch (err) {
+    // Fire-and-forget save — persistence failure is non-critical
+    void this.storage.save(id, JSON.stringify(record)).catch((err) => {
       _log.warn('Failed to persist job state', { id, error: String(err) });
-    }
+    });
   }
 
   private _hydrateFromStore(): void {
-    if (!this.persistDir || !existsSync(this.persistDir)) return;
-
-    try {
-      const files = readdirSync(this.persistDir).filter(f => f.endsWith('.json'));
-      for (const file of files) {
+    // Fire-and-forget hydrate — load persisted jobs on startup
+    void this.storage.listKeys().then(async (keys) => {
+      for (const key of keys) {
         try {
-          const raw = readFileSync(join(this.persistDir, file), 'utf-8');
+          const raw = await this.storage.load(key);
+          if (!raw) continue;
+
           const record: DelegateRecord = JSON.parse(raw);
+
           // Only recover terminal state jobs (completed/failed/cancelled)
           if (record.status === 'completed' || record.status === 'failed' || record.status === 'cancelled') {
             this.delegates.set(record.id, record);
             // Parse nextId from delegate IDs: "del-{N}"
             const num = parseInt(record.id.replace('del-', ''), 10);
             if (num >= this.nextId) this.nextId = num + 1;
+
+            // Clean up completed job files after hydration
+            void this.storage.remove(key).catch(() => {});
           } else {
             // Non-terminal jobs were interrupted — mark as failed
             record.status = 'failed';
@@ -332,12 +378,13 @@ export class DelegateBroker {
             this._saveJobState(record.id);
           }
         } catch {
-          // Skip corrupt files
+          // Skip corrupt entries
+          void this.storage.remove(key).catch(() => {});
         }
       }
       _log.info('Hydrated delegates from store', { count: this.delegates.size });
-    } catch {
-      // Directory read failure — start fresh
-    }
+    }).catch(() => {
+      // Store read failure — start fresh
+    });
   }
 }

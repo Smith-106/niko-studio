@@ -28,6 +28,7 @@ import type {
   IPhaseOrchestrator,
   IWebSocketRelayService,
   IDistillationNowledgeBridge,
+  IDistillationService,
   IConflictNowledgeBridge,
   IFileSyncAdapter,
   IEventBus,
@@ -78,6 +79,7 @@ import { CriticEngine } from '../narrative/evaluators/critic-engine';
 import { WorkflowEngine } from '../workflow/workflow-engine';
 import type { IWorkflowEngineRuntime } from './workflow-runtime-provider';
 import { AgentFactory } from '../agents/factory';
+import type { AgentConstructor } from '../agents/factory';
 import {
   AgentType as BaseAgentType,
   type IAgentLLMService,
@@ -91,6 +93,7 @@ import type { INowledgeMemService } from '../protocols/nowledge-mem';
 import type { DocumentMetadata } from '../protocols/knowledge';
 import type { IKnowledgeService } from './types';
 import { PhaseOrchestrator } from '../workflow/team/phase-orchestrator';
+import { createLogger } from '../logger/index.js';
 import { WorkflowEventRelay } from '../mcp/gateway-ws';
 import { DistillationNowledgeBridge } from '../services/distillation-nowledge-bridge';
 import { ConflictNowledgeBridge } from '../services/conflict-nowledge-bridge';
@@ -119,6 +122,11 @@ import {
   type PhaseGateInput,
 } from '../workflow/team/phase-gate-evaluator';
 import {
+  ArtifactResolver,
+  STAGE_CONTRACTS,
+  type StateArtifact,
+} from '../workflow/artifact-contract';
+import {
   MCPRequestRouter,
   type MCPRequest,
   type MCPRouteResult,
@@ -143,6 +151,8 @@ import { WaveExecutionEngineImpl } from '../workflow/wave-engine.js';
 import type { WaveSpec, WaveResult } from '../workflow/wave-engine.js';
 import { GraphWikiLinkBridgeImpl } from '../services/graph-wiki-bridge.js';
 import type { IGraphWikiLinkBridge as IGraphWikiLinkBridgeInterface } from '../services/graph-wiki-bridge.js';
+
+const _log = createLogger('adapters');
 
 // ---------------------------------------------------------------------------
 // MemoryEngine Adapter
@@ -552,8 +562,13 @@ export class CriticEngineAdapter implements ICriticEngine {
 export class AgentFactoryAdapter implements IAgentFactory {
   private factory: AgentFactory;
 
-  constructor() {
+  constructor(registry?: Map<AgentType, AgentConstructor>) {
     this.factory = new AgentFactory();
+    if (registry) {
+      for (const [agentType, constructor] of registry) {
+        this.factory.register(mapAgentType(agentType), constructor);
+      }
+    }
   }
 
   getAgent(agentType: AgentType, name?: string, config?: Record<string, unknown>, llm?: unknown): IAgent {
@@ -804,8 +819,8 @@ export class ObsidianServiceAdapter implements IObsidianService {
   private readonly syncedFileHashes = new Map<string, string>();
   private readonly syncedFileMtimes = new Map<string, number>();
 
-  constructor(knowledgeService?: IKnowledgeService) {
-    this.service = new ObsidianService();
+  constructor(knowledgeService?: IKnowledgeService, conflictBridge?: IConflictNowledgeBridge) {
+    this.service = new ObsidianService(undefined, conflictBridge);
     this.knowledgeService = knowledgeService;
   }
 
@@ -1086,16 +1101,52 @@ export class NowledgeMemServiceAdapter implements INowledgeMemService {
 // PhaseOrchestrator Adapter
 // ---------------------------------------------------------------------------
 
-export class PhaseOrchestratorAdapter implements IPhaseOrchestrator {
-  private orchestrator: PhaseOrchestrator;
+/**
+ * Maps TeamPhase values to STAGE_CONTRACTS keys for artifact validation.
+ * When leaving a phase, we validate that the corresponding stage's output artifacts exist.
+ */
+const PHASE_TO_CONTRACT_KEY: Partial<Record<TeamPhase, string>> = {
+  [TeamPhase.planning]: 'plan',       // planning phase produces plan.json
+  [TeamPhase.execution]: 'execute',   // execution phase produces summaries
+  [TeamPhase.review]: 'review',       // review phase produces review.json
+  [TeamPhase.verification]: 'verify', // verification phase produces verification.json
+};
 
-  constructor(jsonlDir?: string) {
-    this.orchestrator = new PhaseOrchestrator(TeamPhase.planning, jsonlDir);
+export class PhaseOrchestratorAdapter implements IPhaseOrchestrator {
+  private _orchestrator: PhaseOrchestrator;
+  private _scratchDir: string | null;
+  private _artifacts: ReadonlyArray<StateArtifact>;
+
+  constructor(
+    jsonlDir?: string,
+    relay?: IWebSocketRelayService,
+    scratchDir?: string,
+    artifacts?: ReadonlyArray<StateArtifact>,
+  ) {
+    this._orchestrator = new PhaseOrchestrator(TeamPhase.planning, jsonlDir, relay);
+    this._scratchDir = scratchDir ?? null;
+    this._artifacts = artifacts ?? [];
+  }
+
+  /**
+   * Set the scratch directory for artifact validation.
+   * Called by workflow engine when a new scratch directory is created.
+   */
+  setScratchDir(dir: string): void {
+    this._scratchDir = dir;
+  }
+
+  /**
+   * Set the artifacts array for contract validation.
+   * Called by workflow engine when state.json is loaded or updated.
+   */
+  setArtifacts(artifacts: ReadonlyArray<StateArtifact>): void {
+    this._artifacts = artifacts;
   }
 
   async validatePhase(phase: string, stage: string): Promise<boolean> {
     const phaseKey = phase as keyof typeof TeamPhase;
-    return phaseKey in TeamPhase && this.orchestrator.phase === TeamPhase[phaseKey];
+    return phaseKey in TeamPhase && this._orchestrator.phase === TeamPhase[phaseKey];
   }
 
   async checkQualityGate(phase: string, stage: string): Promise<boolean> {
@@ -1113,9 +1164,91 @@ export class PhaseOrchestratorAdapter implements IPhaseOrchestrator {
   }
 
   async advancePhase(phase: string, nextStage: string): Promise<boolean> {
+    // Artifact contract enforcement: validate current phase's output artifacts
+    // before allowing the transition to proceed.
+    const currentPhase = this._orchestrator.phase;
+    const contractKey = PHASE_TO_CONTRACT_KEY[currentPhase];
+
+    if (contractKey && this._scratchDir) {
+      const contract = STAGE_CONTRACTS[contractKey];
+      if (contract) {
+        const resolver = new ArtifactResolver(this._artifacts);
+        const { missingInputs, missingOutputs } = resolver.validate(contract, this._scratchDir);
+
+        if (missingOutputs.length > 0) {
+          _log.warn('Artifact contract validation blocked phase advance', {
+            from: currentPhase,
+            contractKey,
+            missingOutputs,
+            scratchDir: this._scratchDir,
+          });
+          return false;
+        }
+
+        if (missingInputs.length > 0) {
+          _log.warn('Artifact contract validation found missing inputs (non-blocking)', {
+            from: currentPhase,
+            contractKey,
+            missingInputs,
+            scratchDir: this._scratchDir,
+          });
+        }
+      }
+    }
+
     const gateInput: PhaseGateInput = {};
-    const result = this.orchestrator.advance(gateInput);
+    const result = this._orchestrator.advance(gateInput);
     return result.success;
+  }
+
+  /**
+   * Route-through-orchestrator gate check.
+   *
+   * Deterministic rules based on TeamPhase:
+   * - `complete`  → all operations allowed (system is in terminal/ready state)
+   * - `planning`  → read-only operations (GET/HEAD) allowed; write operations blocked with 503
+   * - `fix`       → all operations blocked with 503 (system is in remediation loop)
+   * - All others  → all operations allowed (execution/review/verification are active phases)
+   *
+   * Health/admin routes are always permitted regardless of phase.
+   */
+  routeThroughOrchestrator(operation: string, method: string, path: string): import('./types').PhaseRouteResult {
+    const currentPhase = this._orchestrator.phase;
+
+    // Health/admin routes are always permitted — system must be observable at all phases.
+    if (path.startsWith('/health') || path.startsWith('/admin') || path.startsWith('/ws/')) {
+      return { allowed: true, statusCode: 200, reason: 'health/admin route bypasses phase gate', currentPhase };
+    }
+
+    switch (currentPhase) {
+      case TeamPhase.complete:
+        // Terminal state — all operations are permitted.
+        return { allowed: true, statusCode: 200, reason: 'phase complete allows all operations', currentPhase };
+
+      case TeamPhase.planning:
+        // Planning phase — only read-only (GET/HEAD) operations are permitted.
+        // Write operations (POST/PUT/DELETE/PATCH) are blocked: the system is
+        // still defining its execution plan and should not accept mutations.
+        if (method === 'GET' || method === 'HEAD') {
+          return { allowed: true, statusCode: 200, reason: 'read-only operation permitted in planning phase', currentPhase };
+        }
+        return { allowed: false, statusCode: 503, reason: `write operation '${operation}' blocked in planning phase`, currentPhase };
+
+      case TeamPhase.fix:
+        // Fix phase — all operations are blocked with 503 (service unavailable).
+        // The system is in a remediation loop and cannot serve requests reliably.
+        return { allowed: false, statusCode: 503, reason: `system in fix phase, '${operation}' unavailable`, currentPhase };
+
+      default:
+        // execution / review / verification — active phases, all operations permitted.
+        return { allowed: true, statusCode: 200, reason: `operation permitted in ${currentPhase} phase`, currentPhase };
+    }
+  }
+
+  /** Expose the underlying PhaseOrchestrator for injection into WorkflowEngine.
+   * Also used by bindings.ts via `(phaseOrchAdapter as { orchestrator }).orchestrator`. */
+  get orchestrator(): PhaseOrchestrator {
+    return this._orchestrator;
   }
 }
 
@@ -1241,6 +1374,45 @@ import { SyncEngine } from '../sync/sync-engine';
 import type { StorageAdapter } from '../sync/storage-adapter';
 import { FileSyncService } from '../services/file-sync';
 
+// ---------------------------------------------------------------------------
+// FileSyncServiceAdapter — thin wrapper making FileSyncService conform to
+// IFileSyncAdapter (container/types.ts).
+//
+// FileSyncService has its own SyncResult type (per-file: path/success/action)
+// and methods like syncFile/syncDirectory/stop. This adapter bridges those
+// to the IFileSyncAdapter contract (sync/getSyncHistory/getIndexedFiles).
+// ---------------------------------------------------------------------------
+
+export class FileSyncServiceAdapter implements IFileSyncAdapter {
+  private service: FileSyncService;
+
+  constructor(knowledgeLayer: unknown, watchPaths?: string[], writingRoot?: string) {
+    this.service = new FileSyncService(knowledgeLayer, watchPaths ?? [], writingRoot);
+  }
+
+  async sync(direction: 'push' | 'pull' | 'bidirectional', source: string, target: string): Promise<{ synced: number; conflicts: number }> {
+    // FileSyncService syncs from filesystem to knowledge layer — direction
+    // is informational only; the actual flow is always "local → knowledge".
+    const results = await this.service.syncDirectory(source);
+    const synced = results.filter(r => r.success).length;
+    const errors = results.filter(r => !r.success).length;
+    return { synced, conflicts: errors };
+  }
+
+  async getSyncHistory(source: string): Promise<Array<{ timestamp: string; direction: string; filesCount: number }>> {
+    const history = this.service.getSyncHistory();
+    return history.map(h => ({
+      timestamp: new Date((h.timestamp as number) * 1000).toISOString(),
+      direction: String(h.action ?? 'unknown'),
+      filesCount: 1,
+    }));
+  }
+
+  async getIndexedFiles(source: string): Promise<string[]> {
+    return Object.keys(this.service.getIndexedFiles());
+  }
+}
+
 export class ObsidianSyncAdapter implements IFileSyncAdapter {
   private readonly obsidianService: IObsidianService;
 
@@ -1295,34 +1467,104 @@ export class CloudSyncAdapter implements IFileSyncAdapter {
 }
 
 export class KnowledgeSyncAdapter implements IFileSyncAdapter {
-  private fileSyncService: FileSyncService | null = null;
+  private adapter: FileSyncServiceAdapter | null = null;
 
   constructor(knowledgeLayer?: unknown, watchPaths?: string[]) {
     if (knowledgeLayer) {
-      this.fileSyncService = new FileSyncService(knowledgeLayer, watchPaths ?? []);
+      this.adapter = new FileSyncServiceAdapter(knowledgeLayer, watchPaths);
     }
   }
 
   async sync(direction: 'push' | 'pull' | 'bidirectional', source: string, target: string): Promise<{ synced: number; conflicts: number }> {
-    if (!this.fileSyncService) return { synced: 0, conflicts: 0 };
-    const results = await this.fileSyncService.syncDirectory(source);
-    const synced = results.filter(r => r.success).length;
-    return { synced, conflicts: 0 };
+    if (!this.adapter) return { synced: 0, conflicts: 0 };
+    return this.adapter.sync(direction, source, target);
   }
 
   async getSyncHistory(source: string): Promise<Array<{ timestamp: string; direction: string; filesCount: number }>> {
-    if (!this.fileSyncService) return [];
-    const history = this.fileSyncService.getSyncHistory();
-    return history.map(h => ({
-      timestamp: new Date((h.timestamp as number) * 1000).toISOString(),
-      direction: String(h.action ?? 'unknown'),
-      filesCount: 1,
-    }));
+    if (!this.adapter) return [];
+    return this.adapter.getSyncHistory(source);
   }
 
   async getIndexedFiles(source: string): Promise<string[]> {
-    if (!this.fileSyncService) return [];
-    return Object.keys(this.fileSyncService.getIndexedFiles());
+    if (!this.adapter) return [];
+    return this.adapter.getIndexedFiles(source);
+  }
+}
+
+/**
+ * FileSyncAdapterChain — unified adapter that delegates to the correct
+ * backend adapter based on source type.
+ *
+ * Source type routing:
+ * - 'obsidian' or paths containing '.md' → ObsidianSyncAdapter
+ * - 'cloud' or URLs (http/https) → CloudSyncAdapter
+ * - 'knowledge' or all other paths → KnowledgeSyncAdapter
+ *
+ * Aggregates results from all adapters for bidirectional sync when
+ * the source type is ambiguous or 'all'.
+ */
+export class FileSyncAdapterChain implements IFileSyncAdapter {
+  private readonly adapters: Map<string, IFileSyncAdapter>;
+  private readonly defaultAdapter: IFileSyncAdapter;
+  private readonly eventBus?: IEventBus;
+
+  constructor(adapters: {
+    obsidian: IFileSyncAdapter;
+    cloud: IFileSyncAdapter;
+    knowledge: IFileSyncAdapter;
+  }, eventBus?: IEventBus) {
+    this.adapters = new Map([
+      ['obsidian', adapters.obsidian],
+      ['cloud', adapters.cloud],
+      ['knowledge', adapters.knowledge],
+    ]);
+    this.defaultAdapter = adapters.obsidian;
+    this.eventBus = eventBus;
+  }
+
+  async sync(direction: 'push' | 'pull' | 'bidirectional', source: string, target: string): Promise<{ synced: number; conflicts: number }> {
+    const adapter = this.resolveAdapter(source, target);
+    const result = await adapter.sync(direction, source, target);
+    this.eventBus?.publish('sync:completed', { direction, source, target, synced: result.synced, conflicts: result.conflicts });
+    return result;
+  }
+
+  async getSyncHistory(source: string): Promise<Array<{ timestamp: string; direction: string; filesCount: number }>> {
+    const adapter = this.resolveAdapter(source, source);
+    return adapter.getSyncHistory(source);
+  }
+
+  async getIndexedFiles(source: string): Promise<string[]> {
+    const adapter = this.resolveAdapter(source, source);
+    return adapter.getIndexedFiles(source);
+  }
+
+  /** Resolve the correct adapter based on source/target path hints */
+  private resolveAdapter(source: string, target: string): IFileSyncAdapter {
+    // Explicit source type prefixes: "obsidian:", "cloud:", "knowledge:"
+    const sourceLower = source.toLowerCase();
+    const targetLower = target.toLowerCase();
+
+    if (sourceLower.startsWith('obsidian:') || targetLower.startsWith('obsidian:')) {
+      return this.adapters.get('obsidian')!;
+    }
+    if (sourceLower.startsWith('cloud:') || targetLower.startsWith('cloud:') || targetLower.startsWith('http')) {
+      return this.adapters.get('cloud')!;
+    }
+    if (sourceLower.startsWith('knowledge:') || targetLower.startsWith('knowledge:')) {
+      return this.adapters.get('knowledge')!;
+    }
+
+    // Path-based hints: .md files → obsidian, URLs → cloud, others → knowledge
+    if (sourceLower.endsWith('.md') || targetLower.endsWith('.md')) {
+      return this.adapters.get('obsidian')!;
+    }
+    if (targetLower.startsWith('http://') || targetLower.startsWith('https://')) {
+      return this.adapters.get('cloud')!;
+    }
+
+    // Default: obsidian adapter (most common use case)
+    return this.defaultAdapter;
   }
 }
 
@@ -1333,8 +1575,8 @@ export class KnowledgeSyncAdapter implements IFileSyncAdapter {
 export class EventBusAdapter implements IEventBus {
   private bus: TypedEventBus;
 
-  constructor(relay?: IWebSocketRelayService) {
-    this.bus = new TypedEventBus(relay);
+  constructor(relay?: IWebSocketRelayService, config?: import('../services/event-bus').EventBusConfig) {
+    this.bus = new TypedEventBus(relay, config);
   }
 
   publish(channel: string, payload: unknown): void {
@@ -1471,12 +1713,14 @@ export class ObsidianKnowledgeSyncAdapter implements IObsidianKnowledgeSync {
     obsidianService: IObsidianService,
     knowledgeService: IKnowledgeService,
     eventBus: IEventBus,
+    conflictBridge?: IConflictNowledgeBridge,
     config?: Partial<import('../services/obsidian-knowledge-sync').ObsidianSyncConfig> & { vaultRoot?: string },
   ) {
     this.impl = new ObsidianKnowledgeSyncImpl({
       obsidianService,
       knowledgeService,
       eventBus,
+      conflictBridge,
       config,
     });
   }

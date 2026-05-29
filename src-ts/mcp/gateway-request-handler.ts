@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import type { GatewayRoute } from './gateway-route-types';
+import type { IPhaseOrchestrator, PhaseRouteResult } from '../container/types';
 import { recordRequestMetrics } from './metrics';
 import {
   addCorsHeaders,
@@ -32,7 +33,10 @@ function isSSEStreamChunk(path: string): boolean {
   return path.includes('/stream') || path.includes('/chunk') || path.includes('/events');
 }
 
-export function createGatewayRequestHandler(routes: readonly GatewayRoute[]): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
+export function createGatewayRequestHandler(
+  routes: readonly GatewayRoute[],
+  phaseOrchestrator?: IPhaseOrchestrator,
+): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     addCorsHeaders(req, res);
 
@@ -68,6 +72,48 @@ export function createGatewayRequestHandler(routes: readonly GatewayRoute[]): (r
         latencyMs: 0,
       });
       return;
+    }
+
+    // G08: Route-through-orchestrator phase gate.
+    // Before dispatching to the endpoint handler, check whether the current
+    // phase state permits this operation. If the orchestrator is available
+    // and the gate rejects the request, return 503 (service unavailable) or
+    // 403 (forbidden) immediately — no handler is invoked.
+    if (phaseOrchestrator) {
+      const gateResult: PhaseRouteResult = phaseOrchestrator.routeThroughOrchestrator(
+        `${method} ${matched.route.pattern.source}`,
+        method,
+        path,
+      );
+
+      if (!gateResult.allowed) {
+        log.warn('Phase gate blocked request', {
+          method,
+          path,
+          phase: gateResult.currentPhase,
+          reason: gateResult.reason,
+        });
+        res.writeHead(gateResult.statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          error: gateResult.reason,
+          phase: gateResult.currentPhase,
+        }));
+        recordRequestMetrics({
+          route: matched.route.pattern.source,
+          method,
+          statusCode: gateResult.statusCode,
+          latencyMs: 0,
+        });
+        return;
+      }
+
+      // Log orchestrator state for observability (debug level to avoid noise).
+      log.debug('Phase gate passed', {
+        method,
+        path,
+        phase: gateResult.currentPhase,
+        reason: gateResult.reason,
+      });
     }
 
     const startedAt = Date.now();

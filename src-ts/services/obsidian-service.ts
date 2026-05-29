@@ -17,6 +17,7 @@ import {
   unlinkSync,
 } from 'node:fs';
 import { platform } from 'node:os';
+import type { IConflictNowledgeBridge } from '../container/types';
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -80,9 +81,11 @@ function minimatch(name: string, pattern: string): boolean {
 export class ObsidianService {
   private readonly _configPath: string | null;
   private readonly _vaultCache = new Map<string, VaultInfo>();
+  private readonly _conflictBridge?: IConflictNowledgeBridge;
 
-  constructor(_config?: unknown) {
+  constructor(_config?: unknown, conflictBridge?: IConflictNowledgeBridge) {
     this._configPath = getObsidianConfigPath();
+    this._conflictBridge = conflictBridge;
   }
 
   // -----------------------------------------------------------------

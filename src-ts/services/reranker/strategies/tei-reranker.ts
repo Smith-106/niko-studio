@@ -9,7 +9,7 @@ import type { RankedDocument, RerankerConfig } from '../models';
 import { RerankerError, RerankerType } from '../models';
 import { RerankerStrategy } from '../base';
 
-const DEFAULT_BASE_URL = process.env.TEI_RERANKER_URL || 'http://localhost:8080';
+const ENV_BASE_URL = process.env.TEI_RERANKER_URL || process.env.NIKO_TEI_RERANKER_URL || '';
 const DEFAULT_MODEL = 'BAAI/bge-reranker-v2-m3';
 
 export class TEIReranker extends RerankerStrategy {
@@ -18,7 +18,14 @@ export class TEIReranker extends RerankerStrategy {
 
   constructor(config: RerankerConfig) {
     super(config);
-    this._baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
+    // Resolve base URL: explicit config > env vars > fallback to localhost
+    if (config.baseUrl) {
+      this._baseUrl = config.baseUrl;
+    } else if (ENV_BASE_URL) {
+      this._baseUrl = ENV_BASE_URL;
+    } else {
+      this._baseUrl = 'http://localhost:8080';
+    }
     this._model = config.model ?? DEFAULT_MODEL;
   }
 

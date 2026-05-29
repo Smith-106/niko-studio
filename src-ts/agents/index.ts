@@ -2,6 +2,8 @@
  * agents/index.ts - Barrel file re-exporting all agent types and classes.
  */
 
+import { AgentType } from "./base";
+
 // base.ts
 export {
   ModelProvider,
@@ -11,6 +13,13 @@ export {
   tokenUsageToDict,
   BaseAgent,
 } from "./base";
+
+/** All available agent names (for health reporting and introspection) */
+export const AGENT_NAMES: readonly string[] = [
+  ...Object.values(AgentType),
+  'worldbuilding',
+  'character',
+];
 
 export type {
   ModelPricing,
@@ -100,6 +109,10 @@ export type {
 
 // factory.ts
 export { AgentFactory } from "./factory";
+export type { AgentConstructor } from "./factory";
+
+// registry.ts
+export { AgentRegistry } from "./registry";
 
 // lifecycle-hooks.ts
 export {

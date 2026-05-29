@@ -1,1 +1,0 @@
-{"id":"DEC-20260527T120000","timestamp":"2026-05-27T12:00:00Z","source":"ralph","node_id":"post-verify","type":"quality-gate","verdict":"proceed","confidence_score":85,"close_call":false,"summary":"All 10 HIGH findings verified fixed. tsc 0 errors, 1644 tests passed. Review found 1 critical + 16 high pre-existing issues outside scope. Definition of done met."}

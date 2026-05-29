@@ -2,6 +2,7 @@ import type { interfaces } from 'inversify';
 
 import {
   ServiceTypes,
+  AgentType,
   type IMemoryEngine,
   type IGraphEngine,
   type ISearchEngine,
@@ -57,12 +58,15 @@ import {
   PersonalizationServiceImpl,
 } from '../services';
 import { ProviderType as EmbeddingProviderType } from '../services/embedding-service';
+import { ProviderType } from '../services/llm-service';
+import type { LLMProvider } from '../protocols/llm';
 import {
   SmartSearch,
   HybridSearch,
   VectorSearch,
 } from '../search';
 import { LocalEmbeddingProvider } from '../knowledge/providers';
+import { OpenAILLMProvider, AnthropicLLMProvider } from '../knowledge/providers';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 import {
   MemoryEngineAdapter,
@@ -85,6 +89,8 @@ import {
   ObsidianSyncAdapter,
   CloudSyncAdapter,
   KnowledgeSyncAdapter,
+  FileSyncServiceAdapter,
+  FileSyncAdapterChain,
   EventBusAdapter,
   SearchStrategyConfigAdapter,
   UnifiedSearchPipelineAdapter,
@@ -106,6 +112,13 @@ import {
 import { NowledgeMemKnowledgeBridge } from '../services/nowledge-mem-knowledge-bridge';
 import { CompositeKnowledgeMemoryBridge } from '../services/composite-knowledge-memory-bridge';
 import { CircuitBreakerRegistry } from '../services/circuit-breaker';
+import { CommanderAgent } from '../agents/commander';
+import { ArchitectAgent } from '../agents/architect';
+import { WriterAgent } from '../agents/writer';
+import { CriticAgent } from '../agents/critic';
+import { PlotAgent } from '../agents/plot';
+import { AgentType as BaseAgentType } from '../agents/base';
+import type { AgentConstructor } from '../agents/factory';
 import {
   LearningOrchestrator,
   ImportLearningPipeline,
@@ -193,14 +206,43 @@ export function registerCanonicalBindings(
       .inSingletonScope();
   };
 
+  // Q4: DistillationService wired to LLMService so distillation can use
+  // actual LLM calls instead of falling back to simple extraction.
   bindSingleton<IDistillationService>(
     ServiceTypes.DistillationService,
-    () => new DistillationService(),
+    (context) => {
+      const distillationService = new DistillationService();
+      const llmService = context.container.get<ILLMService>(ServiceTypes.LLMService);
+      // Wire LLMService into DistillationService for actual content analysis
+      if (llmService) {
+        distillationService.setLLMClient(llmService as any);
+      }
+      return distillationService;
+    },
   );
 
+    // Q2: LLM providers registered in DI — OpenAI and Anthropic providers
+  // are instantiated from env vars and injected into LLMServiceImpl.
+  // Q7: TokenService wired into LLMService for session-level budget tracking.
   bindSingleton<ILLMService>(
     ServiceTypes.LLMService,
-    () => new LLMServiceImpl(new Map(), {}),
+    (context) => {
+      const providers = new Map<ProviderType, LLMProvider>();
+
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (openaiKey) {
+        providers.set(ProviderType.OPENAI, new OpenAILLMProvider({ apiKey: openaiKey }) as unknown as LLMProvider);
+      }
+
+      const anthropicKey = process.env.ANTHROPIC_API_KEY;
+      if (anthropicKey) {
+        providers.set(ProviderType.ANTHROPIC, new AnthropicLLMProvider({ apiKey: anthropicKey }) as unknown as LLMProvider);
+      }
+
+      return new LLMServiceImpl(providers, {
+        tokenService: context.container.get<ITokenService>(ServiceTypes.TokenService),
+      });
+    },
   );
 
   bindSingleton<IEmbeddingService>(
@@ -224,6 +266,7 @@ export function registerCanonicalBindings(
         embeddingService: context.container.get<IEmbeddingService & VectorEmbeddingService>(ServiceTypes.EmbeddingService),
         memoryEngine: compositeEngine,
         graphEngine: context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
+        eventBus: context.container.get<IEventBus>(ServiceTypes.EventBus),
       });
     },
   );
@@ -271,9 +314,19 @@ export function registerCanonicalBindings(
     () => new SearchEngineAdapter(undefined, integrationAdapters),
   );
 
+    // Q1: WorkflowEngine wired to PhaseOrchestrator — quality gates are invoked
+  // during step execution (before phase transitions, after task completion).
   bindSingleton<IWorkflowEngine>(
     ServiceTypes.WorkflowEngine,
-    () => new WorkflowEngineAdapter(),
+    (context) => {
+      const phaseOrchAdapter = context.container.get<IPhaseOrchestrator>(ServiceTypes.PhaseOrchestrator);
+      // Extract the underlying PhaseOrchestrator from the adapter for injection
+      const engine = phaseOrchAdapter instanceof PhaseOrchestratorAdapter
+        ? new WorkflowEngine(undefined, undefined, undefined, undefined, undefined,
+            (phaseOrchAdapter as unknown as { orchestrator: PhaseOrchestrator }).orchestrator)
+        : new WorkflowEngine();
+      return new WorkflowEngineAdapter(engine);
+    },
   );
 
   bindSingleton<ICriticEngine>(
@@ -281,9 +334,19 @@ export function registerCanonicalBindings(
     () => new CriticEngineAdapter(),
   );
 
+  // G10: AgentFactory wired with agent registry — DI-injected constructors
+  // take precedence over built-in direct construction.
   bindSingleton<IAgentFactory>(
     ServiceTypes.AgentFactory,
-    () => new AgentFactoryAdapter(),
+    () => {
+      const registry = new Map<AgentType, AgentConstructor>();
+      registry.set(AgentType.Commander, (llmService) => new CommanderAgent(llmService));
+      registry.set(AgentType.Architect, (llmService) => new ArchitectAgent(llmService));
+      registry.set(AgentType.Writer, (llmService) => new WriterAgent({ llmService: llmService as import('../agents/base').IAgentLLMService }));
+      registry.set(AgentType.Critic, (llmService) => new CriticAgent({ llmService: llmService as import('../agents/base').IAgentLLMService }));
+      registry.set(AgentType.Plot, () => new PlotAgent());
+      return new AgentFactoryAdapter(registry);
+    },
   );
 
   bindSingleton<IBackupManager>(
@@ -296,10 +359,13 @@ export function registerCanonicalBindings(
     () => new TokenServiceAdapter(),
   );
 
+  // Q5: ConflictNowledgeBridge wired into ObsidianService — bidirectional
+  // conflict detection works when Obsidian vault changes flow back to Knowledge.
   bindSingleton<IObsidianService>(
     ServiceTypes.ObsidianService,
     (context) => new ObsidianServiceAdapter(
       context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+      context.container.get<IConflictNowledgeBridge>(ServiceTypes.ConflictNowledgeBridge),
     ),
   );
 
@@ -379,9 +445,14 @@ export function registerCanonicalBindings(
 
   // ─── Collaboration Layer (Phase 1 Quick Wins) ────────────────────
 
+  // Q1: PhaseOrchestrator wired to WebSocketRelayService so phase transitions
+  // are broadcast to connected browser clients in real-time.
   bindSingleton<IPhaseOrchestrator>(
     ServiceTypes.PhaseOrchestrator,
-    () => new PhaseOrchestratorAdapter(),
+    (context) => new PhaseOrchestratorAdapter(
+      undefined,
+      context.container.get<IWebSocketRelayService>(ServiceTypes.WebSocketRelayService),
+    ),
   );
 
   bindSingleton<IWebSocketRelayService>(
@@ -389,10 +460,14 @@ export function registerCanonicalBindings(
     () => new WebSocketRelayServiceAdapter(),
   );
 
+  // Q4: DistillationNowledgeBridge wired to DistillationService — when
+  // distill() is called, the bridge performs actual LLM-based distillation
+  // before persisting to Nowledge Mem (Obsidian vault format).
   bindSingleton<IDistillationNowledgeBridge>(
     ServiceTypes.DistillationNowledgeBridge,
     (context) => new DistillationNowledgeBridgeAdapter(
       context.container.get<INowledgeMemService>(ServiceTypes.NowledgeMemService),
+      context.container.get<IDistillationService>(ServiceTypes.DistillationService),
     ),
   );
 
@@ -403,22 +478,19 @@ export function registerCanonicalBindings(
     ),
   );
 
-  // ─── File Sync Adapters (T08) ─────────────────────────────────────
+  // ─── File Sync Adapters (T08 — Q8: unified adapter chain) ──────────────────
 
   bindSingleton<IFileSyncAdapter>(
     ServiceTypes.FileSyncService,
-    (context) => new ObsidianSyncAdapter(
-      context.container.get<IObsidianService>(ServiceTypes.ObsidianService),
-    ),
-  );
-
-  // ─── EventBus (T01) ────────────────────────────────────────────────
-
-  bindSingleton<IEventBus>(
-    ServiceTypes.EventBus,
-    (context) => new EventBusAdapter(
-      context.container.get<IWebSocketRelayService>(ServiceTypes.WebSocketRelayService),
-    ),
+    (context) => new FileSyncAdapterChain({
+      obsidian: new ObsidianSyncAdapter(
+        context.container.get<IObsidianService>(ServiceTypes.ObsidianService),
+      ),
+      cloud: new CloudSyncAdapter(),
+      knowledge: new KnowledgeSyncAdapter(
+        context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+      ),
+    }, context.container.get<IEventBus>(ServiceTypes.EventBus)),
   );
 
   // ─── EventLog & DeadLetterQueue ─────────────────────────────────────
@@ -433,6 +505,21 @@ export function registerCanonicalBindings(
     (context) => new DeadLetterQueueAdapter({
       eventBus: context.container.get<IEventBus>(ServiceTypes.EventBus),
     }),
+  );
+
+  // ─── EventBus (T01) ────────────────────────────────────────────────
+  // G16: EventLog wired into EventBus for event persistence and replay.
+  // DeadLetterQueue is NOT wired here to avoid circular DI (DLQ needs EventBus).
+  // Handler errors still fall back to console.error when DLQ is absent from config.
+
+  bindSingleton<IEventBus>(
+    ServiceTypes.EventBus,
+    (context) => new EventBusAdapter(
+      context.container.get<IWebSocketRelayService>(ServiceTypes.WebSocketRelayService),
+      {
+        eventLog: context.container.get<IEventLog>(ServiceTypes.EventLog),
+      },
+    ),
   );
 
   // ─── SearchStrategyConfig (T04) ───────────────────────────────────────
@@ -483,6 +570,7 @@ export function registerCanonicalBindings(
       context.container.get<IObsidianService>(ServiceTypes.ObsidianService),
       context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
       context.container.get<IEventBus>(ServiceTypes.EventBus),
+      context.container.get<IConflictNowledgeBridge>(ServiceTypes.ConflictNowledgeBridge),
     ),
   );
 

@@ -3,6 +3,12 @@
  *
  * Provides centralized agent creation with lazy initialization and caching.
  * Enables decoupling of agent instantiation from workflow levels.
+ *
+ * Agent resolution priority:
+ * 1. Mocks (testing overrides)
+ * 2. Registry (DI-injected agent constructors)
+ * 3. Cached instances
+ * 4. Direct construction (fallback)
  */
 
 import type { IAgentLLMService } from './base';
@@ -15,13 +21,26 @@ import { WriterAgent } from './writer';
 import { CriticAgent } from './critic';
 import { PlotAgent } from './plot';
 
+/**
+ * Agent registry entry — a constructor function that creates an agent instance.
+ * Allows DI containers and external code to register custom agent constructors
+ * instead of relying on the factory's built-in switch-case.
+ */
+export type AgentConstructor = (llmService: IAgentLLMService | null) => unknown;
+
 export class AgentFactory {
   private instances: Map<AgentType, unknown> = new Map();
   private mocks: Map<AgentType, unknown> = new Map();
+  private registry: Map<AgentType, AgentConstructor> = new Map();
   private defaultLlmService?: IAgentLLMService;
 
   constructor(defaultLlmService?: IAgentLLMService) {
     this.defaultLlmService = defaultLlmService;
+  }
+
+  /** Register an agent constructor in the registry for DI-based resolution */
+  register(agentType: AgentType, constructor: AgentConstructor): void {
+    this.registry.set(agentType, constructor);
   }
 
   /** Register a mock instance for testing */
@@ -74,6 +93,13 @@ export class AgentFactory {
   ): unknown {
     const llmService = options?.llmService ?? this.defaultLlmService ?? null;
 
+    // Resolve from registry first (DI-injected constructors)
+    const constructor = this.registry.get(agentType);
+    if (constructor !== undefined) {
+      return constructor(llmService);
+    }
+
+    // Fallback to direct construction
     switch (agentType) {
       case AgentType.COMMANDER: {
         return new CommanderAgent(llmService);

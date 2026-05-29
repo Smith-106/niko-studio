@@ -1,2 +1,0 @@
-id,skill,args,wave_n,status,findings,artifacts,error
-"0","maestro-verify","1 -y","1","completed","fresh current-head verify passed; 2026-05-09 gaps closed",".workflow/.csv-wave/20260510-verify-P1-ui-backend-interface-control; .workflow/scratch/20260507-plan-P1-writing-craft-ui/verification.json; .workflow/scratch/20260507-plan-P1-writing-craft-ui/validation.json",""

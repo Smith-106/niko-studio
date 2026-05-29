@@ -547,6 +547,28 @@ export interface IPhaseOrchestrator {
   checkQualityGate(phase: string, stage: string): Promise<boolean>;
   getQualityGates(phase: string): string[];
   advancePhase(phase: string, nextStage: string): Promise<boolean>;
+  /**
+   * Route-through-orchestrator gate check.
+   *
+   * Validates whether the current phase state permits a given operation.
+   * Returns a PhaseRouteResult that the gateway uses to decide whether
+   * to forward the request or reject it.
+   */
+  routeThroughOrchestrator(operation: string, method: string, path: string): PhaseRouteResult;
+}
+
+/**
+ * Result of the orchestrator route-through gate check.
+ */
+export interface PhaseRouteResult {
+  /** Whether the operation is permitted at the current phase. */
+  allowed: boolean;
+  /** HTTP status code to use if not allowed (403 = forbidden, 503 = service unavailable). */
+  statusCode: number;
+  /** Human-readable reason for the gate decision. */
+  reason: string;
+  /** Current phase name at the time of the check. */
+  currentPhase: string;
 }
 
 export interface IWebSocketRelayService {

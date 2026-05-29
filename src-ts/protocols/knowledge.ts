@@ -198,4 +198,5 @@ export interface KnowledgeServiceConfig {
   embeddingModel?: string;
   memoryEngine?: KnowledgeMemoryEngineAdapter;
   graphEngine?: KnowledgeGraphEngineAdapter;
+  eventBus?: import('../container/types').IEventBus;
 }

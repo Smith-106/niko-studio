@@ -114,6 +114,7 @@ export interface LLMServiceConfig {
   retry?: Partial<RetryConfig>;
   hooks?: HookRegistry;
   tokenBudget?: number;
+  tokenService?: ITokenService;
 }
 
 /**
@@ -156,6 +157,7 @@ export class LLMServiceImpl implements LLMService {
   private readonly retryConfig: RetryConfig;
   private readonly _hooks: HookRegistry | null;
   private readonly _tokenBudget: number | null;
+  private readonly _tokenService: ITokenService | null;
   private _tokensUsed = 0;
   private readonly _circuitBreakerRegistry: CircuitBreakerRegistry;
 
@@ -171,6 +173,7 @@ export class LLMServiceImpl implements LLMService {
     this.defaultProvider = config.defaultProvider ?? ProviderType.OPENAI;
     this._hooks = config.hooks ?? null;
     this._tokenBudget = config.tokenBudget ?? null;
+    this._tokenService = config.tokenService ?? null;
 
     this.retryConfig = {
       maxRetries: config.retry?.maxRetries ?? 3,
@@ -516,6 +519,9 @@ export class LLMServiceImpl implements LLMService {
       systemPrompt?: string;
     }
   ): AsyncIterableIterator<StreamChunk> {
+    // Budget pre-check (estimate from maxTokens or prompt length)
+    this.checkBudget(options?.maxTokens ?? Math.ceil(prompt.length / 4));
+
     const fallbackOrder = this.getProviderFallbackOrder();
     const errors: Error[] = [];
 
@@ -622,6 +628,12 @@ export class LLMServiceImpl implements LLMService {
       maxConcurrency?: number;
     }
   ): Promise<string[]> {
+    // Pre-check budget for the entire batch to avoid partial execution
+    const tokensPerPrompt = options?.maxTokens ?? Math.ceil(
+      Math.max(...prompts.map(p => p.length), 1) / 4
+    );
+    this.checkBudget(tokensPerPrompt * prompts.length);
+
     const maxConcurrency = options?.maxConcurrency ?? 5;
     const results: string[] = new Array(prompts.length);
 
@@ -689,22 +701,48 @@ export class LLMServiceImpl implements LLMService {
   }
 
   /**
-   * Check budget before dispatching
+   * Check budget before dispatching.
+   * Checks both the internal token budget (if configured) and the
+   * TokenService session budget (if injected via DI).
    */
   private checkBudget(estimatedTokens: number): void {
-    if (this._tokenBudget == null) return;
+    // Internal token budget check
+    if (this._tokenBudget != null) {
+      if (this._tokensUsed + estimatedTokens > this._tokenBudget) {
+        throw new BudgetExceededError(
+          `Token budget exceeded: used ${this._tokensUsed}, estimated ${estimatedTokens}, budget ${this._tokenBudget}`,
+          this._tokensUsed,
+          this._tokenBudget
+        );
+      }
+    }
 
-    if (this._tokensUsed + estimatedTokens > this._tokenBudget) {
-      throw new BudgetExceededError(
-        `Token budget exceeded: used ${this._tokensUsed}, estimated ${estimatedTokens}, budget ${this._tokenBudget}`,
-        this._tokensUsed,
-        this._tokenBudget
-      );
+    // TokenService session budget check
+    if (this._tokenService) {
+      const sessionId = 'llm-default';
+      if (!this._tokenService.isWithinBudget(sessionId, estimatedTokens)) {
+        const usage = this._tokenService.getUsage(sessionId);
+        throw new BudgetExceededError(
+          `Session token budget exceeded: used ${usage.used}, estimated ${estimatedTokens}, budget ${usage.budget}`,
+          usage.used,
+          usage.budget
+        );
+      }
     }
   }
 
   private trackTokenUsage(usage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined): void {
-    if (!usage || this._tokenBudget == null) return;
-    this._tokensUsed += usage.totalTokens ?? (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0);
+    if (!usage) return;
+    const totalTokens = usage.totalTokens ?? (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0);
+
+    // Track internal budget
+    if (this._tokenBudget != null) {
+      this._tokensUsed += totalTokens;
+    }
+
+    // Track via TokenService
+    if (this._tokenService) {
+      this._tokenService.updateUsage('llm-default', totalTokens);
+    }
   }
 }

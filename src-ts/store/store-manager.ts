@@ -165,8 +165,14 @@ export class Document {
     };
   }
 
-  /** Create from dictionary */
+  /** Create from dictionary — validates against contract schema */
   static fromDict(data: Record<string, unknown>): Document {
+    // Validate required fields before constructing
+    const validation = validateArtifact(data);
+    if (!validation.valid) {
+      throw new Error(`Invalid artifact: ${validation.errors.join('; ')}`);
+    }
+
     let createdAt: Date;
     const rawCreated = data.created_at;
     if (typeof rawCreated === 'string') {
@@ -216,12 +222,12 @@ export class Document {
     return this.chunks.length;
   }
 
-  /** Approximate word count */
+  /** Approximate word count (CJK characters + Latin words) */
   get wordCount(): number {
     if (!this.content) return 0;
-    const cjkChars = this.content.match(/[一-鿿㐀-䶿]/g);
+    const cjkChars = this.content.match(/\p{Script=Han}/gu);
     const cjkCount = cjkChars ? cjkChars.length : 0;
-    const withoutCjk = this.content.replace(/[一-鿿鿿㐀-䶿]/g, ' ');
+    const withoutCjk = this.content.replace(/\p{Script=Han}/gu, ' ');
     const latinWords = withoutCjk.split(/\s+/).filter(Boolean).length;
     return cjkCount + latinWords;
   }
@@ -292,6 +298,63 @@ export class DocumentFilter {
 
     return true;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Artifact contract enforcement
+// ---------------------------------------------------------------------------
+
+/** Required fields for a valid artifact/document */
+const ARTIFACT_REQUIRED_FIELDS: readonly string[] = ['id', 'content', 'format'];
+
+/** Validation result for artifact contract enforcement */
+export interface ArtifactValidationResult {
+  valid: boolean;
+  missingFields: string[];
+  errors: string[];
+}
+
+/**
+ * Validate an artifact against the contract schema.
+ *
+ * Checks that required fields (id, content, format) are present and non-empty.
+ * Returns a structured result with missing fields and error messages.
+ */
+export function validateArtifact(artifact: Record<string, unknown>): ArtifactValidationResult {
+  const missingFields: string[] = [];
+  const errors: string[] = [];
+
+  for (const field of ARTIFACT_REQUIRED_FIELDS) {
+    const value = artifact[field];
+    if (value === undefined || value === null) {
+      missingFields.push(field);
+      errors.push(`Missing required field: ${field}`);
+    } else if (typeof value === 'string' && value.trim() === '') {
+      missingFields.push(field);
+      errors.push(`Required field "${field}" must not be empty`);
+    }
+  }
+
+  // Validate format is a known DocumentFormat value
+  if (artifact.format !== undefined && artifact.format !== null) {
+    const formatStr = String(artifact.format);
+    if (!Object.values(DocumentFormat).includes(formatStr as DocumentFormat)) {
+      errors.push(`Unknown document format: "${formatStr}"`);
+    }
+  }
+
+  // Validate id is a non-whitespace string
+  if (artifact.id !== undefined && artifact.id !== null) {
+    if (typeof artifact.id !== 'string') {
+      errors.push(`Field "id" must be a string`);
+    }
+  }
+
+  return {
+    valid: missingFields.length === 0 && errors.length === 0,
+    missingFields,
+    errors,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -428,7 +491,7 @@ normalized_at: ${now}
   // CRUD operations
   // -----------------------------------------------------------------------
 
-  /** Add a document to the store */
+  /** Add a document to the store — validates artifact contract first */
   addDocument(
     path: string,
     content: string,
@@ -437,6 +500,16 @@ normalized_at: ${now}
     normalize: boolean = true
   ): string {
     const format = this._detectFormat(path);
+
+    // Validate artifact contract before storage
+    const validation = validateArtifact({
+      id: docId ?? `doc-${Date.now()}`,
+      content,
+      format,
+    });
+    if (!validation.valid) {
+      throw new Error(`Artifact validation failed: ${validation.errors.join('; ')}`);
+    }
 
     // Create document
     const doc = Document.create(content, format, metadata ?? {}, docId);

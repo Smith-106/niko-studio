@@ -1,2 +1,0 @@
-id,skill_call,topic
-"1","$maestro-analyze --gaps \"修复 release NO_GO 的剩余两个 blocker：刷新当前 retained package E2E acceptance 证据，并处理 .writing/sessions/active 下 115 条 triage_state=open 的治理阻断；确认 local_selftest_enforcement 只是连带失败。\" -y","Chain \"quality-fix\" step 1/4 — 分析剩余 release blocker 的自动化边界、证据刷新路径和 triage 治理处理方式。"

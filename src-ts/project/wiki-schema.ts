@@ -94,24 +94,30 @@ function normalizeAscii(value: string): string {
 }
 
 // CJK Unified Ideographs ranges for slug sanitization
-// 一-鿿: CJK Unified Ideographs
-// 㐀-䶿: CJK Unified Ideographs Extension A
-const CJK_SLUG_PATTERN = new RegExp('[^a-z0-9_\\u4e00-\\u9fff\\u3400-\\u4dbf-]+', 'g');
+const CJK_CHAR_PATTERN = /[一-鿿㐀-䶿]/gu;
 const SMART_QUOTES_PATTERN = /[‘’"]/g;
 
+/** Encode CJK characters as URL-safe percent-encoding, preserving readability */
+function encodeCjkInSlug(value: string): string {
+  return value.replace(CJK_CHAR_PATTERN, (ch) => encodeURIComponent(ch));
+}
+
 function sanitizeIdentifier(value: string): string {
-  return normalizeAscii(value)
-    .toLowerCase()
-    .replace(CJK_SLUG_PATTERN, '-')
+  const encoded = encodeCjkInSlug(normalizeAscii(value).toLowerCase());
+  return encoded
+    .replace(/[^a-z0-9_%-]+/g, '-')
     .replace(/^-+|-+$/g, '')
     || 'workspace';
 }
 
 function sanitizeSlugSegment(value: string): string {
-  return normalizeAscii(value)
-    .toLowerCase()
-    .replace(SMART_QUOTES_PATTERN, '')
-    .replace(CJK_SLUG_PATTERN, '-')
+  const encoded = encodeCjkInSlug(
+    normalizeAscii(value)
+      .toLowerCase()
+      .replace(SMART_QUOTES_PATTERN, '')
+  );
+  return encoded
+    .replace(/[^a-z0-9_%-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
     || 'untitled';

@@ -129,6 +129,7 @@ export class ObsidianKnowledgeSyncImpl implements IObsidianKnowledgeSync {
   private readonly eventBus: IEventBus;
   private readonly config: ObsidianSyncConfig;
   private readonly vaultRoot: string;
+  private readonly conflictBridge?: import('../container/types').IConflictNowledgeBridge;
 
   private running = false;
   private lastVaultSync: number | null = null;
@@ -156,12 +157,14 @@ export class ObsidianKnowledgeSyncImpl implements IObsidianKnowledgeSync {
     obsidianService: IObsidianService;
     knowledgeService: IKnowledgeService;
     eventBus: IEventBus;
+    conflictBridge?: import('../container/types').IConflictNowledgeBridge;
     config?: Partial<ObsidianSyncConfig> & { vaultRoot?: string };
   }) {
     this.obsidian = deps.obsidianService;
     // Cast to access getEntity/addEntity/deleteEntity/listEntities
     this.knowledgeService = deps.knowledgeService as IKnowledgeService & KnowledgeEntityReader;
     this.eventBus = deps.eventBus;
+    this.conflictBridge = deps.conflictBridge;
     this.vaultRoot = deps.config?.vaultRoot ?? process.cwd();
     this.config = { ...DEFAULT_CONFIG, ...deps.config };
   }
@@ -516,6 +519,30 @@ export class ObsidianKnowledgeSyncImpl implements IObsidianKnowledgeSync {
     });
 
     this.publishEvent('obsidian-sync:conflict-detected', conflict);
+
+    // Bidirectional conflict detection via ConflictNowledgeBridge
+    // If the bridge is available, also check Nowledge Mem for reverse conflicts
+    // that the primary detection may have missed.
+    if (this.conflictBridge) {
+      try {
+        const reverseConflicts = await this.conflictBridge.detectConflicts(
+          notePath,
+          entityId,
+        );
+        if (reverseConflicts.length > 0) {
+          log.info('Reverse conflicts detected via ConflictNowledgeBridge', {
+            conflictId: conflict.id,
+            reverseCount: reverseConflicts.length,
+          });
+          this.publishEvent('obsidian-sync:reverse-conflict-detected', {
+            conflictId: conflict.id,
+            reverseConflicts,
+          });
+        }
+      } catch {
+        // ConflictBridge check failure is non-critical
+      }
+    }
 
     switch (this.config.conflictStrategy) {
       case ConflictStrategy.LAST_WRITE_WINS: {

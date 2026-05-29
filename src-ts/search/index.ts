@@ -88,3 +88,9 @@ export {
   type RankedSearchResult,
   type UnifiedPipelineDeps,
 } from './unified-pipeline';
+
+export {
+  GraphSearchAdapter,
+  type GraphSearchOptions,
+  type GraphSearchResult,
+} from './graph-search-adapter';

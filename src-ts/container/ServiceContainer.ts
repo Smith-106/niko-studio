@@ -29,6 +29,8 @@ import {
   IHybridSearch,
   IVectorSearch,
   IPhaseOrchestrator,
+  IWebSocketRelayService,
+  IDistillationNowledgeBridge,
 } from './types';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 import { registerCanonicalBindings } from './bindings';
@@ -261,6 +263,13 @@ export class ServiceContainer {
       return this.mocks.get(ServiceTypes.PhaseOrchestrator) as IPhaseOrchestrator;
     }
     return this.container.get<IPhaseOrchestrator>(ServiceTypes.PhaseOrchestrator);
+  }
+
+  get wsRelay(): IWebSocketRelayService {
+    if (this.mocks.has(ServiceTypes.WebSocketRelayService)) {
+      return this.mocks.get(ServiceTypes.WebSocketRelayService) as IWebSocketRelayService;
+    }
+    return this.container.get<IWebSocketRelayService>(ServiceTypes.WebSocketRelayService);
   }
 
   /**

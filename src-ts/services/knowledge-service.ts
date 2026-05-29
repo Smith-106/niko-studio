@@ -28,6 +28,7 @@ import type {
 } from '../protocols/knowledge';
 import type { LLMService } from '../protocols/llm';
 import type { EmbeddingService } from '../protocols/embedding';
+import type { IEventBus } from '../container/types';
 import { DistillationService, DistillationTemplate } from './distill-service';
 
 import { createLogger } from "../logger/index.js";
@@ -105,6 +106,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
   private readonly memoryEngine?: KnowledgeMemoryEngineAdapter;
   private readonly graphEngine?: KnowledgeGraphEngineAdapter;
   private readonly snapshotPath: string;
+  private readonly eventBus?: IEventBus;
 
   private documentChunks: Map<string, DocumentChunk> = new Map();
   private entities: Map<string, KnowledgeEntity> = new Map();
@@ -125,6 +127,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     this.memoryEngine = config.memoryEngine;
     this.graphEngine = config.graphEngine;
     this.snapshotPath = this.resolveSnapshotPath(config.dbPath);
+    this.eventBus = config.eventBus;
   }
 
   async initialize(): Promise<void> {
@@ -185,10 +188,18 @@ export class KnowledgeServiceImpl implements KnowledgeService {
 
     await this.persistDocument(docId, chunk);
     await this.persistSnapshot();
+
+    this.eventBus?.publish('knowledge:document-added', {
+      id: docId,
+      sourceId: metadata?.sourceId,
+      sourceType: metadata?.sourceType ?? 'document',
+    });
   }
 
   async addEntity(entity: KnowledgeEntity): Promise<void> {
     this.ensureInitialized();
+
+    const isUpdate = this.entities.has(entity.id);
 
     const entityWithTimestamp: KnowledgeEntity = {
       ...entity,
@@ -200,6 +211,11 @@ export class KnowledgeServiceImpl implements KnowledgeService {
 
     await this.persistEntity(entityWithTimestamp);
     await this.persistSnapshot();
+
+    this.eventBus?.publish(
+      isUpdate ? 'knowledge:entity-updated' : 'knowledge:entity-created',
+      { id: entity.id, label: entity.name, type: entity.type },
+    );
   }
 
   async addRelation(relation: KnowledgeRelation): Promise<void> {
@@ -481,6 +497,8 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     }
 
     await this.persistSnapshot();
+
+    this.eventBus?.publish('knowledge:entity-deleted', { id: entityId });
   }
 
   async deleteDocument(docId: string): Promise<void> {

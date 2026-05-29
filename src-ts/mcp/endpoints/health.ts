@@ -8,6 +8,7 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse } from '../http-types';
 import type { ServiceConfig } from '../../knowledge/models';
+import { AGENT_NAMES } from '../../agents/index.js';
 import { listSkills } from '../../skills/index.js';
 
 // ---------------------------------------------------------------
@@ -335,7 +336,7 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
     observability: gw.getObservabilitySnapshot(services, engineHealth),
     agents: Object.keys(engineHealth).filter(
       (name) => name !== 'memory' && name !== 'graph' && name !== 'search' && name !== 'workflow' && name !== 'critic'
-    ).concat(['commander', 'architect', 'writer', 'critic', 'worldbuilding', 'character', 'plot']),
+    ).concat(AGENT_NAMES),
     skills_count: listSkills().length,
     mcp_runtime: {
       session_id: gw.runtimeSessionId,

@@ -1,2 +1,0 @@
-id,skill,args,wave_n,status,findings,artifacts,error
-"0","maestro-verify","1 -y","1","completed","stale gaps_found summary reused by verifier",".workflow/.csv-wave/20260509-verify-P1-ui-backend-interface-control",""

@@ -156,3 +156,15 @@ export type {
   ProjectWikiProjectionSourcePage,
   WriteProjectWikiProjectionSnapshotResult,
 } from './wiki-projection.js';
+
+export {
+  extractWikiLinks,
+  buildWikiLinkGraph,
+  wikiGraphSearch,
+  searchWikiGraph,
+} from './wiki-graph-search.js';
+
+export type {
+  WikiLinkGraph,
+  WikiGraphSearchResult,
+} from './wiki-graph-search.js';
