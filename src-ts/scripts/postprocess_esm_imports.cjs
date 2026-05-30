@@ -22,14 +22,17 @@ function rewriteRelativeSpecifier(spec, fileDir) {
   if (/\.(js|mjs|cjs|json)$/.test(spec)) return spec;
 
   const abs = path.resolve(fileDir, spec);
+  // File takes priority over directory (e.g. '../types' → types.js, not types/index.js)
+  const fileAbs = abs + '.js';
   try {
-    const stat = fs.statSync(abs);
-    if (stat.isDirectory()) {
+    if (fs.statSync(fileAbs, { throwIfNoEntry: false })) return `${spec}.js`;
+  } catch { /* fall through */ }
+  try {
+    const stat = fs.statSync(abs, { throwIfNoEntry: false });
+    if (stat && stat.isDirectory()) {
       return `${spec}/index.js`;
     }
-  } catch {
-    // fall through - treat as file-like specifier
-  }
+  } catch { /* fall through */ }
   return `${spec}.js`;
 }
 

@@ -260,7 +260,7 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
   }, [currentChapterId])
 
   return (
-    <div className="flex-1 flex min-w-0 h-full">
+    <div className="flex-1 flex min-w-0 min-h-0">
       <div className="flex-1 flex flex-col bg-transparent z-0 min-w-0">
         {/* Editor Canvas Area */}
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 sm:p-10 bg-slate-50/50 dark:bg-[#0f0f0f]">

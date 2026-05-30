@@ -41,7 +41,7 @@ export function AppMainContent({
     <main
       id="app-main-content"
       tabIndex={-1}
-      className="flex-1 flex flex-col relative min-w-0 bg-slate-50 dark:bg-[#0f0f0f] shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] z-20"
+      className="flex-1 flex flex-col relative min-w-0 bg-slate-50 dark:bg-[#0f0f0f] shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] z-20 overflow-hidden"
     >
       <AppHeader {...headerProps} />
 
