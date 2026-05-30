@@ -6,7 +6,7 @@ import { createGatewayRequestHandler } from './gateway-request-handler';
 import { gatewayRoutes } from './routes';
 import { WorkflowEventRelay } from './gateway-ws';
 import { createLogger } from '../logger/index.js';
-import { initConfig, validateConfig, ensureEnvironment, ensureStartupEnv } from '../config/index.js';
+import { initConfig, validateConfig, ensureEnvironment } from '../config/index.js';
 
 const _log = createLogger('mcp-bootstrap');
 
@@ -78,7 +78,7 @@ export async function startGatewayServer(
   // so browser clients can receive real-time notifications via WebSocket.
   // This replaces the standalone WorkflowEventRelay with the DI-managed service.
   const wsRelay = container.wsRelay;
-  wsRelay.initialize(server);
+  (wsRelay as unknown as { initialize(server: Server): void }).initialize(server);
 
   // Keep a standalone relay for server-attached convenience (backward compat)
   const relay = new WorkflowEventRelay(server, '/ws/events');

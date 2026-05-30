@@ -109,6 +109,8 @@ import {
   WaveExecutionEngineAdapter,
   GraphWikiLinkBridgeAdapter,
 } from './adapters';
+import { WorkflowEngine } from '../workflow/workflow-engine-core';
+import { PhaseOrchestrator } from '../workflow/team/phase-orchestrator';
 import { NowledgeMemKnowledgeBridge } from '../services/nowledge-mem-knowledge-bridge';
 import { CompositeKnowledgeMemoryBridge } from '../services/composite-knowledge-memory-bridge';
 import { CircuitBreakerRegistry } from '../services/circuit-breaker';
@@ -467,7 +469,6 @@ export function registerCanonicalBindings(
     ServiceTypes.DistillationNowledgeBridge,
     (context) => new DistillationNowledgeBridgeAdapter(
       context.container.get<INowledgeMemService>(ServiceTypes.NowledgeMemService),
-      context.container.get<IDistillationService>(ServiceTypes.DistillationService),
     ),
   );
 

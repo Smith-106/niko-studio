@@ -16,6 +16,7 @@
 import type { LLMService, LLMProvider, LLMRequest, LLMResponse, StreamChunk } from '../protocols/llm';
 import { HookRegistry, HookType, createHookContext, type HookResult } from '../hooks/writing-hooks.js';
 import { CircuitBreakerRegistry, CircuitState } from './circuit-breaker.js';
+import type { ITokenService } from '../container/types';
 
 import { createLogger } from "../logger/index.js";
 const _log = createLogger("svc-llm");
