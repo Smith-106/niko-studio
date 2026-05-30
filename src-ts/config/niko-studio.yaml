@@ -1,0 +1,86 @@
+# Niko-Studio Configuration
+# This file supports hot-reload - changes apply automatically
+
+app_name: niko-studio
+version: "9.26.2"
+debug: false
+env: development
+data_dir: .writing
+
+agent:
+  default_model: gpt-4o
+  google_api_key: ""
+  openai_api_key: ""
+  max_cost_per_request: 1.0
+  max_cost_per_session: 10.0
+  max_tokens_per_request: 100000
+  budget_warn_threshold: 0.8
+  log_level: INFO
+
+memory:
+  vector_db_path: .writing/vector_store
+  embedding_model: BAAI/bge-small-en-v1.5
+  embedding_dimension: 384
+  cache_enabled: true
+  cache_ttl: 86400
+  cache_max_size: 2000
+  chunk_size: 1000
+  chunk_overlap: 200
+
+workflow:
+  session_timeout: 3600
+  max_concurrent_sessions: 10
+  checkpoint_enabled: true
+  checkpoint_interval: 300
+  resume_strategy: from_last_checkpoint
+  quality_mode: auto
+  quality_level: high
+  degrade_on_timeout: true
+  degrade_on_error: true
+  critical_gate_always_on: true
+  quality_phase_timeout_seconds: 30
+
+graph:
+  db_path: .writing/graph_db
+  max_connections: 10
+  max_entities_per_query: 100
+  relation_depth: 3
+
+writing:
+  character_depth_dimensions: 5
+  max_character_traits: 20
+  scene_coherence_threshold: 0.8
+  contradiction_sensitivity: medium
+  foreshadowing_max_distance: 50
+  foreshadowing_reminder_threshold: 10
+  style_vector_dimensions: 30
+  style_sample_min_words: 5000
+
+gateway:
+  host: 0.0.0.0
+  port: 8000
+  reload: true
+  localhost_only: true
+  localhost_only_exempt_paths: []
+  cors_dev_origins:
+    - "*"
+  cors_prod_origins:
+    - https://app.example.com
+    - https://gray.example.com
+  metrics_enabled: true
+  ui_bridge_enabled: false
+  detection_evasion_guard: true
+
+integration:
+  postgres_enabled: false
+  redis_cache_enabled: false
+  elasticsearch_enabled: false
+  neo4j_enabled: false
+  langflow_enabled: false
+  dbhub_governance_enabled: false
+  search_route_mode: legacy
+  search_elastic_timeout_ms: 300
+  redis_rate_limit: 120
+  redis_rate_limit_window_seconds: 60
+  langflow_flow_name: niko-search-pilot
+  redis_cache_ttl_seconds: 120
