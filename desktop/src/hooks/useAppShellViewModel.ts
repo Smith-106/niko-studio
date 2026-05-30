@@ -65,6 +65,7 @@ interface UseAppShellViewModelOptions {
     restoreStatus: ComponentProps<typeof AppMainContent>['restoreStatus']
   }
   onContextUsageChange: ComponentProps<typeof ChatSidebar>['chatAreaProps']['onContextUsageChange']
+  onReconnectGateway?: () => void | Promise<void>
 }
 
 export function useAppShellViewModel({
@@ -75,7 +76,9 @@ export function useAppShellViewModel({
   headerViewModel,
   checkpointMenu,
   onContextUsageChange,
+  onReconnectGateway,
 }: UseAppShellViewModelOptions) {
+
   const openWritingHelperFreshStart = (mode: WritingHelperDraftState['mode'] = 'polish') => {
     uiPersistence.setWritingHelperDraft(createWritingHelperDraft({ mode }))
     panelOrchestration.toggleRightPanel('writingHelper')
@@ -143,6 +146,8 @@ export function useAppShellViewModel({
       headerDotClass: headerViewModel.headerDotClass,
       headerConnectionText: headerViewModel.headerConnectionText,
       onOpenDiagnostics: panelOrchestration.openDiagnostics,
+      onReconnectGateway,
+
       checkpointLabel: t.checkpoint,
       loadingCheckpointsLabel: t.loadingCheckpoints,
       noCheckpointsLabel: t.noCheckpoints,
@@ -174,6 +179,12 @@ export function useAppShellViewModel({
     onOpenSettings: panelOrchestration.openSettings,
     onOpenCharacterPanel: () => panelOrchestration.toggleRightPanel('knowledge'),
     onOpenTemplateBrowser: () => panelOrchestration.toggleRightPanel('templateBrowser'),
+    activeRightPanel: uiPersistence.activeRightPanel,
+    onOpenPanel: (panelId: any) => {
+      if (uiPersistence.activeRightPanel !== panelId) {
+        panelOrchestration.toggleRightPanel(panelId)
+      }
+    },
   }
 
   const chatSidebarProps = {

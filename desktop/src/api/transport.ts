@@ -56,6 +56,13 @@ export async function checkTauriBackendHealth(): Promise<boolean> {
   return invoke<boolean>(TAURI_GATEWAY_COMMANDS.checkBackendHealth)
 }
 
+export async function restartTauriBackend(): Promise<string> {
+  if (!isTauriRuntime()) {
+    return 'Mock restart success'
+  }
+  return invoke<string>(TAURI_GATEWAY_COMMANDS.restartBackend)
+}
+
 // ─── 分片信封类型 ──────────────────────────────────────────
 
 /** Rust 端大载荷分片信封的 JSON 结构 */

@@ -86,5 +86,7 @@ export function useAppViewModel() {
     headerViewModel,
     checkpointMenu,
     onContextUsageChange: contextUsageView.handleContextUsageChange,
+    onReconnectGateway: checkBackend,
   })
 }
+

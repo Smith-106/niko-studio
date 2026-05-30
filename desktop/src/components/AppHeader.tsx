@@ -1,5 +1,5 @@
-import { useId, useLayoutEffect, useRef, type MutableRefObject } from 'react'
-import { PanelRightClose, PanelRightOpen, History, Clock } from 'lucide-react'
+import { useId, useLayoutEffect, useRef, useState, type MutableRefObject } from 'react'
+import { PanelRightClose, PanelRightOpen, History, Clock, RefreshCw } from 'lucide-react'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { useI18n } from '../i18n'
 import { AiToolbar } from './AiToolbar'
@@ -19,7 +19,9 @@ interface AppHeaderProps {
   headerDotClass: string
   headerConnectionText: string
   onOpenDiagnostics: () => void
+  onReconnectGateway?: () => void | Promise<void>
   checkpointLabel: string
+
   loadingCheckpointsLabel: string
   noCheckpointsLabel: string
   restoreLabel: string
@@ -78,6 +80,7 @@ export function AppHeader({
   headerDotClass,
   headerConnectionText,
   onOpenDiagnostics,
+  onReconnectGateway,
   checkpointLabel,
   loadingCheckpointsLabel,
   noCheckpointsLabel,
@@ -101,9 +104,41 @@ export function AppHeader({
   onOpenTextOptimizer,
 }: AppHeaderProps) {
   const { t } = useI18n()
+  const [isRetrying, setIsRetrying] = useState(false)
+
+  const handleReconnect = async () => {
+    setIsRetrying(true)
+    if (onReconnectGateway) {
+      try {
+        await onReconnectGateway()
+      } catch (err) {
+        console.error('Reconnect failed:', err)
+      }
+    }
+    setTimeout(() => {
+      setIsRetrying(false)
+    }, 1200)
+  }
+
   const checkpointMenuId = useId()
   const checkpointPanelRef = useRef<HTMLDivElement | null>(null)
   const firstRestoreButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  const [offlineWarning, setOfflineWarning] = useState<string | null>(null)
+
+  const wrapWithConnectionGuard = (action: () => void, toolName: string) => {
+    return () => {
+      if (headerConnectionState !== 'connected') {
+        setOfflineWarning(`无法使用「${toolName}」：本地写作网关已离线。请先点击[检测与重连]重新拉起服务。`)
+        setTimeout(() => {
+          setOfflineWarning((prev) => (prev && prev.includes(toolName) ? null : prev))
+        }, 5000)
+        return
+      }
+      action()
+    }
+  }
+
 
   useLayoutEffect(() => {
     if (!checkpointMenuOpen || checkpointsLoading) {
@@ -135,18 +170,30 @@ export function AppHeader({
 
   return (
     <header className="h-14 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0 z-10 relative">
+      {offlineWarning && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-600 dark:bg-red-950/90 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-lg border border-red-500/30 flex items-center gap-3 animate-fade-in z-50 backdrop-blur-md">
+          <span>{offlineWarning}</span>
+          <button
+            onClick={() => setOfflineWarning(null)}
+            className="hover:bg-red-700 dark:hover:bg-red-800 active:scale-95 px-2 py-0.5 rounded text-[10px] bg-red-800 dark:bg-red-900 border border-red-700/30 transition-all font-semibold"
+          >
+            我知道了
+          </button>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <span className="text-base font-semibold text-gray-800 dark:text-dark-text tracking-wide">{appTitle}</span>
         <AiToolbar
           disabled={aiToolbarDisabled}
-          onWrite={onAiWrite}
-          onRewrite={onAiRewrite}
-          onDescribe={onAiDescribe}
-          onBrainstorm={onAiBrainstorm}
-          onOpenWritingHelper={onOpenWritingHelper}
-          onOpenTextOptimizer={onOpenTextOptimizer}
+          onWrite={wrapWithConnectionGuard(onAiWrite, '写作')}
+          onRewrite={wrapWithConnectionGuard(onAiRewrite, '改写')}
+          onDescribe={wrapWithConnectionGuard(onAiDescribe, '描写')}
+          onBrainstorm={wrapWithConnectionGuard(onAiBrainstorm, '头脑风暴')}
+          onOpenWritingHelper={wrapWithConnectionGuard(onOpenWritingHelper, '写作助手')}
+          onOpenTextOptimizer={wrapWithConnectionGuard(onOpenTextOptimizer, '文本优化')}
         />
       </div>
+
       <div className="flex items-center gap-2 relative">
         <button
           onClick={onToggleChatSidebar}
@@ -169,16 +216,30 @@ export function AppHeader({
               }`}>{headerConnectionText}</span>
             )}
             {headerConnectionState !== 'connected' && (
-              <button
-                type="button"
-                onClick={onOpenDiagnostics}
-                className="shell-text-compact rounded-lg border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 transition-all hover:bg-amber-100 active:scale-95 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
-                aria-label={t.settingsCheckConnection}
-                title={t.settingsCheckConnection}
-              >
-                {t.settingsCheckConnection}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleReconnect}
+                  disabled={isRetrying}
+                  className="shell-text-compact flex items-center gap-1 rounded-lg border border-primary-200 bg-primary-50 px-2 py-0.5 font-semibold text-primary-700 transition-all hover:bg-primary-100 active:scale-95 dark:border-primary-700/50 dark:bg-primary-900/10 dark:text-primary-200 dark:hover:bg-primary-900/20 disabled:opacity-60"
+                  aria-label="检测与重连"
+                  title="检测与重连"
+                >
+                  <RefreshCw size={11} className={isRetrying ? 'animate-spin' : ''} />
+                  <span>{isRetrying ? '正在检测...' : '检测与重连'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenDiagnostics}
+                  className="shell-text-compact rounded-lg border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 transition-all hover:bg-amber-100 active:scale-95 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
+                  aria-label={t.settingsCheckConnection}
+                  title={t.settingsCheckConnection}
+                >
+                  {t.settingsCheckConnection}
+                </button>
+              </div>
             )}
+
             {contextUsageVisible && (
               <div className="flex items-center gap-1.5">
                 <ContextRing percent={contextUsageWidthPercent} colorClass="text-primary-500 dark:text-primary-400" />
@@ -229,6 +290,7 @@ export function AppHeader({
                       ref={index === 0 ? firstRestoreButtonRef : undefined}
                       type="button"
                       onClick={() => onRestoreCheckpoint(checkpoint.id)}
+                      aria-label={restoreLabel}
                       className="w-full text-left p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 hover:border-primary-200 dark:hover:border-primary-700/40 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all group"
                     >
                       <div className="shell-text-compact text-gray-700 dark:text-dark-text truncate group-hover:text-primary-700 dark:group-hover:text-primary-300 font-medium" title={checkpoint.description || checkpoint.id}>

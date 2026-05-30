@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Activity, AlertCircle, RefreshCw, Server, Wrench } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Activity, AlertCircle, RefreshCw, Server, Wrench, ShieldAlert, Terminal, Trash2, HeartPulse } from 'lucide-react'
 import {
   checkBackendHealth,
   createGatewayServiceConfig,
@@ -15,6 +15,7 @@ import {
   probeGatewayServiceHealth,
   setGatewayServiceEnabled,
   updateGatewayServiceConfig,
+  restartGatewayBackend,
 } from '../api/client'
 
 import { useI18n } from '../i18n'
@@ -49,6 +50,77 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
   const [newServiceName, setNewServiceName] = useState('')
   const [newServicePath, setNewServicePath] = useState('')
   const [serviceDraftNames, setServiceDraftNames] = useState<Record<string, string>>({})
+
+  // ─── 实时日志终端与自愈医生 ──────────────────────────────────
+  const [terminalLogs, setTerminalLogs] = useState<string[]>([])
+  const [diagnosing, setDiagnosing] = useState(false)
+  const [diagnosisResult, setDiagnosisResult] = useState<string | null>(null)
+  const logsEndRef = useRef<HTMLDivElement | null>(null)
+
+  // 滚动到终端底部
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [terminalLogs])
+
+  // 监听 Tauri 广播的网关日志
+  useEffect(() => {
+    let unlisten: (() => void) | null = null
+
+    const startListening = async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event')
+        const unsub = await listen<string>('gateway-log', (event) => {
+          setTerminalLogs((prev) => {
+            const next = [...prev, event.payload]
+            return next.slice(-200) // 限制最大日志行数，避免内存泄漏
+          })
+        })
+        unlisten = unsub
+      } catch (err) {
+        console.warn('[gateway-doctor] Not in Tauri environment or failed to listen:', err)
+      }
+    }
+
+    void startListening()
+
+    return () => {
+      if (unlisten) unlisten()
+    }
+  }, [])
+
+  const handleAutoHeal = async () => {
+    setDiagnosing(true)
+    setDiagnosisResult(null)
+    setTerminalLogs((prev) => [
+      ...prev,
+      `[DOCTOR] [${new Date().toLocaleTimeString()}] 发起一键深度自愈诊断...`,
+      `[DOCTOR] 正在检测网关进程占用与死锁状态...`,
+    ])
+
+    try {
+      const result = await restartGatewayBackend()
+      if (result.success) {
+        setTerminalLogs((prev) => [
+          ...prev,
+          `[SYSTEM] 网关已在后台成功重新拉起！基址: ${result.data || 'default'}`,
+          `[DOCTOR] 正在拉取最新的网关健康度及核心服务列表...`,
+        ])
+        await refreshStatus()
+        setTerminalLogs((prev) => [...prev, `[DOCTOR] 自愈自检全部完成。网关服务状态已复苏！`])
+        setDiagnosisResult('网关重启及健康自检均已成功！所有占用进程已清理，网关顺利复活。')
+      } else {
+        setTerminalLogs((prev) => [...prev, `[ERROR] 自愈终止：${result.error}`])
+        setDiagnosisResult(`自愈中断：${result.error}`)
+      }
+    } catch (err) {
+      setTerminalLogs((prev) => [...prev, `[ERROR] 致命运行时异常：${String(err)}`])
+      setDiagnosisResult(`自愈诊断失败：${String(err)}`)
+    } finally {
+      setDiagnosing(false)
+    }
+  }
 
   const refreshStatus = useCallback(async () => {
     setLoading(true)
@@ -311,7 +383,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
 
   return (
     <div
-      className="fixed right-0 top-14 bottom-0 w-96 bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col z-30 transform transition-transform"
+      className="h-full w-96 bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col"
       role="dialog"
       aria-modal="true"
       aria-label={t.mcpPanelAriaLabel}
@@ -394,6 +466,43 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
             {!runtimeDiagnostic && runtimeView.lastError && (
               <div className="text-[11px] text-danger-600 dark:text-danger-400 break-all bg-danger-50 dark:bg-danger-900/10 p-2 rounded-md border border-danger-100 dark:border-danger-500/20 mt-2">
                 <span className="font-semibold">{t.mcpLastErrorPrefix}</span> {runtimeView.lastError}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 一键自愈医生卡片 */}
+        <section className="border border-indigo-200 dark:border-indigo-500/20 rounded-xl p-4 bg-gradient-to-br from-indigo-50/50 to-slate-50 dark:from-indigo-950/10 dark:to-dark-surface shadow-sm">
+          <h3 className="text-[13px] font-bold text-indigo-600 dark:text-indigo-400 mb-2.5 uppercase tracking-wider flex items-center gap-1.5">
+            <HeartPulse size={15} className="animate-pulse-subtle" />
+            网关自愈医生
+          </h3>
+          <p className="text-[11px] text-slate-500 dark:text-dark-text-secondary leading-relaxed mb-3">
+            当写作网关离线、僵死或端口被占用时，点击自愈医生将一键清理残留进程、强行杀灭端口并原地满血复苏。
+          </p>
+          <div className="space-y-2.5">
+            <button
+              onClick={handleAutoHeal}
+              disabled={diagnosing}
+              className="w-full flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-primary-600 hover:from-indigo-500 hover:to-primary-500 text-white rounded-lg disabled:opacity-50 transition-all shadow-[0_4px_12px_rgba(99,102,241,0.15)] active:scale-[0.98]"
+            >
+              {diagnosing ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>自愈自检执行中...</span>
+                </>
+              ) : (
+                <>
+                  <HeartPulse size={14} />
+                  <span>一键深度自愈与重启</span>
+                </>
+              )}
+            </button>
+            
+            {diagnosisResult && (
+              <div className="text-[11px] p-2.5 rounded-lg border border-emerald-100 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-950/10 text-emerald-700 dark:text-emerald-400 flex gap-1.5 animate-fade-in">
+                <ShieldAlert size={14} className="shrink-0 mt-0.5" />
+                <span>{diagnosisResult}</span>
               </div>
             )}
           </div>
@@ -574,6 +683,51 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
           ) : (
             <div className="text-xs text-gray-400 dark:text-dark-text-muted italic">{t.mcpNoToolData}</div>
           )}
+        </section>
+
+        {/* 实时网关终端 */}
+        <section className="border border-slate-800 dark:border-dark-border rounded-xl p-4 bg-slate-950 text-slate-100 shadow-lg flex flex-col gap-2.5 relative overflow-hidden font-mono mb-4">
+          {/* Neon scanline glow top */}
+          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-55" />
+          
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0 select-none">
+            <div className="flex items-center gap-2">
+              <Terminal size={14} className="text-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                Live Gateway Terminal
+              </span>
+            </div>
+            <button
+              onClick={() => setTerminalLogs([])}
+              disabled={terminalLogs.length === 0}
+              className="text-slate-500 hover:text-slate-300 disabled:opacity-30 p-1 hover:bg-slate-900 rounded transition-colors"
+              title="清空终端"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+
+          <div className="h-44 overflow-y-auto text-[10px] space-y-1 custom-scrollbar scroll-smooth pr-1 leading-relaxed text-emerald-400">
+            {terminalLogs.length === 0 ? (
+              <div className="text-slate-600 italic select-none">控制台静默中... 正在等待网关日志流</div>
+            ) : (
+              terminalLogs.map((log, index) => {
+                const isError = log.includes('[ERROR]') || log.includes('error') || log.includes('failed')
+                const isSystem = log.includes('[SYSTEM]') || log.includes('[DOCTOR]')
+                
+                let textColor = 'text-emerald-400'
+                if (isError) textColor = 'text-rose-400'
+                else if (isSystem) textColor = 'text-sky-400'
+
+                return (
+                  <div key={index} className={`break-all ${textColor}`}>
+                    {log}
+                  </div>
+                )
+              })
+            )}
+            <div ref={logsEndRef} />
+          </div>
         </section>
 
       </div>

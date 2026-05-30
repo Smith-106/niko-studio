@@ -11,7 +11,7 @@ describe('useAppUiPersistence', () => {
   it('defaults to a collapsed chat sidebar and no active right panel for a fresh session', () => {
     const { result } = renderHook(() => useAppUiPersistence())
 
-    expect(result.current.chatSidebarCollapsed).toBe(true)
+    expect(result.current.chatSidebarCollapsed).toBe(false)
     expect(result.current.activeRightPanel).toBe('none')
   })
 

@@ -154,6 +154,7 @@ export function NarrativeVisualizationPanel({
         )
 
   return (
+    <div className="w-[400px] h-full bg-white dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border text-gray-900 dark:text-dark-text flex flex-col">
     <aside className="flex h-full flex-col gap-4 overflow-y-auto p-4" aria-label="Narrative Visualization Panel">
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -208,5 +209,6 @@ export function NarrativeVisualizationPanel({
         {selectedChapterId ? 'Clear selected chapter' : 'Select sample chapter'}
       </button>
     </aside>
+    </div>
   )
 }

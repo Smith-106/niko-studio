@@ -190,3 +190,13 @@ fn serialize_chunked_response(status_code: u16, body: &str) -> String {
     })
     .to_string()
 }
+
+#[tauri::command]
+pub async fn restart_backend(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, GatewayState>,
+) -> Result<String, String> {
+    state.stop_child_best_effort();
+    let base = state.resolve_base(&app).await?;
+    Ok(format!("Gateway restarted: {base}"))
+}

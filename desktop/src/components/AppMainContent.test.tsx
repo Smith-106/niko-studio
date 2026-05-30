@@ -44,10 +44,8 @@ vi.mock('../hooks/useWriterWorkspaceSummary', () => ({
 
 const defaultHeaderProps: ComponentProps<typeof AppHeader> = {
   appTitle: 'Niko Studio',
-  contextUsageLabel: 'Context',
   contextUsageVisible: true,
   contextUsageText: '~1.2k tokens',
-  contextUsageBarClass: 'bg-emerald-500',
   contextUsageWidthPercent: 24,
   headerConnectionState: 'connected',
   headerDotClass: 'bg-emerald-500',

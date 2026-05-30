@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::Mutex as AsyncMutex;
@@ -271,7 +271,7 @@ impl GatewayState {
                     );
                 }
 
-                let (_rx, child) = match cmd.spawn() {
+                let (mut rx, child) = match cmd.spawn() {
                     Ok(result) => result,
                     Err(e) => {
                         last_error = Some(format!(
@@ -286,6 +286,27 @@ impl GatewayState {
                         continue;
                     }
                 };
+
+                let app_clone = app.clone();
+                tokio::spawn(async move {
+                    use tauri_plugin_shell::process::CommandEvent;
+                    while let Some(event) = rx.recv().await {
+                        match event {
+                            CommandEvent::Stdout(line) => {
+                                let text = String::from_utf8_lossy(&line).to_string();
+                                let _ = app_clone.emit("gateway-log", text);
+                            }
+                            CommandEvent::Stderr(line) => {
+                                let text = String::from_utf8_lossy(&line).to_string();
+                                let _ = app_clone.emit("gateway-log", format!("[ERROR] {}", text));
+                            }
+                            CommandEvent::Terminated(status) => {
+                                let _ = app_clone.emit("gateway-log", format!("[SYSTEM] Process terminated with status: {:?}", status));
+                            }
+                            _ => {}
+                        }
+                    }
+                });
 
                 *self.child.lock().unwrap() = Some(child);
                 *self.local_base.lock().unwrap() = Some(base.clone());

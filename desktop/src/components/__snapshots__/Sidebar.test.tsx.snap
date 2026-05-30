@@ -144,7 +144,7 @@ exports[`Sidebar > matches snapshot 1`] = `
   >
     <button
       aria-label="Templates"
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50  "
       title="Templates"
       type="button"
     >
@@ -181,7 +181,7 @@ exports[`Sidebar > matches snapshot 1`] = `
     </button>
     <button
       aria-label="Story Notes"
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50  "
       title="Story Notes"
       type="button"
     >
@@ -211,8 +211,54 @@ exports[`Sidebar > matches snapshot 1`] = `
       </span>
     </button>
     <button
+      aria-label="MCP"
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
+      title="MCP"
+      type="button"
+    >
+      <svg
+        class="lucide lucide-cable "
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="18"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M4 9a2 2 0 0 1-2-2V5h6v2a2 2 0 0 1-2 2Z"
+        />
+        <path
+          d="M3 5V3"
+        />
+        <path
+          d="M7 5V3"
+        />
+        <path
+          d="M19 15V6.5a3.5 3.5 0 0 0-7 0v11a3.5 3.5 0 0 1-7 0V9"
+        />
+        <path
+          d="M17 21v-2"
+        />
+        <path
+          d="M21 21v-2"
+        />
+        <path
+          d="M22 19h-6v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2Z"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+      >
+        MCP
+      </span>
+    </button>
+    <button
       aria-label="Settings"
-      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50  "
       title="Settings"
       type="button"
     >
@@ -248,24 +294,37 @@ exports[`Sidebar > matches snapshot 1`] = `
     class="px-3 pt-2 pb-1"
   >
     <div
-      class="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2"
-    />
+      class="flex items-center justify-between px-2 py-2"
+    >
+      <div
+        class="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted"
+      />
+    </div>
   </div>
   <div
-    class="border-t border-dark-border shrink-0"
+    class="border-t border-dark-border shrink-0 overflow-y-auto custom-scrollbar"
   >
     <div
       class="px-4 pt-3 pb-0.5"
     >
-      <span
-        class="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60"
-      />
+      <div
+        class="flex items-center gap-1.5"
+      >
+        <span
+          class="w-5 h-5 rounded-full bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300"
+        >
+          1
+        </span>
+        <span
+          class="shell-text-ui text-[11px] font-semibold transition-colors duration-300 text-primary-400/80"
+        />
+      </div>
     </div>
     <div
       class="px-3 space-y-0.5"
     >
       <button
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
         type="button"
       >
         <svg
@@ -313,40 +372,7 @@ exports[`Sidebar > matches snapshot 1`] = `
         />
       </button>
       <button
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        type="button"
-      >
-        <svg
-          class="lucide lucide-scaling "
-          fill="none"
-          height="18"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="18"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
-          />
-          <path
-            d="M14 15H9v-5"
-          />
-          <path
-            d="M16 3h5v5"
-          />
-          <path
-            d="M21 3 9 15"
-          />
-        </svg>
-        <span
-          class="text-sm font-medium"
-        />
-      </button>
-      <button
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
         title="Reply Review"
         type="button"
       >
@@ -383,21 +409,37 @@ exports[`Sidebar > matches snapshot 1`] = `
       </button>
     </div>
     <div
-      class="px-4 pt-3 pb-0.5"
+      class="flex items-center justify-center py-0.5"
     >
-      <span
-        class="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60"
+      <div
+        class="w-0.5 h-4 rounded-full transition-all duration-500 bg-dark-border"
       />
+    </div>
+    <div
+      class="px-4 pt-1 pb-0.5"
+    >
+      <div
+        class="flex items-center gap-1.5"
+      >
+        <span
+          class="w-5 h-5 rounded-full bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300"
+        >
+          2
+        </span>
+        <span
+          class="shell-text-ui text-[11px] font-semibold transition-colors duration-300 text-primary-400/80"
+        />
+      </div>
     </div>
     <div
       class="px-3 space-y-0.5"
     >
       <button
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
         type="button"
       >
         <svg
-          class="lucide lucide-eye "
+          class="lucide lucide-scaling "
           fill="none"
           height="18"
           stroke="currentColor"
@@ -409,12 +451,16 @@ exports[`Sidebar > matches snapshot 1`] = `
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
-            d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"
+            d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
           />
-          <circle
-            cx="12"
-            cy="12"
-            r="3"
+          <path
+            d="M14 15H9v-5"
+          />
+          <path
+            d="M16 3h5v5"
+          />
+          <path
+            d="M21 3 9 15"
           />
         </svg>
         <span
@@ -422,80 +468,7 @@ exports[`Sidebar > matches snapshot 1`] = `
         />
       </button>
       <button
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        type="button"
-      >
-        <svg
-          class="lucide lucide-users "
-          fill="none"
-          height="18"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="18"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
-          />
-          <circle
-            cx="9"
-            cy="7"
-            r="4"
-          />
-          <path
-            d="M22 21v-2a4 4 0 0 0-3-3.87"
-          />
-          <path
-            d="M16 3.13a4 4 0 0 1 0 7.75"
-          />
-        </svg>
-        <span
-          class="text-sm font-medium"
-        />
-      </button>
-      <button
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
-        title="Narrative Visualization"
-        type="button"
-      >
-        <svg
-          class="lucide lucide-activity "
-          fill="none"
-          height="18"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="18"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M22 12h-4l-3 9L9 3l-3 9H2"
-          />
-        </svg>
-        <span
-          class="text-sm font-medium"
-        >
-          Narrative Visualization
-        </span>
-      </button>
-    </div>
-    <div
-      class="px-4 pt-3 pb-0.5"
-    >
-      <span
-        class="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60"
-      />
-    </div>
-    <div
-      class="px-3 pb-3 space-y-0.5"
-    >
-      <button
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
         type="button"
       >
         <svg
@@ -543,8 +516,153 @@ exports[`Sidebar > matches snapshot 1`] = `
           class="text-sm font-medium"
         />
       </button>
+    </div>
+    <div
+      class="flex items-center justify-center py-0.5"
+    >
+      <div
+        class="w-0.5 h-4 rounded-full transition-all duration-500 bg-dark-border"
+      />
+    </div>
+    <div
+      class="px-4 pt-1 pb-0.5"
+    >
+      <div
+        class="flex items-center gap-1.5"
+      >
+        <span
+          class="w-5 h-5 rounded-full bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300"
+        >
+          3
+        </span>
+        <span
+          class="shell-text-ui text-[11px] font-semibold transition-colors duration-300 text-primary-400/80"
+        />
+      </div>
+    </div>
+    <div
+      class="px-3 space-y-0.5"
+    >
       <button
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
+        type="button"
+      >
+        <svg
+          class="lucide lucide-eye "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="3"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        />
+      </button>
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
+        type="button"
+      >
+        <svg
+          class="lucide lucide-users "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+          />
+          <circle
+            cx="9"
+            cy="7"
+            r="4"
+          />
+          <path
+            d="M22 21v-2a4 4 0 0 0-3-3.87"
+          />
+          <path
+            d="M16 3.13a4 4 0 0 1 0 7.75"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        />
+      </button>
+    </div>
+    <div
+      class="flex items-center justify-center py-0.5"
+    >
+      <div
+        class="w-0.5 h-4 rounded-full transition-all duration-500 bg-dark-border"
+      />
+    </div>
+    <div
+      class="px-4 pt-1 pb-0.5"
+    >
+      <div
+        class="flex items-center gap-1.5"
+      >
+        <span
+          class="w-5 h-5 rounded-full bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300"
+        >
+          4
+        </span>
+        <span
+          class="shell-text-ui text-[11px] font-semibold transition-colors duration-300 text-primary-400/80"
+        />
+      </div>
+    </div>
+    <div
+      class="px-3 pb-3 space-y-0.5"
+    >
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
+        title="Narrative Visualization"
+        type="button"
+      >
+        <svg
+          class="lucide lucide-activity "
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M22 12h-4l-3 9L9 3l-3 9H2"
+          />
+        </svg>
+        <span
+          class="text-sm font-medium"
+        >
+          Narrative Visualization
+        </span>
+      </button>
+      <button
+        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50   "
         type="button"
       >
         <svg

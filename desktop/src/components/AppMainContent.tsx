@@ -4,6 +4,7 @@ import { AppHeader } from './AppHeader'
 import { AppRestoreStatusBanner } from './AppRestoreStatusBanner'
 import { DocumentEditor } from './DocumentEditor'
 import { AppContextFooter } from './AppContextFooter'
+import { WorkflowStepsNavigator } from './WorkflowStepsNavigator'
 import { useI18n } from '../i18n'
 import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 
@@ -16,6 +17,8 @@ interface AppMainContentProps {
   onOpenSettings?: () => void
   onOpenCharacterPanel?: () => void
   onOpenTemplateBrowser?: () => void
+  activeRightPanel?: string
+  onOpenPanel?: (panelId: string) => void
 }
 
 export function AppMainContent({
@@ -27,6 +30,8 @@ export function AppMainContent({
   onOpenSettings,
   onOpenCharacterPanel,
   onOpenTemplateBrowser,
+  activeRightPanel,
+  onOpenPanel,
 }: AppMainContentProps) {
   const { language } = useI18n()
   const workspaceSummary = useWriterWorkspaceSummary()
@@ -39,6 +44,11 @@ export function AppMainContent({
       className="flex-1 flex flex-col relative min-w-0 bg-slate-50 dark:bg-[#0f0f0f] shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] z-20"
     >
       <AppHeader {...headerProps} />
+
+      <WorkflowStepsNavigator
+        activeRightPanel={activeRightPanel}
+        onOpenPanel={onOpenPanel || (() => {})}
+      />
 
       {workspaceSummary.hasMeaningfulScope && (
         <div className="shell-text-compact border-b border-gray-100 bg-white/80 px-4 py-1.5 text-gray-500 dark:border-dark-border dark:bg-dark-surface/70 dark:text-dark-text-secondary flex items-center gap-2">

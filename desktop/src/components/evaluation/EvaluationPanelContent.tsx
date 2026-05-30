@@ -111,7 +111,7 @@ export interface EvaluationPanelProps {
   onOpenWritingHelper?: (handoff: { content: string; guidance: string; mode: 'polish' | 'rewrite' | 'expand' | 'summarize' | 'outline'; maxSentences: number; maxItems: number; handoff: WritingHelperEvaluationHandoff }) => void
 }
 interface EvaluationRevisionCandidate extends RevisionCandidate { suggestionId: string; surface: 'compact' | 'detailed' }
-export const panelShellClassName = 'h-full w-80 border-l border-gray-200 bg-white shadow-lg dark:border-dark-border dark:bg-dark-surface'
+export const panelShellClassName = 'h-full w-80 border-l border-gray-200 bg-white shadow-lg dark:border-dark-border dark:bg-dark-surface top-14 z-30'
 
 export function EvaluationPanel({ content: fallbackContent = '', evaluationSources, onClose, onOpenAutomation, onOpenWritingHelper }: EvaluationPanelProps) {
   const { t, translate, language } = useI18n()

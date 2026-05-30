@@ -18,8 +18,8 @@ interface ChatAreaInlineActionsProps {
 const actionBtnClass = (active: boolean) =>
   `px-2.5 py-1.5 text-xs rounded-lg transition-all duration-200 active:scale-95 ${
     active
-      ? 'bg-primary-600/20 text-primary-300 ring-1 ring-primary-500/30 shadow-sm'
-      : 'bg-dark-surface2 text-dark-text-secondary hover:bg-dark-surface hover:text-dark-text'
+      ? 'bg-blue-600 text-white bg-primary-600/20 text-primary-300 ring-1 ring-primary-500/30 shadow-sm'
+      : 'bg-gray-200 bg-dark-surface2 text-dark-text-secondary hover:bg-dark-surface hover:text-dark-text'
   }`
 
 export const ChatAreaInlineActions = React.memo(function ChatAreaInlineActionsComponent({

@@ -465,7 +465,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed right-0 top-14 bottom-0 w-full max-w-[800px] bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col z-40 transform transition-transform animate-fade-in"
+      className="h-full w-full max-w-[800px] bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-label={t.knowledgeTitle}

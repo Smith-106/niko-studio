@@ -172,9 +172,9 @@ const loadChatSidebarCollapsed = (): boolean => {
     const raw = localStorage.getItem(CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY)
     if (raw === 'true') return true
     if (raw === 'false') return false
-    return true
+    return false
   } catch {
-    return true
+    return false
   }
 }
 

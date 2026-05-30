@@ -238,7 +238,9 @@ describe('useAppViewModel', () => {
       headerViewModel,
       checkpointMenu,
       onContextUsageChange: contextUsageView.handleContextUsageChange,
+      onReconnectGateway: expect.any(Function),
     })
+
     expect(result.current).toBe(shellViewModel)
   })
 

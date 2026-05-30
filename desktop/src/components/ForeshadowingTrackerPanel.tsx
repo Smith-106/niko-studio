@@ -132,7 +132,7 @@ export const ForeshadowingTrackerPanel: React.FC<PanelProps> = ({ onClose }) => 
 
   return (
     <div
-      className="w-[400px] h-full bg-dark-bg-2 border-l border-dark-border text-white flex flex-col"
+      className="w-[400px] h-full bg-white dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border text-gray-900 dark:text-dark-text flex flex-col"
       role="region"
       aria-label={t.foreshadowTitle}
     >

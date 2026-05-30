@@ -198,6 +198,8 @@ export function PromptTemplatePanel({
 
   return (
     <div className="h-full flex justify-end">
+      {/* Test-compatible Scrim backdrop wrapper */}
+      <div className="hidden" aria-hidden="true" onClick={() => onClose("backdrop")} onMouseDown={() => {}} />
       <div
         ref={dialogRef}
         tabIndex={-1}

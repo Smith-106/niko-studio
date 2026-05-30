@@ -6,6 +6,7 @@ mod shell_setup;
 
 use gateway_commands::{
     call_api, check_backend_health, fetch_chunk, get_gateway_base, set_gateway_base_override, start_backend,
+    restart_backend,
 };
 use gateway_runtime::GatewayState;
 
@@ -44,7 +45,8 @@ fn main() {
             start_backend,
             check_backend_health,
             call_api,
-            fetch_chunk
+            fetch_chunk,
+            restart_backend
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

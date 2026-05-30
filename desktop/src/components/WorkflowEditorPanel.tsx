@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
 import type { Workflow, WorkflowStep, WorkflowExecution, AgentMode, InputSource, CheckpointType } from '../types/workflow'
+import { Check, X, Loader2, AlertCircle } from 'lucide-react'
 
 interface PanelProps {
   onClose: () => void
@@ -234,6 +235,7 @@ export const WorkflowEditorPanel: React.FC<PanelProps> = ({ onClose }) => {
         {view === 'execution' && activeExecution && (
           <ExecutionView
             execution={activeExecution}
+            workflow={workflows.find((w) => w.id === activeExecution.workflowId) ?? null}
             onApprove={handleApprove}
             onReject={handleReject}
           />
@@ -525,99 +527,178 @@ const StepEditor: React.FC<StepEditorProps> = ({
 
 interface ExecutionViewProps {
   execution: WorkflowExecution
+  workflow: Workflow | null
   onApprove: (modifiedOutput?: string) => void
   onReject: () => void
 }
 
-const ExecutionView: React.FC<ExecutionViewProps> = ({ execution, onApprove, onReject }) => {
+const ExecutionView: React.FC<ExecutionViewProps> = ({ execution, workflow, onApprove, onReject }) => {
   const { t, translate } = useI18n()
   const [modifiedOutput, setModifiedOutput] = useState<string>('')
   const [editingOutput, setEditingOutput] = useState(false)
   const lastResult = execution.stepResults[execution.stepResults.length - 1]
 
-  const statusConfig: Record<string, { bg: string; text: string }> = {
-    running: { bg: 'bg-blue-500/15', text: 'text-blue-600 dark:text-blue-400' },
-    paused: { bg: 'bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400' },
-    completed: { bg: 'bg-green-500/15', text: 'text-green-600 dark:text-green-400' },
-    failed: { bg: 'bg-red-500/15', text: 'text-red-600 dark:text-red-400' },
-    idle: { bg: 'bg-gray-500/15', text: 'text-gray-600 dark:text-gray-400' },
+  const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+    running: { bg: 'bg-blue-500/15', text: 'text-blue-600 dark:text-blue-400', label: '运行中' },
+    paused: { bg: 'bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400', label: '等待审核' },
+    completed: { bg: 'bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400', label: '已完成' },
+    failed: { bg: 'bg-red-500/15', text: 'text-red-600 dark:text-red-400', label: '已失败' },
+    idle: { bg: 'bg-gray-500/15', text: 'text-gray-600 dark:text-gray-400', label: '空闲' },
   }
   const config = statusConfig[execution.status] ?? statusConfig.idle
 
+  const steps = workflow ? workflow.steps.filter((s) => s.enabled) : []
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-5 select-none">
       {/* 执行状态 + 步骤进度 */}
-      <div className="flex items-center gap-3">
-        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${config.bg} ${config.text}`}>
-          {execution.status}
-        </span>
-        <span className="text-xs text-gray-500 dark:text-dark-text-muted">
-          {translate('workflowExecutionStep', { step: execution.currentStepIndex + 1 })}
-        </span>
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 dark:border-dark-border/40 pb-3">
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${config.bg} ${config.text}`}>
+            {config.label}
+          </span>
+          <span className="text-[11px] font-bold text-gray-500 dark:text-dark-text-secondary">
+            {translate('workflowExecutionStep', { step: execution.currentStepIndex + 1 })}
+          </span>
+        </div>
+        {execution.status === 'running' && (
+          <Loader2 size={14} className="text-primary-500 animate-spin" />
+        )}
       </div>
 
-      {/* 步骤进度条 */}
-      <div className="flex items-center gap-1">
-        {execution.stepResults.map((result, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <div className="w-2 h-px bg-gray-300 dark:bg-dark-border" />}
+      {/* 步骤流进度网络（操作流程可视化） */}
+      {steps.length > 0 && (
+        <section className="space-y-3.5" aria-label="Step progress pipeline">
+          <div className="text-[10px] font-black text-gray-400 dark:text-dark-text-muted uppercase tracking-wider">执行管线详情</div>
+          
+          <div className="relative border-l-2 border-gray-100 dark:border-dark-border/40 ml-3.5 pl-5 space-y-4">
+            {steps.map((step, i) => {
+              const result = execution.stepResults.find((r) => r.stepIndex === i)
+              const isCurrent = execution.currentStepIndex === i && execution.status === 'running'
+              const isPaused = execution.currentStepIndex === i && execution.status === 'paused'
+              const isCompleted = result?.status === 'completed' || (execution.currentStepIndex > i)
+              const isFailed = result?.status === 'failed'
+
+
+              return (
+                <div key={step.id} className="relative group">
+                  {/* Left Column Bullet Icon */}
+                  <div
+                    className={`absolute -left-[30px] top-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shadow-sm transition-all border ${
+                      isCompleted
+                        ? 'bg-emerald-500 border-emerald-400 text-white glow-emerald'
+                        : isFailed
+                        ? 'bg-red-500 border-red-400 text-white glow-rose animate-pulse-subtle'
+                        : isCurrent
+                        ? 'bg-primary-600 border-primary-500 text-white glow-primary animate-glow-pulse'
+                        : isPaused
+                        ? 'bg-amber-500 border-amber-400 text-white shadow-sm'
+                        : 'bg-white dark:bg-dark-surface border-gray-300 dark:border-dark-border text-gray-400'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <Check size={11} strokeWidth={3.5} />
+                    ) : isFailed ? (
+                      <X size={11} strokeWidth={3.5} />
+                    ) : isCurrent ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : isPaused ? (
+                      <AlertCircle size={11} />
+                    ) : (
+                      <span>{i + 1}</span>
+                    )}
+                  </div>
+
+                  {/* Right Column Step Content */}
+                  <div className={`p-2.5 rounded-xl border transition-all ${
+                    isCurrent
+                      ? 'border-primary-500 bg-primary-600/5 dark:bg-primary-900/15 glow-primary'
+                      : isPaused
+                      ? 'border-amber-500 bg-amber-500/5 dark:bg-amber-950/10'
+                      : isCompleted
+                      ? 'border-gray-200/50 dark:border-dark-border bg-white dark:bg-dark-surface/40 opacity-70'
+                      : 'border-transparent opacity-40'
+                  }`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px]">{MODE_ICON_MAP[step.agentMode]}</span>
+                        <span className="text-xs font-bold text-gray-800 dark:text-dark-text">{step.name || '未命名步骤'}</span>
+                      </div>
+                      <span className={`text-[8px] font-black uppercase tracking-wider ${
+                        isCurrent ? 'text-primary-600 dark:text-primary-400 animate-pulse'
+                        : isPaused ? 'text-amber-600 dark:text-amber-400'
+                        : isCompleted ? 'text-emerald-600 dark:text-emerald-400'
+                        : isFailed ? 'text-red-600 dark:text-red-400'
+                        : 'text-gray-400'
+                      }`}>
+                        {isCurrent ? 'AI 处理中...'
+                        : isPaused ? '等待人工确认'
+                        : isCompleted ? '完成'
+                        : isFailed ? '失败'
+                        : '等待中'}
+                      </span>
+                    </div>
+
+                    {/* Step log or output preview */}
+                    {result && result.output && (
+                      <p className="mt-1.5 text-[9.5px] leading-relaxed text-gray-500 dark:text-dark-text-secondary line-clamp-2 whitespace-pre-wrap">
+                        {result.output}
+                      </p>
+                    )}
+                    {isCurrent && (
+                      <p className="mt-1.5 text-[9.5px] font-bold text-primary-500 dark:text-primary-400 animate-pulse">
+                        智能写作助手正在检索上下文并生成章节内容，请稍候...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Standard Fallback Execution log when workflow is unavailable */}
+      {!workflow && (
+        <div className="space-y-2">
+          {execution.stepResults.map((result, i) => (
             <div
-              className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${
+              key={i}
+              className={`p-3 rounded-xl text-xs border ${
                 result.status === 'completed'
-                  ? 'bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30'
-                  : result.status === 'failed'
-                  ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
-                  : 'bg-gray-200 dark:bg-dark-surface border border-gray-300 dark:border-dark-border text-gray-500'
+                  ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30'
+                  : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30'
               }`}
             >
-              {i + 1}
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold">{translate('workflowExecutionStep', { step: result.stepIndex + 1 })}</span>
+                <span className="text-[10px] uppercase font-bold">{result.status}</span>
+              </div>
+              {result.output && (
+                <p className="text-gray-600 dark:text-dark-text-secondary line-clamp-3 whitespace-pre-wrap text-[11px]">{result.output}</p>
+              )}
             </div>
-          </React.Fragment>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* 步骤结果 */}
-      <div className="space-y-2">
-        {execution.stepResults.map((result, i) => (
-          <div
-            key={i}
-            className={`p-3 rounded-lg text-xs border ${
-              result.status === 'completed'
-                ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30'
-                : result.status === 'failed'
-                ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30'
-                : 'bg-gray-50 dark:bg-dark-surface/70 border-gray-200 dark:border-dark-border'
-            }`}
-          >
-            <div className="flex justify-between items-center mb-1">
-              <span className="font-medium text-gray-900 dark:text-dark-text">{translate('workflowExecutionStep', { step: result.stepIndex + 1 })}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                result.status === 'completed' ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-                : result.status === 'failed' ? 'bg-red-500/15 text-red-600 dark:text-red-400'
-                : 'bg-gray-200 dark:bg-dark-surface text-gray-500 dark:text-dark-text-muted'
-              }`}>{result.status}</span>
-            </div>
-            {result.output && (
-              <p className="text-gray-600 dark:text-dark-text-muted line-clamp-3 whitespace-pre-wrap text-[11px]">{result.output}</p>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* 检查点审阅 */}
+      {/* 检查点审阅 (Approval Gates Panel) */}
       {execution.status === 'paused' && lastResult && (
-        <div className="border-t border-gray-200 dark:border-dark-border pt-4 space-y-3">
-          <span className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold">{t.workflowCheckpointReviewOutput}</span>
+        <div className="border-t border-gray-200 dark:border-dark-border pt-4 space-y-3.5">
+          <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-extrabold uppercase tracking-wide">
+            <AlertCircle size={14} className="animate-pulse-subtle" />
+            <span>{t.workflowCheckpointReviewOutput}</span>
+          </div>
 
           {editingOutput ? (
             <textarea
               value={modifiedOutput}
               onChange={(e) => setModifiedOutput(e.target.value)}
-              rows={6}
-              className={`${inputClass} resize-none`}
+              rows={7}
+              className={`${inputClass} resize-none font-sans leading-relaxed focus:ring-amber-500/50 focus:border-amber-500`}
             />
           ) : (
-            <div className="bg-gray-50 dark:bg-dark-surface/70 border border-gray-200 dark:border-dark-border rounded-lg p-3 text-xs text-gray-600 dark:text-dark-text-muted max-h-40 overflow-y-auto whitespace-pre-wrap">
+            <div className="bg-slate-50 dark:bg-dark-bg/60 border border-gray-200 dark:border-dark-border rounded-xl p-3 text-[11px] leading-relaxed text-gray-600 dark:text-dark-text-secondary max-h-44 overflow-y-auto whitespace-pre-wrap font-serif">
               {lastResult.output}
             </div>
           )}
@@ -632,7 +713,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({ execution, onApprove, onR
                   onApprove()
                 }
               }}
-              className="flex-1 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"
+              className="flex-1 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors shadow-sm active:scale-95 transform"
             >
               {editingOutput ? t.workflowSubmitModifiedContinue : t.workflowApproveContinue}
             </button>
@@ -641,13 +722,13 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({ execution, onApprove, onR
                 setModifiedOutput(lastResult.output)
                 setEditingOutput(true)
               }}
-              className="flex-1 py-1.5 text-sm font-medium border border-gray-200 dark:border-dark-border text-gray-600 dark:text-dark-text-secondary rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-colors"
+              className="flex-1 py-2 text-xs font-bold border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-surface2 text-gray-700 dark:text-dark-text rounded-lg transition-colors shadow-sm active:scale-95 transform"
             >
               {t.workflowModify}
             </button>
             <button
               onClick={onReject}
-              className="flex-1 py-1.5 text-sm font-medium border border-red-300 dark:border-red-800/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+              className="flex-1 py-2 text-xs font-bold border border-red-300 dark:border-red-800/30 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-lg transition-colors shadow-sm active:scale-95 transform"
             >
               {t.workflowReject}
             </button>

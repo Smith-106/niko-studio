@@ -15,6 +15,7 @@ import {
   getResolvedApiBase,
   isTauriRuntime,
   startTauriBackend,
+  restartTauriBackend,
 } from '../core'
 
 export type GatewayTools = Record<string, string[]>
@@ -217,4 +218,16 @@ export async function checkBackendHealth(): Promise<boolean> {
 
 export async function checkHealth(): Promise<boolean> {
   return checkBackendHealth()
+}
+
+export async function restartGatewayBackend(): Promise<ApiResponse<string>> {
+  if (!isTauriRuntime()) {
+    return { success: false, error: 'Not in Tauri environment' }
+  }
+  try {
+    const result = await restartTauriBackend()
+    return { success: true, data: result }
+  } catch (error) {
+    return { success: false, error: String(error) }
+  }
 }

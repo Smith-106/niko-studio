@@ -54,6 +54,11 @@ type SidebarKeys =
   | 'sidebarCharacterRelationships'
   | 'sidebarPatternDashboard'
   | 'sidebarSessionAnalytics'
+  | 'sidebarFlowWrite'
+  | 'sidebarFlowEvaluate'
+  | 'sidebarFlowRevise'
+  | 'sidebarFlowTrack'
+  | 'sidebarFlowStep'
   | 'skillGroupCore'
   | 'skillGroupStory'
   | 'skillGroupQuality'
@@ -145,6 +150,11 @@ export const zhSidebar: Translations = {
   sidebarCharacterRelationships: '角色关系',
   sidebarPatternDashboard: '模式面板',
   sidebarSessionAnalytics: '会话统计',
+  sidebarFlowWrite: '写作与评估',
+  sidebarFlowEvaluate: '评估与修订',
+  sidebarFlowRevise: '修订与追踪',
+  sidebarFlowTrack: '叙事追踪',
+  sidebarFlowStep: '步骤',
   skillGroupCore: '核心',
   skillGroupStory: '故事',
   skillGroupQuality: '质量',
@@ -235,6 +245,11 @@ export const enSidebar: Translations = {
   sidebarCharacterRelationships: 'Characters',
   sidebarPatternDashboard: 'Patterns',
   sidebarSessionAnalytics: 'Session Stats',
+  sidebarFlowWrite: 'Write & Evaluate',
+  sidebarFlowEvaluate: 'Evaluate & Revise',
+  sidebarFlowRevise: 'Revise & Track',
+  sidebarFlowTrack: 'Narrative Tracking',
+  sidebarFlowStep: 'Step',
   skillGroupCore: 'Core',
   skillGroupStory: 'Story',
   skillGroupQuality: 'Quality',

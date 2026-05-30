@@ -9,6 +9,7 @@ import {
   isTauriRuntime,
   normalizeGatewayBaseUrl,
   startTauriBackend,
+  restartTauriBackend,
 } from './transport'
 import type { GatewayRequestMethod } from './tauri-contract'
 import { LRUCache, makeCacheKey } from './ipc-chunk'
@@ -189,4 +190,5 @@ export {
   isTauriRuntime,
   normalizeGatewayBaseUrl,
   startTauriBackend,
+  restartTauriBackend,
 }

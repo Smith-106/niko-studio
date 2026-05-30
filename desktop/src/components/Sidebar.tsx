@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain, Activity, Check, Cable } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
@@ -28,6 +28,38 @@ interface SidebarProps {
 }
 
 type FlowStep = 1 | 2 | 3 | 4
+
+const STEP_DETAILS = {
+  1: {
+    title: '写作与评估',
+    tools: [
+      { id: 'analysis', name: '智能分析', icon: Brain, action: 'onOpenAnalysis' },
+      { id: 'evaluation', name: '深度评估', icon: BarChart3, action: 'onOpenEvaluation' },
+    ],
+  },
+  2: {
+    title: '评估与修订',
+    tools: [
+      { id: 'evaluationDrillDown', name: '评估细分', icon: Scaling, action: 'onOpenEvaluationDrillDown' },
+      { id: 'patternDashboard', name: '模式仪表板', icon: LayoutGrid, action: 'onOpenPatternDashboard' },
+    ],
+  },
+  3: {
+    title: '修订与追踪',
+    tools: [
+      { id: 'foreshadowingTracker', name: '伏笔追踪', icon: Eye, action: 'onOpenForeshadowingTracker' },
+      { id: 'characterRelationships', name: '角色关系', icon: Users, action: 'onOpenCharacterRelationships' },
+    ],
+  },
+  4: {
+    title: '叙事追踪',
+    tools: [
+      { id: 'narrativeVisualization', name: '叙事可视化', icon: Activity, action: 'onOpenNarrativeVisualization' },
+      { id: 'sessionAnalytics', name: '会话分析', icon: PieChart, action: 'onOpenSessionAnalytics' },
+    ],
+  },
+}
+
 
 const STEP_TO_PANELS: Record<FlowStep, string[]> = {
   1: ['analysis', 'evaluation'],
@@ -110,6 +142,50 @@ export const Sidebar = React.memo(function Sidebar({
   const writerWorkspaceLabel = translate('writerWorkspaceLabel')
 
   const activeStep = getActiveStep(activeRightPanel)
+
+  const [hoveredStep, setHoveredStep] = useState<FlowStep | null>(null)
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const getToolLabel = (toolId: string) => {
+    switch (toolId) {
+      case 'analysis': return t.sidebarAnalysis
+      case 'evaluation': return t.sidebarEvaluationPanel
+      case 'evaluationDrillDown': return t.sidebarEvaluationDrillDown
+      case 'patternDashboard': return t.sidebarPatternDashboard
+      case 'foreshadowingTracker': return t.sidebarForeshadowingTracker
+      case 'characterRelationships': return t.sidebarCharacterRelationships
+      case 'narrativeVisualization': return t.sidebarNarrativeVisualization
+      case 'sessionAnalytics': return t.sidebarSessionAnalytics
+      default: return ''
+    }
+  }
+
+
+  const handleMouseEnterStep = (step: FlowStep) => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+    setHoveredStep(step)
+  }
+
+  const handleMouseLeaveStep = () => {
+    closeTimeoutRef.current = setTimeout(() => {
+      setHoveredStep(null)
+    }, 150)
+  }
+
+  const handleMouseEnterPopover = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+  }
+
+  const handleMouseLeavePopover = () => {
+    setHoveredStep(null)
+  }
+
 
   const handleContinueWriting = () => {
     onContinueWriting()
@@ -366,92 +442,174 @@ export const Sidebar = React.memo(function Sidebar({
         </div>
       )}
       <div className="border-t border-dark-border shrink-0 overflow-y-auto custom-scrollbar">
-        {/* Step 1: 写作与评估 */}
-        {!collapsed && (
-          <div className="px-4 pt-3 pb-0.5">
-            <div className="flex items-center gap-1.5">
-              <FlowStepBadge step={1} isActive={activeStep === 1} isCompleted={activeStep !== null && activeStep > 1} />
-              <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 1 ? 'text-primary-300' : activeStep !== null && activeStep > 1 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowWrite}</span>
-            </div>
+        {collapsed ? (
+          <div className="py-4 flex flex-col items-center gap-4 relative">
+            {(Object.keys(STEP_DETAILS) as unknown as Array<keyof typeof STEP_DETAILS>).map((stepKey) => {
+              const step = Number(stepKey) as FlowStep
+              const isActive = activeStep === step
+              const isCompleted = activeStep !== null && activeStep > step
+              const stepInfo = STEP_DETAILS[step]
+
+              const actionMap: Record<string, () => void> = {
+                onOpenAnalysis,
+                onOpenEvaluation,
+                onOpenEvaluationDrillDown,
+                onOpenPatternDashboard,
+                onOpenForeshadowingTracker,
+                onOpenCharacterRelationships,
+                onOpenNarrativeVisualization,
+                onOpenSessionAnalytics,
+              }
+
+              return (
+                <div
+                  key={step}
+                  className="relative flex items-center justify-center"
+                  onMouseEnter={() => handleMouseEnterStep(step)}
+                  onMouseLeave={handleMouseLeaveStep}
+                >
+                  <button
+                    type="button"
+                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 relative border ${
+                      isActive
+                        ? 'bg-primary-600 border-primary-500 text-white shadow-[0_0_12px_rgba(99,102,241,0.4)] step-pulse-active'
+                        : isCompleted
+                        ? 'bg-primary-900/40 border-primary-800 text-primary-300 shadow-[0_0_8px_rgba(99,102,241,0.15)]'
+                        : 'bg-dark-surface border-dark-border text-dark-text-muted hover:text-dark-text hover:bg-dark-surface2'
+                    }`}
+                    title={stepInfo.title}
+                  >
+                    {isCompleted ? <Check size={14} strokeWidth={3} /> : step}
+                  </button>
+
+                  {/* Popover Flyout Menu */}
+                  {hoveredStep === step && (
+                    <div
+                      className="step-flyout-popover"
+                      onMouseEnter={handleMouseEnterPopover}
+                      onMouseLeave={handleMouseLeavePopover}
+                    >
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-dark-text-muted mb-2 border-b border-dark-border/40 pb-1">
+                        步骤 {step}：{stepInfo.title}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {stepInfo.tools.map((tool) => {
+                          const ToolIcon = tool.icon
+                          const isToolActive = activeRightPanel === tool.id
+                          const clickHandler = actionMap[tool.action]
+                          const label = getToolLabel(tool.id)
+
+                          return (
+                            <button
+                              key={tool.id}
+                              onClick={() => {
+                                clickHandler?.()
+                                setHoveredStep(null)
+                              }}
+                              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-all ${
+                                isToolActive
+                                  ? 'bg-primary-600 text-white font-medium shadow-sm'
+                                  : 'text-dark-text-secondary hover:text-dark-text hover:bg-dark-surface/50'
+                              }`}
+                              title={label}
+                              aria-label={label}
+                            >
+                              <ToolIcon size={14} />
+                              <span className="truncate">{label}</span>
+                            </button>
+                          )
+                        })}
+
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
-        )}
-        <div className="px-3 space-y-0.5">
-          <button onClick={onOpenAnalysis} className={`${sidebarBtnClass(collapsed, activeStep === 1)} ${activeStep === 1 && activeRightPanel === 'analysis' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarAnalysis} type="button">
-            <Brain size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarAnalysis}</span>}
-          </button>
-          <button onClick={onOpenEvaluation} className={`${sidebarBtnClass(collapsed, activeStep === 1)} ${activeStep === 1 && activeRightPanel === 'evaluation' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationPanel} type="button">
-            <BarChart3 size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationPanel}</span>}
-          </button>
-        </div>
-
-        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 1} active={activeStep === 1} />}
-
-        {/* Step 2: 评估与修订 */}
-        {!collapsed && (
-          <div className="px-4 pt-1 pb-0.5">
-            <div className="flex items-center gap-1.5">
-              <FlowStepBadge step={2} isActive={activeStep === 2} isCompleted={activeStep !== null && activeStep > 2} />
-              <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 2 ? 'text-primary-300' : activeStep !== null && activeStep > 2 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowEvaluate}</span>
+        ) : (
+          <>
+            {/* Step 1: 写作与评估 */}
+            <div className="px-4 pt-3 pb-0.5">
+              <div className="flex items-center gap-1.5">
+                <FlowStepBadge step={1} isActive={activeStep === 1} isCompleted={activeStep !== null && activeStep > 1} />
+                <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 1 ? 'text-primary-300' : activeStep !== null && activeStep > 1 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowWrite}</span>
+              </div>
             </div>
-          </div>
-        )}
-        <div className="px-3 space-y-0.5">
-          <button onClick={onOpenEvaluationDrillDown} className={`${sidebarBtnClass(collapsed, activeStep === 2)} ${activeStep === 2 && activeRightPanel === 'evaluationDrillDown' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationDrillDown} type="button">
-            <Scaling size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationDrillDown}</span>}
-          </button>
-          <button onClick={onOpenPatternDashboard} className={`${sidebarBtnClass(collapsed, activeStep === 2)} ${activeStep === 2 && activeRightPanel === 'patternDashboard' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarPatternDashboard} type="button">
-            <LayoutGrid size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarPatternDashboard}</span>}
-          </button>
-        </div>
-
-        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 2} active={activeStep === 2} />}
-
-        {/* Step 3: 修订与追踪 */}
-        {!collapsed && (
-          <div className="px-4 pt-1 pb-0.5">
-            <div className="flex items-center gap-1.5">
-              <FlowStepBadge step={3} isActive={activeStep === 3} isCompleted={activeStep !== null && activeStep > 3} />
-              <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 3 ? 'text-primary-300' : activeStep !== null && activeStep > 3 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowRevise}</span>
+            <div className="px-3 space-y-0.5">
+              <button onClick={onOpenAnalysis} className={`${sidebarBtnClass(collapsed, activeStep === 1)} ${activeStep === 1 && activeRightPanel === 'analysis' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarAnalysis} type="button">
+                <Brain size={18} />
+                <span className="text-sm font-medium">{t.sidebarAnalysis}</span>
+              </button>
+              <button onClick={onOpenEvaluation} className={`${sidebarBtnClass(collapsed, activeStep === 1)} ${activeStep === 1 && activeRightPanel === 'evaluation' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationPanel} type="button">
+                <BarChart3 size={18} />
+                <span className="text-sm font-medium">{t.sidebarEvaluationPanel}</span>
+              </button>
             </div>
-          </div>
-        )}
-        <div className="px-3 space-y-0.5">
-          <button onClick={onOpenForeshadowingTracker} className={`${sidebarBtnClass(collapsed, activeStep === 3)} ${activeStep === 3 && activeRightPanel === 'foreshadowingTracker' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarForeshadowingTracker} type="button">
-            <Eye size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarForeshadowingTracker}</span>}
-          </button>
-          <button onClick={onOpenCharacterRelationships} className={`${sidebarBtnClass(collapsed, activeStep === 3)} ${activeStep === 3 && activeRightPanel === 'characterRelationships' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarCharacterRelationships} type="button">
-            <Users size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarCharacterRelationships}</span>}
-          </button>
-        </div>
 
-        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 3} active={activeStep === 3} />}
+            <FlowConnector completed={activeStep !== null && activeStep > 1} active={activeStep === 1} />
 
-        {/* Step 4: 叙事追踪 */}
-        {!collapsed && (
-          <div className="px-4 pt-1 pb-0.5">
-            <div className="flex items-center gap-1.5">
-              <FlowStepBadge step={4} isActive={activeStep === 4} isCompleted={false} />
-              <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 4 ? 'text-primary-300' : 'text-primary-400/80'}`}>{t.sidebarFlowTrack}</span>
+            {/* Step 2: 评估与修订 */}
+            <div className="px-4 pt-1 pb-0.5">
+              <div className="flex items-center gap-1.5">
+                <FlowStepBadge step={2} isActive={activeStep === 2} isCompleted={activeStep !== null && activeStep > 2} />
+                <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 2 ? 'text-primary-300' : activeStep !== null && activeStep > 2 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowEvaluate}</span>
+              </div>
             </div>
-          </div>
+            <div className="px-3 space-y-0.5">
+              <button onClick={onOpenEvaluationDrillDown} className={`${sidebarBtnClass(collapsed, activeStep === 2)} ${activeStep === 2 && activeRightPanel === 'evaluationDrillDown' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationDrillDown} type="button">
+                <Scaling size={18} />
+                <span className="text-sm font-medium">{t.sidebarEvaluationDrillDown}</span>
+              </button>
+              <button onClick={onOpenPatternDashboard} className={`${sidebarBtnClass(collapsed, activeStep === 2)} ${activeStep === 2 && activeRightPanel === 'patternDashboard' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarPatternDashboard} type="button">
+                <LayoutGrid size={18} />
+                <span className="text-sm font-medium">{t.sidebarPatternDashboard}</span>
+              </button>
+            </div>
+
+            <FlowConnector completed={activeStep !== null && activeStep > 2} active={activeStep === 2} />
+
+            {/* Step 3: 修订与追踪 */}
+            <div className="px-4 pt-1 pb-0.5">
+              <div className="flex items-center gap-1.5">
+                <FlowStepBadge step={3} isActive={activeStep === 3} isCompleted={activeStep !== null && activeStep > 3} />
+                <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 3 ? 'text-primary-300' : activeStep !== null && activeStep > 3 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowRevise}</span>
+              </div>
+            </div>
+            <div className="px-3 space-y-0.5">
+              <button onClick={onOpenForeshadowingTracker} className={`${sidebarBtnClass(collapsed, activeStep === 3)} ${activeStep === 3 && activeRightPanel === 'foreshadowingTracker' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarForeshadowingTracker} type="button">
+                <Eye size={18} />
+                <span className="text-sm font-medium">{t.sidebarForeshadowingTracker}</span>
+              </button>
+              <button onClick={onOpenCharacterRelationships} className={`${sidebarBtnClass(collapsed, activeStep === 3)} ${activeStep === 3 && activeRightPanel === 'characterRelationships' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarCharacterRelationships} type="button">
+                <Users size={18} />
+                <span className="text-sm font-medium">{t.sidebarCharacterRelationships}</span>
+              </button>
+            </div>
+
+            <FlowConnector completed={activeStep !== null && activeStep > 3} active={activeStep === 3} />
+
+            {/* Step 4: 叙事追踪 */}
+            <div className="px-4 pt-1 pb-0.5">
+              <div className="flex items-center gap-1.5">
+                <FlowStepBadge step={4} isActive={activeStep === 4} isCompleted={false} />
+                <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 4 ? 'text-primary-300' : 'text-primary-400/80'}`}>{t.sidebarFlowTrack}</span>
+              </div>
+            </div>
+            <div className="px-3 pb-3 space-y-0.5">
+              <button onClick={onOpenNarrativeVisualization} className={`${sidebarBtnClass(collapsed, activeStep === 4)} ${activeStep === 4 && activeRightPanel === 'narrativeVisualization' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarNarrativeVisualization} type="button">
+                <Activity size={18} />
+                <span className="text-sm font-medium">{t.sidebarNarrativeVisualization}</span>
+              </button>
+              <button onClick={onOpenSessionAnalytics} className={`${sidebarBtnClass(collapsed, activeStep === 4)} ${activeStep === 4 && activeRightPanel === 'sessionAnalytics' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarSessionAnalytics} type="button">
+                <PieChart size={18} />
+                <span className="text-sm font-medium">{t.sidebarSessionAnalytics}</span>
+              </button>
+            </div>
+          </>
         )}
-        <div className="px-3 pb-3 space-y-0.5">
-          <button onClick={onOpenNarrativeVisualization} className={`${sidebarBtnClass(collapsed, activeStep === 4)} ${activeStep === 4 && activeRightPanel === 'narrativeVisualization' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarNarrativeVisualization} type="button">
-            <Activity size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarNarrativeVisualization}</span>}
-          </button>
-          <button onClick={onOpenSessionAnalytics} className={`${sidebarBtnClass(collapsed, activeStep === 4)} ${activeStep === 4 && activeRightPanel === 'sessionAnalytics' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarSessionAnalytics} type="button">
-            <PieChart size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarSessionAnalytics}</span>}
-          </button>
-        </div>
       </div>
+
 
       {!collapsed && (
         <PanelResizeHandle side="right" onMouseDown={startResize} onDoubleClick={resetWidth} />

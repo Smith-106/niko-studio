@@ -311,7 +311,7 @@ export function AutomationPanel({ onClose, onOpenSettings }: AutomationPanelProp
     <div
       ref={panelRef}
       tabIndex={-1}
-      className="fixed right-0 top-14 bottom-0 w-96 bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col z-30"
+      className="h-full w-96 bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col"
       role="dialog"
       aria-modal="true"
       aria-label={isZh ? '自动化面板' : 'Automation panel'}

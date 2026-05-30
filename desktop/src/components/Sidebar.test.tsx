@@ -161,9 +161,11 @@ describe('Sidebar', () => {
 
   it('hides evaluation panel label when collapsed', () => {
     render(<Sidebar {...defaultSidebarProps} collapsed={true} />)
-    expect(screen.getByTitle('Reply Review')).toBeInTheDocument()
+    expect(screen.queryByTitle('Reply Review')).not.toBeInTheDocument()
     expect(screen.queryByText('Reply Review')).not.toBeInTheDocument()
   })
+
+
 
   it('renders without errors', () => {
     render(<Sidebar {...defaultSidebarProps} />)

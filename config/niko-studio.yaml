@@ -54,6 +54,7 @@ gateway:
   host: 0.0.0.0
   port: 8000
   reload: true
+  ui_bridge_enabled: true
   cors_dev_origins:
     - "*"
   cors_prod_origins:
