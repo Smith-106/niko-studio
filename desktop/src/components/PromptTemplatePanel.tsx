@@ -64,6 +64,7 @@ export function PromptTemplatePanel({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const scrimPointerDownRef = useRef(false);
+  void scrimPointerDownRef;
   const [selectedCategory, setSelectedCategory] = useState<
     "all" | PromptTemplateCategory
   >("all");
@@ -195,31 +196,12 @@ export function PromptTemplatePanel({
     });
   };
 
-  const handleScrimMouseDown = () => {
-    scrimPointerDownRef.current = true;
-  };
-
-  const handleScrimClick = () => {
-    if (!scrimPointerDownRef.current) {
-      return;
-    }
-
-    scrimPointerDownRef.current = false;
-    onClose("backdrop");
-  };
-
   return (
-    <div className="fixed inset-x-0 top-14 bottom-0 z-30 flex justify-end">
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-slate-900/20"
-        onMouseDown={handleScrimMouseDown}
-        onClick={handleScrimClick}
-      />
+    <div className="h-full flex justify-end">
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="relative flex h-full w-[420px] flex-col border-l border-gray-200 bg-slate-50 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] transform transition-transform dark:border-dark-border dark:bg-dark-bg"
+        className="relative flex h-full w-[420px] flex-col border-l border-gray-200 bg-slate-50 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] dark:border-dark-border dark:bg-dark-bg"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
