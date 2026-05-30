@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useI18n } from '../i18n'
 import { useAppStore } from '../stores/appStore'
-import { ALL_BUILTINS } from '../services/templates/builtins'
 import { substitutePlaceholders } from '../services/templateService'
 import type { Template, TemplateCategory, TemplatePlaceholder } from '../types/template'
 
@@ -32,7 +31,7 @@ export function TemplateManagerPanel({ onApplyTemplate }: TemplateManagerPanelPr
   }, [loadTemplates])
 
   const allTemplates = useMemo(
-    () => [...ALL_BUILTINS, ...customTemplates],
+    () => customTemplates,
     [customTemplates]
   )
 

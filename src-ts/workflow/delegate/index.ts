@@ -1,3 +1,3 @@
-export { DelegateBroker, DelegateHandle, type DelegateSpec, type DelegateRecord, type DelegateMessage, type DelegateCompletion, type DelegateStatus, type DelegatePriority, type DelegateExecutor } from './delegate-broker.js';
+export { DelegateBroker, DelegateHandle, type IPersistentStorage, type DelegateSpec, type DelegateRecord, type DelegateMessage, type DelegateCompletion, type DelegateStatus, type DelegatePriority, type DelegateExecutor } from './delegate-broker.js';
 export { SubPlanDispatcher, type SubPlanSpec, type SubPlanResult, type SubTaskSpec, type SubTaskResult } from './sub-plan.js';
 export { ParallelResultAggregatorImpl, AggregationStrategy, type IParallelResultAggregator, type AggregationConfig, type AggregatedResult } from './result-aggregator.js';

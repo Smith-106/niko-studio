@@ -6,7 +6,7 @@
     },
     {
       "test": "5 rounds complete within 30s total",
-      "notes": "5 rounds finished in 7549ms (under 30s budget)"
+      "notes": "5 rounds finished in 7522ms (under 30s budget)"
     },
     {
       "test": "concurrent two L4 sessions on shared session root preserve isolation",

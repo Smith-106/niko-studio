@@ -12,7 +12,6 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Typography from '@tiptap/extension-typography'
 import CharacterCount from '@tiptap/extension-character-count'
-import Underline from '@tiptap/extension-underline'
 import {
   Table,
   TableRow,
@@ -114,7 +113,6 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       TextStyle,
       Typography,
       CharacterCount,
-      Underline,
       Table.configure({
         resizable: true,
       }),

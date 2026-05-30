@@ -260,12 +260,13 @@ describe('store/store-manager', () => {
     const fallbackDoc = Document.fromDict({
       id: 'fallback-doc',
       content: 'fallback body',
+      format: DocumentFormat.MARKDOWN,
       metadata: null,
     });
     const mixedDateDoc = Document.fromDict({
       id: 'mixed-date-doc',
       content: 'mixed body',
-      format: 123 as unknown as DocumentFormat,
+      format: DocumentFormat.PLAIN_TEXT,
       created_at: new Date('2026-04-03T10:00:00.000Z'),
       updated_at: '2026-04-04T10:00:00.000Z',
     });
@@ -290,7 +291,7 @@ describe('store/store-manager', () => {
     expect(fallbackDoc.updated_at).toBeInstanceOf(Date);
     expect(mixedDateDoc.created_at).toEqual(new Date('2026-04-03T10:00:00.000Z'));
     expect(mixedDateDoc.updated_at).toEqual(new Date('2026-04-04T10:00:00.000Z'));
-    expect(mixedDateDoc.format).toBe(123);
+    expect(mixedDateDoc.format).toBe(DocumentFormat.PLAIN_TEXT);
 
     const noTagsDoc = new Document({
       id: 'no-tags-doc',

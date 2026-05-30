@@ -1,14 +1,28 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   DelegateBroker,
   DelegateHandle,
   type DelegateCompletion,
   type DelegateRecord,
+  type IPersistentStorage,
 } from '../../../workflow/delegate/index.js';
+
+/** In-memory storage to avoid file-system side effects between test runs. */
+class MemoryStorage implements IPersistentStorage {
+  private readonly map = new Map<string, string>();
+  async save(key: string, value: string): Promise<void> { this.map.set(key, value); }
+  async load(key: string): Promise<string | null> { return this.map.get(key) ?? null; }
+  async remove(key: string): Promise<void> { this.map.delete(key); }
+  async listKeys(): Promise<string[]> { return Array.from(this.map.keys()); }
+}
+
+function createBroker(executor: Parameters<typeof DelegateBroker>[0], opts?: { defaultTimeout?: number }) {
+  return new DelegateBroker(executor, { storage: new MemoryStorage(), ...opts });
+}
 
 describe('DelegateBroker', () => {
   it('submit → complete lifecycle', async () => {
-    const broker = new DelegateBroker(async (task, handle) => {
+    const broker = createBroker(async (task, handle) => {
       expect(handle.cancelled).toBe(false);
       return `result: ${task}`;
     });
@@ -22,7 +36,7 @@ describe('DelegateBroker', () => {
   });
 
   it('submit → fail lifecycle', async () => {
-    const broker = new DelegateBroker(async () => {
+    const broker = createBroker(async () => {
       throw new Error('something broke');
     });
 
@@ -34,7 +48,7 @@ describe('DelegateBroker', () => {
 
   it('cancel stops a running delegate', async () => {
     let cancelled = false;
-    const broker = new DelegateBroker(async (task, handle) => {
+    const broker = createBroker(async (task, handle) => {
       // Simulate long work
       await new Promise(r => setTimeout(r, 2000));
       cancelled = handle.cancelled;
@@ -54,7 +68,7 @@ describe('DelegateBroker', () => {
 
   it('inject message to running delegate', async () => {
     let received: string[] = [];
-    const broker = new DelegateBroker(async (task, handle) => {
+    const broker = createBroker(async (task, handle) => {
       await new Promise(r => setTimeout(r, 200));
       // Drain messages
       const msgs = handle.drainMessages();
@@ -74,7 +88,7 @@ describe('DelegateBroker', () => {
   });
 
   it('timeout kills long-running delegate', async () => {
-    const broker = new DelegateBroker(async () => {
+    const broker = createBroker(async () => {
       await new Promise(r => setTimeout(r, 10_000)); // 10s
       return 'should not reach';
     });
@@ -86,7 +100,7 @@ describe('DelegateBroker', () => {
   });
 
   it('list returns all delegates', async () => {
-    const broker = new DelegateBroker(async () => 'ok');
+    const broker = createBroker(async () => 'ok');
 
     await broker.submit({ task: 'task1' });
     await broker.submit({ task: 'task2' });
@@ -99,17 +113,17 @@ describe('DelegateBroker', () => {
   });
 
   it('get returns null for unknown id', () => {
-    const broker = new DelegateBroker(async () => 'ok');
+    const broker = createBroker(async () => 'ok');
     expect(broker.get('nonexistent')).toBeNull();
   });
 
   it('inject returns false for unknown delegate', () => {
-    const broker = new DelegateBroker(async () => 'ok');
+    const broker = createBroker(async () => 'ok');
     expect(broker.inject('nonexistent', 'msg')).toBe(false);
   });
 
   it('shutdown cancels all running delegates', async () => {
-    const broker = new DelegateBroker(async () => {
+    const broker = createBroker(async () => {
       await new Promise(r => setTimeout(r, 10_000));
       return 'should not reach';
     });
