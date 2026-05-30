@@ -210,7 +210,7 @@ export function ChatAreaComposer({
           onClick={onCancelStream}
           aria-label={cancelLabel}
           title={cancelLabel}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger-500 text-white transition-all hover:bg-danger-600 active:scale-95 shadow-sm"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger-500 text-white transition-all hover:bg-danger-600 active:scale-90 shadow-sm"
           type="button"
         >
           <Square size={16} className="fill-current" />
@@ -225,7 +225,7 @@ export function ChatAreaComposer({
           aria-label={sendLabel}
           title={sendLabel}
           disabled={sendDisabled}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white transition-colors hover:bg-primary-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm cursor-pointer"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white transition-all duration-150 hover:bg-primary-500 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm cursor-pointer"
           type="button"
         >
           <Send size={16} className="ml-0.5" />

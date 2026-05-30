@@ -111,7 +111,7 @@ export interface EvaluationPanelProps {
   onOpenWritingHelper?: (handoff: { content: string; guidance: string; mode: 'polish' | 'rewrite' | 'expand' | 'summarize' | 'outline'; maxSentences: number; maxItems: number; handoff: WritingHelperEvaluationHandoff }) => void
 }
 interface EvaluationRevisionCandidate extends RevisionCandidate { suggestionId: string; surface: 'compact' | 'detailed' }
-export const panelShellClassName = 'fixed right-0 top-14 bottom-0 z-30 w-80 border-l border-gray-200 bg-white shadow-lg dark:border-dark-border dark:bg-dark-surface'
+export const panelShellClassName = 'h-full w-80 border-l border-gray-200 bg-white shadow-lg dark:border-dark-border dark:bg-dark-surface'
 
 export function EvaluationPanel({ content: fallbackContent = '', evaluationSources, onClose, onOpenAutomation, onOpenWritingHelper }: EvaluationPanelProps) {
   const { t, translate, language } = useI18n()
@@ -347,6 +347,15 @@ export function EvaluationPanel({ content: fallbackContent = '', evaluationSourc
   return (
     <div ref={dialogRef} tabIndex={-1} className={`${panelShellClassName} flex flex-col`} role="dialog" aria-modal="true" aria-label={t.evaluationTitle}>
       <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-dark-border"><div className="flex items-center gap-2"><BarChart3 size={20} className="text-blue-600" /><span className="font-semibold text-gray-900 dark:text-dark-text">{t.evaluationTitle}</span></div><button onClick={onClose} className="rounded text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:text-dark-text" aria-label={t.evaluationClose} title={t.evaluationClose}>×</button></div>
+      <div className="flex items-center gap-1.5 border-b border-gray-100 dark:border-dark-border/50 px-4 py-2">
+        <span className="w-5 h-5 rounded-full bg-primary-600 text-white flex items-center justify-center text-[10px] font-bold shadow-sm">1</span>
+        <div className="flex-1 h-0.5 rounded-full bg-primary-500/40" />
+        <span className="w-5 h-5 rounded-full bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold">2</span>
+        <div className="flex-1 h-0.5 rounded-full bg-dark-border" />
+        <span className="w-5 h-5 rounded-full bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold">3</span>
+        <div className="flex-1 h-0.5 rounded-full bg-dark-border" />
+        <span className="w-5 h-5 rounded-full bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold">4</span>
+      </div>
       <div className="space-y-3 border-b border-gray-200 p-4 dark:border-dark-border">
         <EvaluationSourceSection title={evaluationSourceTitle} hint={evaluationSourceHint} sources={availableEvaluationSources} activeKind={activeEvaluationSource?.kind ?? null} onSelect={setSelectedSourceKind} />
         <div className="mb-3 flex items-center justify-between"><span className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.evaluationOverallScore}</span><div className={`rounded-full px-3 py-1 text-sm font-medium ${getScoreColor(result.score)}`}>{result.score.toFixed(1)} / 10</div></div>

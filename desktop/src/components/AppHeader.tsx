@@ -158,15 +158,21 @@ export function AppHeader({
         </button>
         {(contextUsageVisible || headerConnectionState !== 'connected') && (
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-gray-50 dark:bg-dark-surface/50 border border-gray-200/60 dark:border-dark-border/60 shadow-[var(--shadow-tiny)]">
-            <div className={`w-2 h-2 rounded-full shadow-sm transition-colors duration-300 ${headerDotClass}`} title={headerConnectionText} />
+            <div
+              className={`w-2 h-2 rounded-full shadow-sm transition-colors duration-300 ${headerDotClass} ${headerConnectionState !== 'connected' ? 'animate-pulse' : ''}`}
+              title={headerConnectionText}
+            />
             {headerConnectionState !== 'connected' && (
-              <span className="shell-text-compact font-medium text-gray-600 dark:text-dark-text-secondary">{headerConnectionText}</span>
+              <span className={`shell-text-compact font-medium transition-colors duration-300 ${
+                headerConnectionState === 'disconnected' ? 'text-danger-600 dark:text-danger-400' :
+                'text-amber-600 dark:text-amber-400'
+              }`}>{headerConnectionText}</span>
             )}
             {headerConnectionState !== 'connected' && (
               <button
                 type="button"
                 onClick={onOpenDiagnostics}
-                className="shell-text-compact rounded-lg border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
+                className="shell-text-compact rounded-lg border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 transition-all hover:bg-amber-100 active:scale-95 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
                 aria-label={t.settingsCheckConnection}
                 title={t.settingsCheckConnection}
               >

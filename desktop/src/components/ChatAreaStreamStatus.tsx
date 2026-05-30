@@ -40,6 +40,12 @@ const STATUS_CLASS = {
   info: 'text-primary-700 bg-primary-50 border-primary-100 dark:bg-primary-900/20 dark:text-primary-300 dark:border-primary-500/20',
 }
 
+const STATUS_DOT = {
+  success: 'bg-success-400',
+  error: 'bg-danger-400 animate-pulse',
+  info: 'bg-primary-400 animate-pulse',
+}
+
 export const ChatAreaStreamStatus = React.memo(function ChatAreaStreamStatus({
   recoverStatus,
   recoverableCheckpointId,
@@ -54,12 +60,15 @@ export const ChatAreaStreamStatus = React.memo(function ChatAreaStreamStatus({
   uploadStatus,
 }: ChatAreaStreamStatusProps) {
   return (
-    <div className="space-y-1.5 mb-1.5 animate-fade-in">
+    <div className="space-y-1.5 mb-1.5">
       {recoverStatus && (
-        <div className={`px-3 py-2 text-xs rounded-lg border ${STATUS_CLASS[recoverStatus.type]}`}>
+        <div className={`px-3 py-2 text-xs rounded-lg border animate-fade-in ${STATUS_CLASS[recoverStatus.type]}`}>
           <div className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
-              <span className="font-medium leading-relaxed">{recoverStatus.message}</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[recoverStatus.type]}`} />
+                <span className="font-medium leading-relaxed">{recoverStatus.message}</span>
+              </div>
               {onDismissStatus && (
                 <button
                   onClick={onDismissStatus}
@@ -112,9 +121,12 @@ export const ChatAreaStreamStatus = React.memo(function ChatAreaStreamStatus({
       )}
 
       {uploadStatus && (
-        <div className={`px-3 py-2 text-xs rounded-lg border ${STATUS_CLASS[uploadStatus.type]}`}>
+        <div className={`px-3 py-2 text-xs rounded-lg border animate-fade-in ${STATUS_CLASS[uploadStatus.type]}`}>
           <div className="flex items-center justify-between gap-3">
-            <span className="font-medium">{uploadStatus.message}</span>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[uploadStatus.type]}`} />
+              <span className="font-medium">{uploadStatus.message}</span>
+            </div>
             <div className="flex items-center gap-2">
               <div className="w-16 h-1 bg-gray-200/50 dark:bg-black/20 rounded-full overflow-hidden">
                 <div

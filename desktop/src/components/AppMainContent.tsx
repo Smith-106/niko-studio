@@ -11,6 +11,7 @@ interface AppMainContentProps {
   headerProps: ComponentProps<typeof AppHeader>
   restoreStatus: ComponentProps<typeof AppRestoreStatusBanner>['restoreStatus']
   contextEstimatedText: string
+  contextPercent?: number
   onOpenWritingHelper: () => void
   onOpenSettings?: () => void
   onOpenCharacterPanel?: () => void
@@ -21,6 +22,7 @@ export function AppMainContent({
   headerProps,
   restoreStatus,
   contextEstimatedText,
+  contextPercent,
   onOpenWritingHelper,
   onOpenSettings,
   onOpenCharacterPanel,
@@ -55,7 +57,7 @@ export function AppMainContent({
 
       <DocumentEditor onOpenWritingHelper={onOpenWritingHelper} onOpenSettings={onOpenSettings} onOpenCharacterPanel={onOpenCharacterPanel} onOpenTemplateBrowser={onOpenTemplateBrowser} />
 
-      <AppContextFooter contextEstimatedText={contextEstimatedText} />
+      <AppContextFooter contextEstimatedText={contextEstimatedText} contextPercent={contextPercent} />
     </main>
   )
 }

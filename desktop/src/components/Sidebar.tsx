@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain, Activity, Check } from 'lucide-react'
+import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain, Activity, Check, Cable } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
 import { useConversationList, useCurrentConversationId, useCreateConversation, useSelectConversation } from '../stores/selectors'
@@ -23,6 +23,7 @@ interface SidebarProps {
   onOpenEvaluationDrillDown: () => void
   onOpenCharacterRelationships: () => void
   onOpenNarrativeVisualization: () => void
+  onOpenMcpStatus: () => void
   activeRightPanel?: string
 }
 
@@ -46,35 +47,35 @@ function getActiveStep(activePanel: string | undefined): FlowStep | null {
 function FlowStepBadge({ step, isActive, isCompleted }: { step: number; isActive: boolean; isCompleted: boolean }) {
   if (isCompleted) {
     return (
-      <span className="w-5 h-5 rounded-md bg-primary-600 text-white flex items-center justify-center shrink-0 shadow-[0_1px_3px_rgba(72,8,209,0.3)]">
+      <span className="w-5 h-5 rounded-full bg-primary-600 text-white flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(99,102,241,0.25)] transition-all duration-300">
         <Check size={12} strokeWidth={3} />
       </span>
     )
   }
   if (isActive) {
     return (
-      <span className="w-5 h-5 rounded-md bg-primary-600/30 text-primary-300 flex items-center justify-center text-[10px] font-bold shrink-0 ring-1 ring-primary-500/50 shadow-[0_0_8px_rgba(99,102,241,0.15)]">
+      <span className="w-5 h-5 rounded-full bg-primary-600/25 text-primary-300 flex items-center justify-center text-[10px] font-bold shrink-0 ring-2 ring-primary-500/50 shadow-[0_0_12px_rgba(99,102,241,0.2)] transition-all duration-300 animate-[pulse-ring_2s_ease-in-out_infinite]">
         {step}
       </span>
     )
   }
   return (
-    <span className="w-5 h-5 rounded-md bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold shrink-0">
+    <span className="w-5 h-5 rounded-full bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300">
       {step}
     </span>
   )
 }
 
-function FlowConnector({ completed }: { completed: boolean }) {
+function FlowConnector({ completed, active }: { completed: boolean; active?: boolean }) {
   return (
     <div className="flex items-center justify-center py-0.5">
-      <div className={`w-px h-3 rounded-full transition-colors duration-300 ${completed ? 'bg-primary-500/60' : 'bg-dark-border'}`} />
+      <div className={`w-0.5 h-4 rounded-full transition-all duration-500 ${active ? 'bg-gradient-to-b from-primary-500/60 to-primary-500/20 shadow-[0_0_6px_rgba(99,102,241,0.15)]' : completed ? 'bg-primary-500/50' : 'bg-dark-border'}`} />
     </div>
   )
 }
 
-const sidebarBtnClass = (collapsed: boolean) =>
-  `w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`
+const sidebarBtnClass = (collapsed: boolean, highlight?: boolean) =>
+  `w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''} ${highlight ? 'border-l-2 border-primary-500/40 pl-2.5' : ''}`
 
 export const Sidebar = React.memo(function Sidebar({
   collapsed,
@@ -91,6 +92,7 @@ export const Sidebar = React.memo(function Sidebar({
   onOpenEvaluationDrillDown,
   onOpenCharacterRelationships,
   onOpenNarrativeVisualization,
+  onOpenMcpStatus,
   activeRightPanel,
 }: SidebarProps) {
   const conversations = useConversationList()
@@ -331,6 +333,16 @@ export const Sidebar = React.memo(function Sidebar({
           {!collapsed && <span className="text-sm font-medium">{t.knowledgeBase}</span>}
         </button>
         <button
+          onClick={onOpenMcpStatus}
+          className={`${sidebarBtnClass(collapsed)} ${activeRightPanel === 'mcpStatus' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`}
+          aria-label="MCP"
+          title="MCP"
+          type="button"
+        >
+          <Cable size={18} />
+          {!collapsed && <span className="text-sm font-medium">MCP</span>}
+        </button>
+        <button
           onClick={onOpenSettings}
           className={sidebarBtnClass(collapsed)}
           aria-label={t.settings}
@@ -345,7 +357,12 @@ export const Sidebar = React.memo(function Sidebar({
       {/* Writer Intelligence — 流程引导式设计 */}
       {!collapsed && (
         <div className="px-3 pt-2 pb-1">
-          <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2">{t.sidebarWriterIntelligence}</div>
+          <div className="flex items-center justify-between px-2 py-2">
+            <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted">{t.sidebarWriterIntelligence}</div>
+            {activeStep && (
+              <span className="shell-text-label text-primary-400/70 font-semibold">{activeStep}/4</span>
+            )}
+          </div>
         </div>
       )}
       <div className="border-t border-dark-border shrink-0 overflow-y-auto custom-scrollbar">
@@ -359,17 +376,17 @@ export const Sidebar = React.memo(function Sidebar({
           </div>
         )}
         <div className="px-3 space-y-0.5">
-          <button onClick={onOpenAnalysis} className={`${sidebarBtnClass(collapsed)} ${activeStep === 1 && activeRightPanel === 'analysis' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarAnalysis} type="button">
+          <button onClick={onOpenAnalysis} className={`${sidebarBtnClass(collapsed, activeStep === 1)} ${activeStep === 1 && activeRightPanel === 'analysis' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarAnalysis} type="button">
             <Brain size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarAnalysis}</span>}
           </button>
-          <button onClick={onOpenEvaluation} className={`${sidebarBtnClass(collapsed)} ${activeStep === 1 && activeRightPanel === 'evaluation' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationPanel} type="button">
+          <button onClick={onOpenEvaluation} className={`${sidebarBtnClass(collapsed, activeStep === 1)} ${activeStep === 1 && activeRightPanel === 'evaluation' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationPanel} type="button">
             <BarChart3 size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationPanel}</span>}
           </button>
         </div>
 
-        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 1} />}
+        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 1} active={activeStep === 1} />}
 
         {/* Step 2: 评估与修订 */}
         {!collapsed && (
@@ -381,17 +398,17 @@ export const Sidebar = React.memo(function Sidebar({
           </div>
         )}
         <div className="px-3 space-y-0.5">
-          <button onClick={onOpenEvaluationDrillDown} className={`${sidebarBtnClass(collapsed)} ${activeStep === 2 && activeRightPanel === 'evaluationDrillDown' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationDrillDown} type="button">
+          <button onClick={onOpenEvaluationDrillDown} className={`${sidebarBtnClass(collapsed, activeStep === 2)} ${activeStep === 2 && activeRightPanel === 'evaluationDrillDown' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationDrillDown} type="button">
             <Scaling size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationDrillDown}</span>}
           </button>
-          <button onClick={onOpenPatternDashboard} className={`${sidebarBtnClass(collapsed)} ${activeStep === 2 && activeRightPanel === 'patternDashboard' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarPatternDashboard} type="button">
+          <button onClick={onOpenPatternDashboard} className={`${sidebarBtnClass(collapsed, activeStep === 2)} ${activeStep === 2 && activeRightPanel === 'patternDashboard' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarPatternDashboard} type="button">
             <LayoutGrid size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarPatternDashboard}</span>}
           </button>
         </div>
 
-        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 2} />}
+        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 2} active={activeStep === 2} />}
 
         {/* Step 3: 修订与追踪 */}
         {!collapsed && (
@@ -403,17 +420,17 @@ export const Sidebar = React.memo(function Sidebar({
           </div>
         )}
         <div className="px-3 space-y-0.5">
-          <button onClick={onOpenForeshadowingTracker} className={`${sidebarBtnClass(collapsed)} ${activeStep === 3 && activeRightPanel === 'foreshadowingTracker' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarForeshadowingTracker} type="button">
+          <button onClick={onOpenForeshadowingTracker} className={`${sidebarBtnClass(collapsed, activeStep === 3)} ${activeStep === 3 && activeRightPanel === 'foreshadowingTracker' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarForeshadowingTracker} type="button">
             <Eye size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarForeshadowingTracker}</span>}
           </button>
-          <button onClick={onOpenCharacterRelationships} className={`${sidebarBtnClass(collapsed)} ${activeStep === 3 && activeRightPanel === 'characterRelationships' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarCharacterRelationships} type="button">
+          <button onClick={onOpenCharacterRelationships} className={`${sidebarBtnClass(collapsed, activeStep === 3)} ${activeStep === 3 && activeRightPanel === 'characterRelationships' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarCharacterRelationships} type="button">
             <Users size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarCharacterRelationships}</span>}
           </button>
         </div>
 
-        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 3} />}
+        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 3} active={activeStep === 3} />}
 
         {/* Step 4: 叙事追踪 */}
         {!collapsed && (
@@ -425,11 +442,11 @@ export const Sidebar = React.memo(function Sidebar({
           </div>
         )}
         <div className="px-3 pb-3 space-y-0.5">
-          <button onClick={onOpenNarrativeVisualization} className={`${sidebarBtnClass(collapsed)} ${activeStep === 4 && activeRightPanel === 'narrativeVisualization' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarNarrativeVisualization} type="button">
+          <button onClick={onOpenNarrativeVisualization} className={`${sidebarBtnClass(collapsed, activeStep === 4)} ${activeStep === 4 && activeRightPanel === 'narrativeVisualization' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarNarrativeVisualization} type="button">
             <Activity size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarNarrativeVisualization}</span>}
           </button>
-          <button onClick={onOpenSessionAnalytics} className={`${sidebarBtnClass(collapsed)} ${activeStep === 4 && activeRightPanel === 'sessionAnalytics' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarSessionAnalytics} type="button">
+          <button onClick={onOpenSessionAnalytics} className={`${sidebarBtnClass(collapsed, activeStep === 4)} ${activeStep === 4 && activeRightPanel === 'sessionAnalytics' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarSessionAnalytics} type="button">
             <PieChart size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarSessionAnalytics}</span>}
           </button>

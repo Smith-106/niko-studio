@@ -100,6 +100,7 @@ export function useAppShellViewModel({
     onOpenEvaluationDrillDown: () => panelOrchestration.toggleRightPanel('evaluationDrillDown'),
     onOpenCharacterRelationships: () => panelOrchestration.toggleRightPanel('characterRelationships'),
     onOpenNarrativeVisualization: () => panelOrchestration.toggleRightPanel('narrativeVisualization'),
+    onOpenMcpStatus: () => panelOrchestration.toggleRightPanel('mcpStatus'),
     activeRightPanel: uiPersistence.activeRightPanel,
   }
 
@@ -168,6 +169,7 @@ export function useAppShellViewModel({
     contextEstimatedText: headerViewModel.contextUsageText
       ? `${t.contextEstimated} · ${headerViewModel.contextUsageText}`
       : '',
+    contextPercent: headerViewModel.contextUsageVisible ? headerViewModel.contextUsageWidthPercent : undefined,
     onOpenWritingHelper: () => openWritingHelperFreshStart('polish'),
     onOpenSettings: panelOrchestration.openSettings,
     onOpenCharacterPanel: () => panelOrchestration.toggleRightPanel('knowledge'),

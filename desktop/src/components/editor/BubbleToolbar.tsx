@@ -92,7 +92,7 @@ export function BubbleToolbar({ editor, position, onRewrite, onContinue, onClose
         </ToolbarButton>
 
         {showRewriteMenu && (
-          <div className="absolute left-0 top-full mt-1 w-44 rounded-lg bg-gray-900 dark:bg-dark-surface shadow-2xl border border-gray-700 dark:border-dark-border py-1 z-10">
+          <div className="absolute left-0 top-full mt-1 w-44 rounded-lg bg-gray-900 dark:bg-dark-surface shadow-2xl border border-gray-700 dark:border-dark-border py-1 z-10 animate-fade-in">
             {rewriteOptions.map((opt) => (
               <button
                 key={opt.id}

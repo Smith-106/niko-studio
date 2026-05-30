@@ -15,6 +15,13 @@ interface ChatAreaInlineActionsProps {
   onClear: () => void
 }
 
+const actionBtnClass = (active: boolean) =>
+  `px-2.5 py-1.5 text-xs rounded-lg transition-all duration-200 active:scale-95 ${
+    active
+      ? 'bg-primary-600/20 text-primary-300 ring-1 ring-primary-500/30 shadow-sm'
+      : 'bg-dark-surface2 text-dark-text-secondary hover:bg-dark-surface hover:text-dark-text'
+  }`
+
 export const ChatAreaInlineActions = React.memo(function ChatAreaInlineActionsComponent({
   selectedText,
   inlineAction,
@@ -30,12 +37,12 @@ export const ChatAreaInlineActions = React.memo(function ChatAreaInlineActionsCo
   onClear,
 }: ChatAreaInlineActionsProps) {
   return (
-    <div className="mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-2">
-      <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{selectedTextInfo}</div>
+    <div className="mb-3 rounded-lg border border-dark-border bg-dark-surface p-2.5 animate-fade-in">
+      <div className="text-xs text-dark-text-secondary mb-2">{selectedTextInfo}</div>
       <div className="flex items-center gap-2">
         <button
           onClick={() => onSelectAction('continue')}
-          className={`px-2 py-1 text-xs rounded ${inlineAction === 'continue' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'}`}
+          className={actionBtnClass(inlineAction === 'continue')}
           type="button"
         >
           {continueLabel}
@@ -43,14 +50,14 @@ export const ChatAreaInlineActions = React.memo(function ChatAreaInlineActionsCo
         <button
           onClick={() => onSelectAction('revise')}
           disabled={!selectedText}
-          className={`px-2 py-1 text-xs rounded ${inlineAction === 'revise' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'} disabled:opacity-50`}
+          className={`${actionBtnClass(inlineAction === 'revise')} disabled:opacity-50 disabled:cursor-not-allowed`}
           type="button"
         >
           {reviseLabel}
         </button>
         <button
           onClick={() => onSelectAction('generate')}
-          className={`px-2 py-1 text-xs rounded ${inlineAction === 'generate' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'}`}
+          className={actionBtnClass(inlineAction === 'generate')}
           type="button"
         >
           {generateLabel}
@@ -58,14 +65,14 @@ export const ChatAreaInlineActions = React.memo(function ChatAreaInlineActionsCo
         <button
           onClick={onRun}
           disabled={runDisabled}
-          className="px-2 py-1 text-xs rounded bg-emerald-600 text-white disabled:opacity-50"
+          className="px-2.5 py-1.5 text-xs rounded-lg bg-primary-600 text-white transition-all duration-200 active:scale-95 hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
           type="button"
         >
           {runLabel}
         </button>
         <button
           onClick={onClear}
-          className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text"
+          className="px-2.5 py-1.5 text-xs rounded-lg bg-dark-surface2 text-dark-text-secondary hover:bg-dark-surface hover:text-dark-text transition-all duration-200"
           type="button"
         >
           {clearSelectionLabel}

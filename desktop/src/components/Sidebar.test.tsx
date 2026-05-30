@@ -75,6 +75,7 @@ const defaultSidebarProps = {
   onOpenEvaluationDrillDown: vi.fn(),
   onOpenCharacterRelationships: vi.fn(),
   onOpenNarrativeVisualization: vi.fn(),
+  onOpenMcpStatus: vi.fn(),
 }
 
 describe('Sidebar', () => {
