@@ -79,7 +79,6 @@ function createOptions() {
       headerConnectionText: 'Some actions may need retry',
       contextUsageVisible: false,
       contextUsageText: '0.0k/128k',
-      contextUsageBarClass: 'bg-primary-500',
       contextUsageWidthPercent: 0,
     },
     checkpointMenu,

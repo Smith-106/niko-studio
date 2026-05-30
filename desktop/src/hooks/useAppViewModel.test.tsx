@@ -166,7 +166,6 @@ describe('useAppViewModel', () => {
       headerConnectionText: 'Some actions may need retry',
       contextUsageVisible: false,
       contextUsageText: '',
-      contextUsageBarClass: 'bg-primary-500',
       contextUsageWidthPercent: 0,
     }
     const shellViewModel = {

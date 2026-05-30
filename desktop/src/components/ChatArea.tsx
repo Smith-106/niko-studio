@@ -964,6 +964,7 @@ export function ChatArea({
             quickRollbackMissingRequired={t.quickRollbackMissingRequired}
             quickRollbackFailed={t.quickRollbackFailed}
             quickRollbackSuccess={t.quickRollbackSuccess}
+            autoExpand={streamPhase === 'error' || streamPhase === 'interrupted'}
           />
           {selectionMeta && (
             <ChatAreaInlineActions

@@ -31,10 +31,24 @@ interface ChatAreaModeControlsProps {
   onToggleSkill?: (skillId: string) => void
 }
 
+const MODE_VISUAL: Record<'chat-write' | 'chat-comparison' | 'agent-write' | 'agent-revise' | 'agent-context', { dotColor: string; labelKey: string }> = {
+  'chat-write': { dotColor: 'bg-primary-500', labelKey: 'normal' },
+  'chat-comparison': { dotColor: 'bg-amber-500', labelKey: 'comparison' },
+  'agent-write': { dotColor: 'bg-green-500', labelKey: 'write' },
+  'agent-revise': { dotColor: 'bg-cyan-500', labelKey: 'revise' },
+  'agent-context': { dotColor: 'bg-violet-500', labelKey: 'context' },
+}
+
+function getModeKey(chatMode: 'chat' | 'agent', enableModelComparison: boolean, agentAction: 'write' | 'revise' | 'context'): keyof typeof MODE_VISUAL {
+  if (enableModelComparison) return 'chat-comparison'
+  if (chatMode === 'agent') return `agent-${agentAction}`
+  return 'chat-write'
+}
+
 export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   modeLabel: _modeLabel,
   modePresetsLabel: _modePresetsLabel,
-  selectedSkillsLabel: _selectedSkillsLabel,
+  selectedSkillsLabel,
   availableSkillIds,
   selectedSkillIds,
   skillPacksLabel,
@@ -61,6 +75,8 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
       ? chatAgentActionReviseLabel
       : chatAgentActionContextLabel
 
+  const modeKey = getModeKey(chatMode, enableModelComparison, agentAction)
+  const modeVisual = MODE_VISUAL[modeKey]
   const activeModeSummary = enableModelComparison
     ? chatModeComparisonLabel
     : chatMode === 'agent'
@@ -71,18 +87,24 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   const activeSkillCount = selectedSkillIds?.length ?? 0
 
   return (
-    <div className="mb-2 rounded-lg border border-gray-200 bg-white/80 dark:border-dark-border dark:bg-dark-surface/80 backdrop-blur-sm">
-      {/* Mode badge + Presets — single-row compact */}
+    <div className="mb-2 rounded-xl border border-gray-200 bg-white/80 dark:border-dark-border dark:bg-dark-surface/80 backdrop-blur-sm shadow-[var(--shadow-tiny)]">
+      {/* Mode indicator + Presets — streamlined single row */}
       <div className="flex items-center gap-2 px-3 py-2">
-        <span className="inline-flex items-center rounded-md bg-primary-50 dark:bg-primary-900/20 px-2 py-1 text-[11px] font-semibold text-primary-700 dark:text-primary-300 ring-1 ring-primary-100 dark:ring-primary-500/20">
+        <span className="inline-flex items-center gap-1.5 rounded-lg bg-white dark:bg-dark-bg px-2.5 py-1.5 text-[12px] font-semibold text-gray-800 dark:text-dark-text ring-1 ring-gray-200/80 dark:ring-dark-border shadow-[var(--shadow-tiny)]">
+          <span className={`w-2 h-2 rounded-full ${modeVisual.dotColor} shadow-sm`} />
           {activeModeSummary}
+          {selectedSkillsLabel && (
+            <span className="ml-1 text-[10px] font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-1.5 py-0.5 rounded-md">
+              {selectedSkillsLabel}
+            </span>
+          )}
         </span>
         {modePresets.map((preset) => (
           <button
             key={preset.id}
             type="button"
             onClick={() => onApplyPreset(preset.id)}
-            className="px-2 py-1 text-[11px] font-medium rounded-md transition-all active:scale-95 bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text-secondary ring-1 ring-gray-200/80 dark:ring-dark-border/80"
+            className="px-2.5 py-1.5 text-[11px] font-medium rounded-lg transition-all active:scale-95 bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text-secondary ring-1 ring-gray-200/80 dark:ring-dark-border/80 shadow-[var(--shadow-tiny)]"
           >
             {preset.label}
           </button>
@@ -91,14 +113,14 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
           onClick={onOpenTemplateLibrary}
           aria-label={templateLibraryEntryLabel}
           title={templateLibraryEntryLabel}
-          className="px-2 py-1 text-[11px] font-medium rounded-md transition-all active:scale-95 bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text-secondary ring-1 ring-gray-200/80 dark:ring-dark-border/80"
+          className="px-2.5 py-1.5 text-[11px] font-medium rounded-lg transition-all active:scale-95 bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text-secondary ring-1 ring-gray-200/80 dark:ring-dark-border/80 shadow-[var(--shadow-tiny)]"
           type="button"
         >
           {templateLibraryEntryLabel}
         </button>
       </div>
 
-      {/* Skills — collapsible */}
+      {/* Skills — collapsible with improved visual */}
       {hasSkills && (
         <div className="border-t border-gray-100 dark:border-dark-border/50">
           <button
@@ -110,7 +132,7 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
             <Sparkles size={12} />
             <span>{skillPacksLabel}</span>
             {activeSkillCount > 0 && (
-              <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-[10px] font-bold w-4 h-4 leading-none">
+              <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-[10px] font-bold w-4 h-4 leading-none shadow-sm">
                 {activeSkillCount}
               </span>
             )}
@@ -125,9 +147,9 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
                     type="button"
                     onClick={() => onToggleSkill(skillId)}
                     aria-pressed={selected}
-                    className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all active:scale-95 ${
+                    className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all active:scale-95 ${
                       selected
-                        ? 'bg-primary-600 text-white ring-1 ring-primary-600'
+                        ? 'bg-primary-600 text-white ring-1 ring-primary-600 shadow-sm'
                         : 'bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text-secondary ring-1 ring-gray-200/80 dark:ring-dark-border/80'
                     }`}
                   >

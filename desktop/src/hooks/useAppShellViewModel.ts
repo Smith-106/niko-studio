@@ -51,7 +51,6 @@ interface UseAppShellViewModelOptions {
     headerConnectionText: string
     contextUsageVisible: boolean
     contextUsageText: string
-    contextUsageBarClass: string
     contextUsageWidthPercent: number
   }
   checkpointMenu: {
@@ -101,6 +100,7 @@ export function useAppShellViewModel({
     onOpenEvaluationDrillDown: () => panelOrchestration.toggleRightPanel('evaluationDrillDown'),
     onOpenCharacterRelationships: () => panelOrchestration.toggleRightPanel('characterRelationships'),
     onOpenNarrativeVisualization: () => panelOrchestration.toggleRightPanel('narrativeVisualization'),
+    activeRightPanel: uiPersistence.activeRightPanel,
   }
 
   const appRightPanelsProps: ComponentProps<typeof AppRightPanels> = {
@@ -135,10 +135,8 @@ export function useAppShellViewModel({
   const appMainContentProps: ComponentProps<typeof AppMainContent> = {
     headerProps: {
       appTitle: t.appTitle,
-      contextUsageLabel: t.contextUsage,
       contextUsageVisible: headerViewModel.contextUsageVisible,
       contextUsageText: headerViewModel.contextUsageText,
-      contextUsageBarClass: headerViewModel.contextUsageBarClass,
       contextUsageWidthPercent: headerViewModel.contextUsageWidthPercent,
       headerConnectionState: headerViewModel.headerConnectionState ?? 'connected',
       headerDotClass: headerViewModel.headerDotClass,

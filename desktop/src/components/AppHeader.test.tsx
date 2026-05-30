@@ -29,10 +29,8 @@ describe('AppHeader checkpoint disclosure', () => {
     render(
       <AppHeader
         appTitle="Niko Studio"
-        contextUsageLabel="Context"
         contextUsageVisible
         contextUsageText="42%"
-        contextUsageBarClass="bg-primary-500"
         contextUsageWidthPercent={42}
         headerConnectionState="connected"
         headerDotClass="bg-green-500"
@@ -95,10 +93,8 @@ describe('AppHeader checkpoint disclosure', () => {
           </button>
           <AppHeader
             appTitle="Niko Studio"
-            contextUsageLabel="Context"
             contextUsageVisible
             contextUsageText="42%"
-            contextUsageBarClass="bg-primary-500"
             contextUsageWidthPercent={42}
             headerConnectionState="connected"
             headerDotClass="bg-green-500"
@@ -164,10 +160,8 @@ describe('AppHeader checkpoint disclosure', () => {
           <button type="button">Before</button>
           <AppHeader
             appTitle="Niko Studio"
-            contextUsageLabel="Context"
             contextUsageVisible
             contextUsageText="42%"
-            contextUsageBarClass="bg-primary-500"
             contextUsageWidthPercent={42}
             headerConnectionState="connected"
             headerDotClass="bg-green-500"
@@ -233,10 +227,8 @@ describe('AppHeader checkpoint disclosure', () => {
     render(
       <AppHeader
         appTitle="Niko Studio"
-        contextUsageLabel="Context"
         contextUsageVisible
         contextUsageText="42%"
-        contextUsageBarClass="bg-primary-500"
         contextUsageWidthPercent={42}
         headerConnectionState="degraded"
         headerDotClass="bg-amber-500"
@@ -276,10 +268,8 @@ describe('AppHeader checkpoint disclosure', () => {
     render(
       <AppHeader
         appTitle="Niko Studio"
-        contextUsageLabel="Context"
         contextUsageVisible={false}
         contextUsageText="0.0k/128k"
-        contextUsageBarClass="bg-primary-500"
         contextUsageWidthPercent={0}
         headerConnectionState="connected"
         headerDotClass="bg-green-500"

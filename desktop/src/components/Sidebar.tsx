@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain, Activity } from 'lucide-react'
+import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain, Activity, Check } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
 import { useConversationList, useCurrentConversationId, useCreateConversation, useSelectConversation } from '../stores/selectors'
@@ -23,7 +23,58 @@ interface SidebarProps {
   onOpenEvaluationDrillDown: () => void
   onOpenCharacterRelationships: () => void
   onOpenNarrativeVisualization: () => void
+  activeRightPanel?: string
 }
+
+type FlowStep = 1 | 2 | 3 | 4
+
+const STEP_TO_PANELS: Record<FlowStep, string[]> = {
+  1: ['analysis', 'evaluation'],
+  2: ['evaluationDrillDown', 'patternDashboard'],
+  3: ['foreshadowingTracker', 'characterRelationships'],
+  4: ['narrativeVisualization', 'sessionAnalytics'],
+}
+
+function getActiveStep(activePanel: string | undefined): FlowStep | null {
+  if (!activePanel || activePanel === 'none') return null
+  for (const [step, panels] of Object.entries(STEP_TO_PANELS)) {
+    if (panels.includes(activePanel)) return Number(step) as FlowStep
+  }
+  return null
+}
+
+function FlowStepBadge({ step, isActive, isCompleted }: { step: number; isActive: boolean; isCompleted: boolean }) {
+  if (isCompleted) {
+    return (
+      <span className="w-5 h-5 rounded-md bg-primary-600 text-white flex items-center justify-center shrink-0 shadow-[0_1px_3px_rgba(72,8,209,0.3)]">
+        <Check size={12} strokeWidth={3} />
+      </span>
+    )
+  }
+  if (isActive) {
+    return (
+      <span className="w-5 h-5 rounded-md bg-primary-600/30 text-primary-300 flex items-center justify-center text-[10px] font-bold shrink-0 ring-1 ring-primary-500/50 shadow-[0_0_8px_rgba(99,102,241,0.15)]">
+        {step}
+      </span>
+    )
+  }
+  return (
+    <span className="w-5 h-5 rounded-md bg-dark-surface2 text-dark-text-muted flex items-center justify-center text-[10px] font-bold shrink-0">
+      {step}
+    </span>
+  )
+}
+
+function FlowConnector({ completed }: { completed: boolean }) {
+  return (
+    <div className="flex items-center justify-center py-0.5">
+      <div className={`w-px h-3 rounded-full transition-colors duration-300 ${completed ? 'bg-primary-500/60' : 'bg-dark-border'}`} />
+    </div>
+  )
+}
+
+const sidebarBtnClass = (collapsed: boolean) =>
+  `w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`
 
 export const Sidebar = React.memo(function Sidebar({
   collapsed,
@@ -40,6 +91,7 @@ export const Sidebar = React.memo(function Sidebar({
   onOpenEvaluationDrillDown,
   onOpenCharacterRelationships,
   onOpenNarrativeVisualization,
+  activeRightPanel,
 }: SidebarProps) {
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
@@ -54,6 +106,8 @@ export const Sidebar = React.memo(function Sidebar({
   const writerChapterLabel = translate('writerChapterLabel')
   const writerStoryBibleMetaLabel = translate('writerStoryBibleMetaLabel')
   const writerWorkspaceLabel = translate('writerWorkspaceLabel')
+
+  const activeStep = getActiveStep(activeRightPanel)
 
   const handleContinueWriting = () => {
     onContinueWriting()
@@ -71,7 +125,6 @@ export const Sidebar = React.memo(function Sidebar({
     direction: 'rtl',
   })
 
-  // 对话数量超过阈值时启用虚拟滚动，减少 DOM 节点开销
   const VIRTUAL_THRESHOLD = 50
   const convListRef = useRef<HTMLDivElement>(null)
   const shouldVirtualize = conversations.length > VIRTUAL_THRESHOLD
@@ -259,7 +312,7 @@ export const Sidebar = React.memo(function Sidebar({
       <div className="border-t border-dark-border p-3 space-y-0.5 shrink-0">
         <button
           onClick={onOpenPrompts}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`}
+          className={sidebarBtnClass(collapsed)}
           aria-label={t.templateLibraryEntry}
           title={t.templateLibraryEntry}
           type="button"
@@ -269,7 +322,7 @@ export const Sidebar = React.memo(function Sidebar({
         </button>
         <button
           onClick={onOpenKnowledge}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`}
+          className={sidebarBtnClass(collapsed)}
           aria-label={t.knowledgeBase}
           title={t.knowledgeBase}
           type="button"
@@ -279,7 +332,7 @@ export const Sidebar = React.memo(function Sidebar({
         </button>
         <button
           onClick={onOpenSettings}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`}
+          className={sidebarBtnClass(collapsed)}
           aria-label={t.settings}
           title={t.settings}
           type="button"
@@ -289,66 +342,94 @@ export const Sidebar = React.memo(function Sidebar({
         </button>
       </div>
 
+      {/* Writer Intelligence — 流程引导式设计 */}
       {!collapsed && (
         <div className="px-3 pt-2 pb-1">
           <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2">{t.sidebarWriterIntelligence}</div>
         </div>
       )}
-      <div className="border-t border-dark-border shrink-0">
-        {/* 分析 */}
+      <div className="border-t border-dark-border shrink-0 overflow-y-auto custom-scrollbar">
+        {/* Step 1: 写作与评估 */}
         {!collapsed && (
           <div className="px-4 pt-3 pb-0.5">
-            <span className="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60">{t.sidebarGroupAnalysis}</span>
+            <div className="flex items-center gap-1.5">
+              <FlowStepBadge step={1} isActive={activeStep === 1} isCompleted={activeStep !== null && activeStep > 1} />
+              <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 1 ? 'text-primary-300' : activeStep !== null && activeStep > 1 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowWrite}</span>
+            </div>
           </div>
         )}
         <div className="px-3 space-y-0.5">
-          <button onClick={onOpenAnalysis} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={collapsed ? t.sidebarAnalysis : t.sidebarAnalysis} type="button">
+          <button onClick={onOpenAnalysis} className={`${sidebarBtnClass(collapsed)} ${activeStep === 1 && activeRightPanel === 'analysis' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarAnalysis} type="button">
             <Brain size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarAnalysis}</span>}
           </button>
-          <button onClick={onOpenEvaluationDrillDown} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={collapsed ? t.sidebarEvaluationDrillDown : t.sidebarEvaluationDrillDown} type="button">
-            <Scaling size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationDrillDown}</span>}
-          </button>
-          <button onClick={onOpenEvaluation} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={collapsed ? t.sidebarEvaluationPanel : t.sidebarEvaluationPanel} type="button">
+          <button onClick={onOpenEvaluation} className={`${sidebarBtnClass(collapsed)} ${activeStep === 1 && activeRightPanel === 'evaluation' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationPanel} type="button">
             <BarChart3 size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationPanel}</span>}
           </button>
         </div>
 
-        {/* 叙事 */}
+        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 1} />}
+
+        {/* Step 2: 评估与修订 */}
         {!collapsed && (
-          <div className="px-4 pt-3 pb-0.5">
-            <span className="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60">{t.sidebarGroupNarrative}</span>
+          <div className="px-4 pt-1 pb-0.5">
+            <div className="flex items-center gap-1.5">
+              <FlowStepBadge step={2} isActive={activeStep === 2} isCompleted={activeStep !== null && activeStep > 2} />
+              <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 2 ? 'text-primary-300' : activeStep !== null && activeStep > 2 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowEvaluate}</span>
+            </div>
           </div>
         )}
         <div className="px-3 space-y-0.5">
-          <button onClick={onOpenForeshadowingTracker} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={collapsed ? t.sidebarForeshadowingTracker : t.sidebarForeshadowingTracker} type="button">
-            <Eye size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarForeshadowingTracker}</span>}
+          <button onClick={onOpenEvaluationDrillDown} className={`${sidebarBtnClass(collapsed)} ${activeStep === 2 && activeRightPanel === 'evaluationDrillDown' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarEvaluationDrillDown} type="button">
+            <Scaling size={18} />
+            {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationDrillDown}</span>}
           </button>
-          <button onClick={onOpenCharacterRelationships} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={collapsed ? t.sidebarCharacterRelationships : t.sidebarCharacterRelationships} type="button">
-            <Users size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarCharacterRelationships}</span>}
-          </button>
-          <button onClick={onOpenNarrativeVisualization} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={collapsed ? t.sidebarNarrativeVisualization : t.sidebarNarrativeVisualization} type="button">
-            <Activity size={18} />
-            {!collapsed && <span className="text-sm font-medium">{t.sidebarNarrativeVisualization}</span>}
-          </button>
-        </div>
-
-        {/* 数据 */}
-        {!collapsed && (
-          <div className="px-4 pt-3 pb-0.5">
-            <span className="shell-text-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-text-muted/60">{t.sidebarGroupData}</span>
-          </div>
-        )}
-        <div className="px-3 pb-3 space-y-0.5">
-          <button onClick={onOpenPatternDashboard} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={collapsed ? t.sidebarPatternDashboard : t.sidebarPatternDashboard} type="button">
+          <button onClick={onOpenPatternDashboard} className={`${sidebarBtnClass(collapsed)} ${activeStep === 2 && activeRightPanel === 'patternDashboard' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarPatternDashboard} type="button">
             <LayoutGrid size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarPatternDashboard}</span>}
           </button>
-          <button onClick={onOpenSessionAnalytics} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={collapsed ? t.sidebarSessionAnalytics : t.sidebarSessionAnalytics} type="button">
+        </div>
+
+        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 2} />}
+
+        {/* Step 3: 修订与追踪 */}
+        {!collapsed && (
+          <div className="px-4 pt-1 pb-0.5">
+            <div className="flex items-center gap-1.5">
+              <FlowStepBadge step={3} isActive={activeStep === 3} isCompleted={activeStep !== null && activeStep > 3} />
+              <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 3 ? 'text-primary-300' : activeStep !== null && activeStep > 3 ? 'text-primary-500/70' : 'text-primary-400/80'}`}>{t.sidebarFlowRevise}</span>
+            </div>
+          </div>
+        )}
+        <div className="px-3 space-y-0.5">
+          <button onClick={onOpenForeshadowingTracker} className={`${sidebarBtnClass(collapsed)} ${activeStep === 3 && activeRightPanel === 'foreshadowingTracker' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarForeshadowingTracker} type="button">
+            <Eye size={18} />
+            {!collapsed && <span className="text-sm font-medium">{t.sidebarForeshadowingTracker}</span>}
+          </button>
+          <button onClick={onOpenCharacterRelationships} className={`${sidebarBtnClass(collapsed)} ${activeStep === 3 && activeRightPanel === 'characterRelationships' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarCharacterRelationships} type="button">
+            <Users size={18} />
+            {!collapsed && <span className="text-sm font-medium">{t.sidebarCharacterRelationships}</span>}
+          </button>
+        </div>
+
+        {!collapsed && <FlowConnector completed={activeStep !== null && activeStep > 3} />}
+
+        {/* Step 4: 叙事追踪 */}
+        {!collapsed && (
+          <div className="px-4 pt-1 pb-0.5">
+            <div className="flex items-center gap-1.5">
+              <FlowStepBadge step={4} isActive={activeStep === 4} isCompleted={false} />
+              <span className={`shell-text-ui text-[11px] font-semibold transition-colors duration-300 ${activeStep === 4 ? 'text-primary-300' : 'text-primary-400/80'}`}>{t.sidebarFlowTrack}</span>
+            </div>
+          </div>
+        )}
+        <div className="px-3 pb-3 space-y-0.5">
+          <button onClick={onOpenNarrativeVisualization} className={`${sidebarBtnClass(collapsed)} ${activeStep === 4 && activeRightPanel === 'narrativeVisualization' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarNarrativeVisualization} type="button">
+            <Activity size={18} />
+            {!collapsed && <span className="text-sm font-medium">{t.sidebarNarrativeVisualization}</span>}
+          </button>
+          <button onClick={onOpenSessionAnalytics} className={`${sidebarBtnClass(collapsed)} ${activeStep === 4 && activeRightPanel === 'sessionAnalytics' ? 'bg-primary-600/10 text-primary-300 ring-1 ring-primary-500/30' : ''}`} title={t.sidebarSessionAnalytics} type="button">
             <PieChart size={18} />
             {!collapsed && <span className="text-sm font-medium">{t.sidebarSessionAnalytics}</span>}
           </button>

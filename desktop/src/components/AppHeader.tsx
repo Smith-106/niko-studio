@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useRef, type MutableRefObject } from 'react'
-import { PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { PanelRightClose, PanelRightOpen, History, Clock } from 'lucide-react'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { useI18n } from '../i18n'
 import { AiToolbar } from './AiToolbar'
@@ -12,10 +12,8 @@ interface CheckpointItem {
 
 interface AppHeaderProps {
   appTitle: string
-  contextUsageLabel: string
   contextUsageVisible: boolean
   contextUsageText: string
-  contextUsageBarClass: string
   contextUsageWidthPercent: number
   headerConnectionState: 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
   headerDotClass: string
@@ -44,12 +42,37 @@ interface AppHeaderProps {
   onOpenTextOptimizer: () => void
 }
 
+function ContextRing({ percent, colorClass }: { percent: number; colorClass: string }) {
+  const radius = 10
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (Math.min(percent, 100) / 100) * circumference
+  const isWarning = percent > 70
+  const isCritical = percent > 90
+
+  return (
+    <div className="relative w-7 h-7 flex items-center justify-center" title={`${percent.toFixed(0)}%`}>
+      <svg className="w-7 h-7 -rotate-90" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r={radius} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-200 dark:text-dark-border" />
+        <circle
+          cx="12" cy="12" r={radius} fill="none"
+          stroke="currentColor" strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className={`transition-all duration-500 ${isCritical ? 'text-red-500' : isWarning ? 'text-amber-500' : colorClass}`}
+        />
+      </svg>
+      <span className={`absolute text-[8px] font-bold ${isCritical ? 'text-red-600 dark:text-red-400' : isWarning ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-dark-text-secondary'}`}>
+        {percent >= 10 ? Math.round(percent) : '<10'}
+      </span>
+    </div>
+  )
+}
+
 export function AppHeader({
   appTitle,
-  contextUsageLabel,
   contextUsageVisible,
   contextUsageText,
-  contextUsageBarClass,
   contextUsageWidthPercent,
   headerConnectionState,
   headerDotClass,
@@ -111,7 +134,7 @@ export function AppHeader({
   })
 
   return (
-    <header className="h-14 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-10 relative">
+    <header className="h-14 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0 z-10 relative">
       <div className="flex items-center gap-3">
         <span className="text-base font-semibold text-gray-800 dark:text-dark-text tracking-wide">{appTitle}</span>
         <AiToolbar
@@ -124,7 +147,7 @@ export function AppHeader({
           onOpenTextOptimizer={onOpenTextOptimizer}
         />
       </div>
-      <div className="flex items-center gap-3 relative">
+      <div className="flex items-center gap-2 relative">
         <button
           onClick={onToggleChatSidebar}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 dark:text-dark-text-secondary transition-colors hover:bg-gray-100 dark:hover:bg-dark-surface hover:text-gray-700 dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
@@ -133,34 +156,31 @@ export function AppHeader({
         >
           {chatSidebarCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
         </button>
-        {headerConnectionState === 'connected' ? (
-          <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} title={headerConnectionText} />
-        ) : (
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-dark-surface2 border border-gray-200 dark:border-dark-border2">
-            <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} />
-            <span className="shell-text-compact font-medium text-gray-600 dark:text-dark-text">{headerConnectionText}</span>
-            <button
-              type="button"
-              onClick={onOpenDiagnostics}
-              className="shell-text-compact rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
-              aria-label={t.settingsCheckConnection}
-              title={t.settingsCheckConnection}
-            >
-              {t.settingsCheckConnection}
-            </button>
-          </div>
-        )}
-        {contextUsageVisible && (
-          <div className="flex items-center gap-2">
-            <span className="shell-text-compact font-medium text-gray-500 dark:text-dark-text-secondary">
-              {contextUsageLabel} <span className="text-gray-700 dark:text-dark-text">{contextUsageText}</span>
-            </span>
-            <div className="w-16 h-1.5 bg-gray-200 dark:bg-dark-border2 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${contextUsageBarClass}`}
-                style={{ width: `${contextUsageWidthPercent}%` }}
-              />
-            </div>
+        {(contextUsageVisible || headerConnectionState !== 'connected') && (
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-gray-50 dark:bg-dark-surface/50 border border-gray-200/60 dark:border-dark-border/60 shadow-[var(--shadow-tiny)]">
+            <div className={`w-2 h-2 rounded-full shadow-sm transition-colors duration-300 ${headerDotClass}`} title={headerConnectionText} />
+            {headerConnectionState !== 'connected' && (
+              <span className="shell-text-compact font-medium text-gray-600 dark:text-dark-text-secondary">{headerConnectionText}</span>
+            )}
+            {headerConnectionState !== 'connected' && (
+              <button
+                type="button"
+                onClick={onOpenDiagnostics}
+                className="shell-text-compact rounded-lg border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
+                aria-label={t.settingsCheckConnection}
+                title={t.settingsCheckConnection}
+              >
+                {t.settingsCheckConnection}
+              </button>
+            )}
+            {contextUsageVisible && (
+              <div className="flex items-center gap-1.5">
+                <ContextRing percent={contextUsageWidthPercent} colorClass="text-primary-500 dark:text-primary-400" />
+                <span className="shell-text-compact font-medium text-gray-500 dark:text-dark-text-secondary hidden sm:inline">
+                  {contextUsageText}
+                </span>
+              </div>
+            )}
           </div>
         )}
         <div className="relative" ref={checkpointMenuContainerRef}>
@@ -168,11 +188,12 @@ export function AppHeader({
             ref={checkpointMenuTriggerRef}
             type="button"
             onClick={onToggleCheckpointMenu}
-            className="shell-text-compact px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border2 text-gray-700 dark:text-dark-text rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all active:scale-[0.98]"
+            className="flex items-center gap-1.5 shell-text-compact px-2.5 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border2 text-gray-700 dark:text-dark-text rounded-lg shadow-[var(--shadow-tiny)] hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all active:scale-[0.98]"
             aria-expanded={checkpointMenuOpen}
             aria-controls={checkpointMenuId}
             aria-haspopup="dialog"
           >
+            <History size={14} />
             {checkpointLabel}
           </button>
 
@@ -184,29 +205,34 @@ export function AppHeader({
               role="dialog"
               aria-modal="false"
               aria-label={checkpointLabel}
-              className="absolute right-0 top-10 w-72 p-2 rounded border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-lg z-20"
+              className="absolute right-0 top-10 w-80 p-2 rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-[var(--shadow-card)] z-20"
             >
+              <div className="flex items-center gap-1.5 px-2 py-1.5 mb-1 border-b border-gray-100 dark:border-dark-border/50">
+                <Clock size={12} className="text-gray-400 dark:text-dark-text-muted" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-dark-text-muted">{checkpointLabel}</span>
+              </div>
               {checkpointsLoading ? (
-                <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2">{loadingCheckpointsLabel}</div>
+                <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2 animate-pulse">{loadingCheckpointsLabel}</div>
               ) : checkpoints.length === 0 ? (
                 <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2">{noCheckpointsLabel}</div>
               ) : (
-                <div className="space-y-2 max-h-56 overflow-y-auto">
+                <div className="space-y-1.5 max-h-64 overflow-y-auto custom-scrollbar py-1">
                   {checkpoints.map((checkpoint, index) => (
-                    <div key={checkpoint.id} className="p-2 border border-gray-200 dark:border-dark-border rounded">
-                      <div className="shell-text-compact text-gray-700 dark:text-dark-text truncate" title={checkpoint.description || checkpoint.id}>
+                    <button
+                      key={checkpoint.id}
+                      ref={index === 0 ? firstRestoreButtonRef : undefined}
+                      type="button"
+                      onClick={() => onRestoreCheckpoint(checkpoint.id)}
+                      className="w-full text-left p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 hover:border-primary-200 dark:hover:border-primary-700/40 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all group"
+                    >
+                      <div className="shell-text-compact text-gray-700 dark:text-dark-text truncate group-hover:text-primary-700 dark:group-hover:text-primary-300 font-medium" title={checkpoint.description || checkpoint.id}>
                         {checkpoint.description || checkpoint.id}
                       </div>
-                      <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary">{checkpoint.created_at}</div>
-                      <button
-                        ref={index === 0 ? firstRestoreButtonRef : undefined}
-                        type="button"
-                        onClick={() => onRestoreCheckpoint(checkpoint.id)}
-                        className="shell-text-compact mt-1 px-2 py-1 bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
-                      >
+                      <div className="shell-text-compact text-gray-400 dark:text-dark-text-muted mt-0.5">{checkpoint.created_at}</div>
+                      <span className="shell-text-compact mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
                         {restoreLabel}
-                      </button>
-                    </div>
+                      </span>
+                    </button>
                   ))}
                 </div>
               )}

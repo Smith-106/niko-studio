@@ -38,12 +38,6 @@ export function useAppHeaderViewModel({ runtimeView, backendStatus, t, contextUs
   const contextUsageVisible = contextUsage.usedK > 0 || contextUsage.percent > 0
 
   const contextUsageText = `${contextUsage.usedK.toFixed(1)}k/${contextUsage.totalK}k`
-  const contextUsageBarClass =
-    contextUsage.percent > 85
-      ? 'bg-danger-500'
-      : contextUsage.percent > 65
-        ? 'bg-warning-500'
-        : 'bg-primary-500'
   const contextUsageWidthPercent = Math.min(100, Math.max(0, contextUsage.percent))
 
   return {
@@ -52,7 +46,6 @@ export function useAppHeaderViewModel({ runtimeView, backendStatus, t, contextUs
     headerConnectionText,
     contextUsageVisible,
     contextUsageText,
-    contextUsageBarClass,
     contextUsageWidthPercent,
   }
 }
