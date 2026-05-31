@@ -356,10 +356,10 @@ export function resolveCorsOrigins(): string[] {
   if (isProductionEnv()) {
     const forbidden = new Set(['*', 'http://localhost:3000', 'http://127.0.0.1:3000']);
     origins = origins.filter((o) => !forbidden.has(o));
+    // In Tauri packaged mode, the frontend communicates via IPC (not CORS),
+    // so empty origins is acceptable. Add tauri://localhost as a safe default.
     if (origins.length === 0) {
-      throw new Error(
-        'Production CORS origins are empty. Set NIKO_CORS_PROD_ORIGINS or gateway.cors_prod_origins.',
-      );
+      origins = ['tauri://localhost', 'https://tauri.localhost'];
     }
   }
 

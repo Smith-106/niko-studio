@@ -5,6 +5,7 @@ export interface PluginInfo {
   name: string
   version: string
   description: string
+  dimension?: string
   enabled: boolean
 }
 
@@ -14,19 +15,28 @@ export interface PluginResult {
   error?: string
 }
 
+export interface PluginManifest {
+  id: string
+  name: string
+  version: string
+  description: string
+  dimension?: string
+  rules: Array<{ keyword: string; score: number; evidence: string; suggestion?: string }>
+}
+
 export async function listPlugins(): Promise<ApiResponse<{ plugins: PluginInfo[] }>> {
   return callApi('/plugins/list', 'GET')
 }
 
 export async function executePlugin(
   pluginId: string,
-  input: Record<string, unknown>,
+  text: string,
 ): Promise<ApiResponse<{ results: PluginResult[] }>> {
-  return callApi('/plugins/execute', 'POST', { plugin_id: pluginId, input })
+  return callApi('/plugins/execute', 'POST', { pluginId, text })
 }
 
 export async function registerPlugin(
-  manifest: { name: string; version: string; description: string; entryPoint: string },
+  manifest: PluginManifest,
 ): Promise<ApiResponse<{ id: string; status: string }>> {
-  return callApi('/plugins/register', 'POST', manifest)
+  return callApi('/plugins/register', 'POST', manifest as unknown as Record<string, unknown>)
 }

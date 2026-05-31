@@ -1,13 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { EmbeddingEngine } from '../../memory/unified-memory';
 
 describe('EmbeddingEngine fallback path', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  });
 
   it('returns zero vector when _modelValue is neither dummy nor a real model', () => {
     // The constructor defaults _modelValue to "dummy" via the getter.
@@ -24,16 +19,15 @@ describe('EmbeddingEngine fallback path', () => {
     expect(result.every((v: number) => v === 0.0)).toBe(true);
   });
 
-  it('emits a console.warn when falling back to zero vector', () => {
+  it('sets isDegraded flag when falling back to zero vector', () => {
     const engine = new EmbeddingEngine('test-model');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (engine as any)._model = 'not-a-real-model';
 
+    expect(engine.isDegraded).toBe(false);
     engine.embed('test input for warning');
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('degraded mode'),
-    );
+    expect(engine.isDegraded).toBe(true);
   });
 
   it('dummy path still produces deterministic 384-dim vector', () => {

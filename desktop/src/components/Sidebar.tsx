@@ -490,7 +490,7 @@ export const Sidebar = React.memo(function Sidebar({
                       onMouseLeave={handleMouseLeavePopover}
                     >
                       <div className="text-[10px] font-bold uppercase tracking-wider text-dark-text-muted mb-2 border-b border-dark-border/40 pb-1">
-                        步骤 {step}：{stepInfo.title}
+                        {t.sidebarFlowStep} {step}：{stepInfo.title}
                       </div>
                       <div className="flex flex-col gap-1">
                         {stepInfo.tools.map((tool) => {

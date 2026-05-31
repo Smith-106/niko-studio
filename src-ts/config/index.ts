@@ -1056,7 +1056,13 @@ export function ensureEnvironment(strict: boolean = false): void {
 
   const msg = 'Environment pre-check issues:\n- ' + errors.join('\n- ')
 
+  // In desktop mode, missing LLM credentials should warn but not crash —
+  // users configure API keys through the UI after first launch.
+  const llmOnly = errors.length === 1
+    && errors[0].includes('Missing LLM credentials')
   if (config.env === 'development' && !strict) {
+    log.warn(msg)
+  } else if (llmOnly && !strict) {
     log.warn(msg)
   } else {
     throw new Error(msg)

@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 
-import { initializeGatewayControlPlane, prewarmGatewayControlPlane } from '../container/gateway-control-plane';
+import { initializeGatewayControlPlane, prewarmGatewayControlPlane, shutdownGatewayControlPlane } from '../container/gateway-control-plane';
 import { resolveGatewayHostPort } from './config';
 import { createGatewayRequestHandler } from './gateway-request-handler';
 import { gatewayRoutes } from './routes';
@@ -69,25 +69,38 @@ export async function startGatewayServer(
 
   await prewarmGatewayControlPlane(container);
 
-  // G08: Route MCP calls through PhaseOrchestrator — the request handler
-  // receives the orchestrator so it can gate requests by phase state before
-  // dispatching to endpoint handlers.
   const server = createServer(createGatewayRequestHandler(gatewayRoutes, container.phaseOrchestrator));
 
-  // Q3: Wire WebSocket relay from DI container — initialize with HTTP server
-  // so browser clients can receive real-time notifications via WebSocket.
-  // This replaces the standalone WorkflowEventRelay with the DI-managed service.
   const wsRelay = container.wsRelay;
   (wsRelay as unknown as { initialize(server: Server): void }).initialize(server);
 
-  // Keep a standalone relay for server-attached convenience (backward compat)
   const relay = new WorkflowEventRelay(server, '/ws/events');
 
   await listen(server, host, port);
   logGatewayStartup(host, port, true);
 
-  // Attach relay to server for downstream access
   (server as Server & { eventRelay?: WorkflowEventRelay }).eventRelay = relay;
+
+  // Graceful shutdown: flush WorkflowEngine state, close WebSocket relay, then close HTTP server
+  const shutdown = async (signal: string) => {
+    _log.info(`Received ${signal}, shutting down gracefully...`);
+    try {
+      await shutdownGatewayControlPlane();
+    } catch (e) {
+      _log.error('Error during control plane shutdown', { error: String(e) });
+    }
+    try {
+      relay.close();
+    } catch { /* best effort */ }
+    server.close(() => {
+      _log.info('Gateway server closed');
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 5000);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 
   return server;
 }

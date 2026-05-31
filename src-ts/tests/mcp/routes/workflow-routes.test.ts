@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { workflowRoutes } from '../../../mcp/routes/workflow';
 
 describe('workflowRoutes', () => {
-  it('should have 24 routes', () => {
-    expect(workflowRoutes).toHaveLength(24);
+  it('should have 30 routes', () => {
+    expect(workflowRoutes).toHaveLength(30);
   });
 
   it('every route has a valid method', () => {
@@ -45,6 +45,29 @@ describe('workflowRoutes', () => {
     ];
 
     for (const endpoint of coreEndpoints) {
+      it(`has POST ${endpoint}`, () => {
+        const r = workflowRoutes.find(
+          (rt) => rt.method === 'POST' && rt.pattern.test(endpoint),
+        );
+        expect(r).toBeDefined();
+      });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Revision endpoints
+  // ---------------------------------------------------------------------------
+  describe('revision endpoints', () => {
+    const revisionEndpoints = [
+      '/workflow/revision/start-session',
+      '/workflow/revision/analyze',
+      '/workflow/revision/suggest',
+      '/workflow/revision/mark-revised',
+      '/workflow/revision/compare',
+      '/workflow/revision/history',
+    ];
+
+    for (const endpoint of revisionEndpoints) {
       it(`has POST ${endpoint}`, () => {
         const r = workflowRoutes.find(
           (rt) => rt.method === 'POST' && rt.pattern.test(endpoint),

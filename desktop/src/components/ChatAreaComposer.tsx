@@ -219,9 +219,10 @@ export function ChatAreaComposer({
         <button
           onMouseDown={(e) => {
             e.preventDefault()
+          }}
+          onClick={() => {
             if (!sendDisabled) onSend()
           }}
-          onClick={onSend}
           aria-label={sendLabel}
           title={sendLabel}
           disabled={sendDisabled}

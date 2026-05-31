@@ -119,6 +119,8 @@ export async function prewarmGatewayControlPlane(container: ServiceContainer): P
   try {
     await container.initializeAll();
   } catch (error) {
-    log.warn('Engine pre-warm warning', { error: String(error) });
+    log.error('Engine pre-warm failed — some services may be unavailable', { error: String(error) });
+    // Expose degraded state via health endpoint so the frontend can detect it
+    setGatewayDeps(buildGatewayDeps(container, createGatewayRuntimeState()));
   }
 }
