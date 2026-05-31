@@ -15,15 +15,23 @@ fn main() {
         if dsn.is_empty() {
             None
         } else {
-            let guard = sentry::init(sentry::ClientOptions {
-                dsn: Some(dsn.parse().expect("invalid SENTRY_DSN")),
-                release: Some(env!("CARGO_PKG_VERSION").into()),
-                ..Default::default()
-            });
-            if guard.is_enabled() {
-                Some(guard)
-            } else {
-                None
+            match dsn.parse() {
+                Ok(dsn_value) => {
+                    let guard = sentry::init(sentry::ClientOptions {
+                        dsn: Some(dsn_value),
+                        release: Some(env!("CARGO_PKG_VERSION").into()),
+                        ..Default::default()
+                    });
+                    if guard.is_enabled() {
+                        Some(guard)
+                    } else {
+                        None
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[sentry] Failed to parse SENTRY_DSN: {e}, disabling Sentry");
+                    None
+                }
             }
         }
     });

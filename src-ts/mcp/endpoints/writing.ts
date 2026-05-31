@@ -10,6 +10,24 @@ import { jsonResponse, parseBody } from '../http-types';
 import { processWritingHelper as processLocalWritingHelper } from '../../services/writing-helper';
 import { evaluateContent, type EvaluateContentResult } from '../services/critic';
 import { skillsLoad } from '../services/skills';
+import { createLogger } from '../../logger';
+
+const _log = createLogger('writing-endpoint');
+
+/**
+ * Scrub potential credentials (API keys, tokens) from error messages
+ * before returning to clients.
+ */
+function scrubErrorMessage(message: string): string {
+  // Remove common API key patterns: sk-..., key-...,Bearer ..., long hex/base64 tokens
+  return message
+    .replace(/[Aa]uthorization:\s*Bearer\s+\S+/g, 'Authorization: [REDACTED]')
+    .replace(/[Aa]pi[_-]?[Kk]ey[:=]\s*\S+/g, 'api_key=[REDACTED]')
+    .replace(/\bsk-[a-zA-Z0-9]{20,}\b/g, 'sk-[REDACTED]')
+    .replace(/\bkey-[a-zA-Z0-9]{20,}\b/g, 'key-[REDACTED]')
+    .replace(/\b[Aa]ccess[_-]?[Tt]oken[:=]\s*\S+/g, 'access_token=[REDACTED]')
+    .replace(/\b[Aa]uth[_-]?[Tt]oken[:=]\s*\S+/g, 'auth_token=[REDACTED]');
+}
 
 // ---------------------------------------------------------------
 // Mode-specific prompt builders
@@ -395,8 +413,10 @@ export async function writingHelperProcessEndpoint(
 
     return jsonResponse({ mode, processed_text: result, status: 'ok', skills_used: skillIds })
   } catch (exc) {
-    const message = exc instanceof Error ? exc.message : String(exc)
-    return jsonResponse({ error: message }, 500)
+    const rawMessage = exc instanceof Error ? exc.message : String(exc)
+    const safeMessage = scrubErrorMessage(rawMessage)
+    _log.error('LLM call failed', { error: safeMessage })
+    return jsonResponse({ error: safeMessage }, 500)
   }
 }
 
@@ -437,15 +457,41 @@ export async function writingStreamEndpoint(
 
     const sseEvents: string[] = []
     let index = 0
+    let bufferSize = 0
+    // Prevent OOM: cap SSE buffer at 5MB
+    const MAX_SSE_BUFFER = 5 * 1024 * 1024
+    const WARN_SSE_BUFFER = 1 * 1024 * 1024
+    let warnedLargeBuffer = false
 
-    sseEvents.push(formatSseEvent('start', { status: 'started' }))
+    const startEvent = formatSseEvent('start', { status: 'started' })
+    sseEvents.push(startEvent)
+    bufferSize += startEvent.length
 
     for await (const chunk of streamLLM(config, prompt, systemPrompt)) {
-      sseEvents.push(formatSseEvent('content', { chunk, index }))
+      const event = formatSseEvent('content', { chunk, index })
+      bufferSize += event.length
+
+      if (bufferSize > MAX_SSE_BUFFER) {
+        _log.error('SSE buffer exceeded 5MB cap, truncating stream', { chunks: index, bufferSize })
+        const truncEvent = formatSseEvent('done', { status: 'truncated', reason: 'buffer_size_exceeded', chunks: index, skills_used: skillIds })
+        sseEvents.push(truncEvent)
+        break
+      }
+
+      if (!warnedLargeBuffer && bufferSize > WARN_SSE_BUFFER) {
+        _log.warn('SSE buffer exceeds 1MB — consider streaming refactor', { chunks: index, bufferSize })
+        warnedLargeBuffer = true
+      }
+
+      sseEvents.push(event)
       index++
     }
 
-    sseEvents.push(formatSseEvent('done', { status: 'completed', chunks: index, skills_used: skillIds }))
+    // Only append 'done' if we didn't truncate
+    if (bufferSize <= MAX_SSE_BUFFER) {
+      const doneEvent = formatSseEvent('done', { status: 'completed', chunks: index, skills_used: skillIds })
+      sseEvents.push(doneEvent)
+    }
 
     return {
       statusCode: 200,
@@ -456,7 +502,9 @@ export async function writingStreamEndpoint(
       },
     }
   } catch (exc) {
-    const message = exc instanceof Error ? exc.message : String(exc)
-    return jsonResponse({ error: message }, 500)
+    const rawMessage = exc instanceof Error ? exc.message : String(exc)
+    const safeMessage = scrubErrorMessage(rawMessage)
+    _log.error('LLM stream failed', { error: safeMessage })
+    return jsonResponse({ error: safeMessage }, 500)
   }
 }

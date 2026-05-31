@@ -13,8 +13,8 @@ interface ConflictItem {
 export function ConflictResolutionPanel() {
   const [conflicts, setConflicts] = useState<ConflictItem[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [vaultContent, _setVaultContent] = useState('')
-  const [knowledgeContent, _setKnowledgeContent] = useState('')
+  const [vaultContent, setVaultContent] = useState('')
+  const [knowledgeContent, setKnowledgeContent] = useState('')
   const { obsidianVaultPath } = useKnowledgeGraphStore()
 
   const loadConflicts = async () => {
@@ -30,6 +30,31 @@ export function ConflictResolutionPanel() {
   useEffect(() => {
     loadConflicts()
   }, [obsidianVaultPath])
+
+  // Load conflict content when a conflict is selected
+  useEffect(() => {
+    if (!selectedId || !isTauriRuntime()) {
+      setVaultContent('')
+      setKnowledgeContent('')
+      return
+    }
+    let cancelled = false
+    const loadContent = async () => {
+      try {
+        const result = await invoke<{ vault: string; knowledge: string }>('get_conflict_content', { id: selectedId })
+        if (cancelled) return
+        setVaultContent(result.vault)
+        setKnowledgeContent(result.knowledge)
+      } catch {
+        if (cancelled) return
+        // Content unavailable — show empty instead of misleading loading state
+        setVaultContent('')
+        setKnowledgeContent('')
+      }
+    }
+    loadContent()
+    return () => { cancelled = true }
+  }, [selectedId])
 
   const resolveConflict = async (id: string, resolution: 'vault-wins' | 'knowledge-wins') => {
     try {
@@ -78,13 +103,13 @@ export function ConflictResolutionPanel() {
                 <div className="bg-gray-900 p-2 rounded text-xs">
                   <div className="text-purple-400 mb-1">Vault 版本</div>
                   <pre className="text-gray-300 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                    {vaultContent || '(加载中...)'}
+                    {vaultContent || '(无内容)'}
                   </pre>
                 </div>
                 <div className="bg-gray-900 p-2 rounded text-xs">
                   <div className="text-blue-400 mb-1">Niko Studio 版本</div>
                   <pre className="text-gray-300 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                    {knowledgeContent || '(加载中...)'}
+                    {knowledgeContent || '(无内容)'}
                   </pre>
                 </div>
                 <div className="flex gap-2">

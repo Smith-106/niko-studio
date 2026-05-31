@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getGatewayHealth, mergeGatewayHealthState, type GatewayRuntimeView } from '../api/client'
 
 interface UseAppRuntimeHealthOptions {
@@ -8,6 +8,8 @@ interface UseAppRuntimeHealthOptions {
 
 export function useAppRuntimeHealth({ backendStatus, checkBackend }: UseAppRuntimeHealthOptions) {
   const [runtimeView, setRuntimeView] = useState<GatewayRuntimeView | null>(null)
+  // Use ref to track interval so visibility handler clears previous before creating new
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     checkBackend()
@@ -23,34 +25,35 @@ export function useAppRuntimeHealth({ backendStatus, checkBackend }: UseAppRunti
 
     void fetchGatewayRuntime()
 
-    let interval: ReturnType<typeof setInterval> | null = setInterval(() => {
-      void checkBackend()
-      void fetchGatewayRuntime()
-    }, 30000)
+    const startInterval = () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      intervalRef.current = setInterval(() => {
+        void checkBackend()
+        void fetchGatewayRuntime()
+      }, 30000)
+    }
+
+    startInterval()
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        if (interval) {
-          clearInterval(interval)
-          interval = null
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
         }
       } else {
         void checkBackend()
         void fetchGatewayRuntime()
-        if (!interval) {
-          interval = setInterval(() => {
-            void checkBackend()
-            void fetchGatewayRuntime()
-          }, 30000)
-        }
+        startInterval()
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      if (interval) {
-        clearInterval(interval)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }

@@ -22,6 +22,7 @@ import {
   copyFileSync,
   readFileSync,
   writeFileSync,
+  createReadStream,
 } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
@@ -498,10 +499,14 @@ export class BackupManager {
         for (const file of localFiles) {
           const rel = relative(backup.backupPath, file).replace(/\\/g, '/');
           const s3Key = `${keyPrefix}/${rel}`;
+          const fileBuffer = readFileSync(file);
+          if (fileBuffer.length > 100 * 1024 * 1024) {
+            throw new Error(`File too large for S3 upload: ${file} (${(fileBuffer.length / 1024 / 1024).toFixed(1)}MB)`);
+          }
           await client.send(new PutObjectCommand({
             Bucket: bucket,
             Key: s3Key,
-            Body: readFileSync(file),
+            Body: fileBuffer,
             ContentType: 'application/octet-stream',
           }));
         }
@@ -555,7 +560,13 @@ export class BackupManager {
             const rel = key.slice(normalizedKey.length).replace(/^\/+/, '');
             if (!rel) continue;
 
-            const localFile = join(target, ...rel.split('/'));
+            // Path traversal: reject relative paths containing '..' segments
+            const segments = rel.split('/').filter(Boolean);
+            if (segments.some((s) => s === '..')) {
+              continue; // skip keys that escape the prefix
+            }
+
+            const localFile = join(target, ...segments);
             mkdirSync(dirname(localFile), { recursive: true });
 
             const response = await client.send(new GetObjectCommand({
@@ -951,3 +962,13 @@ export function resetBackupManager(): void {
   }
   _instance = null;
 }
+
+// Close database on process exit to prevent leaked handles
+function _registerExitHook(): void {
+  const shutdown = () => { resetBackupManager(); };
+  process.on('exit', shutdown);
+  process.on('SIGINT', () => { shutdown(); process.exit(0); });
+  process.on('SIGTERM', () => { shutdown(); process.exit(0); });
+}
+
+_registerExitHook();

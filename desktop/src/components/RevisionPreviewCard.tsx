@@ -37,9 +37,14 @@ function computeLineDiff(before: string, after: string): DiffLine[] {
   const beforeLines = before.split('\n')
   const afterLines = after.split('\n')
 
-  // Use a simple LCS-based diff to identify added/removed/same lines
   const m = beforeLines.length
   const n = afterLines.length
+
+  // Fallback: for large inputs, use simple line-by-line comparison to avoid O(n*m) blowup
+  const LCS_LIMIT = 500
+  if (m > LCS_LIMIT || n > LCS_LIMIT) {
+    return computeSimpleLineDiff(beforeLines, afterLines)
+  }
 
   // Build LCS table
   const dp: number[][] = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0))
@@ -75,6 +80,23 @@ function computeLineDiff(before: string, after: string): DiffLine[] {
 
   reversed.reverse()
   result.push(...reversed)
+  return result
+}
+
+/** Simple line-by-line diff for large inputs — no LCS, just pairwise comparison */
+function computeSimpleLineDiff(beforeLines: string[], afterLines: string[]): DiffLine[] {
+  const result: DiffLine[] = []
+  const max = Math.max(beforeLines.length, afterLines.length)
+  for (let i = 0; i < max; i++) {
+    const bLine = beforeLines[i]
+    const aLine = afterLines[i]
+    if (bLine !== undefined && aLine !== undefined && bLine === aLine) {
+      result.push({ type: 'same', text: bLine })
+    } else {
+      if (bLine !== undefined) result.push({ type: 'removed', text: bLine })
+      if (aLine !== undefined) result.push({ type: 'added', text: aLine })
+    }
+  }
   return result
 }
 

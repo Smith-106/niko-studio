@@ -133,7 +133,7 @@ impl GatewayState {
 
     pub async fn resolve_base(&self, app: &tauri::AppHandle) -> Result<String, String> {
         {
-            let cached = self.cached_base.lock().unwrap();
+            let cached = self.cached_base.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(ref entry) = *cached {
                 if entry.resolved_at.elapsed() < BASE_CACHE_TTL {
                     return Ok(entry.base.clone());
@@ -143,7 +143,7 @@ impl GatewayState {
 
         let base = self.resolve_base_uncached(app).await?;
 
-        *self.cached_base.lock().unwrap() = Some(CachedBase {
+        *self.cached_base.lock().unwrap_or_else(|e| e.into_inner()) = Some(CachedBase {
             base: base.clone(),
             resolved_at: Instant::now(),
         });
@@ -162,7 +162,7 @@ impl GatewayState {
             );
         }
 
-        let override_base = { self.base_override.lock().unwrap().clone() };
+        let override_base = { self.base_override.lock().unwrap_or_else(|e| e.into_inner()).clone() };
         if let Some(override_base) = override_base {
             if is_gateway_healthy(&override_base).await {
                 return Ok(override_base);
@@ -173,7 +173,7 @@ impl GatewayState {
             );
         }
 
-        let local_base = { self.local_base.lock().unwrap().clone() };
+        let local_base = { self.local_base.lock().unwrap_or_else(|e| e.into_inner()).clone() };
         if let Some(local_base) = local_base {
             if is_gateway_healthy(&local_base).await {
                 return Ok(local_base);
@@ -187,7 +187,7 @@ impl GatewayState {
     async fn start_local_sidecar(&self, app: &tauri::AppHandle) -> Result<String, String> {
         let _guard = self.start_lock.lock().await;
 
-        let existing_local = { self.local_base.lock().unwrap().clone() };
+        let existing_local = { self.local_base.lock().unwrap_or_else(|e| e.into_inner()).clone() };
         if let Some(local_base) = existing_local {
             if is_gateway_healthy(&local_base).await {
                 return Ok(local_base);
@@ -256,7 +256,7 @@ impl GatewayState {
                     .env("NIKO_GATEWAY_HOST", "127.0.0.1")
                     .env("NIKO_GATEWAY_PORT", port.to_string())
                     .env("NIKO_GATEWAY_RELOAD", "0")
-                    .env("NIKO_ENV", "development")
+                    .env("NIKO_ENV", if cfg!(debug_assertions) { "development" } else { "production" })
                     .env("NIKO_GATEWAY_RUNTIME", runtime.as_env())
                     .env(
                         "NIKO_CORS_DEV_ORIGINS",
@@ -308,8 +308,8 @@ impl GatewayState {
                     }
                 });
 
-                *self.child.lock().unwrap() = Some(child);
-                *self.local_base.lock().unwrap() = Some(base.clone());
+                *self.child.lock().unwrap_or_else(|e| e.into_inner()) = Some(child);
+                *self.local_base.lock().unwrap_or_else(|e| e.into_inner()) = Some(base.clone());
 
                 let health_timeout = if runtime == GatewayRuntime::Node {
                     Duration::from_secs(5)
@@ -347,7 +347,7 @@ impl GatewayState {
                 return Ok(());
             }
 
-            let _pid = { self.child.lock().unwrap().as_ref().map(|child| child.pid()) };
+            let _pid = { self.child.lock().unwrap_or_else(|e| e.into_inner()).as_ref().map(|child| child.pid()) };
 
             if start.elapsed() >= timeout {
                 return Err(format!("Gateway did not become healthy in {:?}", timeout));
@@ -359,17 +359,17 @@ impl GatewayState {
     }
 
     pub fn stop_child_best_effort(&self) {
-        let child_opt = self.child.lock().unwrap().take();
+        let child_opt = self.child.lock().unwrap_or_else(|e| e.into_inner()).take();
         if let Some(child) = child_opt {
             let _ = child.kill();
         }
-        *self.local_base.lock().unwrap() = None;
-        *self.cached_base.lock().unwrap() = None;
+        *self.local_base.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        *self.cached_base.lock().unwrap_or_else(|e| e.into_inner()) = None;
     }
 
     pub fn set_base_override(&self, base: Option<String>) {
-        *self.base_override.lock().unwrap() = base.map(|value| normalize_base_url(value.trim()));
-        *self.cached_base.lock().unwrap() = None;
+        *self.base_override.lock().unwrap_or_else(|e| e.into_inner()) = base.map(|value| normalize_base_url(value.trim()));
+        *self.cached_base.lock().unwrap_or_else(|e| e.into_inner()) = None;
     }
 }
 

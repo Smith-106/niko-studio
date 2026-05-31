@@ -952,4 +952,275 @@ GET  /wiki/page/:id</code></pre>
 <h2>相关页面</h2>
 <p>继续阅读：<a href="/api/health-api">健康检查</a>、<a href="/api/gateway-api">Gateway API</a>。</p>
   `,
+  'chat-sidebar': `
+<h2>聊天侧边栏（ChatSidebar）</h2>
+<p>ChatSidebar 是左侧面板，用于管理对话会话列表、切换会话和创建新对话。它是多会话写作工作流的核心导航入口。</p>
+<h2>界面元素</h2>
+<ul>
+  <li><strong>会话列表</strong> — 显示所有对话会话卡片，包含会话标题、最后消息摘要和时间戳。当前激活会话高亮显示。</li>
+  <li><strong>新建对话按钮</strong> — 创建新的空白对话会话。</li>
+  <li><strong>会话切换</strong> — 点击会话卡片即可切换到该对话，ChatArea 自动加载对应的消息历史。</li>
+  <li><strong>会话删除</strong> — 每个会话卡片上的删除按钮，移除不需要的对话记录。</li>
+</ul>
+<h2>使用场景</h2>
+<ul>
+  <li>为不同角色或场景创建独立会话——例如"角色对话调试"、"情节推演"、"章节润色"。</li>
+  <li>在多个会话间快速切换，保留每个对话的独立上下文和草稿。</li>
+  <li>清理已完成或不再需要的对话历史。</li>
+</ul>
+<h2>使用建议</h2>
+<ul>
+  <li>为每个会话使用清晰的标题，方便后续定位。</li>
+  <li>不同写作任务使用不同会话，避免上下文污染。</li>
+  <li>定期清理旧会话，保持侧边栏简洁。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/chat-area">对话区</a>、<a href="/agent/chat-system">对话系统</a>。</p>
+  `,
+  'content-search': `
+<h2>内容搜索（ContentSearch）</h2>
+<p>ContentSearch 是全局内容搜索组件，支持在当前作品的所有章节和素材中快速查找文本。它提供实时搜索、结果高亮和一键导航功能。</p>
+<h2>界面元素</h2>
+<ul>
+  <li><strong>搜索输入框</strong> — 输入关键词后自动触发搜索（150ms 防抖），无需手动提交。</li>
+  <li><strong>结果列表</strong> — 显示匹配条目，包含所在章节名、匹配片段预览和行号。</li>
+  <li><strong>关键词高亮</strong> — 搜索结果中匹配的关键词以高亮色标出。</li>
+  <li><strong>一键导航</strong> — 点击搜索结果直接跳转到编辑器对应位置。</li>
+</ul>
+<h2>使用场景</h2>
+<ul>
+  <li>查找角色名在哪些章节出现——确认设定一致性。</li>
+  <li>搜索特定关键词或短语——定位需要修改的段落。</li>
+  <li>在长篇作品中快速定位特定场景或对白。</li>
+</ul>
+<h2>使用方法</h2>
+<ol>
+  <li>打开内容搜索面板。</li>
+  <li>在搜索框中输入关键词。</li>
+  <li>浏览搜索结果列表，查看匹配上下文。</li>
+  <li>点击目标结果，编辑器自动跳转到对应位置。</li>
+</ol>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/niko-editor">Niko 编辑器</a>、<a href="/memory/semantic-search">语义搜索</a>。</p>
+  `,
+  'quick-panel': `
+<h2>快速面板（QuickPanel）</h2>
+<p>QuickPanel 是快捷操作入口面板，提供最近项目、常用操作和快速导航功能。它旨在减少用户在深层菜单中寻找功能的时间。</p>
+<h2>界面元素</h2>
+<ul>
+  <li><strong>最近项目</strong> — 显示最近打开的项目列表，一键切换。</li>
+  <li><strong>快捷操作</strong> — 常用写作操作的快捷入口：新建章节、开始分析、打开评估面板等。</li>
+  <li><strong>搜索框</strong> — 快速搜索功能、面板或设置项。</li>
+</ul>
+<h2>使用场景</h2>
+<ul>
+  <li>在多个写作项目间快速切换。</li>
+  <li>直接跳转到常用面板，无需在侧边栏中逐级查找。</li>
+  <li>搜索不记得位置的功能或设置。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/editor-integration">编辑器集成</a>、<a href="/desktop/settings-modal">设置面板</a>。</p>
+  `,
+  'template-manager': `
+<h2>模板管理器（TemplateManagerPanel）</h2>
+<p>TemplateManagerPanel 是提示词模板的完整管理界面，支持模板的创建、编辑、分类、导入和导出。它让团队和个人写作流程以模板形式稳定复用。</p>
+<h2>界面元素</h2>
+<ul>
+  <li><strong>模板列表</strong> — 按分类显示所有提示词模板，每项包含标题、描述和分类标签。</li>
+  <li><strong>模板编辑器</strong> — 创建或编辑模板：名称、描述、分类、提示词正文和支持变量。</li>
+  <li><strong>分类管理</strong> — 自定义模板分类（如"润色"、"分析"、"角色"等）。</li>
+  <li><strong>导入/导出</strong> — 将模板导出为 JSON 文件或从 JSON 导入，支持团队共享。</li>
+</ul>
+<h2>模板变量</h2>
+<p>模板正文支持占位变量，运行时由系统自动替换：</p>
+<ul>
+  <li><code>{selection}</code> — 当前选中的文本。</li>
+  <li><code>{chapter}</code> — 当前章节内容。</li>
+  <li><code>{storyBible}</code> — Story Bible 关键设定。</li>
+</ul>
+<h2>使用建议</h2>
+<ul>
+  <li>将团队常用的写作流程封装为模板，减少重复提示词编写。</li>
+  <li>按写作阶段（规划、创作、修订、检查）分类模板。</li>
+  <li>使用导出功能在团队间共享模板库。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/chat-area-mode-controls">ChatAreaModeControls</a>、<a href="/desktop/skill-system">技能系统</a>。</p>
+  `,
+  'reader-immersion-dashboard': `
+<h2>读者沉浸仪表板（ReaderImmersionDashboard）</h2>
+<p>ReaderImmersionDashboard 是智能面板组件，从读者视角展示沉浸感评分、Show/Tell 比率、节奏处方和阅读体验诊断。它帮助作者判断文本是否足够"引人入胜"。</p>
+<h2>核心指标</h2>
+<ul>
+  <li><strong>沉浸感评分</strong> — 综合评分，反映读者被文本吸引和保持专注的程度。</li>
+  <li><strong>Show/Tell 比率</strong> — "展示"与"讲述"段落的占比，高 Show 比率通常对应更强沉浸感。</li>
+  <li><strong>节奏处方</strong> — 基于节奏分析给出的具体建议（如"此段节奏过慢，建议增加冲突"）。</li>
+  <li><strong>阅读疲劳预警</strong> — 检测长段叙述或信息密度过高的区域。</li>
+</ul>
+<h2>使用场景</h2>
+<ul>
+  <li>检查整章的沉浸感分布——哪些段落让读者"出戏"。</li>
+  <li>查看 Show/Tell 比率——确认关键场景是否用"展示"而非"讲述"。</li>
+  <li>根据节奏处方调整段落节奏——在平缓区域增加动作或冲突。</li>
+</ul>
+<h2>使用方法</h2>
+<ol>
+  <li>在写作面板中选择 Reader Immersion 维度。</li>
+  <li>查看沉浸感总览评分和各段落指标。</li>
+  <li>点击低分段落查看详细诊断。</li>
+  <li>根据节奏处方的建议修改文本。</li>
+  <li>重新分析验证改善效果。</li>
+</ol>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/writing-dashboard">写作面板</a>、<a href="/writing/emotional-arc">情感弧线</a>、<a href="/desktop/pacing-prescription-panel">节奏处方面板</a>。</p>
+  `,
+  'voice-fingerprint-panel': `
+<h2>角色声纹面板（VoiceFingerprintPanel）</h2>
+<p>VoiceFingerprintPanel 展示角色语音一致性分析结果，帮助作者确保每个角色的对话风格独特且一致。它是角色塑造深度的重要诊断工具。</p>
+<h2>核心功能</h2>
+<ul>
+  <li><strong>声纹图谱</strong> — 可视化每个角色的词汇偏好、句式长度、语气特征和常用表达。</li>
+  <li><strong>一致性检测</strong> — 标记角色对话中与既定声纹不一致的段落（如严肃角色突然使用网络用语）。</li>
+  <li><strong>声纹对比</strong> — 多角色声纹横向对比，检查是否出现角色话语风格雷同。</li>
+  <li><strong>编辑器修饰标记</strong> — 在编辑器中高亮显示 VoiceConsistency 装饰标记，直接定位问题段落。</li>
+</ul>
+<h2>使用场景</h2>
+<ul>
+  <li>多角色对话场景——确认每个角色的语气和用词风格可区分。</li>
+  <li>长篇连载——防止角色声纹在后续章节中漂移。</li>
+  <li>角色代入写作——参考声纹图谱确保角色说话方式与设定一致。</li>
+</ul>
+<h2>使用建议</h2>
+<ul>
+  <li>先在 Story Bible 中定义角色的核心性格和说话风格，声纹分析会参考这些设定。</li>
+  <li>当一致性检测标记出异常时，优先检查是否是角色发展（有意为之）而非作者失误。</li>
+  <li>使用声纹对比功能特别检查主要角色间的区分度。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/writing/voice-fingerprint">角色声纹</a>、<a href="/desktop/story-bible-panel">Story Bible</a>、<a href="/graph/character-relationships">角色关系</a>。</p>
+  `,
+  'pacing-prescription-panel': `
+<h2>节奏处方面板（PacingPrescriptionPanel）</h2>
+<p>PacingPrescriptionPanel 提供节奏诊断和处方建议，帮助作者识别文本中节奏过慢、过快或不均匀的区域，并给出具体的修改方向。</p>
+<h2>诊断维度</h2>
+<ul>
+  <li><strong>段落节奏</strong> — 检测信息密度和事件推进速度，标记"拖沓"或"跳跃"段落。</li>
+  <li><strong>场景转换</strong> — 检查场景间的过渡节奏，标记过快的切换或过长的过渡。</li>
+  <li><strong>对话/叙述比例</strong> — 分析对话与叙述的交替节奏，标记失衡区域。</li>
+  <li><strong>张力节奏</strong> — 对比张力曲线，标记该紧张时不紧张、该松弛时不松弛的位置。</li>
+</ul>
+<h2>处方类型</h2>
+<table>
+  <thead><tr><th>处方</th><th>说明</th><th>适用场景</th></tr></thead>
+  <tbody>
+    <tr><td>增加冲突</td><td>在节奏过慢区域增加对抗性事件</td><td>中段塌陷、长段叙述无事件</td></tr>
+    <tr><td>加速推进</td><td>压缩过渡段落，直入核心事件</td><td>冗长的环境描写或心理独白</td></tr>
+    <tr><td>增加喘息</td><td>在紧张场景后插入缓冲段落</td><td>连续高潮导致疲劳</td></tr>
+    <tr><td>调整对话比例</td><td>增加/减少对话以改善节奏</td><td>全叙述无对话或全对话无描写</td></tr>
+  </tbody>
+</table>
+<h2>使用方法</h2>
+<ol>
+  <li>在写作面板或 Reader Immersion Dashboard 中触发节奏分析。</li>
+  <li>查看节奏处方列表，每条处方包含目标段落、诊断和具体建议。</li>
+  <li>点击处方定位到编辑器对应段落。</li>
+  <li>根据建议修改文本后重新分析验证。</li>
+</ol>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/reader-immersion-dashboard">读者沉浸仪表板</a>、<a href="/writing/emotional-arc">情感弧线</a>。</p>
+  `,
+  'emotional-arc-chart': `
+<h2>情感弧线图（EmotionalArcChart）</h2>
+<p>EmotionalArcChart 是叙事可视化面板中的交互式图表组件，以时间线形式展示故事的情绪轨迹。它帮助作者直观判断情感弧线的起伏是否合理、高潮是否有足够铺垫。</p>
+<h2>界面元素</h2>
+<ul>
+  <li><strong>情绪曲线</strong> — X 轴为章节/场景进度，Y 轴为情绪强度（-1 到 +1），绘制整部作品的情感轨迹。</li>
+  <li><strong>关键转折标注</strong> — 在曲线上标注情感转折点（如情绪骤降、情感爆发）。</li>
+  <li><strong>场景色块</strong> — 不同场景类型用颜色区分（紧张场景/温馨场景/悬念场景等）。</li>
+  <li><strong>缩放与平移</strong> — 支持缩放查看细节或全局总览。</li>
+</ul>
+<h2>典型情感弧线模式</h2>
+<table>
+  <thead><tr><th>模式</th><th>描述</th><th>适用类型</th></tr></thead>
+  <tbody>
+    <tr><td>上升型</td><td>情绪持续走高</td><td>励志、成长</td></tr>
+    <tr><td>下降型</td><td>情绪持续走低</td><td>悲剧、反思</td></tr>
+    <tr><td>V 型</td><td>先跌后升</td><td>绝地反击</td></tr>
+    <tr><td>波浪型</td><td>起伏交替</td><td>冒险、悬疑</td></tr>
+  </tbody>
+</table>
+<h2>使用建议</h2>
+<ul>
+  <li>检查整体弧线是否符合预期的情感模式——例如悬疑作品应有明显的波浪起伏。</li>
+  <li>在曲线平缓段（"中段塌陷"）增加冲突或悬念。</li>
+  <li>确保高潮前有足够的情绪铺垫，而不是突然跳升。</li>
+  <li>结合张力曲线视图一起分析，获得更完整的节奏判断。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/narrative-viz/narrative-visualization">叙事可视化</a>、<a href="/writing/emotional-arc">情感弧线</a>。</p>
+  `,
+  'anti-pattern-warning': `
+<h2>反模式警告（AntiPatternWarning）</h2>
+<p>AntiPatternWarning 组件用于显示写作反模式检测结果。当 AI 分析发现文本中存在常见的写作问题模式时，此组件以醒目的警告卡片形式呈现诊断和修正建议。</p>
+<h2>检测的反模式类型</h2>
+<table>
+  <thead><tr><th>反模式</th><th>描述</th><th>典型表现</th></tr></thead>
+  <tbody>
+    <tr><td>Info Dump</td><td>信息倾倒，一次性抛出大量设定</td><td>连续数段纯设定说明，无角色互动</td></tr>
+    <tr><td>Telling Not Showing</td><td>讲述而非展示</td><td>"他很伤心"而非描写悲伤行为</td></tr>
+    <tr><td>Mary Sue</td><td>完美角色，缺乏真实弱点</td><td>角色无缺点、所有冲突轻松解决</td></tr>
+    <tr><td>Deus Ex Machina</td><td>机械降神，天降解决</td><td>关键冲突被外部力量突然解决</td></tr>
+    <tr><td>Plot Armor</td><td>主角光环，违反设定逻辑</td><td>主角在不可能的情况下安然无恙</td></tr>
+  </tbody>
+</table>
+<h2>警告卡片结构</h2>
+<ul>
+  <li><strong>反模式名称</strong> — 红色/橙色标题标签。</li>
+  <li><strong>严重程度</strong> — 高/中/低级别指示。</li>
+  <li><strong>命中段落</strong> — 引用触发反模式的具体文本片段。</li>
+  <li><strong>修正建议</strong> — 具体的改写方向和参考示例。</li>
+</ul>
+<h2>使用方法</h2>
+<ol>
+  <li>运行写作分析后，反模式检测结果自动出现在右侧面板。</li>
+  <li>查看每条警告的严重程度和命中段落。</li>
+  <li>点击命中段落跳转到编辑器对应位置。</li>
+  <li>参考修正建议修改文本。</li>
+</ol>
+<h2>使用建议</h2>
+<ul>
+  <li>高级别警告应优先处理——这些反模式最影响阅读体验。</li>
+  <li>反模式检测是辅助工具，不是规则——某些"Info Dump"在科幻设定中是可接受的。</li>
+  <li>结合评估面板的维度评分一起判断，避免过度修改。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/evaluation-panel">评估面板</a>、<a href="/knowledge/pattern-detection">模式检测</a>。</p>
+  `,
+  'virtual-list': `
+<h2>虚拟列表（VirtualList）</h2>
+<p>VirtualList 是高性能列表渲染组件，用于在大量消息或条目场景下保持流畅滚动。它基于 <code>@tanstack/react-virtual</code> 实现窗口化渲染，仅渲染可视区域内的元素。</p>
+<h2>适用场景</h2>
+<ul>
+  <li>长对话消息列表——数百条消息时仍保持流畅滚动。</li>
+  <li>素材或知识条目列表——大量条目场景下的高效浏览。</li>
+  <li>章节列表——长篇作品中快速定位章节。</li>
+</ul>
+<h2>核心特性</h2>
+<ul>
+  <li><strong>窗口化渲染</strong> — 仅渲染可视区域 + 上下缓冲区的 DOM 节点，其余用空白占位。</li>
+  <li><strong>自动滚动</strong> — <code>stickToBottom</code> 模式下新消息自动滚动到底部。</li>
+  <li><strong>自定义行高</strong> — 支持动态行高，适配不同内容长度的条目。</li>
+  <li><strong>平滑滚动</strong> — 内置滚动位置记忆和恢复，切换会话后恢复到上次浏览位置。</li>
+</ul>
+<h2>与非虚拟化渲染的切换</h2>
+<p>当消息数量 ≤ 50 条时，系统使用直接 DOM 渲染（避免虚拟化的初始化开销）；超过 50 条时自动切换到 VirtualList。这一阈值对用户透明。</p>
+<h2>使用建议</h2>
+<ul>
+  <li>在长对话中向上滚动查看历史时，VirtualList 会预加载相邻区域，无需等待。</li>
+  <li>开启 stickToBottom 时，新消息自动滚动到底部；向上手动滚动后会停止自动跟随。</li>
+  <li>滚动性能问题通常与单条消息内容复杂度有关——简化消息内嵌组件可提升渲染速度。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/chat-area">对话区</a>、<a href="/desktop/chat-sidebar">聊天侧边栏</a>。</p>
+  `,
 };

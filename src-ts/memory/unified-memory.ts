@@ -547,6 +547,8 @@ export class EmbeddingEngine {
   private _model: unknown | null = null;
   private _modelName: string;
   private _cache: ReturnType<typeof getQueryCache>;
+  /** True when no real embedding model is available — retrieval quality is degraded */
+  isDegraded = false;
 
   constructor(modelName?: string | null) {
     this._modelName = modelName ?? DEFAULT_EMBEDDING_MODEL;
@@ -558,8 +560,12 @@ export class EmbeddingEngine {
     if (this._model === null) {
       // In the TypeScript port, actual embedding models would be injected.
       // Fallback to dummy embeddings if no model is available.
-      log.warn("No embedding model installed, using dummy embeddings", { model: this._modelName });
       this._model = "dummy";
+      this.isDegraded = true;
+      log.error(
+        "EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly",
+        { model: this._modelName }
+      );
     }
     return this._model;
   }
@@ -598,7 +604,11 @@ export class EmbeddingEngine {
     } else {
       // Fallback: return zero vector when no real embedding model is available.
       // This degrades retrieval quality but keeps the memory subsystem operational.
-      log.warn("No real embedding model available, returning zero vector (degraded mode)", { model: this._modelName });
+      this.isDegraded = true;
+      log.error(
+        "EMBEDDING ENGINE DEGRADED: No real embedding model available, returning zero vector — retrieval will not work",
+        { model: this._modelName }
+      );
       embedding = new Array(384).fill(0.0);
     }
 
@@ -741,6 +751,13 @@ export class UnifiedMemoryEngine {
 
     this._initSchema();
     log.info("Memory engine initialized", { dbPath: this.dbPath });
+
+    // Log degraded mode loudly at startup so operators know retrieval won't work
+    if (this.embedder.isDegraded) {
+      log.error(
+        "EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"
+      );
+    }
 
     if (params.plugins) {
       this._registerPlugins(params.plugins);

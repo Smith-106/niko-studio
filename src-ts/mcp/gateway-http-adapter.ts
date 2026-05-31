@@ -5,9 +5,13 @@ import type { HttpRequest, HttpResponse } from './http-types';
 
 export const API_PROTOCOL_VERSION = '1.0.0';
 
+/** Maximum request body size (10 MB) to prevent memory exhaustion */
+const MAX_BODY_SIZE = 10 * 1024 * 1024;
+
 export function readRequestBody(req: IncomingMessage, timeoutMs: number = 30000): Promise<string> {
   return new Promise((resolve, reject) => {
-    let data = '';
+    const chunks: Buffer[] = [];
+    let totalSize = 0;
     let settled = false;
     const timer = setTimeout(() => {
       if (!settled) {
@@ -23,12 +27,19 @@ export function readRequestBody(req: IncomingMessage, timeoutMs: number = 30000)
       }
     };
 
-    req.on('data', (chunk) => {
-      data += chunk;
+    req.on('data', (chunk: Buffer | string) => {
+      const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+      totalSize += buf.length;
+      if (totalSize > MAX_BODY_SIZE) {
+        cleanup();
+        reject(new Error(`Request body exceeds ${MAX_BODY_SIZE / 1024 / 1024}MB limit`));
+        return;
+      }
+      chunks.push(buf);
     });
     req.on('end', () => {
       cleanup();
-      resolve(data);
+      resolve(Buffer.concat(chunks).toString('utf-8'));
     });
     req.on('error', (err) => {
       cleanup();

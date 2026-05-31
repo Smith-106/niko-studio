@@ -143,7 +143,7 @@ export function ChatArea({
     setInput(v)
     debouncedPersist.call(v)
   }, [debouncedPersist])
-  useEffect(() => { setInput(persistedText) }, [currentConversationId])
+  useEffect(() => { setInput(persistedText) }, [currentConversationId, persistedText])
   const [isLoading, setIsLoading] = useState(false)
   const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')
   const [chatMode, setChatMode] = useState<'chat' | 'agent'>('chat')

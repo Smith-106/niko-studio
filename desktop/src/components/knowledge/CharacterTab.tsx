@@ -139,7 +139,7 @@ export function CharacterTab(props: CharacterTabProps) {
                   {(['dynamicScore', 'competenceScore', 'eccentricityScore', 'contrastScore', 'dualityScore'] as const).map((key) => (
                     <div key={key} className="bg-gray-100 dark:bg-dark-border rounded p-1">
                       <div className="text-gray-500 dark:text-dark-text-secondary">{key.replace('Score', '')}</div>
-                      <div className="font-medium">{Math.round(depth.scores[key])}</div>
+                      <div className="font-medium">{Math.round(depth.scores[key] ?? 0)}</div>
                     </div>
                   ))}
                 </div>

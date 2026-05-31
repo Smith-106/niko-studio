@@ -1,5 +1,6 @@
 use crate::gateway_runtime::{is_gateway_healthy, GatewayState};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::collections::HashMap;
 
 /// 大载荷分片阈值：100KB
@@ -22,10 +23,42 @@ static CHUNK_CACHE: once_cell::sync::Lazy<Mutex<HashMap<String, CachedChunkedRes
 
 /// 分片缓存过期时间（60 秒）
 const CHUNK_CACHE_TTL_SECS: u64 = 60;
+/// 缓存最大条目数，防止无界增长
+const CHUNK_CACHE_MAX_ENTRIES: usize = 256;
 
-/// 清理过期的分片缓存
+/// 全局递增计数器，保证 channelId 唯一
+static CHUNK_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// 共享 HTTP Client（复用连接池）
+static HTTP_CLIENT: once_cell::sync::Lazy<reqwest::Client> = once_cell::sync::Lazy::new(|| {
+    reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .expect("Failed to build HTTP client")
+});
+
+/// 清理过期的分片缓存，并淘汰超出上限的旧条目
 fn cleanup_chunk_cache(cache: &mut HashMap<String, CachedChunkedResponse>) {
     cache.retain(|_, entry| entry.created_at.elapsed().as_secs() < CHUNK_CACHE_TTL_SECS);
+    if cache.len() > CHUNK_CACHE_MAX_ENTRIES {
+        let mut entries: Vec<_> = cache.iter().map(|(k, v)| (k.clone(), v.created_at)).collect();
+        entries.sort_by_key(|(_, t)| *t);
+        let to_remove = cache.len() - CHUNK_CACHE_MAX_ENTRIES;
+        for (key, _) in entries.into_iter().take(to_remove) {
+            cache.remove(&key);
+        }
+    }
+}
+
+/// 校验 endpoint 路径，防止路径遍历攻击
+fn validate_endpoint(endpoint: &str) -> Result<(), String> {
+    if !endpoint.starts_with('/') {
+        return Err(format!("Endpoint must start with '/': got '{}'", endpoint));
+    }
+    if endpoint.contains("..") {
+        return Err(format!("Endpoint must not contain '..': got '{}'", endpoint));
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -71,27 +104,37 @@ pub async fn call_api(
     method: String,
     body: Option<String>,
 ) -> Result<String, String> {
+    validate_endpoint(&endpoint)?;
     let base_url = state.resolve_base(&app).await?;
     let url = format!("{}{}", base_url, endpoint);
-    let client = reqwest::Client::new();
 
     let response = match method.as_str() {
-        "GET" => client.get(&url).send().await,
+        "GET" => HTTP_CLIENT.get(&url).send().await,
         "POST" => {
-            let mut req = client.post(&url);
+            let mut req = HTTP_CLIENT.post(&url);
             if let Some(body) = body {
                 req = req.header("Content-Type", "application/json").body(body);
             }
             req.send().await
         }
         "PUT" => {
-            let mut req = client.put(&url);
+            let mut req = HTTP_CLIENT.put(&url);
             if let Some(body) = body {
                 req = req.header("Content-Type", "application/json").body(body);
             }
             req.send().await
         }
-        _ => return Err("Unsupported method".to_string()),
+        "DELETE" => {
+            let mut req = HTTP_CLIENT.delete(&url);
+            if let Some(body) = body {
+                req = req.header("Content-Type", "application/json").body(body);
+            }
+            req.send().await
+        }
+        _ => return Err(format!(
+            "Unsupported method '{}'. Supported: GET, POST, PUT, DELETE",
+            method
+        )),
     };
 
     match response {
@@ -155,13 +198,10 @@ fn serialize_chunked_response(status_code: u16, body: &str) -> String {
         offset = end;
     }
 
-    // 生成唯一 channelId
+    // 生成唯一 channelId（原子递增计数器，避免毫秒时间戳碰撞）
     let channel_id = format!(
         "chunk-{}-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis(),
+        CHUNK_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
         total_chunks
     );
 

@@ -35,6 +35,9 @@ export interface Embedder {
 /**
  * IndexingService - Semantic Search based on vector embeddings and SQLite storage.
  */
+// Track live instances for exit cleanup (declared before class so constructor can reference it)
+const _liveInstances: IndexingService[] = [];
+
 export class IndexingService {
   private readonly dbPath: string;
   private readonly modelName: string;
@@ -45,6 +48,8 @@ export class IndexingService {
     this.dbPath = dbPath;
     this.modelName = modelName;
     this._initDb();
+    // Register for exit-hook cleanup
+    _liveInstances.push(this);
   }
 
   /**
@@ -217,5 +222,18 @@ export class IndexingService {
       this._db.close();
       this._db = null;
     }
+    // Remove from live instances registry
+    const idx = _liveInstances.indexOf(this);
+    if (idx !== -1) _liveInstances.splice(idx, 1);
   }
 }
+
+// Close all database connections on process exit to prevent leaked handles
+function _registerExitHook(): void {
+  const shutdown = () => { for (const inst of _liveInstances) inst.close(); };
+  process.on('exit', shutdown);
+  process.on('SIGINT', () => { shutdown(); process.exit(0); });
+  process.on('SIGTERM', () => { shutdown(); process.exit(0); });
+}
+
+_registerExitHook();

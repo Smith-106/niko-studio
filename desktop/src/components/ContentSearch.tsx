@@ -31,7 +31,8 @@ export const ContentSearch = forwardRef<{ focus: () => void }, ContentSearchProp
     })
     const inputRef = useRef<HTMLInputElement>(null)
     const rangesRef = useRef<Range[]>([])
-
+    // Debounce timer ref for search — cleared on new input or unmount
+    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     useImperativeHandle(ref, () => ({
       focus: () => inputRef.current?.focus(),
     }))
@@ -110,7 +111,10 @@ export const ContentSearch = forwardRef<{ focus: () => void }, ContentSearchProp
 
     // Cleanup on unmount
     useEffect(() => {
-      return () => clearHighlights()
+      return () => {
+        clearHighlights()
+        if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      }
     }, [clearHighlights])
 
     const handleKeyDown = useCallback(
@@ -157,8 +161,9 @@ export const ContentSearch = forwardRef<{ focus: () => void }, ContentSearchProp
             onChange={(e) => {
               const query = e.target.value
               setState((prev) => ({ ...prev, query, currentIndex: 0 }))
-              // Debounced search
-              setTimeout(() => performSearch(), 150)
+              // Debounced search — clear previous timer to avoid stale searches
+              if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+              searchTimerRef.current = setTimeout(() => performSearch(), 150)
             }}
             onKeyDown={handleKeyDown}
             placeholder={t.contentSearchPlaceholder}

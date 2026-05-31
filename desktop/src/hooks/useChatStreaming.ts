@@ -86,10 +86,13 @@ export function useChatStreaming() {
       let streamMeta: StreamRuntimeMeta | null = null
       let streamErrorPayload: StreamErrorPayload | null = null
 
+      // Reset stream display state on each retry to avoid duplicate/corrupted content
+      reset('')
+      setStreamDone(false)
+
       const requestId = ++streamRequestIdRef.current
       const abortController = new AbortController()
       abortControllerRef.current = abortController
-      setStreamDone(false)
       options.onStreamPhase('streaming')
 
       const finalize = (phase: StreamPhase, meta?: StreamRuntimeMeta) => {

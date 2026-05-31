@@ -16,7 +16,7 @@ function shouldRepairPersistedGatewayBase(configuredBase: string | null, resolve
     && resolvedBase !== configuredBase
 }
 
-export function useAppBackendBootstrap() {
+export function useAppBackendBootstrap(onError?: (error: string) => void) {
   useEffect(() => {
     if (!isTauriRuntime()) {
       return
@@ -36,7 +36,12 @@ export function useAppBackendBootstrap() {
         }
       } catch (e) {
         console.error('[useAppBackendBootstrap] Backend bootstrap failed:', e)
+        // Notify user of bootstrap failure instead of silent console.error
+        if (onError) {
+          const message = e instanceof Error ? e.message : String(e)
+          onError(`后端启动失败: ${message}`)
+        }
       }
     })()
-  }, [])
+  }, [onError])
 }

@@ -12,6 +12,11 @@ export function useSmoothStream({ onUpdate, streamDone, minDelay = 10, initialTe
   const displayedRef = useRef(initialText)
   const rafRef = useRef<number>(0)
   const lastTimeRef = useRef(0)
+  // Use ref for streamDone to avoid stale closure and cascading re-creations of tick
+  const streamDoneRef = useRef(streamDone)
+  streamDoneRef.current = streamDone
+  // Cancellation flag to stop RAF loop on reset
+  const cancelledRef = useRef(false)
 
   const segmenter = useRef<Intl.Segmenter | null>(null)
   try {
@@ -39,6 +44,9 @@ export function useSmoothStream({ onUpdate, streamDone, minDelay = 10, initialTe
 
   const tick = useCallback(
     (timestamp: number) => {
+      // Check cancellation flag before scheduling next frame
+      if (cancelledRef.current) return
+
       if (timestamp - lastTimeRef.current < minDelay) {
         rafRef.current = requestAnimationFrame(tick)
         return
@@ -51,11 +59,12 @@ export function useSmoothStream({ onUpdate, streamDone, minDelay = 10, initialTe
         onUpdate(displayedRef.current)
       }
 
-      if (queueRef.current || !streamDone) {
+      // Use ref instead of dependency to avoid stale closure
+      if (queueRef.current || !streamDoneRef.current) {
         rafRef.current = requestAnimationFrame(tick)
       }
     },
-    [minDelay, streamDone, flushQueue, onUpdate]
+    [minDelay, flushQueue, onUpdate]
   )
 
   const addChunk = useCallback(
@@ -71,11 +80,15 @@ export function useSmoothStream({ onUpdate, streamDone, minDelay = 10, initialTe
 
   const reset = useCallback(
     (text = '') => {
+      // Set cancellation flag to stop any pending RAF
+      cancelledRef.current = true
       cancelAnimationFrame(rafRef.current)
       rafRef.current = 0
       queueRef.current = ''
       displayedRef.current = text
       onUpdate(text)
+      // Reset cancellation flag for next stream
+      cancelledRef.current = false
     },
     [onUpdate]
   )

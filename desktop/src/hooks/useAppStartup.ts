@@ -5,7 +5,7 @@ import { useAppUpdate } from './useAppUpdate'
 
 export function useAppStartup(notifyUpdate?: (msg: string) => void) {
   useTheme()
-  useAppBackendBootstrap()
+  useAppBackendBootstrap(notifyUpdate)
   const { checkForUpdate } = useAppUpdate(notifyUpdate)
   useEffect(() => { checkForUpdate() }, [checkForUpdate])
 }

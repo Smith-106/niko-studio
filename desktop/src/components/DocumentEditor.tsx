@@ -68,6 +68,11 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
   const editorTextRef = useRef<string>('')
   const prevChapterIdRef = useRef<string | null>(null)
   const telemetryRef = useRef<WritingSessionTelemetry | null>(null)
+  // Refs for auto-save timer to always use latest values instead of closure capture
+  const currentProjectIdRef = useRef(currentProjectId)
+  currentProjectIdRef.current = currentProjectId
+  const currentChapterIdRef = useRef(currentChapterId)
+  currentChapterIdRef.current = currentChapterId
   const titleFieldLabel = language === 'zh' ? '文档标题' : 'Document title'
 
   const updateSessionTelemetry = useCallback((event: {
@@ -180,15 +185,15 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
       setSaveTime(`${h}:${m}`)
       setSaveStatus('saved')
       setEditorIsDirty(false)
-      // Persist to filesystem
-      if (currentProjectId && currentChapterId) {
-        writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(json)).catch(() => {})
-        autoSaveSnapshot(currentProjectId, currentChapterId).catch(() => {})
+      // Use refs for project/chapter IDs to avoid stale closure in auto-save timer
+      if (currentProjectIdRef.current && currentChapterIdRef.current) {
+        writeChapterContent(currentProjectIdRef.current, currentChapterIdRef.current, JSON.stringify(json)).catch(() => {})
+        autoSaveSnapshot(currentProjectIdRef.current, currentChapterIdRef.current).catch(() => {})
       }
       updateSessionTelemetry({ type: 'save' })
       setTimeout(() => setSaveStatus('idle'), 4000)
     }, 1500)
-  }, [currentProjectId, currentChapterId, updateSessionTelemetry])
+  }, [updateSessionTelemetry])
 
   const handleSave = useCallback(() => {
     if (currentProjectId && currentChapterId && editorJson) {

@@ -29,7 +29,7 @@ pub fn select_vault(
     let watcher = VaultWatcher::new(app, path)
         .map_err(|e| format!("Failed to start vault watcher: {}", e))?;
 
-    *state.0.lock().unwrap() = Some(watcher);
+    *state.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
 
     Ok(VaultInfo {
         path: vault_path,
@@ -40,7 +40,7 @@ pub fn select_vault(
 
 #[tauri::command]
 pub fn stop_vault_watcher(state: State<'_, VaultWatcherState>) -> Result<(), String> {
-    *state.0.lock().unwrap() = None;
+    *state.0.lock().unwrap_or_else(|e| e.into_inner()) = None;
     Ok(())
 }
 

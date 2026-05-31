@@ -27,6 +27,9 @@ interface MetricsState {
   routeMethodStatusCounts: Map<string, number>;
 }
 
+/** Maximum number of distinct route+method keys before auto-reset to prevent unbounded growth */
+const MAX_METRICS_KEYS = 500;
+
 export const METRICS: MetricsState = {
   requestsTotal: 0,
   requestsFailedTotal: 0,
@@ -92,6 +95,11 @@ export function recordRequestMetrics(
   }
 
   const rmKey = dimensionKey(normalized.route, normalized.method);
+  // Prevent unbounded map growth: reset dimension maps if key count exceeds cap
+  if (METRICS.routeMethodMetrics.size >= MAX_METRICS_KEYS && !METRICS.routeMethodMetrics.has(rmKey)) {
+    METRICS.routeMethodMetrics.clear();
+    METRICS.routeMethodStatusCounts.clear();
+  }
   const rmCurrent = METRICS.routeMethodMetrics.get(rmKey) ?? {
     requestsTotal: 0,
     requestsFailedTotal: 0,

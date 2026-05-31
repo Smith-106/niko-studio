@@ -407,3 +407,13 @@ export function resetTokenService(): void {
   }
   _instance = null;
 }
+
+// Close database on process exit to prevent leaked handles
+function _registerExitHook(): void {
+  const shutdown = () => { resetTokenService(); };
+  process.on('exit', shutdown);
+  process.on('SIGINT', () => { shutdown(); process.exit(0); });
+  process.on('SIGTERM', () => { shutdown(); process.exit(0); });
+}
+
+_registerExitHook();
