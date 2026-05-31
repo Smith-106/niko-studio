@@ -362,4 +362,594 @@ GET  /wiki/page/:id</code></pre>
   <li><a href="/graph/character-relationships">角色关系</a>：角色图谱的分析基础。</li>
 </ul>
   `,
+  'niko-editor': `
+<h2>Niko 编辑器</h2>
+<p>NikoEditor 是基于 TipTap（ProseMirror）的富文本编辑器，是所有写作操作的核心工作区。它支持 Markdown 风格输入、Slash 命令、AI 辅助和专业排版扩展。</p>
+<h2>核心功能</h2>
+<ul>
+  <li><strong>富文本编辑</strong> — 粗体、斜体、删除线、标题、引用、代码块、表格、数学公式（LaTeX）和 Callout 框。</li>
+  <li><strong>BubbleToolbar</strong> — 选中文本后弹出浮动工具栏，包含格式按钮和 AI 重写子菜单。</li>
+  <li><strong>SlashCommandMenu</strong> — 输入 <code>/</code> 触发命令菜单，支持 AI 命令（生成、续写、完整文章）和格式块命令（标题、列表、引用、代码、表格、数学、Callout）。</li>
+  <li><strong>Show/Tell 标记</strong> — 左上角切换按钮，高亮文中"展示"与"讲述"段落，辅助沉浸感判断。</li>
+  <li><strong>AI 生成指示器</strong> — 右上角实时显示 AI 生成状态，支持一键取消。</li>
+  <li><strong>快捷键</strong> — <code>Ctrl+S</code> 保存，<code>Ctrl+/</code> 打开快捷键面板。</li>
+</ul>
+<h2>交互流程</h2>
+<pre><code>flowchart LR
+  Start[开始写作] --> Input[输入正文]
+  Input --> Select{选中文本?}
+  Select -->|是| Bubble[BubbleToolbar: 格式 / AI重写]
+  Select -->|否| Slash[输入 / 触发 SlashCommandMenu]
+  Bubble --> AIAction[执行 AI 操作]
+  Slash --> AIAction
+  AIAction --> Result[结果插入编辑器]
+  Result --> Continue[继续写作]</code></pre>
+<h2>Slash 命令列表</h2>
+<table>
+  <thead><tr><th>命令</th><th>类型</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>/ai-generate</td><td>AI</td><td>根据当前上下文生成新内容</td></tr>
+    <tr><td>/ai-continue</td><td>AI</td><td>续写当前段落</td></tr>
+    <tr><td>/ai-full-article</td><td>AI</td><td>生成完整文章草稿</td></tr>
+    <tr><td>/heading</td><td>格式</td><td>插入标题</td></tr>
+    <tr><td>/bullet-list</td><td>格式</td><td>插入无序列表</td></tr>
+    <tr><td>/ordered-list</td><td>格式</td><td>插入有序列表</td></tr>
+    <tr><td>/blockquote</td><td>格式</td><td>插入引用块</td></tr>
+    <tr><td>/code-block</td><td>格式</td><td>插入代码块</td></tr>
+    <tr><td>/table</td><td>格式</td><td>插入表格</td></tr>
+    <tr><td>/math-inline</td><td>格式</td><td>插入行内数学公式</td></tr>
+    <tr><td>/math-block</td><td>格式</td><td>插入块级数学公式</td></tr>
+    <tr><td>/callout</td><td>格式</td><td>插入 Callout 提示框</td></tr>
+  </tbody>
+</table>
+<h2>BubbleToolbar 操作</h2>
+<ul>
+  <li><strong>格式按钮</strong> — 粗体（B）、斜体（I）、删除线（S），当前激活状态高亮显示。</li>
+  <li><strong>AI 重写</strong> — 点击魔法棒图标展开重写选项列表，选择后对选中段落执行 AI 重写。</li>
+  <li><strong>AI 续写</strong> — 点击续写按钮，AI 将在选中文本末尾继续生成内容。</li>
+</ul>
+<h2>使用建议</h2>
+<ul>
+  <li>写作时直接输入文本，无需手动保存——编辑器会在 1.5 秒无操作后自动保存。</li>
+  <li>使用 Slash 命令快速插入格式块，比手动切换格式更高效。</li>
+  <li>选中文本后通过 BubbleToolbar 进行 AI 重写，可针对特定段落精准优化。</li>
+  <li>开启 Show/Tell 标记可直观判断哪些段落需要"展示化"改写。</li>
+</ul>
+<h2>故障排查</h2>
+<ul>
+  <li>编辑器无法输入：检查当前项目与章节是否已选中。</li>
+  <li>Slash 命令菜单未出现：确认在空行或段落末尾输入 <code>/</code>。</li>
+  <li>AI 操作无响应：检查 Gateway 连接状态和模型配置。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/bubble-toolbar">BubbleToolbar</a>、<a href="/desktop/slash-command-menu">SlashCommandMenu</a>、<a href="/desktop/editor-integration">编辑器集成</a>。</p>
+  `,
+  'bubble-toolbar': `
+<h2>BubbleToolbar 浮动工具栏</h2>
+<p>BubbleToolbar 是选中文本时弹出的浮动格式与 AI 操作工具栏。它将常用格式操作和 AI 重写功能合并在一个紧凑的面板中，避免写作时频繁切换面板。</p>
+<h2>界面元素</h2>
+<ul>
+  <li><strong>粗体按钮（B）</strong> — 切换选中文字粗体，激活时高亮显示。</li>
+  <li><strong>斜体按钮（I）</strong> — 切换选中文字斜体。</li>
+  <li><strong>删除线按钮（S）</strong> — 切换选中文字删除线。</li>
+  <li><strong>分隔线</strong> — 视觉分隔格式操作和 AI 操作。</li>
+  <li><strong>AI 重写按钮</strong> — 魔法棒图标 + 展开箭头，点击展开重写选项下拉菜单。</li>
+  <li><strong>AI 续写按钮</strong> — 续写图标，点击后在选中文本末尾继续生成。</li>
+</ul>
+<h2>AI 重写选项</h2>
+<p>AI 重写下拉菜单根据 <code>editorAIPromptPolicy</code> 配置显示可用的重写策略，常见选项包括：</p>
+<ul>
+  <li>润色 — 在保持原意的前提下改善措辞。</li>
+  <li>简化 — 压缩冗余表达，提升信息密度。</li>
+  <li>扩写 — 在关键细节处增加描写深度。</li>
+  <li>改变语气 — 调整叙事语气（紧张、温暖、幽默等）。</li>
+</ul>
+<h2>使用方法</h2>
+<ol>
+  <li>在编辑器中选中一段文本。</li>
+  <li>BubbleToolbar 自动浮现在选区上方。</li>
+  <li>点击格式按钮进行快速格式化，或点击 AI 重写展开选项。</li>
+  <li>选择重写策略后，AI 会替换选中文本，同时自动撤销栈保留原文。</li>
+</ol>
+<h2>注意事项</h2>
+<ul>
+  <li>取消选中文本后工具栏自动关闭。</li>
+  <li>AI 操作可能需要数秒，期间编辑器顶部会显示生成指示器。</li>
+  <li>所有 AI 修改均可通过 <code>Ctrl+Z</code> 撤销。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/niko-editor">Niko 编辑器</a>、<a href="/desktop/slash-command-menu">SlashCommandMenu</a>。</p>
+  `,
+  'slash-command-menu': `
+<h2>SlashCommandMenu 斜杠命令菜单</h2>
+<p>SlashCommandMenu 是编辑器中输入 <code>/</code> 触发的浮动命令面板。它将 AI 写作命令和格式块命令统一在一个可搜索的列表中，支持键盘导航和模糊过滤。</p>
+<h2>界面元素</h2>
+<ul>
+  <li><strong>命令列表</strong> — 每项包含图标、标签、描述文字。AI 命令额外显示"AI"徽章。</li>
+  <li><strong>搜索过滤</strong> — 在 <code>/</code> 后继续输入文字，菜单自动过滤匹配项。</li>
+  <li><strong>键盘导航</strong> — 上下箭头切换选中项，回车确认选择，Escape 关闭菜单。</li>
+  <li><strong>点击选择</strong> — 鼠标点击项目直接执行。</li>
+  <li><strong>点击外部关闭</strong> — 点击菜单外部区域关闭菜单。</li>
+</ul>
+<h2>命令分类</h2>
+<table>
+  <thead><tr><th>分类</th><th>命令示例</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>AI 写作</td><td>AI 生成、AI 续写、完整文章</td><td>调用 Gateway 执行 AI 创作任务</td></tr>
+    <tr><td>标题</td><td>H1、H2、H3</td><td>插入不同级别标题</td></tr>
+    <tr><td>列表</td><td>无序列表、有序列表</td><td>插入列表结构</td></tr>
+    <tr><td>引用</td><td>引用块</td><td>插入blockquote</td></tr>
+    <tr><td>代码</td><td>代码块</td><td>插入代码块</td></tr>
+    <tr><td>表格</td><td>表格</td><td>插入表格结构</td></tr>
+    <tr><td>数学</td><td>行内公式、块级公式</td><td>插入LaTeX数学表达式</td></tr>
+    <tr><td>提示</td><td>Callout</td><td>插入提示框组件</td></tr>
+  </tbody>
+</table>
+<h2>使用方法</h2>
+<ol>
+  <li>在编辑器空行或段落末尾输入 <code>/</code>。</li>
+  <li>菜单弹出，浏览可用命令或输入关键词过滤。</li>
+  <li>用箭头键或鼠标选择目标命令，按回车或点击执行。</li>
+  <li>命令执行后菜单自动关闭，内容插入到编辑器。</li>
+</ol>
+<h2>使用技巧</h2>
+<ul>
+  <li>输入 <code>/h</code> 快速过滤到标题命令。</li>
+  <li>输入 <code>/ai</code> 快速定位 AI 写作命令。</li>
+  <li>AI 命令会利用当前编辑器上下文（已写内容、项目设定等）生成相关内容。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/niko-editor">Niko 编辑器</a>、<a href="/desktop/bubble-toolbar">BubbleToolbar</a>。</p>
+  `,
+  'chat-area': `
+<h2>对话区（ChatArea）</h2>
+<p>ChatArea 是 Niko Studio 的 AI 对话界面，负责管理对话消息流、模式控制、快捷操作和草稿编辑。它将聊天交互与写作工作流无缝衔接。</p>
+<h2>界面结构</h2>
+<pre><code>flowchart TB
+  Top[ChatMessageList: 消息列表 + 流式内容] --> Middle[中间操作栏]
+  Middle --> Inline[ChatAreaInlineActions: 继续/修改/生成]
+  Middle --> Context[ChatContextBar: 上下文信息]
+  Middle --> Mode[ChatAreaModeControls: 模式与预设]
+  Middle --> Status[ChatAreaStreamStatus: 错误/恢复通知]
+  Bottom[ChatAreaComposer: 输入框 + 操作按钮]</code></pre>
+<h2>核心功能</h2>
+<ul>
+  <li><strong>消息列表</strong> — 显示用户消息和 AI 回复，支持流式内容渲染、启动操作和模式预设展示。</li>
+  <li><strong>模式控制</strong> — 支持 chat（对话）和 agent（代理）两种模式，agent 模式可选择 write/revise/context 操作。</li>
+  <li><strong>模式预设</strong> — 专注写作、代理诊断、比较评审三种快捷预设，一键切换模式 + 技能组合。</li>
+  <li><strong>技能包</strong> — 可展开的技能选择面板，每个技能以切换按钮呈现，最多显示 8 个技能。</li>
+  <li><strong>模型比较</strong> — 可启用双模型对比评审，同时输出两个模型的回复进行比较。</li>
+  <li><strong>快捷操作</strong> — QuickRollback（快速回滚）、InlineActions（继续/修改/生成）。</li>
+  <li><strong>草稿管理</strong> — 输入框内容自动缓存为草稿，支持恢复和清除。</li>
+  <li><strong>错误恢复</strong> — 流式请求失败时显示错误状态和重试按钮，支持恢复中断的会话。</li>
+</ul>
+<h2>ChatAreaComposer 功能</h2>
+<ul>
+  <li>自适应高度的文本输入框（3-8 行），支持拖放文件上传。</li>
+  <li>附件按钮（上传文件）、知识面板切换按钮、清除草稿按钮、复制上次回复按钮。</li>
+  <li>发送按钮（正常状态）/ 取消按钮（加载状态）。</li>
+  <li>快捷方式提示文本。</li>
+</ul>
+<h2>使用方法</h2>
+<ol>
+  <li>在输入框输入消息或拖入参考文件。</li>
+  <li>选择对话模式（chat 对话 / agent 代理）和操作类型。</li>
+  <li>可选：启用技能包和模型比较功能。</li>
+  <li>点击发送或使用快捷键提交。</li>
+  <li>查看 AI 回复，使用快捷操作（继续、修改、回滚）调整结果。</li>
+</ol>
+<h2>模式说明</h2>
+<table>
+  <thead><tr><th>模式</th><th>适用场景</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>Chat</td><td>自由提问、讨论思路</td><td>普通对话</td></tr>
+    <tr><td>Agent · Write</td><td>AI 辅助创作新内容</td><td>扩写、续写、完整文章</td></tr>
+    <tr><td>Agent · Revise</td><td>AI 辅助修改现有段落</td><td>润色、改写、风格调整</td></tr>
+    <tr><td>Agent · Context</td><td>AI 辅助查找上下文信息</td><td>角色查询、设定检索</td></tr>
+  </tbody>
+</table>
+<h2>故障排查</h2>
+<ul>
+  <li>发送无响应：检查 Gateway 连接和模型配置。</li>
+  <li>流式输出中断：网络不稳定时可使用恢复按钮继续。</li>
+  <li>草稿未恢复：确认浏览器 localStorage 是否可用。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/agent/chat-system">对话系统</a>、<a href="/desktop/chat-area-composer">ChatAreaComposer</a>、<a href="/desktop/chat-area-mode-controls">ChatAreaModeControls</a>。</p>
+  `,
+  'chat-area-composer': `
+<h2>ChatAreaComposer 对话输入框</h2>
+<p>ChatAreaComposer 是 ChatArea 底部的输入与操作组件。它集成了文本编辑、文件上传、快捷操作和草稿管理，是对话交互的主要入口。</p>
+<h2>界面布局</h2>
+<pre><code>flowchart LR
+  TextArea[自适应文本框] --> Actions[操作按钮组]
+  Actions --> Attach[附件按钮]
+  Actions --> Knowledge[知识面板切换]
+  Actions --> Clear[清除草稿]
+  Actions --> Copy[复制上次回复]
+  Actions --> Send[发送/取消]</code></pre>
+<h2>功能说明</h2>
+<ul>
+  <li><strong>文本输入框</strong> — 最小 3 行，最大 8 行，高度 72-200px 自动调整。支持拖放文件上传（显示覆盖层提示）。</li>
+  <li><strong>文件上传</strong> — 支持拖放和点击附件按钮上传。文件类型白名单：.txt、.md、.json、.pdf、.docx。文件大小限制：10MB。</li>
+  <li><strong>知识面板切换</strong> — 书签图标按钮，点击切换右侧知识面板的显示状态。</li>
+  <li><strong>清除草稿</strong> — 垃圾桶图标按钮，清除输入框中的草稿内容。当输入框为空时自动淡出。</li>
+  <li><strong>复制上次回复</strong> — 复制上一条 AI 回复内容到剪贴板。</li>
+  <li><strong>发送/取消</strong> — 正常状态显示箭头发送按钮，加载中显示红色方块取消按钮。</li>
+</ul>
+<h2>使用技巧</h2>
+<ul>
+  <li>拖放文件到输入框区域可直接上传作为参考素材。</li>
+  <li>输入内容会自动保存为草稿，刷新页面后可恢复。</li>
+  <li>使用知识面板切换按钮可快速查找角色或设定信息，无需离开对话。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/chat-area">对话区</a>、<a href="/desktop/chat-area-mode-controls">ChatAreaModeControls</a>。</p>
+  `,
+  'chat-area-mode-controls': `
+<h2>ChatAreaModeControls 模式控制栏</h2>
+<p>ChatAreaModeControls 是 ChatArea 中间的单行控制栏，负责对话模式选择、预设切换、技能包管理和模板库入口。</p>
+<h2>界面元素</h2>
+<ul>
+  <li><strong>模式指示器</strong> — 彩色圆点 + 活动模式摘要文本（如"Agent · Write"），右侧显示已选技能数量徽章。</li>
+  <li><strong>预设按钮组</strong> — 三个快捷预设按钮：专注写作、代理诊断、比较评审。点击切换模式 + 技能组合。</li>
+  <li><strong>模板库按钮</strong> — 打开 PromptTemplatePanel 模板库面板。</li>
+  <li><strong>技能包面板</strong> — 可折叠面板（Sparkles 图标），展开后显示最多 8 个技能切换按钮。已选技能以填充主色显示，右上角显示已选数量。</li>
+</ul>
+<h2>预设说明</h2>
+<table>
+  <thead><tr><th>预设</th><th>模式</th><th>功能</th></tr></thead>
+  <tbody>
+    <tr><td>专注写作</td><td>Agent · Write</td><td>启用写作相关技能，快速进入创作状态</td></tr>
+    <tr><td>代理诊断</td><td>Agent · Revise</td><td>启用分析技能，聚焦问题诊断</td></tr>
+    <tr><td>比较评审</td><td>Chat + Model Comparison</td><td>启用模型对比，同时输出两个模型回复</td></tr>
+  </tbody>
+</table>
+<h2>使用方法</h2>
+<ol>
+  <li>点击预设按钮快速切换到对应模式与技能组合。</li>
+  <li>点击技能包图标展开面板，手动选择/取消技能。</li>
+  <li>点击模板库按钮浏览和管理提示词模板。</li>
+</ol>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/chat-area">对话区</a>、<a href="/desktop/chat-area-composer">ChatAreaComposer</a>。</p>
+  `,
+  'story-bible-panel': `
+<h2>Story Bible 故事圣经面板</h2>
+<p>StoryBiblePanel 是管理作品核心设定的侧边面板，将 Braindump、Genre、Synopsis、Canon、Characters、Worldbuilding、Narrative、Writing Style 和 Outline 集中在一个可折叠的界面中。它是长期项目保持设定一致性的基础。</p>
+<h2>面板结构</h2>
+<pre><code>flowchart TB
+  Braindump[Braindump 自由文本] --> Genre[Genre 类型标签]
+  Genre --> Synopsis[Synopsis 概要 + 提升至正典]
+  Synopsis --> Canon[Canon Review 正典审阅]
+  Canon --> Characters[Characters 角色]
+  Characters --> Worldbuilding[Worldbuilding 世界观]
+  Worldbuilding --> Narrative[Narrative 叙事记录]
+  Narrative --> Style[Writing Style 写作风格]
+  Style --> Outline[Outline 大纲]</code></pre>
+<h2>各区域说明</h2>
+<ul>
+  <li><strong>Braindump</strong> — 自由文本区，用于记录初始想法和灵感片段。</li>
+  <li><strong>Genre</strong> — 预设类型切换 + 自定义标签输入。</li>
+  <li><strong>Synopsis</strong> — 故事概要文本区，"提升至正典"按钮将草稿晋升为权威设定。</li>
+  <li><strong>Canon Review</strong> — 已晋升正典页面列表，可选择查看详细内容。</li>
+  <li><strong>Characters</strong> — 角色记录列表，支持起草、保存和激活。</li>
+  <li><strong>Worldbuilding</strong> — 世界观设定列表，操作同 Characters。</li>
+  <li><strong>Narrative</strong> — 场景/事件/时间线叙事记录，操作同上。</li>
+  <li><strong>Writing Style</strong> — 4 种风格选项：tried（经验验证）、matchMy（匹配我的风格）、soundsLike（匹配目标风格）、custom（自定义）。</li>
+  <li><strong>Outline</strong> — 大纲文本区，用于规划章节结构。</li>
+</ul>
+<h2>工具栏操作</h2>
+<ul>
+  <li><strong>导出</strong> — 将 Story Bible 草稿导出为 JSON 文件。</li>
+  <li><strong>导入</strong> — 从 JSON 文件导入 Story Bible 数据。</li>
+  <li><strong>重置</strong> — 将草稿重置为初始空状态。</li>
+</ul>
+<h2>使用建议</h2>
+<ul>
+  <li>在写作初期使用 Braindump 记录所有灵感，不必在意格式。</li>
+  <li>确定角色和世界观后及时提升 Synopsis 和关键设定为 Canon，确保后续 AI 分析和一致性检查参考权威设定。</li>
+  <li>定期导出 Story Bible 作为备份。</li>
+</ul>
+<h2>故障排查</h2>
+<ul>
+  <li>面板不显示内容：确认当前项目已选中且 Story Bible 数据已加载。</li>
+  <li>"提升至正典"按钮无响应：检查 Synopsis 文本区是否有内容。</li>
+  <li>导入失败：确认 JSON 文件格式正确。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/wiki-system">Wiki 系统</a>、<a href="/worldview/worldview-manage">设定管理</a>。</p>
+  `,
+  'evaluation-panel': `
+<h2>评估面板（EvaluationPanel）</h2>
+<p>EvaluationPanel 是右侧面板中功能最丰富的组件，提供 4 步评估流程、多维度分析、支持工具和工作流集成。它将"发现问题"和"修复问题"统一在同一个面板中。</p>
+<h2>面板结构</h2>
+<pre><code>flowchart TB
+  Step1[源选择] --> Step2[紧凑评审]
+  Step2 --> Step3[详细评审]
+  Step3 --> Step4[支持工具]
+  Step4 --> Action[批量应用 / 移交写作助手]</code></pre>
+<h2>功能区说明</h2>
+<ul>
+  <li><strong>源选择器</strong> — 选择要评估的文本来源（当前章节、选中文本等）。</li>
+  <li><strong>紧凑评审</strong> — 显示前 2 条建议和主要反馈摘要。</li>
+  <li><strong>详细评审</strong> — 包含完整维度分析、模块细分、所有建议及批量应用/撤销操作。</li>
+  <li><strong>支持工具</strong> — 质量检查（小说质量分数）、多轮次修订循环（设定目标分数和迭代次数）、一致性治理检查、工作流路由/计划/执行/生命周期控制、检查点创建和恢复。</li>
+  <li><strong>建议卡片</strong> — 每条建议可生成修订预览，可一键移交至 Writing Helper 深度处理。</li>
+</ul>
+<h2>决策徽章</h2>
+<table>
+  <thead><tr><th>徽章</th><th>含义</th><th>建议动作</th></tr></thead>
+  <tbody>
+    <tr><td>APPROVED</td><td>当前文本通过评估</td><td>继续写作或进入下一章节</td></tr>
+    <tr><td>REVISE</td><td>存在可修复的问题</td><td>查看建议并选择性应用</td></tr>
+    <tr><td>REWRITE</td><td>问题严重，建议重写</td><td>使用 Writing Helper 或工作流深度修订</td></tr>
+  </tbody>
+</table>
+<h2>使用方法</h2>
+<ol>
+  <li>选择评估源（当前章节或选中文本）。</li>
+  <li>查看总体评分和决策徽章。</li>
+  <li>在紧凑评审中快速浏览主要问题。</li>
+  <li>展开详细评审查看各维度分析和建议。</li>
+  <li>选择建议：直接应用、生成修订预览、或移交至 Writing Helper。</li>
+  <li>使用支持工具进行多轮修订循环直至达到目标分数。</li>
+</ol>
+<h2>故障排查</h2>
+<ul>
+  <li>评估无结果：确认 Gateway 连接正常且模型已配置。</li>
+  <li>建议无法应用：检查选中文本是否仍然存在于编辑器中。</li>
+  <li>多轮修订循环未收敛：调整目标分数或增加迭代次数。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/writing-helper-panel">写作助手</a>、<a href="/critic/critic-evaluate">批评评估</a>、<a href="/desktop/workflow-editor-panel">工作流编辑器</a>。</p>
+  `,
+  'writing-helper-panel': `
+<h2>写作助手面板（WritingHelperPanel）</h2>
+<p>WritingHelperPanel 是全屏模态对话框，提供深度文本修订功能。它支持 5 种修订模式、8 维风格控制和高级子属性调整，是评估面板的下游深度处理入口。</p>
+<h2>面板结构</h2>
+<pre><code>flowchart TB
+  Mode[模式选择] --> Params[参数设定]
+  Params --> Style[8维风格设置]
+  Style --> Advanced[高级子属性]
+  Advanced --> Skills[技能包]
+  Skills --> Guide[修订指南]
+  Guide --> Run[执行处理]
+  Run --> Result[结果与回填]</code></pre>
+<h2>修订模式</h2>
+<table>
+  <thead><tr><th>模式</th><th>说明</th><th>适用场景</th></tr></thead>
+  <tbody>
+    <tr><td>Polish</td><td>润色措辞，保持原意</td><td>文本基本成形，需要提升表达</td></tr>
+    <tr><td>Rewrite</td><td>重写段落结构和表达</td><td>需要大幅调整内容组织</td></tr>
+    <tr><td>Expand</td><td>扩写细节和描写</td><td>场景过薄，需要增加深度</td></tr>
+    <tr><td>Summarize</td><td>压缩和提炼要点</td><td>信息冗余，需要精简</td></tr>
+    <tr><td>Outline</td><td>生成大纲结构</td><td>从草稿提取结构化框架</td></tr>
+  </tbody>
+</table>
+<h2>风格控制维度</h2>
+<ul>
+  <li><strong>4 个选择型维度</strong> — 色调（Tone）、视角（Perspective）、句式（Sentence）、节奏（Pacing）。</li>
+  <li><strong>4 个滑块型维度</strong> — 正式度、情感强度、创造力、叙事距离。</li>
+</ul>
+<h2>高级子属性</h2>
+<p>6 组可折叠子属性面板，每组包含选择、滑块或标签输入控件：</p>
+<ul>
+  <li>Structure — 叙事结构控制</li>
+  <li>Emotion — 情感表达调控</li>
+  <li>Thinking — 思维模式设定</li>
+  <li>Narrative — 叙事视角控制</li>
+  <li>Rhythm — 文本节奏调节</li>
+  <li>Uniqueness/Cultural — 独特性和文化适配</li>
+</ul>
+<h2>评估移交</h2>
+<p>当从评估面板移交时，Writing Helper 会预选修订模式和参数，并显示评估交接预设卡片，包含原始问题、目标分数和建议方向。</p>
+<h2>结果回填</h2>
+<ul>
+  <li>修订结果以 RevisionPreviewCard 展示，支持替换、插入到编辑器下方、或撤销操作。</li>
+  <li>纯文本结果提供"插入到编辑器"按钮。</li>
+</ul>
+<h2>使用建议</h2>
+<ul>
+  <li>从评估面板移交可获得更有针对性的修订——系统会携带问题上下文。</li>
+  <li>精细调整风格维度比选择预设更有效——尝试微调叙事距离和情感强度。</li>
+  <li>开启相关技能包可让修订更有针对性——如"对白润色"技能配合 Polish 模式。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/evaluation-panel">评估面板</a>、<a href="/desktop/ai-text-optimizer">AI 文本优化器</a>。</p>
+  `,
+  'ai-text-optimizer': `
+<h2>AI 文本优化器（AiTextOptimizer）</h2>
+<p>AiTextOptimizer 是全屏模态对话框，专注于降低文本的 AI 痕迹，使其更自然、更具人味。它提供 6 种预设策略、两步分析模式和防护机制。</p>
+<h2>核心功能</h2>
+<ul>
+  <li><strong>困惑度优化</strong> — 增加词汇和句式变化，打破 AI 生成文本的规律性。</li>
+  <li><strong>突发性优化</strong> — 调整句子长度和结构变化，模拟人类写作的自然节奏。</li>
+  <li><strong>检测规避</strong> — 针对 AI 文本检测器的特征进行优化。</li>
+  <li><strong>自然化</strong> — 注入口语表达、不完美和个性化特征。</li>
+</ul>
+<h2>预设策略</h2>
+<table>
+  <thead><tr><th>预设</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>Humanize</td><td>全面人性化，降低所有 AI 特征</td></tr>
+    <tr><td>AI Guide</td><td>保留 AI 优势同时降低可检测性</td></tr>
+    <tr><td>Character Narrative</td><td>以角色声线驱动叙事，增加个性化</td></tr>
+    <tr><td>Literary Polish</td><td>文学性润色，提升艺术表达</td></tr>
+    <tr><td>Academic Paper</td><td>学术写作优化，保持专业性</td></tr>
+    <tr><td>Custom</td><td>自定义策略，自由组合参数</td></tr>
+  </tbody>
+</table>
+<h2>两步分析模式</h2>
+<p>开启两步分析后，系统会先执行 AI 特征分析（标记困惑度低、突发性低等区域），再根据诊断结果定向重写。诊断报告以 <code>&lt;details&gt;</code> 折叠面板展示。</p>
+<h2>使用方法</h2>
+<ol>
+  <li>选择预设策略或自定义模式。</li>
+  <li>可选：开启两步分析以获取诊断报告。</li>
+  <li>输入或粘贴待处理文本（也可从编辑器选中文本直接打开）。</li>
+  <li>点击运行按钮（带防护图标）。</li>
+  <li>查看处理结果，点击"插入到编辑器"将优化后文本替换原文。</li>
+</ol>
+<h2>使用建议</h2>
+<ul>
+  <li>对于网文作品，推荐使用 Character Narrative 预设，能显著增加角色声线辨识度。</li>
+  <li>开启两步分析虽然耗时更长，但结果更精准——诊断报告能帮助理解 AI 特征分布。</li>
+  <li>自定义模式下的文本区可以精确描述你想要的优化方向。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/writing-helper-panel">写作助手</a>、<a href="/desktop/niko-editor">Niko 编辑器</a>。</p>
+  `,
+  'workflow-editor-panel': `
+<h2>工作流编辑器（WorkflowEditorPanel）</h2>
+<p>WorkflowEditorPanel 是右侧面板，用于创建、编辑和执行多步骤工作流。它将分析、修订、检查和导出等操作编排为可复用的自动化流程。</p>
+<h2>三种视图</h2>
+<pre><code>flowchart LR
+  ListView[列表视图] --> EditView[编辑视图]
+  EditView --> ExecView[执行视图]
+  ExecView --> ListView</code></pre>
+<h2>视图说明</h2>
+<ul>
+  <li><strong>列表视图</strong> — 显示所有工作流卡片，每张卡片包含步骤缩略图、运行和删除操作按钮。</li>
+  <li><strong>编辑视图</strong> — 工作流名称/描述输入框，步骤管道可视化（箭头连接器连接各步骤）。每个步骤可配置代理模式（Write/Analyze/Evaluate/Custom）、提示词、输入源（previousStep/chapterContent/storyBible/outline）和检查点类型（none/review/approve）。支持添加步骤和保存。</li>
+  <li><strong>执行视图</strong> — 步骤进度时间线，门控控制（暂停/批准/修改/拒绝），输出文本编辑区域。</li>
+</ul>
+<h2>步骤代理模式</h2>
+<table>
+  <thead><tr><th>模式</th><th>说明</th><th>输入源建议</th></tr></thead>
+  <tbody>
+    <tr><td>Write</td><td>AI 创作新内容</td><td>chapterContent + storyBible</td></tr>
+    <tr><td>Analyze</td><td>分析现有文本</td><td>chapterContent</td></tr>
+    <tr><td>Evaluate</td><td>评估文本质量</td><td>previousStep</td></tr>
+    <tr><td>Custom</td><td>自定义提示词</td><td>任意组合</td></tr>
+  </tbody>
+</table>
+<h2>检查点类型</h2>
+<ul>
+  <li><strong>none</strong> — 步骤自动执行，无需人工干预。</li>
+  <li><strong>review</strong> — 步骤完成后暂停，供人工审阅后继续。</li>
+  <li><strong>approve</strong> — 步骤完成后需人工批准才能继续。</li>
+</ul>
+<h2>使用建议</h2>
+<ul>
+  <li>先在编辑视图中创建和调试工作流，确认无误后再在执行视图中运行。</li>
+  <li>关键步骤设置 review 或 approve 检查点，避免 AI 连锁错误。</li>
+  <li>使用 previousStep 输入源串联步骤，让后续步骤基于前序结果操作。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/evaluation-panel">评估面板</a>、<a href="/api/workflow-api">Workflow API</a>。</p>
+  `,
+  'settings-modal': `
+<h2>设置面板（SettingsModal）</h2>
+<p>SettingsModal 是大型模态对话框，包含左侧导航栏和右侧内容区，管理 Niko Studio 的所有配置项。共 8 个设置分区。</p>
+<h2>分区说明</h2>
+<ul>
+  <li><strong>写作设置</strong> — 工作流级别（L1-L5）、后端模式、目标字数、自动技能匹配、质量目标预设和滑块。</li>
+  <li><strong>检索设置</strong> — 启用/禁用、搜索模式、配置文件、分数/预算/迭代阈值、重排序开关、上下文类型复选框。</li>
+  <li><strong>模板管理</strong> — 打开 TemplateManagerPanel 管理提示词模板。</li>
+  <li><strong>模型配置</strong> — LLM 提供商卡片（启用/主单选）、API 密钥、Base URL、模型选择器、刷新/验证按钮、自定义模型输入、回退/多模型/防护/传统润色开关、提供商搜索。</li>
+  <li><strong>风格设置</strong> — 项目级风格配置文件提取。</li>
+  <li><strong>界面设置</strong> — 10 种主题色、字体大小、语言切换（中文/英文）、发送快捷键配置。</li>
+  <li><strong>后端设置</strong> — Gateway URL、配置 JSON 编辑区、密钥管理。</li>
+  <li><strong>诊断</strong> — 刷新诊断数据、打开详细诊断面板。</li>
+</ul>
+<h2>底部工具栏</h2>
+<ul>
+  <li><strong>重置</strong> — 恢复所有设置为默认值。</li>
+  <li><strong>导出/导入</strong> — 将设置导出为 JSON 文件或从 JSON 导入。</li>
+  <li><strong>保存/取消</strong> — 保存修改或放弃更改。</li>
+</ul>
+<h2>使用建议</h2>
+<ul>
+  <li>首次使用时优先配置模型（API 密钥和模型选择）和写作设置（工作流级别和质量目标）。</li>
+  <li>使用导出/导入功能在多台设备间同步设置。</li>
+  <li>开启检索功能并配置上下文类型可显著提升 AI 分析的针对性。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/writing-helper-panel">写作助手</a>、<a href="/api/config-api">配置 API</a>。</p>
+  `,
+  'knowledge-modal': `
+<h2>知识面板（KnowledgeModal）</h2>
+<p>KnowledgeModal 是全高侧边面板，提供知识条目的查找、增强和参考功能。它是写作过程中查询角色、地点、情节和技能的快速入口。</p>
+<h2>三个主标签</h2>
+<ul>
+  <li><strong>查找（Find）</strong> — 搜索框 + 分类浏览器（角色/地点/情节）。显示项目卡片列表，点击可查看详情。详情视图显示标题、摘要和所有属性条目，底部有"提升至 Wiki 正典"按钮。</li>
+  <li><strong>增强（Enhance）</strong> — 两个子模式：Memory（记忆）显示 MemoryForm 用于添加新素材；Skill（技能）显示 SkillTab 用于搜索和管理技能。</li>
+  <li><strong>参考（Reference）</strong> — 查找模式下的参考入口，带有提示徽章引导使用。</li>
+</ul>
+<h2>工作区范围</h2>
+<p>面板顶部显示当前工作区范围芯片（项目/章节上下文），确保知识查询在正确的项目范围内进行。</p>
+<h2>使用方法</h2>
+<ol>
+  <li>点击书签图标或从输入框的知识面板按钮打开。</li>
+  <li>在查找标签中搜索角色名、地点名或情节关键词。</li>
+  <li>点击结果查看详细信息，确认设定后点击"提升至 Wiki 正典"将其晋升为长期设定。</li>
+  <li>在增强标签中添加新记忆或搜索技能。</li>
+</ol>
+<h2>使用建议</h2>
+<ul>
+  <li>写作前快速查找角色属性可避免设定冲突。</li>
+  <li>及时将临时聊天中确认的事实"提升至 Wiki 正典"，让后续 AI 分析能引用这些设定。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/wiki-system">Wiki 系统</a>、<a href="/memory/material-upload">素材上传</a>。</p>
+  `,
+  'automation-panel': `
+<h2>自动化面板（AutomationPanel）</h2>
+<p>AutomationPanel 是右侧面板，用于管理和干预已调度的自动化任务。它显示任务状态、执行历史和人工门控操作。</p>
+<h2>面板结构</h2>
+<ul>
+  <li><strong>头部</strong> — 标题 + 刷新、导入计划、设置和关闭按钮。</li>
+  <li><strong>工作区范围</strong> — 显示当前项目和章节上下文芯片。</li>
+  <li><strong>任务列表</strong> — 显示所有调度任务，包含标题、描述和状态徽章（Active/Paused）。</li>
+  <li><strong>任务详情</strong> — 选定任务的运行状态、批准状态、上次触发时间、重试状态、阻塞原因、下一步操作、关联计划 ID 和时间戳。</li>
+  <li><strong>人工干预</strong> — 立即运行/重试、暂停/恢复调度按钮。</li>
+  <li><strong>批准门</strong> — 输入确认令牌后"确认并继续"执行。</li>
+  <li><strong>计划生命周期</strong> — 拒绝并暂停计划、恢复计划按钮。</li>
+</ul>
+<h2>使用场景</h2>
+<ul>
+  <li>工作流自动触发后需要人工审阅——在批准门中确认或拒绝。</li>
+  <li>任务执行失败——手动重试或调整调度状态。</li>
+  <li>暂停整个计划以停止自动执行——点击"拒绝并暂停计划"。</li>
+</ul>
+<h2>故障排查</h2>
+<ul>
+  <li>任务一直阻塞：查看阻塞原因，可能需要人工批准门操作。</li>
+  <li>重试失败：检查 Gateway 健康状态和模型配置。</li>
+  <li>计划未触发：确认计划状态是否为 Active。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/desktop/workflow-editor-panel">工作流编辑器</a>、<a href="/api/workflow-api">Workflow API</a>。</p>
+  `,
+  'mcp-status-panel': `
+<h2>MCP 状态面板（McpStatusPanel）</h2>
+<p>McpStatusPanel 是右侧面板，用于监控 Gateway 连接状态、服务健康度和运行时指标。它是排查连接问题和系统健康的首选入口。</p>
+<h2>面板结构</h2>
+<ul>
+  <li><strong>Gateway 状态</strong> — 连接状态指示、会话 ID、重新连接尝试次数和错误诊断信息。</li>
+  <li><strong>自愈医生</strong> — 一键重启按钮 + 诊断结果展示。当 Gateway 异常时可尝试自愈。</li>
+  <li><strong>运行时诊断</strong> — 分类诊断信息（类/详细信息/可操作建议）。</li>
+  <li><strong>关键服务状态</strong> — 表格显示 memory/graph/search/workflow/critic/agent/skills 各服务的在线/离线状态。</li>
+  <li><strong>运行时指标</strong> — 网格显示总请求数、失败数、平均延迟和最大延迟。</li>
+  <li><strong>服务动态配置</strong> — 创建新服务（ID/名称/路径），现有服务的重命名/启用/禁用/健康检查探测。</li>
+  <li><strong>工具统计</strong> — 每个服务的工具计数和工具总数。</li>
+  <li><strong>实时 Gateway 终端</strong> — Tauri 事件监听器实时显示着色日志行，带清除按钮。</li>
+</ul>
+<h2>使用方法</h2>
+<ol>
+  <li>遇到 AI 功能无响应时打开此面板，首先查看 Gateway 状态。</li>
+  <li>若 Gateway 显示离线，尝试"一键重启"自愈医生。</li>
+  <li>检查关键服务状态表格，确认所有必要服务在线。</li>
+  <li>查看运行时指标，判断是否存在大量请求失败或延迟过高。</li>
+  <li>使用实时终端观察 Gateway 日志，定位具体错误。</li>
+</ol>
+<h2>故障排查</h2>
+<ul>
+  <li>Gateway 无法连接：点击自愈医生"一键重启"，或检查后端进程是否在运行。</li>
+  <li>某个服务离线：尝试在服务动态配置中启用/禁用并重新探测。</li>
+  <li>日志刷屏过快：使用清除按钮重置终端。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：<a href="/api/health-api">健康检查</a>、<a href="/api/gateway-api">Gateway API</a>。</p>
+  `,
 };

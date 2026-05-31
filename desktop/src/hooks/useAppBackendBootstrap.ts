@@ -26,12 +26,16 @@ export function useAppBackendBootstrap() {
     const configuredBase = normalizeConfiguredBase(settings.apiBaseUrl)
 
     void (async () => {
-      await syncGatewayBaseOverride(configuredBase)
-      await startTauriBackend()
+      try {
+        await syncGatewayBaseOverride(configuredBase)
+        await startTauriBackend()
 
-      const resolvedBase = await getRuntimeGatewayBase(() => configuredBase ?? STALE_LOCAL_GATEWAY_BASE)
-      if (shouldRepairPersistedGatewayBase(configuredBase, resolvedBase)) {
-        updateSettings({ apiBaseUrl: resolvedBase })
+        const resolvedBase = await getRuntimeGatewayBase(() => configuredBase ?? STALE_LOCAL_GATEWAY_BASE)
+        if (shouldRepairPersistedGatewayBase(configuredBase, resolvedBase)) {
+          updateSettings({ apiBaseUrl: resolvedBase })
+        }
+      } catch (e) {
+        console.error('[useAppBackendBootstrap] Backend bootstrap failed:', e)
       }
     })()
   }, [])

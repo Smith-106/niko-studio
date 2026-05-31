@@ -717,6 +717,8 @@ export function ChatArea({
     if (!payloadForSend.message.trim() || isLoading) return
 
     if (!currentConversationId) {
+      // createConversation() synchronously updates currentConversationId in the store;
+      // downstream calls (createBeforeSendCheckpoint, etc.) read via getState() and will see the new ID
       createConversation()
     }
 

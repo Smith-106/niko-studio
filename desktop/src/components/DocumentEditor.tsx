@@ -141,11 +141,18 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
       setContentLoaded(true)
       return
     }
+    let cancelled = false
     setContentLoaded(false)
     readChapterContent(currentProjectId, currentChapterId).then((content) => {
+      if (cancelled) return
       setChapterContent(content || JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }))
       setContentLoaded(true)
+    }).catch(() => {
+      if (cancelled) return
+      setChapterContent(JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }))
+      setContentLoaded(true)
     })
+    return () => { cancelled = true }
   }, [currentChapterId, currentProjectId])
 
   const stats = useMemo(() => ({
@@ -175,8 +182,8 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
       setEditorIsDirty(false)
       // Persist to filesystem
       if (currentProjectId && currentChapterId) {
-        writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(json))
-        autoSaveSnapshot(currentProjectId, currentChapterId)
+        writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(json)).catch(() => {})
+        autoSaveSnapshot(currentProjectId, currentChapterId).catch(() => {})
       }
       updateSessionTelemetry({ type: 'save' })
       setTimeout(() => setSaveStatus('idle'), 4000)
@@ -186,8 +193,8 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
   const handleSave = useCallback(() => {
     if (currentProjectId && currentChapterId && editorJson) {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(editorJson))
-      autoSaveSnapshot(currentProjectId, currentChapterId)
+      writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(editorJson)).catch(() => {})
+      autoSaveSnapshot(currentProjectId, currentChapterId).catch(() => {})
       const now = new Date()
       const h = now.getHours().toString().padStart(2, '0')
       const m = now.getMinutes().toString().padStart(2, '0')
@@ -281,7 +288,7 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
                 key={currentProjectId ?? '__no-project__'}
                 initialContent={contentLoaded
                   ? (currentChapterId && editorStateCache.has(currentChapterId)
-                    ? editorStateCache.get(currentChapterId)!.json ?? chapterContent
+                    ? editorStateCache.get(currentChapterId)?.json ?? chapterContent
                     : chapterContent || undefined)
                   : undefined}
                 onOpenWritingHelper={onOpenWritingHelper}

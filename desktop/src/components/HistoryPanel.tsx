@@ -35,7 +35,13 @@ function DiffViewer({ projectId, chapterId, from, to, onClose }: {
   const [diff, setDiff] = useState<DiffResult[] | null>(null)
 
   useEffect(() => {
-    diffSnapshots(projectId, chapterId, from.id, to.id).then(setDiff)
+    let cancelled = false
+    diffSnapshots(projectId, chapterId, from.id, to.id).then((result) => {
+      if (!cancelled) setDiff(result)
+    }).catch(() => {
+      if (!cancelled) setDiff([])
+    })
+    return () => { cancelled = true }
   }, [projectId, chapterId, from.id, to.id])
 
   return (
@@ -125,6 +131,8 @@ export function HistoryPanel() {
     }
     listSnapshots(currentProjectId, currentChapterId).then((index) => {
       setSnapshots(index.snapshots)
+    }).catch(() => {
+      setSnapshots([])
     })
   }, [currentProjectId, currentChapterId])
 

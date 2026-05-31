@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { AlertTriangle, Check, X, ArrowLeftRight } from 'lucide-react'
 import { useKnowledgeGraphStore } from '@/stores/knowledgeGraphStore'
+import { isTauriRuntime } from '@/api/transport'
 
 interface ConflictItem {
   id: string
@@ -17,6 +18,7 @@ export function ConflictResolutionPanel() {
   const { obsidianVaultPath } = useKnowledgeGraphStore()
 
   const loadConflicts = async () => {
+    if (!isTauriRuntime() || !obsidianVaultPath) return
     try {
       const result = await invoke<ConflictItem[]>('get_sync_conflicts', { vaultPath: obsidianVaultPath })
       setConflicts(result)

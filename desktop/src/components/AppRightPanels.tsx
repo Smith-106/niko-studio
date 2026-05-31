@@ -144,53 +144,97 @@ export function AppRightPanels({
       )}
 
       {activeRightPanel === 'evaluation' && (
-        <EvaluationPanel
-          evaluationSources={evaluationSources}
-          onClose={closeRightPanel}
-          onOpenAutomation={onOpenAutomationFromEvaluation}
-          onOpenWritingHelper={onOpenWritingHelperFromEvaluation}
-        />
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">评估面板加载失败，请关闭后重试。</div>}>
+          <EvaluationPanel
+            evaluationSources={evaluationSources}
+            onClose={closeRightPanel}
+            onOpenAutomation={onOpenAutomationFromEvaluation}
+            onOpenWritingHelper={onOpenWritingHelperFromEvaluation}
+          />
+        </ErrorBoundary>
       )}
 
       {activeRightPanel === 'automation' && (
-        <AutomationPanel
-          onClose={closeRightPanel}
-          onOpenSettings={openSettingsFromAutomation}
-        />
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">自动化面板加载失败，请关闭后重试。</div>}>
+          <AutomationPanel
+            onClose={closeRightPanel}
+            onOpenSettings={openSettingsFromAutomation}
+          />
+        </ErrorBoundary>
       )}
 
-      {activeRightPanel === 'mcpStatus' && <McpStatusPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'mcpStatus' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">MCP 状态面板加载失败，请关闭后重试。</div>}>
+          <McpStatusPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
 
       {activeRightPanel === 'writingHelper' && (
-        <WritingHelperPanel
-          onClose={closeRightPanel}
-          onOpenSettings={openSettingsFromWritingHelper}
-          draftState={writingHelperDraft}
-          onDraftStateChange={setWritingHelperDraft}
-          onClearDraft={clearWritingHelperDraft}
-        />
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">写作助手面板加载失败，请关闭后重试。</div>}>
+          <WritingHelperPanel
+            onClose={closeRightPanel}
+            onOpenSettings={openSettingsFromWritingHelper}
+            draftState={writingHelperDraft}
+            onDraftStateChange={setWritingHelperDraft}
+            onClearDraft={clearWritingHelperDraft}
+          />
+        </ErrorBoundary>
       )}
 
       {activeRightPanel === 'textOptimizer' && (
-        <AiTextOptimizer
-          onClose={closeRightPanel}
-          onOpenSettings={openSettingsFromTextOptimizer}
-        />
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">文本优化器加载失败，请关闭后重试。</div>}>
+          <AiTextOptimizer
+            onClose={closeRightPanel}
+            onOpenSettings={openSettingsFromTextOptimizer}
+          />
+        </ErrorBoundary>
       )}
 
-      {activeRightPanel === 'foreshadowingTracker' && <ForeshadowingTrackerPanel onClose={closeRightPanel} />}
-      {activeRightPanel === 'patternDashboard' && <PatternDashboardPanel onClose={closeRightPanel} />}
-      {activeRightPanel === 'sessionAnalytics' && <SessionAnalyticsPanel onClose={closeRightPanel} />}
-      {activeRightPanel === 'evaluationDrillDown' && <EvaluationDrillDownPanel onClose={closeRightPanel} />}
-      {activeRightPanel === 'characterRelationships' && <CharacterRelationshipsPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'foreshadowingTracker' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">伏笔追踪面板加载失败，请关闭后重试。</div>}>
+          <ForeshadowingTrackerPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
+      {activeRightPanel === 'patternDashboard' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">模式仪表盘加载失败，请关闭后重试。</div>}>
+          <PatternDashboardPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
+      {activeRightPanel === 'sessionAnalytics' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">会话分析面板加载失败，请关闭后重试。</div>}>
+          <SessionAnalyticsPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
+      {activeRightPanel === 'evaluationDrillDown' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">评估详情面板加载失败，请关闭后重试。</div>}>
+          <EvaluationDrillDownPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
+      {activeRightPanel === 'characterRelationships' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">角色关系面板加载失败，请关闭后重试。</div>}>
+          <CharacterRelationshipsPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
       {activeRightPanel === 'analysis' && (
         <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">分析面板加载失败，请关闭后重试。</div>}>
           <AnalysisPanel onClose={closeRightPanel} />
         </ErrorBoundary>
       )}
-      {activeRightPanel === 'templateBrowser' && <TemplateBrowserPanel onClose={closeRightPanel} />}
-      {activeRightPanel === 'workflowEditor' && <WorkflowEditorPanel onClose={closeRightPanel} />}
-      {activeRightPanel === 'narrativeVisualization' && <NarrativeVisualizationPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'templateBrowser' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">模板浏览器加载失败，请关闭后重试。</div>}>
+          <TemplateBrowserPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
+      {activeRightPanel === 'workflowEditor' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">工作流编辑器加载失败，请关闭后重试。</div>}>
+          <WorkflowEditorPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
+      {activeRightPanel === 'narrativeVisualization' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">叙事可视化面板加载失败，请关闭后重试。</div>}>
+          <NarrativeVisualizationPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
     </Suspense>
   )
 }
