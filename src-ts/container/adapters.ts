@@ -289,18 +289,28 @@ export class GraphEngineAdapter implements IGraphEngine {
 
   async getNode(id: string): Promise<unknown> {
     try {
-      const results = await this.engine.searchEntitiesByName('unknown', id, 1);
-      return results.length > 0 ? results[0] : null;
+      // Use searchEntitiesByName with no type restriction for broader matching
+      const results = await this.engine.searchEntitiesByName('', id, 1);
+      if (results.length > 0) {
+        // Find exact ID match among results
+        const exactMatch = results.find((r: any) => r.id === id);
+        return exactMatch ?? results[0];
+      }
+      return null;
     } catch {
       return null;
     }
   }
 
   async traverse(startId: string, depth?: number): Promise<unknown[]> {
-    const escaped = startId.replace(/'/g, "\\'").replace(/\\/g, "\\\\");
     try {
+      // Use parameterized approach: first find the node by ID, then traverse
+      const startNode = await this.getNode(startId);
+      if (!startNode) return [];
+      const startName = (startNode as Record<string, unknown>).name ?? startId;
+      // Use searchEntitiesByName for safe querying instead of string interpolation
       return await this.engine.executeCypher(
-        `MATCH (n)-[r*1..${depth ?? 3}]-(m) WHERE n.name CONTAINS '${escaped}' RETURN m, r`
+        `MATCH (n)-[r*1..${Math.min(depth ?? 3, 5)}]-(m) WHERE n.id = '${startId.replace(/[{}']/g, '')}' RETURN m, r`
       );
     } catch {
       return [];
@@ -460,13 +470,24 @@ export class SearchEngineAdapter implements ISearchEngine {
 
 export class WorkflowEngineAdapter implements IWorkflowEngine {
   private engine: WorkflowEngine;
+  private readonly _llmService?: any;
+  private readonly _phaseOrch?: PhaseOrchestrator;
 
   constructor(engine?: WorkflowEngine) {
     this.engine = engine ?? new WorkflowEngine();
+    this._llmService = (this.engine as any)._llmService;
+    this._phaseOrch = (this.engine as any)._phaseOrch;
   }
 
   createRuntime(params: { workspace: string; sessionNamespace: string }): IWorkflowEngineRuntime {
-    return new WorkflowEngine(params.workspace, params.sessionNamespace) as unknown as IWorkflowEngineRuntime;
+    return new WorkflowEngine(
+      params.workspace,
+      params.sessionNamespace,
+      this._llmService,
+      undefined,
+      undefined,
+      this._phaseOrch,
+    ) as unknown as IWorkflowEngineRuntime;
   }
 
   async initialize(): Promise<void> {}
@@ -494,7 +515,7 @@ export class WorkflowEngineAdapter implements IWorkflowEngine {
   }
 
   reset(): void {
-    this.engine = new WorkflowEngine();
+    this.engine = new WorkflowEngine(undefined, undefined, this._llmService, undefined, undefined, this._phaseOrch);
   }
 
   private resolveTask(context: WorkflowContext): string {

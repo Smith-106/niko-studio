@@ -25,28 +25,22 @@ export async function learningImportEndpoint(request: HttpRequest): Promise<Http
   const sourceName = body.sourceName as string ?? 'unknown';
 
   if (!content.trim()) {
-    return jsonResponse({ success: false, error: 'content is required' }, 400);
+    return jsonResponse({ error: 'content is required' }, 400);
   }
 
   log.info(`Import learning: source=${sourceName}, type=${sourceType}, len=${content.length}`);
 
-  // The actual pipeline execution is handled by the LearningOrchestrator via DI.
-  // This endpoint returns the extraction plan (what would be extracted).
-  // Full execution requires the orchestrator service to be injected.
   const input: PipelineInput = {
     content,
     metadata: { sourceType, sourceName },
   };
 
   return jsonResponse({
-    success: true,
-    data: {
-      message: 'Import learning pipeline triggered',
-      sourceName,
-      sourceType,
-      contentLength: content.length,
-      input,
-    },
+    message: 'Import learning pipeline triggered',
+    sourceName,
+    sourceType,
+    contentLength: content.length,
+    input,
   });
 }
 
@@ -60,11 +54,11 @@ export async function learningStyleFeedbackEndpoint(request: HttpRequest): Promi
   const source = body.source as string ?? 'manual';
 
   if (!dimension) {
-    return jsonResponse({ success: false, error: 'dimension is required' }, 400);
+    return jsonResponse({ error: 'dimension is required' }, 400);
   }
 
   if (!['accept', 'reject', 'modify'].includes(action)) {
-    return jsonResponse({ success: false, error: 'action must be accept, reject, or modify' }, 400);
+    return jsonResponse({ error: 'action must be accept, reject, or modify' }, 400);
   }
 
   log.info(`Style feedback: dimension=${dimension}, action=${action}, value=${value}`);
@@ -78,11 +72,8 @@ export async function learningStyleFeedbackEndpoint(request: HttpRequest): Promi
   };
 
   return jsonResponse({
-    success: true,
-    data: {
-      message: 'Feedback recorded',
-      evidence,
-    },
+    message: 'Feedback recorded',
+    evidence,
   });
 }
 
@@ -91,17 +82,14 @@ export async function learningStyleDriftEndpoint(request: HttpRequest): Promise<
   const dimensions = body.dimensions as Record<string, number> ?? {};
 
   if (Object.keys(dimensions).length === 0) {
-    return jsonResponse({ success: false, error: 'dimensions object is required' }, 400);
+    return jsonResponse({ error: 'dimensions object is required' }, 400);
   }
 
   log.info(`Style drift check: dims=${Object.keys(dimensions).length}`);
 
   return jsonResponse({
-    success: true,
-    data: {
-      message: 'Style drift detection triggered',
-      dimensionCount: Object.keys(dimensions).length,
-    },
+    message: 'Style drift detection triggered',
+    dimensionCount: Object.keys(dimensions).length,
   });
 }
 
@@ -109,11 +97,8 @@ export async function learningRulesEndpoint(_request: HttpRequest): Promise<Http
   log.info('Style rules query');
 
   return jsonResponse({
-    success: true,
-    data: {
-      message: 'Active style rules',
-      rules: [],
-    },
+    message: 'Active style rules',
+    rules: [],
   });
 }
 
@@ -126,11 +111,11 @@ export async function learningReadingSessionEndpoint(request: HttpRequest): Prom
   const totalChapters = body.totalChapters as number ?? 0;
 
   if (!bookId) {
-    return jsonResponse({ success: false, error: 'bookId is required' }, 400);
+    return jsonResponse({ error: 'bookId is required' }, 400);
   }
 
   if (totalChapters <= 0) {
-    return jsonResponse({ success: false, error: 'totalChapters must be > 0' }, 400);
+    return jsonResponse({ error: 'totalChapters must be > 0' }, 400);
   }
 
   log.info(`Reading session: book=${bookId}, chapter=${currentChapter}/${totalChapters}`);
@@ -145,11 +130,8 @@ export async function learningReadingSessionEndpoint(request: HttpRequest): Prom
   };
 
   return jsonResponse({
-    success: true,
-    data: {
-      message: 'Reading session updated',
-      session,
-    },
+    message: 'Reading session updated',
+    session,
   });
 }
 
@@ -161,7 +143,7 @@ export async function learningReadingExtractEndpoint(request: HttpRequest): Prom
   const totalChapters = body.totalChapters as number ?? 0;
 
   if (!content.trim()) {
-    return jsonResponse({ success: false, error: 'content is required' }, 400);
+    return jsonResponse({ error: 'content is required' }, 400);
   }
 
   log.info(`Reading extract: book=${bookId}, len=${content.length}`);
@@ -182,13 +164,10 @@ export async function learningReadingExtractEndpoint(request: HttpRequest): Prom
   };
 
   return jsonResponse({
-    success: true,
-    data: {
-      message: 'Reading extraction pipeline triggered',
-      bookId,
-      contentLength: content.length,
-      input,
-    },
+    message: 'Reading extraction pipeline triggered',
+    bookId,
+    contentLength: content.length,
+    input,
   });
 }
 
@@ -198,13 +177,10 @@ export async function learningStatusEndpoint(_request: HttpRequest): Promise<Htt
   log.info('Learning status query');
 
   return jsonResponse({
-    success: true,
-    data: {
-      capabilities: [
-        { id: LearningCapability.IMPORT, enabled: true },
-        { id: LearningCapability.SELF_EVOLVING, enabled: true },
-        { id: LearningCapability.READING, enabled: true },
-      ],
-    },
+    capabilities: [
+      { id: LearningCapability.IMPORT, enabled: true },
+      { id: LearningCapability.SELF_EVOLVING, enabled: true },
+      { id: LearningCapability.READING, enabled: true },
+    ],
   });
 }

@@ -58,6 +58,7 @@ type EditorKeys =
   | 'exportHistoryEmpty'
   | 'editorStatusSaving'
   | 'editorStatusSavedAt'
+  | 'editorStatusError'
   | 'editorDraftRestored'
   | 'editorDraftRestoredAt'
 
@@ -123,6 +124,7 @@ export const zhEditor: Translations = {
   exportHistoryEmpty: '暂无导出记录',
   editorStatusSaving: '保存中...',
   editorStatusSavedAt: '已于 {time} 保存',
+  editorStatusError: '保存失败',
   editorDraftRestored: '草稿已恢复',
   editorDraftRestoredAt: '草稿已恢复 — {time}保存',
 }
@@ -187,6 +189,7 @@ export const enEditor: Translations = {
   exportHistoryEmpty: 'No exports yet',
   editorStatusSaving: 'Saving...',
   editorStatusSavedAt: 'Saved at {time}',
+  editorStatusError: 'Save failed',
   editorDraftRestored: 'Draft restored',
   editorDraftRestoredAt: 'Draft restored — saved {time}',
 }

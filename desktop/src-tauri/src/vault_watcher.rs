@@ -2,7 +2,7 @@ use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watche
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::mpsc;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultInfo {
@@ -24,7 +24,7 @@ pub struct VaultWatcher {
 
 impl VaultWatcher {
     pub fn new(app: AppHandle, vault_path: PathBuf) -> Result<Self, notify::Error> {
-        let (tx, rx) = mpsc::channel();
+        let (tx, rx): (mpsc::Sender<notify::Event>, mpsc::Receiver<notify::Event>) = mpsc::channel();
         let vault_path_clone = vault_path.clone();
 
         let mut watcher = RecommendedWatcher::new(

@@ -265,6 +265,7 @@ export function registerCanonicalBindings(
       return new KnowledgeServiceImpl({
         dbPath: '.writing/knowledge.db',
         enableDistillation: true,
+        llmService: context.container.get<ILLMService>(ServiceTypes.LLMService),
         embeddingService: context.container.get<IEmbeddingService & VectorEmbeddingService>(ServiceTypes.EmbeddingService),
         memoryEngine: compositeEngine,
         graphEngine: context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
@@ -316,17 +317,18 @@ export function registerCanonicalBindings(
     () => new SearchEngineAdapter(undefined, integrationAdapters),
   );
 
-    // Q1: WorkflowEngine wired to PhaseOrchestrator — quality gates are invoked
+    // Q1: WorkflowEngine wired to PhaseOrchestrator and LLMService — quality gates are invoked
   // during step execution (before phase transitions, after task completion).
   bindSingleton<IWorkflowEngine>(
     ServiceTypes.WorkflowEngine,
     (context) => {
       const phaseOrchAdapter = context.container.get<IPhaseOrchestrator>(ServiceTypes.PhaseOrchestrator);
+      const llmService = context.container.get<ILLMService>(ServiceTypes.LLMService);
       // Extract the underlying PhaseOrchestrator from the adapter for injection
-      const engine = phaseOrchAdapter instanceof PhaseOrchestratorAdapter
-        ? new WorkflowEngine(undefined, undefined, undefined, undefined, undefined,
-            (phaseOrchAdapter as unknown as { orchestrator: PhaseOrchestrator }).orchestrator)
-        : new WorkflowEngine();
+      const phaseOrch = phaseOrchAdapter instanceof PhaseOrchestratorAdapter
+        ? (phaseOrchAdapter as unknown as { orchestrator: PhaseOrchestrator }).orchestrator
+        : undefined;
+      const engine = new WorkflowEngine(undefined, undefined, llmService, undefined, undefined, phaseOrch);
       return new WorkflowEngineAdapter(engine);
     },
   );

@@ -17,7 +17,7 @@ export async function pluginListEndpoint(_request: HttpRequest): Promise<HttpRes
     dimension: p.dimension,
   }));
 
-  return jsonResponse({ success: true, data: { plugins } });
+  return jsonResponse({ plugins });
 }
 
 export async function pluginExecuteEndpoint(request: HttpRequest): Promise<HttpResponse> {
@@ -29,12 +29,12 @@ export async function pluginExecuteEndpoint(request: HttpRequest): Promise<HttpR
 
   const text = body.text ?? '';
   if (!text.trim()) {
-    return jsonResponse({ success: false, error: 'text is required' }, 400);
+    return jsonResponse({ error: 'text is required' }, 400);
   }
 
   const ids: string[] = body.pluginIds ?? (body.pluginId ? [body.pluginId] : []);
   if (ids.length === 0) {
-    return jsonResponse({ success: false, error: 'pluginId or pluginIds is required' }, 400);
+    return jsonResponse({ error: 'pluginId or pluginIds is required' }, 400);
   }
 
   const results: PluginResult[] = [];
@@ -45,7 +45,7 @@ export async function pluginExecuteEndpoint(request: HttpRequest): Promise<HttpR
     }
   }
 
-  return jsonResponse({ success: true, data: { results } });
+  return jsonResponse({ results });
 }
 
 export async function pluginRegisterEndpoint(request: HttpRequest): Promise<HttpResponse> {
@@ -59,7 +59,7 @@ export async function pluginRegisterEndpoint(request: HttpRequest): Promise<Http
   };
 
   if (!body.id || !body.name || !body.rules || body.rules.length === 0) {
-    return jsonResponse({ success: false, error: 'id, name, and rules[] are required' }, 400);
+    return jsonResponse({ error: 'id, name, and rules[] are required' }, 400);
   }
 
   const rules = body.rules;
@@ -101,5 +101,5 @@ export async function pluginRegisterEndpoint(request: HttpRequest): Promise<Http
 
   pluginEngine.register(plugin);
 
-  return jsonResponse({ success: true, data: { id: plugin.id, name: plugin.name } });
+  return jsonResponse({ id: plugin.id, name: plugin.name });
 }

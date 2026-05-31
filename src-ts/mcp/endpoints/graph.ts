@@ -103,7 +103,7 @@ export async function foreshadowPlantEndpoint(request: HttpRequest): Promise<Htt
   const body = parseBody(request) as Record<string, unknown>;
   const description = String(body.description ?? '');
   if (!description.trim()) {
-    return jsonResponse({ success: false, error: 'description is required' }, 400);
+    return jsonResponse({ error: 'description is required' }, 400);
   }
   const properties: Record<string, unknown> = {
     description,
@@ -115,7 +115,7 @@ export async function foreshadowPlantEndpoint(request: HttpRequest): Promise<Htt
     ...(body.metadata && typeof body.metadata === 'object' ? { metadata: body.metadata } : {}),
   };
   const result = await graphAddEntity('foreshadow', `foreshadow-${Date.now()}`, properties);
-  return jsonResponse({ success: true, data: result });
+  return jsonResponse(result);
 }
 
 export async function foreshadowStatsEndpoint(_request: HttpRequest): Promise<HttpResponse> {
@@ -130,14 +130,11 @@ export async function foreshadowStatsEndpoint(_request: HttpRequest): Promise<Ht
   const total = plantedArr.length + hintedArr.length + harvestedArr.length;
   const totalHints = hintedArr.length;
   return jsonResponse({
-    success: true,
-    data: {
-      total,
-      by_state: { planted: plantedArr.length, hinted: hintedArr.length, harvested: harvestedArr.length },
-      total_hints: totalHints,
-      avg_hints_per_foreshadow: total > 0 ? totalHints / total : 0,
-      harvest_rate: total > 0 ? harvestedArr.length / total : 0,
-    },
+    total,
+    by_state: { planted: plantedArr.length, hinted: hintedArr.length, harvested: harvestedArr.length },
+    total_hints: totalHints,
+    avg_hints_per_foreshadow: total > 0 ? totalHints / total : 0,
+    harvest_rate: total > 0 ? harvestedArr.length / total : 0,
   });
 }
 
@@ -149,26 +146,23 @@ export async function characterProfileEndpoint(request: HttpRequest): Promise<Ht
   const body = parseBody(request) as Record<string, unknown>;
   const name = String(body.name ?? '').trim();
   if (!name) {
-    return jsonResponse({ success: false, error: 'name is required' }, 400);
+    return jsonResponse({ error: 'name is required' }, 400);
   }
   const scope = resolveGraphScope(body);
   const characterData = await graphGetCharacter(name, true, false, scope);
   const data = characterData && typeof characterData === 'object' ? characterData : {};
   return jsonResponse({
-    success: true,
-    data: {
-      id: String((data as Record<string, unknown>).id ?? `char-${name}`),
-      name,
-      role: String((data as Record<string, unknown>).role ?? 'unknown'),
-      personality: (data as Record<string, unknown>).personality ?? {},
-      background: (data as Record<string, unknown>).background ?? {},
-      motivation: (data as Record<string, unknown>).motivation ?? {},
-      relationships: (data as Record<string, unknown>).relationships ?? {},
-      growth: (data as Record<string, unknown>).growth ?? {},
-      five_dimension_score: (data as Record<string, unknown>).five_dimension_score ?? {},
-      created_at: String((data as Record<string, unknown>).created_at ?? new Date().toISOString()),
-      updated_at: String((data as Record<string, unknown>).updated_at ?? new Date().toISOString()),
-    },
+    id: String((data as Record<string, unknown>).id ?? `char-${name}`),
+    name,
+    role: String((data as Record<string, unknown>).role ?? 'unknown'),
+    personality: (data as Record<string, unknown>).personality ?? {},
+    background: (data as Record<string, unknown>).background ?? {},
+    motivation: (data as Record<string, unknown>).motivation ?? {},
+    relationships: (data as Record<string, unknown>).relationships ?? {},
+    growth: (data as Record<string, unknown>).growth ?? {},
+    five_dimension_score: (data as Record<string, unknown>).five_dimension_score ?? {},
+    created_at: String((data as Record<string, unknown>).created_at ?? new Date().toISOString()),
+    updated_at: String((data as Record<string, unknown>).updated_at ?? new Date().toISOString()),
   });
 }
 
@@ -176,7 +170,7 @@ export async function characterDepthEndpoint(request: HttpRequest): Promise<Http
   const body = parseBody(request) as Record<string, unknown>;
   const id = String(body.id ?? '').trim();
   if (!id) {
-    return jsonResponse({ success: false, error: 'id is required' }, 400);
+    return jsonResponse({ error: 'id is required' }, 400);
   }
   const name = id.startsWith('char-') ? id.slice(5) : id;
   const scope = resolveGraphScope(body);
@@ -187,19 +181,16 @@ export async function characterDepthEndpoint(request: HttpRequest): Promise<Http
     ? dimensionScores as Record<string, number>
     : {};
   return jsonResponse({
-    success: true,
-    data: {
-      character: name,
-      scores: {
-        dynamicScore: scores.dynamicScore ?? 50,
-        competenceScore: scores.competenceScore ?? 50,
-        eccentricityScore: scores.eccentricityScore ?? 50,
-        contrastScore: scores.contrastScore ?? 50,
-        dualityScore: scores.dualityScore ?? 50,
-      },
-      depth_level: 'moderate',
-      suggestions: [],
+    character: name,
+    scores: {
+      dynamicScore: scores.dynamicScore ?? 50,
+      competenceScore: scores.competenceScore ?? 50,
+      eccentricityScore: scores.eccentricityScore ?? 50,
+      contrastScore: scores.contrastScore ?? 50,
+      dualityScore: scores.dualityScore ?? 50,
     },
+    depth_level: 'moderate',
+    suggestions: [],
   });
 }
 
@@ -223,8 +214,5 @@ export async function characterRelationshipsEndpoint(request: HttpRequest): Prom
   if (name && !nodeSet.has(name)) {
     nodeSet.set(name, { id: name, name, role: 'protagonist' });
   }
-  return jsonResponse({
-    success: true,
-    data: { nodes: [...nodeSet.values()], edges },
-  });
+  return jsonResponse({ nodes: [...nodeSet.values()], edges });
 }

@@ -74,12 +74,8 @@ export async function startGatewayServer(
   const wsRelay = container.wsRelay;
   (wsRelay as unknown as { initialize(server: Server): void }).initialize(server);
 
-  const relay = new WorkflowEventRelay(server, '/ws/events');
-
   await listen(server, host, port);
   logGatewayStartup(host, port, true);
-
-  (server as Server & { eventRelay?: WorkflowEventRelay }).eventRelay = relay;
 
   // Graceful shutdown: flush WorkflowEngine state, close WebSocket relay, then close HTTP server
   const shutdown = async (signal: string) => {
@@ -89,9 +85,6 @@ export async function startGatewayServer(
     } catch (e) {
       _log.error('Error during control plane shutdown', { error: String(e) });
     }
-    try {
-      relay.close();
-    } catch { /* best effort */ }
     server.close(() => {
       _log.info('Gateway server closed');
       process.exit(0);

@@ -3,6 +3,7 @@ import { adminRoutes } from './admin';
 import { agentRoutes } from './agents';
 import { contentRoutes } from './content';
 import { m10Routes } from './m10';
+import { m11Routes } from './m11';
 import { platformRoutes } from './platform';
 import { workflowRoutes } from './workflow';
 
@@ -14,6 +15,7 @@ export function createGatewayRoutes(): GatewayRoute[] {
     ...workflowRoutes,
     ...adminRoutes,
     ...m10Routes,
+    ...m11Routes,
   ];
 }
 

@@ -59,13 +59,21 @@ function AppMain() {
         className="flex h-screen bg-slate-50 dark:bg-dark-bg text-slate-900 dark:text-dark-text font-sans antialiased overflow-hidden"
         data-font-size={fontSize}
       >
-        <Sidebar {...sidebarProps} />
+        <ErrorBoundary fallback={<div className="w-14 h-screen bg-slate-100 dark:bg-dark-surface flex items-center justify-center text-sm text-gray-400">导航栏出错</div>}>
+          <Sidebar {...sidebarProps} />
+        </ErrorBoundary>
 
-        <ProjectSidebar />
+        <ErrorBoundary fallback={<div className="w-48 h-screen bg-slate-100 dark:bg-dark-surface flex items-center justify-center text-sm text-gray-400">项目面板出错</div>}>
+          <ProjectSidebar />
+        </ErrorBoundary>
 
-        <AppMainContent {...appMainContentProps} />
+        <ErrorBoundary fallback={<div className="flex-1 h-screen flex items-center justify-center text-sm text-gray-400">编辑器出错</div>}>
+          <AppMainContent {...appMainContentProps} />
+        </ErrorBoundary>
 
-        <ChatSidebar {...chatSidebarProps} />
+        <ErrorBoundary fallback={<div className="w-72 h-screen bg-slate-100 dark:bg-dark-surface flex items-center justify-center text-sm text-gray-400">对话面板出错</div>}>
+          <ChatSidebar {...chatSidebarProps} />
+        </ErrorBoundary>
 
         <AppRightPanels {...appRightPanelsProps} />
       </div>

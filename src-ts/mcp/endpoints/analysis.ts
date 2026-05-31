@@ -28,11 +28,11 @@ export async function analysisPatternsEndpoint(request: HttpRequest): Promise<Ht
 
   const entities = (Array.isArray(rawEntities) ? rawEntities : []) as Array<Record<string, unknown>>;
   const patterns = analyzePatterns(entities, category);
-  return jsonResponse({ success: true, data: patterns });
+  return jsonResponse(patterns);
 }
 
 export async function analysisSessionsEndpoint(_request: HttpRequest): Promise<HttpResponse> {
-  return jsonResponse({ success: true, data: [] });
+  return jsonResponse([]);
 }
 
 export async function analysisNarrativeVisualizationEndpoint(request: HttpRequest): Promise<HttpResponse> {
@@ -53,10 +53,7 @@ export async function analysisNarrativeVisualizationEndpoint(request: HttpReques
   }));
 
   if (normalizedChapters.length === 0) {
-    return jsonResponse({
-      success: true,
-      data: buildNarrativeVisualizationBundle({ chapters: [] }),
-    });
+    return jsonResponse(buildNarrativeVisualizationBundle({ chapters: [] }));
   }
 
   const consistencyResult = await runConsistencyCheck({
@@ -95,7 +92,7 @@ export async function analysisNarrativeVisualizationEndpoint(request: HttpReques
     },
   });
 
-  return jsonResponse({ success: true, data: bundle });
+  return jsonResponse(bundle);
 }
 
 interface PatternTemplate {

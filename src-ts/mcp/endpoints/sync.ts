@@ -95,11 +95,8 @@ function validateRemoteUrl(remoteUrl: string): string | null {
 
 export async function syncStatusEndpoint(_request: HttpRequest): Promise<HttpResponse> {
   return jsonResponse({
-    success: true,
-    data: {
-      lastSyncAt: syncStatus.lastSyncAt,
-      isConfigured: syncStatus.isConfigured,
-    },
+    lastSyncAt: syncStatus.lastSyncAt,
+    isConfigured: syncStatus.isConfigured,
   });
 }
 
@@ -111,13 +108,13 @@ export async function syncPushEndpoint(request: HttpRequest): Promise<HttpRespon
   };
 
   if (!body.remoteUrl) {
-    return jsonResponse({ success: false, error: 'remoteUrl is required' }, 400);
+    return jsonResponse({ error: 'remoteUrl is required' }, 400);
   }
 
   // SSRF protection: reject private/internal IP ranges
   const urlError = validateRemoteUrl(body.remoteUrl);
   if (urlError) {
-    return jsonResponse({ success: false, error: urlError }, 400);
+    return jsonResponse({ error: urlError }, 400);
   }
 
   try {
@@ -132,10 +129,9 @@ export async function syncPushEndpoint(request: HttpRequest): Promise<HttpRespon
     const result = await engine.push(body.keys);
     syncStatus = { lastSyncAt: result.timestamp, isConfigured: true };
 
-    return jsonResponse({ success: true, data: result });
+    return jsonResponse(result);
   } catch (err) {
     return jsonResponse({
-      success: false,
       error: `Sync push failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
     }, 500);
   }
@@ -149,13 +145,13 @@ export async function syncPullEndpoint(request: HttpRequest): Promise<HttpRespon
   };
 
   if (!body.remoteUrl) {
-    return jsonResponse({ success: false, error: 'remoteUrl is required' }, 400);
+    return jsonResponse({ error: 'remoteUrl is required' }, 400);
   }
 
   // SSRF protection: reject private/internal IP ranges
   const urlError = validateRemoteUrl(body.remoteUrl);
   if (urlError) {
-    return jsonResponse({ success: false, error: urlError }, 400);
+    return jsonResponse({ error: urlError }, 400);
   }
 
   try {
@@ -170,10 +166,9 @@ export async function syncPullEndpoint(request: HttpRequest): Promise<HttpRespon
     const result = await engine.pull(body.keys);
     syncStatus = { lastSyncAt: result.timestamp, isConfigured: true };
 
-    return jsonResponse({ success: true, data: result });
+    return jsonResponse(result);
   } catch (err) {
     return jsonResponse({
-      success: false,
       error: `Sync pull failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
     }, 500);
   }
@@ -186,13 +181,13 @@ export async function syncFullEndpoint(request: HttpRequest): Promise<HttpRespon
   };
 
   if (!body.remoteUrl) {
-    return jsonResponse({ success: false, error: 'remoteUrl is required' }, 400);
+    return jsonResponse({ error: 'remoteUrl is required' }, 400);
   }
 
   // SSRF protection: reject private/internal IP ranges
   const urlError = validateRemoteUrl(body.remoteUrl);
   if (urlError) {
-    return jsonResponse({ success: false, error: urlError }, 400);
+    return jsonResponse({ error: urlError }, 400);
   }
 
   try {
@@ -207,10 +202,9 @@ export async function syncFullEndpoint(request: HttpRequest): Promise<HttpRespon
     const result = await engine.syncFull();
     syncStatus = { lastSyncAt: result.timestamp, isConfigured: true };
 
-    return jsonResponse({ success: true, data: result });
+    return jsonResponse(result);
   } catch (err) {
     return jsonResponse({
-      success: false,
       error: `Sync full failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
     }, 500);
   }

@@ -22,7 +22,7 @@ export async function worldviewExtractEndpoint(
 
   if (chapters.length === 0) {
     return jsonResponse(
-      { success: false, error: 'chapters array is required' },
+      { error: 'chapters array is required' },
       400,
     );
   }
@@ -32,11 +32,11 @@ export async function worldviewExtractEndpoint(
   try {
     const settings = extractor.quickExtract(chapters);
     log.info(`Worldview extraction complete: ${settings.length} settings found`);
-    return jsonResponse({ success: true, data: settings, count: settings.length });
+    return jsonResponse({ settings, count: settings.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     log.error(`Worldview extraction failed: ${message}`);
-    return jsonResponse({ success: false, error: message }, 500);
+    return jsonResponse({ error: message }, 500);
   }
 }
 
@@ -46,11 +46,11 @@ export async function worldviewGetEndpoint(
   const projectId = request.params?.projectId ?? '';
   if (!projectId) {
     return jsonResponse(
-      { success: false, error: 'projectId is required' },
+      { error: 'projectId is required' },
       400,
     );
   }
 
   log.info(`Worldview lookup: project=${projectId}`);
-  return jsonResponse({ success: true, data: [], projectId });
+  return jsonResponse({ settings: [], projectId });
 }

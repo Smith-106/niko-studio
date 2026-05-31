@@ -72,7 +72,7 @@ export async function writingCraftAnalyzeEndpoint(
 
   const text = body.text ?? '';
   if (!text.trim()) {
-    return jsonResponse({ success: false, error: 'text is required' }, 400);
+    return jsonResponse({ error: 'text is required' }, 400);
   }
 
   const requestedDimensions = body.dimensions ?? [
@@ -94,12 +94,9 @@ export async function writingCraftAnalyzeEndpoint(
     : 0;
 
   return jsonResponse({
-    success: true,
-    data: {
-      overallScore,
-      dimensions: results,
-      textLength: text.length,
-    },
+    overallScore,
+    dimensions: results,
+    textLength: text.length,
   });
 }
 
@@ -451,11 +448,11 @@ export async function writingCraftEmotionalArcEndpoint(
 
   const chapters = body.chapters ?? [];
   if (chapters.length === 0) {
-    return jsonResponse({ success: false, error: 'chapters are required' }, 400);
+    return jsonResponse({ error: 'chapters are required' }, 400);
   }
 
   const result = analyzeEmotionalArc(chapters);
-  return jsonResponse({ success: true, data: result });
+  return jsonResponse(result);
 }
 
 export async function writingCraftVoiceConsistencyEndpoint(
@@ -464,7 +461,7 @@ export async function writingCraftVoiceConsistencyEndpoint(
   const body = parseBody(request) as { text?: string };
   const text = body.text ?? '';
   if (!text.trim()) {
-    return jsonResponse({ success: false, error: 'text is required' }, 400);
+    return jsonResponse({ error: 'text is required' }, 400);
   }
 
   const fpResult = extractVoiceFingerprints(text);
@@ -477,13 +474,10 @@ export async function writingCraftVoiceConsistencyEndpoint(
   }
 
   return jsonResponse({
-    success: true,
-    data: {
-      fingerprints: fpResult.fingerprints,
-      voiceDistinctness: fpResult.voiceDistinctness,
-      warnings,
-      suggestions: fpResult.suggestions,
-    },
+    fingerprints: fpResult.fingerprints,
+    voiceDistinctness: fpResult.voiceDistinctness,
+    warnings,
+    suggestions: fpResult.suggestions,
   });
 }
 
@@ -496,11 +490,11 @@ export async function writingCraftReaderImmersionEndpoint(
 
   const chapters = body.chapters ?? [];
   if (chapters.length === 0) {
-    return jsonResponse({ success: false, error: 'chapters are required' }, 400);
+    return jsonResponse({ error: 'chapters are required' }, 400);
   }
 
   const result = analyzeReaderImmersion(chapters);
-  return jsonResponse({ success: true, data: result });
+  return jsonResponse(result);
 }
 
 export async function writingCraftPacingNavigatorEndpoint(
@@ -512,9 +506,9 @@ export async function writingCraftPacingNavigatorEndpoint(
 
   const chapters = body.chapters ?? [];
   if (chapters.length === 0) {
-    return jsonResponse({ success: false, error: 'chapters are required' }, 400);
+    return jsonResponse({ error: 'chapters are required' }, 400);
   }
 
   const result = navigatePacing(chapters);
-  return jsonResponse({ success: true, data: result });
+  return jsonResponse(result);
 }

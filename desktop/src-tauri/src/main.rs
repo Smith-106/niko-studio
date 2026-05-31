@@ -3,12 +3,16 @@
 mod gateway_commands;
 mod gateway_runtime;
 mod shell_setup;
+mod vault_commands;
+mod vault_watcher;
 
 use gateway_commands::{
     call_api, check_backend_health, fetch_chunk, get_gateway_base, set_gateway_base_override, start_backend,
     restart_backend,
 };
 use gateway_runtime::GatewayState;
+use vault_commands::{list_vaults, select_vault, stop_vault_watcher, get_vault_graph};
+use vault_commands::VaultWatcherState;
 
 fn main() {
     let _sentry_guard = option_env!("SENTRY_DSN").and_then(|dsn| {
@@ -38,6 +42,7 @@ fn main() {
 
     tauri::Builder::default()
         .manage(GatewayState::new())
+        .manage(VaultWatcherState::new())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_fs::init())
@@ -54,7 +59,11 @@ fn main() {
             check_backend_health,
             call_api,
             fetch_chunk,
-            restart_backend
+            restart_backend,
+            list_vaults,
+            select_vault,
+            stop_vault_watcher,
+            get_vault_graph
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

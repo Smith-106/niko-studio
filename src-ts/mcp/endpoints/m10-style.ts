@@ -101,21 +101,21 @@ export async function styleExtractEndpoint(request: HttpRequest): Promise<HttpRe
   const text = body.text as string ?? '';
 
   if (!text.trim()) {
-    return jsonResponse({ success: false, error: 'text is required' }, 400);
+    return jsonResponse({ error: 'text is required' }, 400);
   }
 
   log.info(`Style extraction: text_len=${text.length}`);
   const profile = extractStyle(text);
-  return jsonResponse({ success: true, data: profile });
+  return jsonResponse(profile);
 }
 
 export async function styleProfileEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const projectId = request.params?.projectId ?? '';
   if (!projectId) {
-    return jsonResponse({ success: false, error: 'projectId is required' }, 400);
+    return jsonResponse({ error: 'projectId is required' }, 400);
   }
   log.info(`Style profile lookup: project=${projectId}`);
-  return jsonResponse({ success: true, data: null });
+  return jsonResponse(null);
 }
 
 export async function styleApplyEndpoint(request: HttpRequest): Promise<HttpResponse> {
@@ -124,7 +124,7 @@ export async function styleApplyEndpoint(request: HttpRequest): Promise<HttpResp
   const styleProfile = body.style_profile as Record<string, unknown> ?? {};
 
   if (!text.trim()) {
-    return jsonResponse({ success: false, error: 'text is required' }, 400);
+    return jsonResponse({ error: 'text is required' }, 400);
   }
 
   const guidance = [
@@ -138,5 +138,5 @@ export async function styleApplyEndpoint(request: HttpRequest): Promise<HttpResp
     'Match these parameters when generating or revising text.',
   ].join('\n');
 
-  return jsonResponse({ success: true, data: { context: guidance } });
+  return jsonResponse({ context: guidance });
 }

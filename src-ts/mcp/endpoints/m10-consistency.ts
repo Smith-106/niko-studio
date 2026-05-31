@@ -285,7 +285,7 @@ export async function crossChapterConsistencyEndpoint(request: HttpRequest): Pro
   const chapters = (body.chapters as ChapterInput[]) ?? [];
 
   if (chapters.length === 0) {
-    return jsonResponse({ success: false, error: 'chapters array is required' }, 400);
+    return jsonResponse({ error: 'chapters array is required' }, 400);
   }
 
   log.info(`Cross-chapter consistency: ${chapters.length} chapters`);
@@ -300,17 +300,14 @@ export async function crossChapterConsistencyEndpoint(request: HttpRequest): Pro
   const graphInfo = await enrichWithGraphData(chapters, { nameConflicts, traitDrifts });
 
   return jsonResponse({
-    success: true,
-    data: {
-      overallScore,
-      nameConflicts,
-      timelineIssues,
-      unresolvedThreads,
-      traitDrifts,
-      chaptersChecked: chapters.length,
-      graphEnriched: graphInfo.graphEnriched,
-      graphEntities: graphInfo.graphEntities,
-    },
+    overallScore,
+    nameConflicts,
+    timelineIssues,
+    unresolvedThreads,
+    traitDrifts,
+    chaptersChecked: chapters.length,
+    graphEnriched: graphInfo.graphEnriched,
+    graphEntities: graphInfo.graphEntities,
   });
 }
 
@@ -319,7 +316,7 @@ export async function contextAwareSuggestionsEndpoint(request: HttpRequest): Pro
   const text = body.text as string ?? '';
 
   if (!text.trim()) {
-    return jsonResponse({ success: false, error: 'text is required' }, 400);
+    return jsonResponse({ error: 'text is required' }, 400);
   }
 
   log.info(`Context-aware suggestions: text_len=${text.length}`);
@@ -341,8 +338,5 @@ export async function contextAwareSuggestionsEndpoint(request: HttpRequest): Pro
     // search unavailable, return empty
   }
 
-  return jsonResponse({
-    success: true,
-    data: { context, suggestions },
-  });
+  return jsonResponse({ context, suggestions });
 }

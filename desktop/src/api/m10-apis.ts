@@ -1,4 +1,5 @@
 import { callApi } from './core'
+import type { ApiResponse } from './core'
 import type { ProjectWorkspaceContext } from './workspace'
 
 export interface MultiPassRevisionRequest extends Record<string, unknown> {
@@ -39,36 +40,36 @@ export interface ContextAwareSuggestionsRequest extends Record<string, unknown> 
 
 export async function runMultiPassRevision(
   request: MultiPassRevisionRequest,
-): Promise<{ success: boolean; data?: MultiPassRevisionResult; error?: string }> {
+): Promise<ApiResponse<MultiPassRevisionResult>> {
   return callApi('/agent/revise-multi-pass', 'POST', request)
 }
 
 export async function extractStyleProfile(
   text: string,
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+): Promise<ApiResponse<Record<string, unknown>>> {
   return callApi('/style/extract', 'POST', { text })
 }
 
 export async function getStyleProfile(
   projectId: string,
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+): Promise<ApiResponse<Record<string, unknown>>> {
   return callApi(`/style/profile/${encodeURIComponent(projectId)}`, 'GET')
 }
 
 export async function applyStyle(
   request: StyleApplyRequest,
-): Promise<{ success: boolean; data?: { context: string }; error?: string }> {
+): Promise<ApiResponse<{ context: string }>> {
   return callApi('/style/apply', 'POST', request)
 }
 
 export async function runCrossChapterConsistency(
   request: CrossChapterConsistencyRequest,
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+): Promise<ApiResponse<Record<string, unknown>>> {
   return callApi('/consistency/cross-chapter', 'POST', request)
 }
 
 export async function getContextAwareSuggestions(
   request: ContextAwareSuggestionsRequest,
-): Promise<{ success: boolean; data?: { context: string; suggestions: string[] }; error?: string }> {
+): Promise<ApiResponse<{ context: string; suggestions: string[] }>> {
   return callApi('/suggestions/context-aware', 'POST', request)
 }

@@ -3,7 +3,13 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 
-pub struct VaultWatcherState(Mutex<Option<VaultWatcher>>);
+pub struct VaultWatcherState(pub Mutex<Option<VaultWatcher>>);
+
+impl VaultWatcherState {
+    pub fn new() -> Self {
+        Self(Mutex::new(None))
+    }
+}
 
 #[tauri::command]
 pub fn list_vaults() -> Vec<VaultInfo> {
@@ -34,7 +40,7 @@ pub fn select_vault(
     Ok(VaultInfo {
         path: vault_path,
         name,
-        has_obsidian_config,
+        has_obsidian_config: has_config,
     })
 }
 
@@ -45,7 +51,7 @@ pub fn stop_vault_watcher(state: State<'_, VaultWatcherState>) -> Result<(), Str
 }
 
 #[tauri::command]
-pub fn get_vault_graph(vault_path: String) -> Result<serde_json::Value, String> {
+pub fn get_vault_graph(_vault_path: String) -> Result<serde_json::Value, String> {
     // Stub: returns empty graph structure for now
     // Full implementation will read vault and construct graph data
     Ok(serde_json::json!({

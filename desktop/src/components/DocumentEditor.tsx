@@ -361,6 +361,11 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
                 {t.editorStatusSavedAt.replace('{time}', saveTime)}
               </span>
             )}
+            {saveStatus === 'error' && (
+              <span className="text-red-500 dark:text-red-400 animate-fade-in">
+                {t.editorStatusError}
+              </span>
+            )}
           </div>
         </div>
       </div>
