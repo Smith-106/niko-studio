@@ -11,6 +11,7 @@ import { desktopContent } from './content-desktop';
 import { syncContent } from './content-sync';
 import { architectureContent } from './content-architecture';
 import { apiContent } from './content-api';
+import { componentContent } from './content-components';
 
 const contentMap: Record<string, string> = {
   ...gettingStartedContent,
@@ -26,6 +27,7 @@ const contentMap: Record<string, string> = {
   ...syncContent,
   ...architectureContent,
   ...apiContent,
+  ...componentContent,
 };
 
 export function getDocContent(pageId: string): string {

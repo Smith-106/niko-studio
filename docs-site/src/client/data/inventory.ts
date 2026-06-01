@@ -200,6 +200,98 @@ export const docPages: DocPage[] = [
   { id: 'emotional-arc-chart', title: '情感弧线图', category: 'desktop', description: 'EmotionalArcChart：情绪轨迹可视化与关键转折标注', slug: 'emotional-arc-chart' },
   { id: 'anti-pattern-warning', title: '反模式警告', category: 'desktop', description: 'AntiPatternWarning：写作反模式检测与修正建议', slug: 'anti-pattern-warning' },
   { id: 'virtual-list', title: '虚拟列表', category: 'desktop', description: 'VirtualList：大列表虚拟化渲染与自动滚动', slug: 'virtual-list' },
+  { id: 'ai-toolbar', title: 'AI 工具栏', category: 'desktop', description: 'AiToolbar：选中文本后的 AI 操作入口', slug: 'ai-toolbar' },
+  { id: 'analysis-panel', title: '分析面板', category: 'desktop', description: 'AnalysisPanel：多维度智能分析', slug: 'analysis-panel' },
+  { id: 'app-header', title: '应用头部', category: 'desktop', description: 'AppHeader：全局导航与状态指示', slug: 'app-header' },
+  { id: 'app-right-panels', title: '右侧面板组合', category: 'desktop', description: 'AppRightPanels：懒加载面板容器与错误边界', slug: 'app-right-panels' },
+  { id: 'character-relationships-panel', title: '角色关系面板', category: 'desktop', description: 'CharacterRelationshipsPanel：角色关系网络与信任度', slug: 'character-relationships-panel' },
+  { id: 'chat-message-list', title: '聊天消息列表', category: 'desktop', description: 'ChatMessageList：虚拟滚动消息渲染与流式内容', slug: 'chat-message-list' },
+  { id: 'conflict-resolution-panel', title: '同步冲突解决面板', category: 'desktop', description: 'ConflictResolutionPanel：Vault 与知识图谱冲突解决', slug: 'conflict-resolution-panel' },
+  { id: 'document-editor', title: '文档编辑器', category: 'desktop', description: 'DocumentEditor：写作工作台核心与自动保存', slug: 'document-editor' },
+  { id: 'error-boundary', title: '错误边界', category: 'desktop', description: 'ErrorBoundary：组件崩溃保护与 Sentry 上报', slug: 'error-boundary' },
+  { id: 'export-dialog', title: '导出对话框', category: 'desktop', description: 'ExportDialog：多格式导出与范围选择', slug: 'export-dialog' },
+  { id: 'foreshadow-panel', title: '伏笔面板', category: 'desktop', description: 'ForeshadowingTrackerPanel：伏笔埋设与回收追踪', slug: 'foreshadow-panel' },
+  { id: 'history-panel', title: '历史面板', category: 'desktop', description: 'HistoryPanel：版本快照、Diff 对比与恢复', slug: 'history-panel' },
+  { id: 'keyboard-shortcuts-panel', title: '键盘快捷键面板', category: 'desktop', description: 'KeyboardShortcutsPanel：快捷键列表与帮助', slug: 'keyboard-shortcuts-panel' },
+  { id: 'message-bubble', title: '消息气泡', category: 'desktop', description: 'MessageBubble：消息渲染、模型对比与 Canon 晋升', slug: 'message-bubble' },
+  { id: 'pattern-dashboard-panel', title: '模式仪表板面板', category: 'desktop', description: 'PatternDashboardPanel：写作模式检测与统计', slug: 'pattern-dashboard-panel' },
+  { id: 'prompt-template-panel', title: '提示模板面板', category: 'desktop', description: 'PromptTemplatePanel：模板浏览、变量填写与应用', slug: 'prompt-template-panel' },
+  { id: 'project-sidebar', title: '项目侧边栏', category: 'desktop', description: 'ProjectSidebar：项目/卷/章节树形导航', slug: 'project-sidebar' },
+  { id: 'quick-rollback', title: '快速回滚', category: 'desktop', description: 'QuickRollback：工作流检查点快速回滚', slug: 'quick-rollback' },
+  { id: 'revision-preview-card', title: '修订预览卡片', category: 'desktop', description: 'RevisionPreviewCard：修订前后对比与 Diff 视图', slug: 'revision-preview-card' },
+  { id: 'session-analytics-panel', title: '会话分析面板', category: 'desktop', description: 'SessionAnalyticsPanel：会话聚类与写作行为分析', slug: 'session-analytics-panel' },
+  { id: 'sidebar', title: '主侧边栏', category: 'desktop', description: 'Sidebar：文档导航、工作区摘要与写作智慧流', slug: 'sidebar' },
+  { id: 'thinking-effect', title: 'AI 思考效果动画', category: 'desktop', description: 'ThinkingEffect：思考过程动画指示器', slug: 'thinking-effect' },
+  { id: 'toast-container', title: '消息提示容器', category: 'desktop', description: 'ToastContainer：全局操作反馈通知', slug: 'toast-container' },
+  { id: 'welcome-wizard', title: '新手引导向导', category: 'desktop', description: 'WelcomeWizard：3 步引导创建项目与配置 AI', slug: 'welcome-wizard' },
+  { id: 'workflow-steps-navigator', title: '工作流步骤导航器', category: 'desktop', description: 'WorkflowStepsNavigator：4 步写作智慧流导航', slug: 'workflow-steps-navigator' },
+  { id: 'vault-selector', title: 'Vault 选择器', category: 'desktop', description: 'VaultSelector：Obsidian Vault 发现与选择', slug: 'vault-selector' },
+
+  // Intelligence 子组件
+  { id: 'accordion-wrapper', title: 'AccordionWrapper', category: 'desktop', description: '手风琴折叠容器，支持单选和多选模式', slug: 'accordion-wrapper' },
+  { id: 'inline-annotation', title: 'InlineAnnotation', category: 'desktop', description: '内联标注组件，在文本中嵌入轻量级标记信息', slug: 'inline-annotation' },
+  { id: 'intelligence-badge', title: 'IntelligenceBadge', category: 'desktop', description: '智能徽章，展示分析状态、类别或评分等级', slug: 'intelligence-badge' },
+  { id: 'metric-value', title: 'MetricValue', category: 'desktop', description: '指标数值展示，支持趋势指示和单位标注', slug: 'metric-value' },
+  { id: 'plugin-panel', title: 'PluginPanel', category: 'desktop', description: '插件面板容器，标题栏 + 工具区 + 内容区三段式布局', slug: 'plugin-panel' },
+  { id: 'progress-bar', title: 'ProgressBar', category: 'desktop', description: '进度条组件，支持确定性、不确定和分段模式', slug: 'progress-bar' },
+  { id: 'section-header', title: 'SectionHeader', category: 'desktop', description: '区块标题组件，支持图标、操作按钮和折叠控制', slug: 'section-header' },
+  { id: 'show-tell-legend', title: 'ShowTellLegend', category: 'desktop', description: 'Show/Tell 图例，展示编辑器装饰的颜色含义', slug: 'show-tell-legend' },
+  { id: 'template-manager-intel', title: 'TemplateManager（Intelligence）', category: 'desktop', description: 'Intelligence 模板管理器，分析模板的创建、选择和应用', slug: 'template-manager-intel' },
+  { id: 'trend-chart', title: 'TrendChart', category: 'desktop', description: '趋势图表，折线图/面积图展示指标变化趋势', slug: 'trend-chart' },
+  { id: 'writing-dimension-detail', title: 'WritingDimensionDetail', category: 'desktop', description: '写作维度详情，展示单个维度的评分、说明和改进建议', slug: 'writing-dimension-detail' },
+
+  // Knowledge 子组件
+  { id: 'character-tab', title: 'CharacterTab', category: 'desktop', description: '角色标签页，管理和浏览知识库中的角色信息', slug: 'character-tab' },
+  { id: 'location-tab', title: 'LocationTab', category: 'desktop', description: '地点标签页，管理和浏览知识库中的地点信息', slug: 'location-tab' },
+  { id: 'memory-form', title: 'MemoryForm', category: 'desktop', description: '记忆表单，创建和编辑知识库中的记忆条目', slug: 'memory-form' },
+  { id: 'persisted-entity-tab', title: 'PersistedEntityTab', category: 'desktop', description: '持久实体标签页，通用实体类型的标准化管理界面', slug: 'persisted-entity-tab' },
+  { id: 'plot-tab', title: 'PlotTab', category: 'desktop', description: '情节标签页，管理情节线索和剧情节点', slug: 'plot-tab' },
+  { id: 'skill-tab', title: 'SkillTab', category: 'desktop', description: '技能标签页，管理角色技能和能力体系', slug: 'skill-tab' },
+
+  // Evaluation 子组件
+  { id: 'evaluation-compact-review-section', title: 'EvaluationCompactReviewSection', category: 'desktop', description: '简洁审查区，紧凑摘要形式展示评估结果', slug: 'evaluation-compact-review-section' },
+  { id: 'evaluation-detailed-review-section', title: 'EvaluationDetailedReviewSection', category: 'desktop', description: '详细审查区，展开形式展示完整评估内容', slug: 'evaluation-detailed-review-section' },
+  { id: 'evaluation-source-section', title: 'EvaluationSourceSection', category: 'desktop', description: '来源区，展示评估所基于的原始文本来源', slug: 'evaluation-source-section' },
+  { id: 'evaluation-support-tools-section', title: 'EvaluationSupportToolsSection', category: 'desktop', description: '支持工具区，重新评估、对比评估、导出报告等辅助工具', slug: 'evaluation-support-tools-section' },
+  { id: 'evaluation-workflow-section', title: 'EvaluationWorkflowSection', category: 'desktop', description: '工作流区，展示评估执行流程和当前状态', slug: 'evaluation-workflow-section' },
+  { id: 'toggle-section-shell', title: 'ToggleSectionShell', category: 'desktop', description: '可折叠壳组件，统一的折叠/展开容器', slug: 'toggle-section-shell' },
+
+  // Story Bible 子组件
+  { id: 'card-list', title: 'CardList', category: 'desktop', description: '卡片列表，卡片网格或列表形式展示 Story Bible 条目', slug: 'card-list' },
+  { id: 'collapsible-section', title: 'CollapsibleSection', category: 'desktop', description: '可折叠区，Story Bible 面板中的折叠/展开交互', slug: 'collapsible-section' },
+  { id: 'narrative-record-list', title: 'NarrativeRecordList', category: 'desktop', description: '叙事记录列表，按时间线或分类浏览叙事条目', slug: 'narrative-record-list' },
+  { id: 'story-bible-canon-section', title: 'StoryBibleCanonSection', category: 'desktop', description: 'Canon 区，管理已确认的核心设定条目', slug: 'story-bible-canon-section' },
+  { id: 'story-bible-draft-section', title: 'StoryBibleDraftSection', category: 'desktop', description: '草稿区，管理尚未确认的设定和想法', slug: 'story-bible-draft-section' },
+  { id: 'story-bible-knowledge-section', title: 'StoryBibleKnowledgeSection', category: 'desktop', description: '知识区，管理世界设定和规则体系等结构化知识', slug: 'story-bible-knowledge-section' },
+  { id: 'story-bible-narrative-section', title: 'StoryBibleNarrativeSection', category: 'desktop', description: '叙事区，记录已发生的叙事事件和线索', slug: 'story-bible-narrative-section' },
+  { id: 'story-bible-panel-content', title: 'StoryBiblePanelContent', category: 'desktop', description: '面板内容容器，整合 Canon/Draft/Knowledge/Narrative 各区块', slug: 'story-bible-panel-content' },
+
+  // Panels 子组件
+  { id: 'ai-context-selector', title: 'AiContextSelector', category: 'desktop', description: 'AI 上下文选择器，选择和配置发送给 AI 的上下文信息', slug: 'ai-context-selector' },
+  { id: 'writing-context-panel', title: 'WritingContextPanel', category: 'desktop', description: '写作上下文面板，整合展示当前写作场景的上下文信息', slug: 'writing-context-panel' },
+
+  // Knowledge Graph 子组件
+  { id: 'graph-context-menu', title: 'GraphContextMenu', category: 'graph', description: '图谱上下文菜单，右键节点或边弹出操作菜单', slug: 'graph-context-menu' },
+  { id: 'graph-minimap', title: 'GraphMinimap', category: 'graph', description: '图谱缩略图，全局缩略视图方便快速定位和导航', slug: 'graph-minimap' },
+  { id: 'knowledge-graph-toolbar', title: 'KnowledgeGraphToolbar', category: 'graph', description: '图谱工具栏，布局控制、筛选、缩放等操作入口', slug: 'knowledge-graph-toolbar' },
+  { id: 'knowledge-graph-view', title: 'KnowledgeGraphView', category: 'graph', description: '图谱视图，知识图谱的主渲染视图', slug: 'knowledge-graph-view' },
+  { id: 'sidebar-graph-view', title: 'SidebarGraphView', category: 'graph', description: '侧边栏图谱视图，精简版聚焦局部关系网络', slug: 'sidebar-graph-view' },
+
+  // Narrative 子组件
+  { id: 'brainstorm-panel', title: 'BrainstormPanel', category: 'writing', description: '头脑风暴面板，AI 驱动的叙事创意拓展', slug: 'brainstorm-panel' },
+  { id: 'quality-score-panel', title: 'QualityScorePanel', category: 'writing', description: '质量评分面板，多维度评分和综合评级', slug: 'quality-score-panel' },
+
+  // Narrative Visualization 子组件
+  { id: 'character-graph-view', title: 'CharacterGraphView', category: 'narrative-viz', description: '角色图谱视图，展示角色间的关系网络', slug: 'character-graph-view' },
+  { id: 'tension-curve-view', title: 'TensionCurveView', category: 'narrative-viz', description: '张力曲线视图，展示故事张力的起伏变化', slug: 'tension-curve-view' },
+  { id: 'timeline-view', title: 'TimelineView', category: 'narrative-viz', description: '时间线视图，展示故事中的事件序列', slug: 'timeline-view' },
+  { id: 'visualization-toolbar', title: 'VisualizationToolbar', category: 'narrative-viz', description: '可视化工具栏，视图切换、导出和配置操作', slug: 'visualization-toolbar' },
+
+  // Editor Extensions
+  { id: 'math-view', title: 'MathView', category: 'desktop', description: '数学公式视图扩展，LaTeX 公式渲染和编辑', slug: 'math-view' },
+  { id: 'show-tell-decorations', title: 'ShowTellDecorations', category: 'desktop', description: 'Show/Tell 装饰扩展，编辑器中标记写作手法分布', slug: 'show-tell-decorations' },
+  { id: 'voice-consistency-decorations', title: 'VoiceConsistencyDecorations', category: 'desktop', description: '声纹一致性装饰扩展，检测角色对话声纹一致性问题', slug: 'voice-consistency-decorations' },
+
   { id: 'hook-cliffhanger', title: '钩子与断章检测', category: 'writing', description: '章节钩子强度评分、断章类型分类、读者状态模型', slug: 'hook-cliffhanger' },
   { id: 'voice-fingerprint', title: '角色声纹', category: 'writing', description: '角色语音一致性分析、修饰标记检测', slug: 'voice-fingerprint' },
   { id: 'emotional-arc', title: '情感弧线', category: 'writing', description: '情绪轨迹追踪、Show/Tell 比率、沉浸感评分', slug: 'emotional-arc' },

@@ -4,7 +4,7 @@ import { NodeViewWrapper } from '@tiptap/react'
 import 'katex/dist/katex.min.css'
 
 export function MathView({ node, editor, updateAttributes, deleteNode }: NodeViewProps) {
-  const [isEditing, setIsEditing] = useState(true)
+  const [isEditing, setIsEditing] = useState(!node.attrs.latex)
   const [inputValue, setInputValue] = useState(node.attrs.latex || '')
   const katexContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)

@@ -67,21 +67,33 @@ export default function WritingWorkspace() {
 
   // 添加伏笔
   const addForeshadow = useCallback(async (hint: string) => {
-    await invoke('add_foreshadow', { hint, plantedChapter: chapter, maxDistance: 50 })
-    refreshForeshadows()
+    try {
+      await invoke('add_foreshadow', { hint, plantedChapter: chapter, maxDistance: 50 })
+      refreshForeshadows()
+    } catch (e) {
+      console.error('Add foreshadow failed:', e)
+    }
   }, [chapter, refreshForeshadows])
 
   // 回收伏笔
   const resolveForeshadow = useCallback(async (id: string) => {
-    await invoke('resolve_foreshadow', { id })
-    refreshForeshadows()
+    try {
+      await invoke('resolve_foreshadow', { id })
+      refreshForeshadows()
+    } catch (e) {
+      console.error('Resolve foreshadow failed:', e)
+    }
   }, [refreshForeshadows])
 
   // 同步知识层
   const syncKnowledge = useCallback(async () => {
-    await invoke('sync_from_knowledge_layer')
-    const status = await invoke<NowledgeStatus>('get_nowledge_status')
-    setNowledgeStatus(status)
+    try {
+      await invoke('sync_from_knowledge_layer')
+      const status = await invoke<NowledgeStatus>('get_nowledge_status')
+      setNowledgeStatus(status)
+    } catch (e) {
+      console.error('Sync knowledge failed:', e)
+    }
   }, [])
 
   return (

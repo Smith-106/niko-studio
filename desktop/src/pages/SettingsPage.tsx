@@ -106,7 +106,7 @@ export default function SettingsPage() {
               <input value={nowledgePort} onChange={e => setNowledgePort(e.target.value)}
                 className="w-32 text-xs bg-zinc-900 rounded px-2 py-1 text-zinc-300 border border-zinc-700" />
             </div>
-            <button onClick={() => invoke('get_nowledge_status')}
+            <button onClick={() => invoke('get_nowledge_status').catch(e => console.error('Nowledge status check failed:', e))}
               className="text-xs px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500">
               测试连接
             </button>

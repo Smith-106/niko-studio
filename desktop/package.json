@@ -83,6 +83,8 @@
     "@tiptap/react": "^3.22.0",
     "@tiptap/starter-kit": "^3.22.0",
     "clsx": "^2.1.0",
+    "cytoscape": "^3.33.4",
+    "cytoscape-cose-bilkent": "^4.1.0",
     "diff": "^9.0.0",
     "docx": "^9.6.1",
     "i18next": "^26.0.6",
