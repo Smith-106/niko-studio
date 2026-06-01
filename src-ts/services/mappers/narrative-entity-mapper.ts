@@ -1,4 +1,4 @@
-import { EntityType } from '../graph/graph-manager'
+import { EntityType } from '../../graph/graph-manager'
 
 /** niko-studio EntityType ↔ Nowledge Mem entity_type 映射 */
 const ENTITY_TYPE_MAP: Record<EntityType, string> = {
@@ -7,6 +7,7 @@ const ENTITY_TYPE_MAP: Record<EntityType, string> = {
   [EntityType.EVENT]: 'event',
   [EntityType.OBJECT]: 'object',
   [EntityType.CONCEPT]: 'concept',
+  [EntityType.RELATIONSHIP]: 'relationship',
   [EntityType.TIMELINE]: 'timeline',
 }
 

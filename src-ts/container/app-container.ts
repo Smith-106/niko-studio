@@ -1,9 +1,9 @@
-import { KnowledgeBridgeV2 } from './services/knowledge-bridge-v2'
-import { NarrativeEngine } from './services/narrative-engine'
-import { NowledgeMemHTTPClient } from './services/nowledge-mem-http-client'
-import { NullNowledgeMemAPI } from './services/null-nowledge-mem-api'
-import type { GraphManager } from './graph/graph-manager'
-import type { SqliteMemoryStore } from './memory/sqlite-memory-store'
+import { KnowledgeBridgeV2 } from '../services/knowledge-bridge-v2'
+import { NarrativeEngine } from '../services/narrative-engine'
+import { NowledgeMemHTTPClient } from '../services/nowledge-mem-http-client'
+import { NullNowledgeMemAPI } from '../services/null-nowledge-mem-api'
+import type { GraphManager } from '../graph/graph-manager'
+import type { SqliteMemoryStore } from '../memory/sqlite-memory-store'
 
 export interface AppContainer {
   narrativeEngine: NarrativeEngine

@@ -2,7 +2,7 @@ import type { NarrativeEngine } from '../services/narrative-engine'
 import type { KnowledgeBridgeV2 } from '../services/knowledge-bridge-v2'
 import type { NarrativeAnalyzer } from '../services/narrative-analyzer'
 import { EntityType } from '../graph/graph-manager'
-import { DimensionType } from '../memory/sqlite-memory-store'
+import { DimensionType } from '../memory/six-dimensional-memory'
 import { NarrativeRelationType } from '../services/mappers/narrative-relation-mapper'
 
 /** MCP 工具注册表 — 叙事引擎 + 知识桥接 + 叙事分析 */

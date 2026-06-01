@@ -39,8 +39,8 @@ export class NarrativeAgent {
         suggestions.push({
           action: `回收伏笔: ${f.hint}`,
           reason: `第${f.plantedAt}章埋设的伏笔已${f.urgency === 'overdue' ? '过期' : '到期'}`,
-          affectedEntities: [f.entityId],
-          foreshadowOpportunities: [f.entityId],
+          affectedEntities: [f.foreshadowId],
+          foreshadowOpportunities: [f.foreshadowId],
         })
       }
     }

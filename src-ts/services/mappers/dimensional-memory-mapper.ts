@@ -1,4 +1,4 @@
-import { DimensionType } from '../memory/sqlite-memory-store'
+import { DimensionType } from '../../memory/six-dimensional-memory'
 
 /** niko-studio DimensionType ↔ Nowledge Mem unit_type + labels 映射 */
 const DIMENSION_MAP: Record<DimensionType, { unitType: string; labels: string[] }> = {

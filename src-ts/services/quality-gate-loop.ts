@@ -1,4 +1,5 @@
-import type { NarrativeAnalyzer, QualityReport } from './narrative-analyzer'
+import { NarrativeAnalyzer } from './narrative-analyzer'
+import type { QualityReport } from './narrative-analyzer'
 
 export type GateLevel = 'quick' | 'standard' | 'strict'
 export type GateResult = 'PASS' | 'WARN' | 'FAIL' | 'BLOCK'

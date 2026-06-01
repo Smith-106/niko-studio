@@ -4,6 +4,7 @@
  * These interfaces define the contracts for all services registered in the ServiceContainer.
  * Each interface corresponds to a Python service that will be migrated to TypeScript.
  */
+import type { LLMRequest, LLMResponse, StreamChunk } from '../protocols/llm'
 
 export type { ISearchStrategyConfig } from '../search/strategy-config';
 export type { IUnifiedSearchPipeline } from '../search/unified-pipeline';
@@ -703,7 +704,7 @@ export interface ILLMService {
   /**
    * Generate text response with metadata
    */
-  generateWithMetadata(request: unknown): Promise<unknown>;
+  generateWithMetadata(request: LLMRequest): Promise<LLMResponse>;
 
   /**
    * Generate JSON format response
@@ -729,7 +730,7 @@ export interface ILLMService {
       maxTokens?: number;
       systemPrompt?: string;
     }
-  ): AsyncIterableIterator<unknown>;
+  ): AsyncIterableIterator<StreamChunk>;
 
   /**
    * Batch generate text responses

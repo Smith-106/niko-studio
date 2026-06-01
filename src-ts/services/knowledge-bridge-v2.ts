@@ -1,11 +1,10 @@
-import { NowledgeMemHTTPClient } from './nowledge-mem-http-client'
+import { NowledgeMemHTTPClient, type ISimpleNowledgeMemApi } from './nowledge-mem-http-client'
 import { NullNowledgeMemAPI } from './null-nowledge-mem-api'
 import { NarrativeEntityMapper, type NarrativeEntityInput } from './mappers/narrative-entity-mapper'
 import { DimensionalMemoryMapper, type NarrativeMemoryInput } from './mappers/dimensional-memory-mapper'
 import { NarrativeRelationMapper } from './mappers/narrative-relation-mapper'
 import { IncrementalSyncEngine } from './sync/incremental-sync-engine'
 import { BridgeConflictResolver, type ConflictItem } from './sync/bridge-conflict-resolver'
-import type { INowledgeMemService } from '../protocols/nowledge-mem'
 import path from 'path'
 
 export interface SyncReport {
@@ -23,7 +22,7 @@ export interface SyncStatus {
 }
 
 export class KnowledgeBridgeV2 {
-  private api: INowledgeMemService
+  private api: ISimpleNowledgeMemApi
   private entityMapper: NarrativeEntityMapper
   private memoryMapper: DimensionalMemoryMapper
   private relationMapper: NarrativeRelationMapper
@@ -64,11 +63,11 @@ export class KnowledgeBridgeV2 {
 
       if (remoteId) {
         // 更新已有
-        await this.api.addMemory({ content: nowledgeEntity.description, labels: [nowledgeEntity.entity_type, ...nowledgeEntity.aliases] })
+        const mem = await this.api.addMemory(nowledgeEntity.description, { labels: [nowledgeEntity.entity_type, ...nowledgeEntity.aliases] })
       } else {
         // 新增
-        const id = await this.api.addMemory({ content: nowledgeEntity.description, labels: [nowledgeEntity.entity_type, ...nowledgeEntity.aliases] })
-        this.syncEngine.recordSync(localId, id, content, 'push')
+        const mem = await this.api.addMemory(nowledgeEntity.description, { labels: [nowledgeEntity.entity_type, ...nowledgeEntity.aliases] })
+        this.syncEngine.recordSync(localId, mem.id, content, 'push')
       }
       report.pushed++
     } catch (err) {
@@ -86,12 +85,11 @@ export class KnowledgeBridgeV2 {
       if (!this.syncEngine.hasChanged(localId, content)) return report
 
       const nowledgeInput = this.memoryMapper.toNowledge(input)
-      const id = await this.api.addMemory({
-        content: nowledgeInput.content,
+      const mem = await this.api.addMemory(nowledgeInput.content, {
         labels: nowledgeInput.labels,
         importance: nowledgeInput.importance,
       })
-      this.syncEngine.recordSync(localId, id, content, 'push')
+      this.syncEngine.recordSync(localId, mem.id, content, 'push')
       report.pushed++
     } catch (err) {
       report.errors.push(String(err))
@@ -161,7 +159,7 @@ export class KnowledgeBridgeV2 {
   // === 状态 ===
 
   isOnline(): boolean {
-    return 'isHealthy' in this.api && (this.api as NowledgeMemHTTPClient).isHealthy
+    return this.api.isHealthy
   }
 
   getSyncStatus(): SyncStatus {

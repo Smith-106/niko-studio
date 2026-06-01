@@ -1,4 +1,44 @@
-import type { INowledgeMemService } from '../protocols/nowledge-mem'
+import type { NowledgeMemMemory, NowledgeMemSearchResult } from '../protocols/nowledge-mem'
+
+/** 简化的 Nowledge Mem API 接口 — 仅包含实际使用的方法 */
+export interface ISimpleNowledgeMemApi {
+  readonly isHealthy: boolean
+  checkHealth(): Promise<boolean>
+  addMemory(content: string, options?: {
+    labels?: string[];
+    importance?: number;
+    id?: string;
+    title?: string;
+    unitType?: 'note' | 'decision' | 'learning' | 'reference' | 'task' | 'code' | 'concept' | 'metric';
+    when?: string;
+    eventStart?: string;
+    eventEnd?: string;
+    sourceRefs?: string[];
+    spaceId?: string;
+  }): Promise<NowledgeMemMemory>
+  getMemory(id: string): Promise<{ id: string; content: string; labels: string[]; importance: number } | null>
+  searchMemories(query: string, options?: {
+    labels?: string[];
+    timeRange?: 'today' | 'week' | 'month' | 'year';
+    importance?: number;
+    mode?: 'normal' | 'deep';
+    limit?: number;
+    unitType?: string;
+    eventFrom?: string;
+    eventTo?: string;
+    recordedFrom?: string;
+    recordedTo?: string;
+    spaceId?: string;
+  }): Promise<NowledgeMemSearchResult>
+  deleteMemory(id: string): Promise<boolean>
+  listCrystals(opts?: { query?: string; tags?: string[] }): Promise<Array<{ slug: string; title: string; tags: string[] }>>
+  getCrystal(slug: string): Promise<{ slug: string; title: string; content: string; tags: string[]; sources: string[] } | null>
+  getEntities(opts?: { type?: string; query?: string }): Promise<Array<{ id: string; entity_type: string; name: string; description: string; aliases: string[] }>>
+  graphSearch(query: string, opts?: { depth?: number; limit?: number }): Promise<Array<{ id: string; name: string; score: number; path: string[] }>>
+  temporalQuery(opts: { event_time?: string; recorded_after?: string; fuzzy?: boolean }): Promise<Array<{ id: string; content: string; event_time: string; recorded_at: string }>>
+  getContradictions(): Promise<Array<{ memory_a: string; memory_b: string; description: string }>>
+  getEvolutionChains(entityId: string): Promise<Array<{ memory_id: string; evolves_kind: string; strength: number }>>
+}
 
 export interface NowledgeMemConfig {
   host: string
@@ -16,7 +56,7 @@ const DEFAULT_CONFIG: NowledgeMemConfig = {
   retryDelay: 1000,
 }
 
-export class NowledgeMemHTTPClient implements INowledgeMemService {
+export class NowledgeMemHTTPClient implements ISimpleNowledgeMemApi {
   private config: NowledgeMemConfig
   private baseUrl: string
   private healthy = false
@@ -74,10 +114,21 @@ export class NowledgeMemHTTPClient implements INowledgeMemService {
   }
 
   // === Memory CRUD ===
-  async addMemory(input: { content: string; labels?: string[]; importance?: number }) {
-    return this.request<string>('/memories', {
+  async addMemory(content: string, options?: {
+    labels?: string[];
+    importance?: number;
+    id?: string;
+    title?: string;
+    unitType?: 'note' | 'decision' | 'learning' | 'reference' | 'task' | 'code' | 'concept' | 'metric';
+    when?: string;
+    eventStart?: string;
+    eventEnd?: string;
+    sourceRefs?: string[];
+    spaceId?: string;
+  }): Promise<NowledgeMemMemory> {
+    return this.request<NowledgeMemMemory>('/memories', {
       method: 'POST',
-      body: JSON.stringify(input),
+      body: JSON.stringify({ content, ...options }),
     })
   }
 
@@ -85,15 +136,28 @@ export class NowledgeMemHTTPClient implements INowledgeMemService {
     return this.request<{ id: string; content: string; labels: string[]; importance: number } | null>(`/memories/${id}`)
   }
 
-  async searchMemories(query: string, opts?: { limit?: number; threshold?: number }) {
-    return this.request<Array<{ id: string; content: string; score: number }>>('/memories/search', {
+  async searchMemories(query: string, options?: {
+    labels?: string[];
+    timeRange?: 'today' | 'week' | 'month' | 'year';
+    importance?: number;
+    mode?: 'normal' | 'deep';
+    limit?: number;
+    unitType?: string;
+    eventFrom?: string;
+    eventTo?: string;
+    recordedFrom?: string;
+    recordedTo?: string;
+    spaceId?: string;
+  }): Promise<NowledgeMemSearchResult> {
+    return this.request<NowledgeMemSearchResult>('/memories/search', {
       method: 'POST',
-      body: JSON.stringify({ query, ...opts }),
+      body: JSON.stringify({ query, ...options }),
     })
   }
 
-  async deleteMemory(id: string) {
+  async deleteMemory(id: string): Promise<boolean> {
     await this.request<void>(`/memories/${id}`, { method: 'DELETE' })
+    return true
   }
 
   // === Crystal / LLM Wiki ===

@@ -57,7 +57,7 @@ export class IncrementalSyncEngine {
   /** 获取映射：local_id → remote_id */
   getRemoteId(localId: string): string | null {
     const row = this.db.prepare('SELECT remote_id FROM sync_state WHERE local_id = ?').get(localId) as { remote_id: string } | undefined
-    return row?.remoteId ?? null
+    return row?.remote_id ?? null
   }
 
   /** 获取映射：remote_id → local_id */

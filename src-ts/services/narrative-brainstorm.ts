@@ -1,4 +1,4 @@
-import type { NarrativeAnalyzer } from './narrative-analyzer'
+import { NarrativeAnalyzer } from './narrative-analyzer'
 
 export interface BrainstormRole {
   id: string

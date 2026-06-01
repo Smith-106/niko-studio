@@ -3,7 +3,7 @@ import type { NarrativeEntityInput } from './mappers/narrative-entity-mapper'
 import type { NarrativeMemoryInput } from './mappers/dimensional-memory-mapper'
 import { NarrativeRelationType } from './mappers/narrative-relation-mapper'
 import { EntityType } from '../graph/graph-manager'
-import { DimensionType } from '../memory/six-dimensional-memory'
+import { DimensionType } from '../memory/sqlite-memory-store'
 import { ForeshadowTracker, type ForeshadowRecord } from './foreshadow-tracker'
 import { NarrativeAnalyzer, type HookResult, type CliffhangerResult, type EmotionCraftResult, type SuspenseResult, type QualityReport } from './narrative-analyzer'
 
@@ -124,14 +124,7 @@ export class NarrativeEngine {
 
   async getPendingForeshadows(currentChapter: number): Promise<ForeshadowAlert[]> {
     this.foreshadowTracker.markExpired(currentChapter)
-    return this.foreshadowTracker.getAlerts(currentChapter).map(a => ({
-      foreshadowId: a.id,
-      hint: a.hint,
-      plantedAt: a.plantedChapter,
-      currentChapter,
-      chaptersUntilDue: a.chaptersUntilDue,
-      urgency: a.urgency as ForeshadowAlert['urgency'],
-    }))
+    return this.foreshadowTracker.getAlerts(currentChapter)
   }
 
   // === 叙事分析 ===

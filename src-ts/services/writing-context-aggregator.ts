@@ -1,6 +1,6 @@
 import type { NarrativeEngine } from './narrative-engine'
 import type { KnowledgeBridgeV2 } from './knowledge-bridge-v2'
-import type { DimensionType } from '../memory/sqlite-memory-store'
+import { DimensionType } from '../memory/six-dimensional-memory'
 import type { EntityType } from '../graph/graph-manager'
 import type { ForeshadowAlert } from './narrative-engine'
 

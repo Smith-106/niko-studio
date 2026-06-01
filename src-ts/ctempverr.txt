@@ -1,0 +1,17 @@
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/three-layer-architecture.test.ts[2m [ tests/three-layer-architecture.test.ts ][22m
+[31m[1mError[22m: Cannot find module './foreshadow-tracker' imported from 'C:/Users/niko/Desktop/工作目录/niko-studio/src-ts/tests/three-layer-architecture.test.ts'[39m
+[36m [2m❯[22m tests/three-layer-architecture.test.ts:[2m2:1[22m[39m
+    [90m  1| [39m[35mimport[39m { describe[33m,[39m it[33m,[39m expect } [35mfrom[39m [32m'vitest'[39m
+    [90m  2| [39m[35mimport[39m { [33mForeshadowTracker[39m } [35mfrom[39m [32m'./foreshadow-tracker'[39m
+    [90m   | [39m[31m^[39m
+    [90m  3| [39m[35mimport[39m { [33mNarrativeAnalyzer[39m } [35mfrom[39m [32m'./narrative-analyzer'[39m
+    [90m  4| [39mimport { NarrativeEntityMapper } from './mappers/narrative-entity-mapp…
+
+[31m[1mCaused by: Error[22m: Failed to load url ./foreshadow-tracker (resolved id: ./foreshadow-tracker) in C:/Users/niko/Desktop/工作目录/niko-studio/src-ts/tests/three-layer-architecture.test.ts. Does the file exist?[39m
+[90m [2m❯[22m loadAndTransform ../../../%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/niko-studio/src-ts/node_modules/vite/dist/node/chunks/config.js:[2m22663:33[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
