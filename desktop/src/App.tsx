@@ -17,6 +17,9 @@ import { useSettingsStore } from './stores/settingsStore'
 
 function App() {
   const { isFirstRun, markDone } = useOnboarding()
+  const { addToast } = useToast()
+
+  useAppStartup((msg) => addToast('info', msg, 8000))
 
   if (isFirstRun) {
     return (
@@ -29,11 +32,9 @@ function App() {
 
 function AppMain() {
   const { sidebarProps, appRightPanelsProps, appMainContentProps, chatSidebarProps } = useAppViewModel()
-  const { toasts, addToast, removeToast } = useToast()
+  const { toasts, removeToast } = useToast()
   const { t } = useI18n()
   const fontSize = useSettingsStore((state) => state.settings.fontSize)
-
-  useAppStartup((msg) => addToast('info', msg, 8000))
 
   const handleSkipToMainContent = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault()

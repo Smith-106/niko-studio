@@ -93,6 +93,32 @@ fn resolve_services_config_path(resource_dir: &Path) -> Option<PathBuf> {
     None
 }
 
+fn resolve_app_config_path(resource_dir: &Path) -> Option<PathBuf> {
+    let direct = resource_dir.join("config").join("niko-studio.yaml");
+    if direct.exists() {
+        return Some(direct);
+    }
+
+    for ancestor in std::iter::once(resource_dir).chain(resource_dir.ancestors()) {
+        let nested = ancestor.join("config").join("niko-studio.yaml");
+        if nested.exists() {
+            return Some(nested);
+        }
+
+        let legacy = ancestor
+            .join("_up_")
+            .join("_up_")
+            .join("src-ts")
+            .join("config")
+            .join("niko-studio.yaml");
+        if legacy.exists() {
+            return Some(legacy);
+        }
+    }
+
+    None
+}
+
 pub async fn is_gateway_healthy(base: &str) -> bool {
     let health_url = format!("{}/health", base);
     let client = reqwest::Client::builder()
@@ -162,7 +188,12 @@ impl GatewayState {
             );
         }
 
-        let override_base = { self.base_override.lock().unwrap_or_else(|e| e.into_inner()).clone() };
+        let override_base = {
+            self.base_override
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
+        };
         if let Some(override_base) = override_base {
             if is_gateway_healthy(&override_base).await {
                 return Ok(override_base);
@@ -173,7 +204,12 @@ impl GatewayState {
             );
         }
 
-        let local_base = { self.local_base.lock().unwrap_or_else(|e| e.into_inner()).clone() };
+        let local_base = {
+            self.local_base
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
+        };
         if let Some(local_base) = local_base {
             if is_gateway_healthy(&local_base).await {
                 return Ok(local_base);
@@ -187,7 +223,12 @@ impl GatewayState {
     async fn start_local_sidecar(&self, app: &tauri::AppHandle) -> Result<String, String> {
         let _guard = self.start_lock.lock().await;
 
-        let existing_local = { self.local_base.lock().unwrap_or_else(|e| e.into_inner()).clone() };
+        let existing_local = {
+            self.local_base
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
+        };
         if let Some(local_base) = existing_local {
             if is_gateway_healthy(&local_base).await {
                 return Ok(local_base);
@@ -219,6 +260,7 @@ impl GatewayState {
             .map_err(|e| format!("Failed to resolve resource_dir: {e}"))?;
         let skills_dir = resource_dir.join("skills");
         let services_config_path = resolve_services_config_path(&resource_dir);
+        let app_config_path = resolve_app_config_path(&resource_dir);
 
         let app_data_dir = app
             .path()
@@ -256,7 +298,14 @@ impl GatewayState {
                     .env("NIKO_GATEWAY_HOST", "127.0.0.1")
                     .env("NIKO_GATEWAY_PORT", port.to_string())
                     .env("NIKO_GATEWAY_RELOAD", "0")
-                    .env("NIKO_ENV", if cfg!(debug_assertions) { "development" } else { "production" })
+                    .env(
+                        "NIKO_ENV",
+                        if cfg!(debug_assertions) {
+                            "development"
+                        } else {
+                            "production"
+                        },
+                    )
                     .env("NIKO_GATEWAY_RUNTIME", runtime.as_env())
                     .env(
                         "NIKO_CORS_DEV_ORIGINS",
@@ -267,6 +316,13 @@ impl GatewayState {
                 if let Some(config_path) = &services_config_path {
                     cmd = cmd.env(
                         "NIKO_CONFIG_PATH",
+                        config_path.to_string_lossy().to_string(),
+                    );
+                }
+
+                if let Some(config_path) = &app_config_path {
+                    cmd = cmd.env(
+                        "NIKO_APP_CONFIG_PATH",
                         config_path.to_string_lossy().to_string(),
                     );
                 }
@@ -301,7 +357,13 @@ impl GatewayState {
                                 let _ = app_clone.emit("gateway-log", format!("[ERROR] {}", text));
                             }
                             CommandEvent::Terminated(status) => {
-                                let _ = app_clone.emit("gateway-log", format!("[SYSTEM] Process terminated with status: {:?}", status));
+                                let _ = app_clone.emit(
+                                    "gateway-log",
+                                    format!(
+                                        "[SYSTEM] Process terminated with status: {:?}",
+                                        status
+                                    ),
+                                );
                             }
                             _ => {}
                         }
@@ -347,7 +409,13 @@ impl GatewayState {
                 return Ok(());
             }
 
-            let _pid = { self.child.lock().unwrap_or_else(|e| e.into_inner()).as_ref().map(|child| child.pid()) };
+            let _pid = {
+                self.child
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .as_ref()
+                    .map(|child| child.pid())
+            };
 
             if start.elapsed() >= timeout {
                 return Err(format!("Gateway did not become healthy in {:?}", timeout));
@@ -368,7 +436,8 @@ impl GatewayState {
     }
 
     pub fn set_base_override(&self, base: Option<String>) {
-        *self.base_override.lock().unwrap_or_else(|e| e.into_inner()) = base.map(|value| normalize_base_url(value.trim()));
+        *self.base_override.lock().unwrap_or_else(|e| e.into_inner()) =
+            base.map(|value| normalize_base_url(value.trim()));
         *self.cached_base.lock().unwrap_or_else(|e| e.into_inner()) = None;
     }
 }

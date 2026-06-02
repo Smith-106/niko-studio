@@ -24,7 +24,8 @@ pub struct VaultWatcher {
 
 impl VaultWatcher {
     pub fn new(app: AppHandle, vault_path: PathBuf) -> Result<Self, notify::Error> {
-        let (tx, rx): (mpsc::Sender<notify::Event>, mpsc::Receiver<notify::Event>) = mpsc::channel();
+        let (tx, rx): (mpsc::Sender<notify::Event>, mpsc::Receiver<notify::Event>) =
+            mpsc::channel();
         let vault_path_clone = vault_path.clone();
 
         let mut watcher = RecommendedWatcher::new(
@@ -32,14 +33,10 @@ impl VaultWatcher {
                 if let Ok(event) = res {
                     if matches!(
                         event.kind,
-                        EventKind::Create(_)
-                            | EventKind::Modify(_)
-                            | EventKind::Remove(_)
+                        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
                     ) {
                         for path in &event.paths {
-                            let rel = path
-                                .strip_prefix(&vault_path_clone)
-                                .unwrap_or(path);
+                            let rel = path.strip_prefix(&vault_path_clone).unwrap_or(path);
                             if rel.starts_with(".obsidian") {
                                 continue;
                             }
@@ -74,8 +71,8 @@ pub fn discover_vaults() -> Vec<VaultInfo> {
     let mut vaults = Vec::new();
 
     // Read Obsidian's obsidian.json for registered vaults
-    if let Some(obsidian_config) = dirs::config_dir()
-        .map(|p| p.join("obsidian").join("obsidian.json"))
+    if let Some(obsidian_config) =
+        dirs::config_dir().map(|p| p.join("obsidian").join("obsidian.json"))
     {
         if obsidian_config.exists() {
             if let Ok(content) = std::fs::read_to_string(&obsidian_config) {

@@ -18,6 +18,8 @@ const mockInvoke = vi.mocked(invoke)
 
 function cleanupTauriGlobal() {
   delete (window as unknown as Record<string, unknown>).__TAURI__
+  delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__
+  delete (window as unknown as Record<string, unknown>).isTauri
 }
 
 /**
@@ -54,7 +56,7 @@ describe('normalizeGatewayBaseUrl', () => {
 })
 
 // ---------------------------------------------------------------------------
-// isTauriRuntime (reads window.__TAURI__)
+// isTauriRuntime (supports withGlobalTauri=false)
 // ---------------------------------------------------------------------------
 
 describe('isTauriRuntime', () => {
@@ -62,13 +64,36 @@ describe('isTauriRuntime', () => {
     cleanupTauriGlobal()
   })
 
-  it('returns false when __TAURI__ is not defined', () => {
+  it('returns false when no Tauri runtime markers are defined', () => {
     cleanupTauriGlobal()
     expect(isTauriRuntime()).toBe(false)
   })
 
   it('returns true when __TAURI__ is defined on window', () => {
     vi.stubGlobal('__TAURI__', {})
+    expect(isTauriRuntime()).toBe(true)
+  })
+
+  it('returns true when Tauri 2 internals are present without a global __TAURI__ object', () => {
+    vi.stubGlobal('__TAURI_INTERNALS__', {
+      invoke: vi.fn(),
+    })
+    expect(isTauriRuntime()).toBe(true)
+  })
+
+  it('returns true when window.isTauri() reports a Tauri runtime', () => {
+    vi.stubGlobal('isTauri', () => true)
+    expect(isTauriRuntime()).toBe(true)
+  })
+
+  it('falls back to structural detection when window.isTauri throws', () => {
+    vi.stubGlobal('isTauri', () => {
+      throw new Error('runtime probe unavailable')
+    })
+    vi.stubGlobal('__TAURI_INTERNALS__', {
+      invoke: vi.fn(),
+    })
+
     expect(isTauriRuntime()).toBe(true)
   })
 })
@@ -106,7 +131,9 @@ describe('getRuntimeGatewayBase (non-Tauri)', () => {
 describe('getRuntimeGatewayBase (Tauri runtime)', () => {
   beforeEach(async () => {
     // Enter Tauri mode and clear module-level cache
-    vi.stubGlobal('__TAURI__', {})
+    vi.stubGlobal('__TAURI_INTERNALS__', {
+      invoke: vi.fn(),
+    })
     mockInvoke.mockResolvedValue(undefined)
     await syncGatewayBaseOverride(null)
     mockInvoke.mockReset()
@@ -180,7 +207,9 @@ describe('getRuntimeGatewayBase (Tauri runtime)', () => {
 describe('syncGatewayBaseOverride', () => {
   beforeEach(async () => {
     // Clear module cache while in Tauri mode
-    vi.stubGlobal('__TAURI__', {})
+    vi.stubGlobal('__TAURI_INTERNALS__', {
+      invoke: vi.fn(),
+    })
     mockInvoke.mockResolvedValue(undefined)
     await syncGatewayBaseOverride(null)
     mockInvoke.mockReset()
@@ -238,7 +267,9 @@ describe('syncGatewayBaseOverride', () => {
 
 describe('callTauriApi', () => {
   beforeEach(() => {
-    vi.stubGlobal('__TAURI__', {})
+    vi.stubGlobal('__TAURI_INTERNALS__', {
+      invoke: vi.fn(),
+    })
     mockInvoke.mockReset()
   })
 

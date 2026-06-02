@@ -23,7 +23,7 @@ const log = createLogger('config')
 // Version - authoritative release version for cross-surface consistency checks
 // ---------------------------------------------------------------------------
 
-const APP_VERSION = '9.26.2'
+const APP_VERSION = '11.0.0'
 
 // ---------------------------------------------------------------------------
 // Enum & helper types
@@ -982,29 +982,36 @@ function snakeToCamel(str: string): string {
 // ---------------------------------------------------------------------------
 
 let configManager: ConfigManager | null = null
+const APP_CONFIG_PATH_ENV = 'NIKO_APP_CONFIG_PATH'
+
+function resolveDefaultConfigPath(): string {
+  const envConfigPath = process.env[APP_CONFIG_PATH_ENV]?.trim()
+  if (envConfigPath) {
+    return envConfigPath
+  }
+
+  const candidates = [
+    'config/niko-studio.yaml',
+    'config/niko-studio.json',
+    'niko-studio.yaml',
+    'niko-studio.json',
+  ]
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  return 'config/niko-studio.yaml'
+}
 
 export function initConfig(
   configPath?: string,
   hotReload: boolean = true,
 ): ConfigManager {
   if (configPath === undefined) {
-    const candidates = [
-      'config/niko-studio.yaml',
-      'config/niko-studio.json',
-      'niko-studio.yaml',
-      'niko-studio.json',
-    ]
-
-    for (const candidate of candidates) {
-      if (fs.existsSync(candidate)) {
-        configPath = candidate
-        break
-      }
-    }
-
-    if (configPath === undefined) {
-      configPath = 'config/niko-studio.yaml'
-    }
+    configPath = resolveDefaultConfigPath()
   }
 
   configManager = ConfigManager.getInstance(configPath, hotReload)

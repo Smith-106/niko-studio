@@ -13,8 +13,31 @@ let cachedRuntimeGatewayBaseAt: number | null = null
 
 export const normalizeGatewayBaseUrl = (value: string): string => value.replace(/\/+$/, '')
 
-export const isTauriRuntime = (): boolean =>
-  typeof window !== 'undefined' && '__TAURI__' in window
+type TauriRuntimeWindow = Window & {
+  __TAURI__?: unknown
+  __TAURI_INTERNALS__?: {
+    invoke?: unknown
+  }
+  isTauri?: () => boolean
+}
+
+export const isTauriRuntime = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  const tauriWindow = window as TauriRuntimeWindow
+  if (typeof tauriWindow.isTauri === 'function') {
+    try {
+      return tauriWindow.isTauri()
+    } catch {
+      // Fall through to structural detection when the helper is unavailable.
+    }
+  }
+
+  return '__TAURI__' in tauriWindow
+    || typeof tauriWindow.__TAURI_INTERNALS__?.invoke === 'function'
+}
 
 export async function getRuntimeGatewayBase(
   resolveApiBase: () => string,

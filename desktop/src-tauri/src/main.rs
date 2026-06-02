@@ -7,12 +7,12 @@ mod vault_commands;
 mod vault_watcher;
 
 use gateway_commands::{
-    call_api, check_backend_health, fetch_chunk, get_gateway_base, set_gateway_base_override, start_backend,
-    restart_backend,
+    call_api, check_backend_health, fetch_chunk, get_gateway_base, restart_backend,
+    set_gateway_base_override, start_backend,
 };
 use gateway_runtime::GatewayState;
-use vault_commands::{list_vaults, select_vault, stop_vault_watcher, get_vault_graph};
 use vault_commands::VaultWatcherState;
+use vault_commands::{get_vault_graph, list_vaults, select_vault, stop_vault_watcher};
 
 fn main() {
     let _sentry_guard = option_env!("SENTRY_DSN").and_then(|dsn| {

@@ -4924,3 +4924,17 @@
 {"type":"cli","id":"CLI-1780406581260-1","timestamp":"2026-06-02T13:23:01.260Z","command":"spec load","args":{"keyword":"claude","stdin":false}}
 {"type":"cli","id":"CLI-1780407187673-1","timestamp":"2026-06-02T13:33:07.673Z","command":"spec load","args":{"keyword":"workflow","stdin":false}}
 {"type":"cli","id":"CLI-1780410184721-1","timestamp":"2026-06-02T14:23:04.721Z","command":"spec load","args":{"category":"coding","stdin":false}}
+{"type":"cli","id":"CLI-1780410391936-1","timestamp":"2026-06-02T14:26:31.936Z","command":"spec load","args":{"category":"quality","stdin":false}}
+{"type":"cli","id":"CLI-1780410528917-1","timestamp":"2026-06-02T14:28:48.917Z","command":"spec load","args":{"keyword":"发布","stdin":false}}
+{"type":"cli","id":"CLI-1780411049819-1","timestamp":"2026-06-02T14:37:29.819Z","command":"spec load","args":{"category":"review","stdin":false}}
+{"type":"cli","id":"CLI-1780412173674-1","timestamp":"2026-06-02T14:56:13.674Z","command":"spec load","args":{"keyword":"stream","stdin":false}}
+{"type":"cli","id":"CLI-1780413141058-1","timestamp":"2026-06-02T15:12:21.058Z","command":"spec load","args":{"keyword":"019e88b6","stdin":false}}
+{"type":"cli","id":"CLI-1780413174544-1","timestamp":"2026-06-02T15:12:54.544Z","command":"spec load","args":{"keyword":"release","stdin":false}}
+{"type":"cli","id":"CLI-1780415688484-1","timestamp":"2026-06-02T15:54:48.484Z","command":"spec load","args":{"keyword":"gateway request handler sidecar contract store manager","stdin":false}}
+{"type":"cli","id":"CLI-1780416297122-1","timestamp":"2026-06-02T16:04:57.122Z","command":"spec load","args":{"keyword":"package e2e release sign off","stdin":false}}
+{"type":"cli","id":"CLI-1780418156420-1","timestamp":"2026-06-02T16:35:56.420Z","command":"spec load","args":{"keyword":"sidecar","stdin":false}}
+{"type":"cli","id":"CLI-1780420099977-1","timestamp":"2026-06-02T17:08:19.977Z","command":"spec load","args":{"keyword":"cors","stdin":false}}
+{"type":"cli","id":"CLI-1780420530538-1","timestamp":"2026-06-02T17:15:30.538Z","command":"spec load","args":{"keyword":"release","stdin":false}}
+{"type":"cli","id":"CLI-1780422797286-1","timestamp":"2026-06-02T17:53:17.286Z","command":"spec load","args":{"keyword":"release","stdin":false}}
+{"type":"cli","id":"CLI-1780423147404-1","timestamp":"2026-06-02T17:59:07.404Z","command":"spec load","args":{"keyword":"release","stdin":false}}
+{"type":"cli","id":"CLI-1780423233972-1","timestamp":"2026-06-02T18:00:33.972Z","command":"spec load","args":{"keyword":"release","stdin":false}}

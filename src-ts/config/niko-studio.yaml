@@ -2,7 +2,7 @@
 # This file supports hot-reload - changes apply automatically
 
 app_name: niko-studio
-version: "9.26.2"
+version: "11.0.0"
 debug: false
 env: development
 data_dir: .writing
@@ -65,8 +65,8 @@ gateway:
   cors_dev_origins:
     - "*"
   cors_prod_origins:
-    - https://app.example.com
-    - https://gray.example.com
+    - tauri://localhost
+    - https://tauri.localhost
   metrics_enabled: true
   ui_bridge_enabled: false
   detection_evasion_guard: true

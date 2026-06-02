@@ -1,7 +1,7 @@
 use crate::gateway_runtime::{is_gateway_healthy, GatewayState};
-use std::sync::Mutex;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 
 /// 大载荷分片阈值：100KB
 /// 超过此大小的响应会被自动分片，避免 Tauri IPC 序列化开销和渲染端 GC 压力
@@ -41,7 +41,10 @@ static HTTP_CLIENT: once_cell::sync::Lazy<reqwest::Client> = once_cell::sync::La
 fn cleanup_chunk_cache(cache: &mut HashMap<String, CachedChunkedResponse>) {
     cache.retain(|_, entry| entry.created_at.elapsed().as_secs() < CHUNK_CACHE_TTL_SECS);
     if cache.len() > CHUNK_CACHE_MAX_ENTRIES {
-        let mut entries: Vec<_> = cache.iter().map(|(k, v)| (k.clone(), v.created_at)).collect();
+        let mut entries: Vec<_> = cache
+            .iter()
+            .map(|(k, v)| (k.clone(), v.created_at))
+            .collect();
         entries.sort_by_key(|(_, t)| *t);
         let to_remove = cache.len() - CHUNK_CACHE_MAX_ENTRIES;
         for (key, _) in entries.into_iter().take(to_remove) {
@@ -56,7 +59,10 @@ fn validate_endpoint(endpoint: &str) -> Result<(), String> {
         return Err(format!("Endpoint must start with '/': got '{}'", endpoint));
     }
     if endpoint.contains("..") {
-        return Err(format!("Endpoint must not contain '..': got '{}'", endpoint));
+        return Err(format!(
+            "Endpoint must not contain '..': got '{}'",
+            endpoint
+        ));
     }
     Ok(())
 }
@@ -131,10 +137,12 @@ pub async fn call_api(
             }
             req.send().await
         }
-        _ => return Err(format!(
-            "Unsupported method '{}'. Supported: GET, POST, PUT, DELETE",
-            method
-        )),
+        _ => {
+            return Err(format!(
+                "Unsupported method '{}'. Supported: GET, POST, PUT, DELETE",
+                method
+            ))
+        }
     };
 
     match response {
@@ -161,10 +169,7 @@ pub async fn call_api(
 /// 获取指定分片的内容
 /// 渲染端收到分片信封后，依次调用此命令获取 chunk 1..N
 #[tauri::command]
-pub async fn fetch_chunk(
-    channel_id: String,
-    chunk_index: usize,
-) -> Result<String, String> {
+pub async fn fetch_chunk(channel_id: String, chunk_index: usize) -> Result<String, String> {
     let cache = CHUNK_CACHE.lock().map_err(|e| e.to_string())?;
 
     match cache.get(&channel_id) {

@@ -1149,6 +1149,10 @@ export class PhaseOrchestratorAdapter implements IPhaseOrchestrator {
     this._artifacts = artifacts ?? [];
   }
 
+  private _isPlanningPhaseDeterministicHelperRoute(path: string): boolean {
+    return path === '/writing-helper/process' || path === '/writing/helper';
+  }
+
   /**
    * Set the scratch directory for artifact validation.
    * Called by workflow engine when a new scratch directory is created.
@@ -1252,6 +1256,14 @@ export class PhaseOrchestratorAdapter implements IPhaseOrchestrator {
         // still defining its execution plan and should not accept mutations.
         if (method === 'GET' || method === 'HEAD') {
           return { allowed: true, statusCode: 200, reason: 'read-only operation permitted in planning phase', currentPhase };
+        }
+        if (this._isPlanningPhaseDeterministicHelperRoute(path)) {
+          return {
+            allowed: true,
+            statusCode: 200,
+            reason: 'deterministic writing-helper route permitted in planning phase',
+            currentPhase,
+          };
         }
         return { allowed: false, statusCode: 503, reason: `write operation '${operation}' blocked in planning phase`, currentPhase };
 

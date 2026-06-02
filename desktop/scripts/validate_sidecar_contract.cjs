@@ -59,6 +59,9 @@ const EXPECTED_FRONTEND_PERMISSIONS = [
   'fs:allow-mkdir',
   'fs:allow-read-dir',
   'fs:allow-remove',
+  'fs:allow-stat',
+  'dialog:default',
+  'dialog:allow-open',
 ];
 
 // Contract definitions

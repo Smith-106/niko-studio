@@ -452,7 +452,6 @@ export class StoreManager {
       writeFileSync(this.indexPath, JSON.stringify(indexData, null, 2), 'utf-8');
     } catch (e) {
       _log.error(`Failed to save index`, { detail: String(e) });
-      throw e;
     }
   }
 

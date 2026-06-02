@@ -52,11 +52,12 @@
     "externalBin": [
       "bin/niko-gateway"
     ],
-    "resources": [
-      "../../skills",
-      "../../config/services.yaml",
-      "bin/sidecar"
-    ],
+    "resources": {
+      "../../skills": "skills",
+      "../../config/services.yaml": "config/services.yaml",
+      "../../src-ts/config/niko-studio.yaml": "config/niko-studio.yaml",
+      "bin/sidecar": "bin/sidecar"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

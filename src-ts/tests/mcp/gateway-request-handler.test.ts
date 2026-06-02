@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { PhaseOrchestratorAdapter } from '../../container/adapters';
 import type { HttpRequest, HttpResponse } from '../../mcp/http-types';
 import type { GatewayRoute } from '../../mcp/gateway-route-types';
 
@@ -305,6 +306,57 @@ describe('gateway-request-handler', () => {
     const metricsPayload = recordRequestMetricsMock.mock.calls.at(-1)?.[0] as { latencyMs?: number } | undefined;
     expect(typeof metricsPayload?.latencyMs).toBe('number');
     expect((metricsPayload?.latencyMs ?? -1) >= 0).toBe(true);
+  });
+
+  it('permits deterministic writing-helper process requests during planning phase', async () => {
+    routes = [
+      buildRoute('POST', /^\/writing-helper\/process$/, () => ({
+        statusCode: 200,
+        body: { status: 'ok' },
+      })),
+    ];
+
+    const handler = createGatewayRequestHandler(routes, new PhaseOrchestratorAdapter());
+    const req = createMockIncoming({ method: 'POST', url: '/writing-helper/process' });
+    const { res, captured } = createMockServerResponse();
+
+    vi.spyOn(req, 'on').mockImplementation((_event, callback) => {
+      if (_event === 'data') (callback as (chunk: unknown) => void)('{"content":"第一句。","mode":"polish"}');
+      if (_event === 'end') (callback as () => void)();
+      return req as unknown as IncomingMessage;
+    });
+
+    await handler(req, res);
+
+    expect(captured.statusCode).toBe(200);
+    expect(JSON.parse(captured.body)).toEqual({ status: 'ok' });
+  });
+
+  it('still blocks unrelated POST requests during planning phase', async () => {
+    routes = [
+      buildRoute('POST', /^\/chat$/, () => ({
+        statusCode: 200,
+        body: { status: 'unexpected' },
+      })),
+    ];
+
+    const handler = createGatewayRequestHandler(routes, new PhaseOrchestratorAdapter());
+    const req = createMockIncoming({ method: 'POST', url: '/chat' });
+    const { res, captured } = createMockServerResponse();
+
+    vi.spyOn(req, 'on').mockImplementation((_event, callback) => {
+      if (_event === 'data') (callback as (chunk: unknown) => void)('{"message":"hello"}');
+      if (_event === 'end') (callback as () => void)();
+      return req as unknown as IncomingMessage;
+    });
+
+    await handler(req, res);
+
+    expect(captured.statusCode).toBe(503);
+    expect(JSON.parse(captured.body)).toMatchObject({
+      error: expect.stringContaining('blocked in planning phase'),
+      phase: 'planning',
+    });
   });
 });
 

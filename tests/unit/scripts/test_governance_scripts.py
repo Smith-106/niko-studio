@@ -28,6 +28,9 @@ EXPECTED_DESKTOP_CAPABILITY_PERMISSIONS = [
     "fs:allow-mkdir",
     "fs:allow-read-dir",
     "fs:allow-remove",
+    "fs:allow-stat",
+    "dialog:default",
+    "dialog:allow-open",
 ]
 
 
@@ -1988,7 +1991,7 @@ def test_signed_release_path_uses_generated_tauri_config_without_repo_config_edi
 
     assert (
         package_json["scripts"]["tauri:build:signed"]
-        == "npm run build:sidecar && python ../scripts/generate_signed_tauri_config.py --run-build"
+        == "npm run build:packaged-compat && python ../scripts/generate_signed_tauri_config.py --run-build"
     )
     assert "parser.add_argument(" in signing_source
     assert '"--run-build"' in signing_source
