@@ -38,11 +38,13 @@ let _commitBugPatched = false;
 function patchCommitBug(): void {
   if (_commitBugPatched) return;
   _commitBugPatched = true;
-  BetterSqlite3.prototype.exec = function (this: unknown, sql: string) {
+  BetterSqlite3.prototype.exec = function (this: any, sql: string) {
     try {
       return _origExec.call(this, sql);
     } catch (e: unknown) {
-      if (sql === 'COMMIT' && (e as { code?: string }).code === 'SQLITE_ERROR') return;
+      if (sql === 'COMMIT' && (e as { code?: string }).code === 'SQLITE_ERROR') {
+        return this as BetterSqlite3.Database;
+      }
       throw e;
     }
   };

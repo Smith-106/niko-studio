@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": 1779720164709,
+  "generatedAt": 1780406581285,
   "entries": [
     {
       "id": "roadmap-roadmap",
@@ -9,8 +9,8 @@
       "summary": "# Roadmap: Niko Studio M24 — Tech Debt Cleanup + Narrative Visualization",
       "tags": [],
       "status": "active",
-      "created": "2026-05-24T19:25:47.434Z",
-      "updated": "2026-05-24T19:25:47.434Z",
+      "created": "2026-05-26T14:49:41.414Z",
+      "updated": "2026-05-26T14:49:41.423Z",
       "scope": null,
       "category": null,
       "createdBy": null,
@@ -33,11 +33,11 @@
         "layer",
         "boundary",
         "dependency",
-        "structure"
+        "nuxt"
       ],
       "status": "active",
-      "created": "2026-05-24T19:25:47.532Z",
-      "updated": "2026-05-25T14:10:04.084Z",
+      "created": "2026-06-01T14:19:27.553Z",
+      "updated": "2026-06-01T14:19:27.556Z",
       "scope": "project",
       "category": "arch",
       "createdBy": null,
@@ -50,26 +50,266 @@
       }
     },
     {
+      "id": "spec:project:architecture-constraints-001",
+      "type": "spec",
+      "title": "Module Structure",
+      "summary": "- Type: Nuxt 3 monolith (full-stack) - Key directories: - pages/ — 路由页面 (Nuxt 文件路由) - components/ — Vue 组件 - composables/ — 共享组合式函数 - server/ — Nitro API 路由 + 中间件 - stores/ — Pinia 状态管理 - layouts/ — 页面布局 - plugins/ — Nuxt 插件 ",
+      "tags": [
+        "architecture",
+        "module",
+        "layer",
+        "boundary",
+        "dependency",
+        "nuxt"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:27.553Z",
+      "updated": "2026-06-01T14:19:27.556Z",
+      "scope": "project",
+      "category": "arch",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-002",
+      "type": "spec",
+      "title": "Layer Boundaries",
+      "summary": "- UI 层: pages/ → components/ → composables/ → stores/ - API 层: server/routes/ → server/utils/ → stores/ - 禁止 server/ 导入前端组件 - Composables 可导入 stores 和 utils - Components 通过 composables 访问数据，不直接调用 API",
+      "tags": [
+        "architecture",
+        "module",
+        "layer",
+        "boundary",
+        "dependency",
+        "nuxt"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:27.553Z",
+      "updated": "2026-06-01T14:19:27.556Z",
+      "scope": "project",
+      "category": "arch",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-003",
+      "type": "spec",
+      "title": "Dependency Rules",
+      "summary": "- Nuxt auto-imports: ref, computed, navigateTo 等 (无需显式导入) - 优先用 composables 而非直接在组件中写逻辑 - 服务端路由使用 defineEventHandler + H3",
+      "tags": [
+        "architecture",
+        "module",
+        "layer",
+        "boundary",
+        "dependency",
+        "nuxt"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:27.553Z",
+      "updated": "2026-06-01T14:19:27.556Z",
+      "scope": "project",
+      "category": "arch",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-004",
+      "type": "spec",
+      "title": "Technology Constraints",
+      "summary": "- Runtime: Node.js >= 18 - Framework: Nuxt 3 (Vue 3 + Nitro) - Module system: ESM - TypeScript: strict mode - CSS: Tailwind CSS v3",
+      "tags": [
+        "architecture",
+        "module",
+        "layer",
+        "boundary",
+        "dependency",
+        "nuxt"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:27.553Z",
+      "updated": "2026-06-01T14:19:27.556Z",
+      "scope": "project",
+      "category": "arch",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
       "id": "spec:project:coding-conventions",
       "type": "spec",
       "title": "Coding Conventions",
       "summary": "# Coding Conventions",
       "tags": [
+        "coding",
         "style",
         "naming",
         "import",
-        "pattern",
-        "convention",
-        "formatting"
+        "formatting",
+        "pattern"
       ],
       "status": "active",
-      "created": "2026-05-24T19:25:47.532Z",
-      "updated": "2026-05-25T14:10:04.084Z",
+      "created": "2026-06-01T14:19:01.696Z",
+      "updated": "2026-06-01T14:19:01.698Z",
       "scope": "project",
       "category": "coding",
       "createdBy": null,
       "sourceRef": null,
       "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-001",
+      "type": "spec",
+      "title": "mcp-semantic-search",
+      "summary": "### mcp-semantic-search 代码搜索优先使用 CodeGraph MCP（`mcp__codegraph__codegraph_context`），精确符号查找用 `codegraph_search`/`codegraph_callers`，简单文本匹配用 Grep",
+      "tags": [
+        "search",
+        "codegraph",
+        "代码搜索"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:01.696Z",
+      "updated": "2026-06-01T14:19:01.698Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-002",
+      "type": "spec",
+      "title": "Formatting",
+      "summary": "- Indentation: 2 spaces - Line length: not enforced - Trailing commas: yes (ES5, multi-line) - Semicolons: no - Quotes: single (ESLint/Prettier)",
+      "tags": [
+        "coding",
+        "style",
+        "naming",
+        "import",
+        "formatting",
+        "pattern"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:01.696Z",
+      "updated": "2026-06-01T14:19:01.698Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-003",
+      "type": "spec",
+      "title": "Naming",
+      "summary": "- Variables/functions: camelCase - Classes/types/interfaces: PascalCase - Constants: camelCase - Files: kebab-case (.ts/.tsx), PascalCase (.vue) - CSS classes: BEM or utility-first (Tailwind)",
+      "tags": [
+        "coding",
+        "style",
+        "naming",
+        "import",
+        "formatting",
+        "pattern"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:01.696Z",
+      "updated": "2026-06-01T14:19:01.698Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-004",
+      "type": "spec",
+      "title": "Imports",
+      "summary": "- Style: named imports (ESM) - Path aliases: @ → src/ - Order: vue → external → internal → relative",
+      "tags": [
+        "coding",
+        "style",
+        "naming",
+        "import",
+        "formatting",
+        "pattern"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:01.696Z",
+      "updated": "2026-06-01T14:19:01.698Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-005",
+      "type": "spec",
+      "title": "Patterns",
+      "summary": "- Vue 3 Composition API with `<script setup lang=\"ts\">` - Nuxt 3 auto-imports (ref, computed, navigateTo, etc.) - Pinia stores for state (defineStore + composition style) - Server routes in server/ (Nitro) - Composables for shared logic (us",
+      "tags": [
+        "coding",
+        "style",
+        "naming",
+        "import",
+        "formatting",
+        "pattern"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:19:01.696Z",
+      "updated": "2026-06-01T14:19:01.698Z",
+      "scope": "project",
+      "category": "coding",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
       "related": [],
       "source": {
         "kind": "file",
@@ -90,7 +330,7 @@
       ],
       "status": "active",
       "created": "2026-05-24T19:25:47.532Z",
-      "updated": "2026-05-25T14:10:04.086Z",
+      "updated": "2026-05-25T16:26:39.337Z",
       "scope": "project",
       "category": "debug",
       "createdBy": null,
@@ -115,7 +355,7 @@
       ],
       "status": "active",
       "created": "2026-05-24T19:25:47.534Z",
-      "updated": "2026-05-25T14:10:04.085Z",
+      "updated": "2026-05-25T16:26:39.337Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -140,7 +380,7 @@
       ],
       "status": "active",
       "created": "2026-05-24T19:25:47.534Z",
-      "updated": "2026-05-25T14:10:04.085Z",
+      "updated": "2026-05-25T16:26:39.337Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -165,7 +405,7 @@
       ],
       "status": "active",
       "created": "2026-05-24T19:25:47.534Z",
-      "updated": "2026-05-25T14:10:04.085Z",
+      "updated": "2026-05-25T16:26:39.337Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -191,7 +431,7 @@
       ],
       "status": "active",
       "created": "2026-05-24T19:25:47.534Z",
-      "updated": "2026-05-25T14:10:04.085Z",
+      "updated": "2026-05-25T16:26:39.337Z",
       "scope": "project",
       "category": "learning",
       "createdBy": null,
@@ -211,17 +451,174 @@
       "tags": [
         "quality",
         "lint",
-        "rule",
-        "enforcement"
+        "eslint",
+        "prettier",
+        "ruff"
       ],
       "status": "active",
-      "created": "2026-05-24T19:25:47.535Z",
-      "updated": "2026-05-25T14:10:04.085Z",
+      "created": "2026-06-01T14:20:26.951Z",
+      "updated": "2026-06-01T14:20:26.954Z",
       "scope": "project",
       "category": "review",
       "createdBy": null,
       "sourceRef": null,
       "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      }
+    },
+    {
+      "id": "spec:project:quality-rules-001",
+      "type": "spec",
+      "title": "ESLint",
+      "summary": "- Config: eslint.config.mjs (flat config, ESLint 9) - Plugin: @typescript-eslint - Focus: bug-prevention rules (no stylistic rules) - Command: `npm run lint` → `eslint --max-warnings 0`",
+      "tags": [
+        "quality",
+        "lint",
+        "eslint",
+        "prettier",
+        "ruff"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:26.951Z",
+      "updated": "2026-06-01T14:20:26.954Z",
+      "scope": "project",
+      "category": "review",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:quality-rules",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      }
+    },
+    {
+      "id": "spec:project:quality-rules-002",
+      "type": "spec",
+      "title": "Prettier",
+      "summary": "- Config: prettier.config.mjs - printWidth: 100, semi: false, singleQuote: true, trailingComma: \"all\" - Command: `npm run format` (write), `npm run format:check` (verify)",
+      "tags": [
+        "quality",
+        "lint",
+        "eslint",
+        "prettier",
+        "ruff"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:26.951Z",
+      "updated": "2026-06-01T14:20:26.954Z",
+      "scope": "project",
+      "category": "review",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:quality-rules",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      }
+    },
+    {
+      "id": "spec:project:quality-rules-003",
+      "type": "spec",
+      "title": "Ruff (Python)",
+      "summary": "- Config: pyproject.toml [tool.ruff] - line-length: 100, target: py311 - Command: `ruff check --fix . && ruff format .`",
+      "tags": [
+        "quality",
+        "lint",
+        "eslint",
+        "prettier",
+        "ruff"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:26.951Z",
+      "updated": "2026-06-01T14:20:26.954Z",
+      "scope": "project",
+      "category": "review",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:quality-rules",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      }
+    },
+    {
+      "id": "spec:project:quality-rules-004",
+      "type": "spec",
+      "title": "Pre-commit",
+      "summary": "- Config: .pre-commit-config.yaml - Runs: `python scripts/run_local_pre_commit.py`",
+      "tags": [
+        "quality",
+        "lint",
+        "eslint",
+        "prettier",
+        "ruff"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:26.951Z",
+      "updated": "2026-06-01T14:20:26.954Z",
+      "scope": "project",
+      "category": "review",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:quality-rules",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      }
+    },
+    {
+      "id": "spec:project:quality-rules-005",
+      "type": "spec",
+      "title": "Type Checking",
+      "summary": "- Backend: `npm run typecheck` → `tsc --noEmit` - Desktop: `npm run typecheck` → `tsc --noEmit` - Python: `mypy` (if configured)",
+      "tags": [
+        "quality",
+        "lint",
+        "eslint",
+        "prettier",
+        "ruff"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:26.951Z",
+      "updated": "2026-06-01T14:20:26.954Z",
+      "scope": "project",
+      "category": "review",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:quality-rules",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      }
+    },
+    {
+      "id": "spec:project:quality-rules-006",
+      "type": "spec",
+      "title": "Quick Check",
+      "summary": "- `npm run check:pre-commit` → lint + format:check - `npm run check:quick` → lint + format:check + typecheck + test",
+      "tags": [
+        "quality",
+        "lint",
+        "eslint",
+        "prettier",
+        "ruff"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:26.951Z",
+      "updated": "2026-06-01T14:20:26.954Z",
+      "scope": "project",
+      "category": "review",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:quality-rules",
       "related": [],
       "source": {
         "kind": "file",
@@ -242,7 +639,7 @@
       ],
       "status": "active",
       "created": "2026-05-24T19:25:47.535Z",
-      "updated": "2026-05-25T14:10:04.087Z",
+      "updated": "2026-05-25T16:26:39.339Z",
       "scope": "project",
       "category": "review",
       "createdBy": null,
@@ -262,19 +659,148 @@
       "tags": [
         "test",
         "coverage",
-        "mock",
-        "fixture",
-        "assertion",
-        "framework"
+        "vitest",
+        "playwright",
+        "pytest"
       ],
       "status": "active",
       "created": "2026-05-24T19:25:47.535Z",
-      "updated": "2026-05-25T14:10:04.086Z",
+      "updated": "2026-06-01T14:20:07.519Z",
       "scope": "project",
       "category": "test",
       "createdBy": null,
       "sourceRef": null,
       "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/test-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:test-conventions-001",
+      "type": "spec",
+      "title": "Framework",
+      "summary": "- TypeScript: Vitest (backend + desktop) - Python: pytest + pytest-asyncio - E2E: Playwright",
+      "tags": [
+        "test",
+        "coverage",
+        "vitest",
+        "playwright",
+        "pytest"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.535Z",
+      "updated": "2026-06-01T14:20:07.519Z",
+      "scope": "project",
+      "category": "test",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:test-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/test-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:test-conventions-002",
+      "type": "spec",
+      "title": "Directory Structure",
+      "summary": "- Backend: co-located `*.test.ts` + `src-ts/tests/` - Desktop: co-located `*.test.tsx` + `desktop/tests/` - Python: `tests/unit/` - E2E: `docs-site/e2e/`",
+      "tags": [
+        "test",
+        "coverage",
+        "vitest",
+        "playwright",
+        "pytest"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.535Z",
+      "updated": "2026-06-01T14:20:07.519Z",
+      "scope": "project",
+      "category": "test",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:test-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/test-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:test-conventions-003",
+      "type": "spec",
+      "title": "Naming Conventions",
+      "summary": "- Test files: `*.test.ts`, `*.test.tsx`, `*.integration.test.ts`, `*.e2e.test.ts` - Python: `test_*.py`",
+      "tags": [
+        "test",
+        "coverage",
+        "vitest",
+        "playwright",
+        "pytest"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.535Z",
+      "updated": "2026-06-01T14:20:07.519Z",
+      "scope": "project",
+      "category": "test",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:test-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/test-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:test-conventions-004",
+      "type": "spec",
+      "title": "Coverage",
+      "summary": "- Backend: lines 80%, branches 70%, functions 80%, statements 80% - Desktop: lines 75%, branches 70%, functions 70%, statements 75% - Provider: v8",
+      "tags": [
+        "test",
+        "coverage",
+        "vitest",
+        "playwright",
+        "pytest"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.535Z",
+      "updated": "2026-06-01T14:20:07.519Z",
+      "scope": "project",
+      "category": "test",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:test-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/test-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:test-conventions-005",
+      "type": "spec",
+      "title": "Commands",
+      "summary": "- `npm run test` — vitest run - `npm run test:watch` — vitest watch - `npm run test:coverage` — vitest with coverage - `pytest` — Python tests",
+      "tags": [
+        "test",
+        "coverage",
+        "vitest",
+        "playwright",
+        "pytest"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.535Z",
+      "updated": "2026-06-01T14:20:07.519Z",
+      "scope": "project",
+      "category": "test",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:test-conventions",
       "related": [],
       "source": {
         "kind": "file",
@@ -289,20 +815,174 @@
       "tags": [
         "ui",
         "design",
-        "color",
-        "typography",
-        "layout",
-        "animation",
-        "component"
+        "tailwind",
+        "component",
+        "shadcn"
       ],
       "status": "active",
-      "created": "2026-05-25T14:10:04.086Z",
-      "updated": "2026-05-25T14:10:04.087Z",
+      "created": "2026-06-01T14:20:51.151Z",
+      "updated": "2026-06-01T14:20:51.156Z",
       "scope": "project",
       "category": "ui",
       "createdBy": null,
       "sourceRef": null,
       "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/ui-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:ui-conventions-001",
+      "type": "spec",
+      "title": "Framework",
+      "summary": "- React 18 + TipTap 3.22 (rich text editor) - Tauri 2 (desktop shell) - Zustand 4.5 (state management) - TailwindCSS 3.4",
+      "tags": [
+        "ui",
+        "design",
+        "tailwind",
+        "component",
+        "shadcn"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:51.151Z",
+      "updated": "2026-06-01T14:20:51.156Z",
+      "scope": "project",
+      "category": "ui",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:ui-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/ui-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:ui-conventions-002",
+      "type": "spec",
+      "title": "Component Library",
+      "summary": "- shadcn-vue + Radix Vue (headless primitives) - lucide-react (icons) - All UI components are custom-built (no heavy UI lib)",
+      "tags": [
+        "ui",
+        "design",
+        "tailwind",
+        "component",
+        "shadcn"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:51.151Z",
+      "updated": "2026-06-01T14:20:51.156Z",
+      "scope": "project",
+      "category": "ui",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:ui-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/ui-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:ui-conventions-003",
+      "type": "spec",
+      "title": "Color & Theme",
+      "summary": "- Dark mode via CSS classes (dark:bg-dark-bg, dark:text-dark-text) - Semantic color tokens (CSS variables: --surface-base, --primary-cta) - i18next for zh/en bilingual",
+      "tags": [
+        "ui",
+        "design",
+        "tailwind",
+        "component",
+        "shadcn"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:51.151Z",
+      "updated": "2026-06-01T14:20:51.156Z",
+      "scope": "project",
+      "category": "ui",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:ui-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/ui-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:ui-conventions-004",
+      "type": "spec",
+      "title": "Typography",
+      "summary": "- Sans: Inter - Serif: Merriweather - Mono: Fira Code",
+      "tags": [
+        "ui",
+        "design",
+        "tailwind",
+        "component",
+        "shadcn"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:51.151Z",
+      "updated": "2026-06-01T14:20:51.156Z",
+      "scope": "project",
+      "category": "ui",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:ui-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/ui-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:ui-conventions-005",
+      "type": "spec",
+      "title": "Layout & Spacing",
+      "summary": "- Tailwind utility-first - @tanstack/react-virtual for virtual lists - tippy.js for tooltips",
+      "tags": [
+        "ui",
+        "design",
+        "tailwind",
+        "component",
+        "shadcn"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:51.151Z",
+      "updated": "2026-06-01T14:20:51.156Z",
+      "scope": "project",
+      "category": "ui",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:ui-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/ui-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:ui-conventions-006",
+      "type": "spec",
+      "title": "Component Patterns",
+      "summary": "- Zustand stores with persist middleware - React hooks for shared logic - TipTap extensions for editor features",
+      "tags": [
+        "ui",
+        "design",
+        "tailwind",
+        "component",
+        "shadcn"
+      ],
+      "status": "active",
+      "created": "2026-06-01T14:20:51.151Z",
+      "updated": "2026-06-01T14:20:51.156Z",
+      "scope": "project",
+      "category": "ui",
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:ui-conventions",
       "related": [],
       "source": {
         "kind": "file",

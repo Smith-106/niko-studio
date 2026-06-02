@@ -1,0 +1,60 @@
+{
+  "session_id": "maestro-20260602-090000",
+  "source": "maestro",
+  "intent": "brainstorm 新的项目方向",
+  "task_type": "brainstorm",
+  "chain_name": "brainstorm",
+  "ralph_protocol_version": "1",
+  "active_step_index": null,
+  "phase": null,
+  "phase_is_new": false,
+  "milestone": "",
+  "scope_verdict": null,
+  "analyze_macro_id": null,
+  "blueprint_id": null,
+  "auto_mode": false,
+  "cli_tool": "claude",
+  "context": {
+    "scratch_dir": ".workflow/.maestro/maestro-20260602-090000",
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null,
+    "blueprint_dir": null,
+    "issue_id": null
+  },
+  "steps": [
+    {
+      "index": 0,
+      "skill": "maestro-brainstorm",
+      "args": "新的项目方向",
+      "stage": "brainstorm",
+      "scope": "project-direction",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-brainstorm.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "pending",
+      "goal_ref": null,
+      "completion_confirmed": false,
+      "completion_status": null,
+      "completion_evidence": null,
+      "completed_at": null,
+      "deferred_reads": [],
+      "load": null,
+      "type": "skill"
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "running",
+  "boundary_contract": {
+    "in_scope": ["探索 niko-studio 项目的未来方向和演进路径"],
+    "out_of_scope": ["具体实现"]
+  },
+  "execution_criteria": [],
+  "task_decomposition": [],
+  "task_decomposition_all_done": true,
+  "created_at": "2026-06-02T09:00:00+08:00",
+  "updated_at": "2026-06-02T09:00:00+08:00"
+}

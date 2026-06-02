@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { ForeshadowPanel } from '../components/narrative/ForeshadowPanel'
 import { QualityScorePanel } from '../components/narrative/QualityScorePanel'
 import { BrainstormPanel } from '../components/narrative/BrainstormPanel'
+import { StoryBiblePanel } from '../components/story-bible'
 
 interface QualityData {
   overall: number
@@ -33,7 +34,7 @@ export default function WritingWorkspace() {
   const [quality, setQuality] = useState<QualityData | null>(null)
   const [foreshadows, setForeshadows] = useState<ForeshadowAlert[]>([])
   const [nowledgeStatus, setNowledgeStatus] = useState<NowledgeStatus | null>(null)
-  const [rightTab, setRightTab] = useState<'quality' | 'foreshadow' | 'brainstorm'>('quality')
+  const [rightTab, setRightTab] = useState<'quality' | 'foreshadow' | 'brainstorm' | 'storybible'>('quality')
   const [analyzing, setAnalyzing] = useState(false)
 
   // 加载 Nowledge Mem 状态
@@ -143,6 +144,10 @@ export default function WritingWorkspace() {
             className="w-full text-xs py-1.5 rounded bg-zinc-800 text-zinc-400 hover:bg-zinc-700">
             头脑风暴
           </button>
+          <button onClick={() => setRightTab('storybible')}
+            className="w-full text-xs py-1.5 rounded bg-zinc-800 text-zinc-400 hover:bg-zinc-700">
+            Story Bible
+          </button>
         </div>
 
         {/* 伏笔添加 */}
@@ -176,10 +181,10 @@ export default function WritingWorkspace() {
       {/* 右侧面板 */}
       <aside className="w-72 border-l border-zinc-800 flex flex-col">
         <div className="flex border-b border-zinc-800">
-          {(['quality', 'foreshadow', 'brainstorm'] as const).map(tab => (
+          {(['quality', 'foreshadow', 'brainstorm', 'storybible'] as const).map(tab => (
             <button key={tab} onClick={() => setRightTab(tab)}
               className={`flex-1 py-2 text-[10px] ${rightTab === tab ? 'text-zinc-200 border-b-2 border-blue-500' : 'text-zinc-600'}`}>
-              {{ quality: '质量', foreshadow: '伏笔', brainstorm: '风暴' }[tab]}
+              {{ quality: '质量', foreshadow: '伏笔', brainstorm: '风暴', storybible: 'SB' }[tab]}
             </button>
           ))}
         </div>
@@ -192,10 +197,20 @@ export default function WritingWorkspace() {
             <div className="p-3 text-xs text-zinc-600">点击"分析质量"开始</div>
           )}
           {rightTab === 'foreshadow' && (
-            <ForeshadowPanel alerts={foreshadows} onResolve={resolveForeshadow} currentChapter={chapter} />
+            <ForeshadowPanel alerts={foreshadows.map(f => ({
+              foreshadowId: f.foreshadow_id,
+              hint: f.hint,
+              plantedAt: f.planted_at,
+              currentChapter: f.current_chapter,
+              chaptersUntilDue: f.chapters_until_due,
+              urgency: f.urgency,
+            }))} onResolve={resolveForeshadow} />
           )}
           {rightTab === 'brainstorm' && (
             <BrainstormPanel analyses={[]} onApply={() => {}} />
+          )}
+          {rightTab === 'storybible' && (
+            <StoryBiblePanel novelId="default" />
           )}
         </div>
       </aside>

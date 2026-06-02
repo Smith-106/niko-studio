@@ -189,7 +189,8 @@ export function useCytoscape({
     if (!cy) return
     cy.nodes().removeClass('filtered-out')
     if (ids.length > 0) {
-      cy.nodes().not(cy.collection(ids.map((id) => cy.$(`node[id="${id}"]`)))).addClass('filtered-out')
+      const selector = ids.map((id) => `node[id="${id}"]`).join(', ')
+      cy.nodes().not(cy.$(selector)).addClass('filtered-out')
     }
   }, [])
 

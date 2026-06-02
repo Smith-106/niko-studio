@@ -230,7 +230,6 @@ export class ConsensusEngine {
 
       const agreeingPersonas = Array.from(agreeingSet);
       const disagreeingPersonas = Array.from(disagreeingSet);
-      const involvedPersonas = agreeingSet.size + disagreeingSet.size;
 
       // Consensus strength = agreeing / total personas
       // Uses totalPersonas (not just involved) so that silence = implicit disagreement

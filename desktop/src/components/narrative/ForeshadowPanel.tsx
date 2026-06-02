@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 
 interface ForeshadowAlert {
   foreshadowId: string
@@ -12,7 +12,6 @@ interface ForeshadowAlert {
 interface Props {
   alerts: ForeshadowAlert[]
   onResolve: (id: string) => void
-  currentChapter: number
 }
 
 const urgencyColor: Record<string, string> = {
@@ -21,7 +20,7 @@ const urgencyColor: Record<string, string> = {
   approaching: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
 }
 
-export function ForeshadowPanel({ alerts, onResolve, currentChapter }: Props) {
+export function ForeshadowPanel({ alerts, onResolve }: Props) {
   const [filter, setFilter] = useState<'all' | 'due' | 'overdue'>('all')
   const filtered = filter === 'all' ? alerts : alerts.filter(a => a.urgency === filter)
 

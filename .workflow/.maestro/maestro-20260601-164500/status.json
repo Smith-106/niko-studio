@@ -1,0 +1,164 @@
+{
+  "session_id": "maestro-20260601-164500",
+  "source": "maestro",
+  "intent": "打包发布验证：执行 tauri build 生成安装包，验证打包产物完整性和功能正确性",
+  "task_type": "release-verify",
+  "chain_name": "execute",
+  "ralph_protocol_version": "1",
+  "active_step_index": 0,
+  "phase": null,
+  "phase_is_new": false,
+  "milestone": "M25",
+  "scope_verdict": null,
+  "analyze_macro_id": null,
+  "blueprint_id": null,
+  "auto_mode": true,
+  "cli_tool": "claude",
+  "context": {
+    "scratch_dir": ".workflow/.maestro/maestro-20260601-164500",
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null,
+    "blueprint_dir": null,
+    "issue_id": null
+  },
+  "steps": [
+    {
+      "index": 0,
+      "skill": "maestro-quick",
+      "args": "预检：确认 Rust 工具链、WebView2、签名配置等打包前置条件",
+      "stage": "pre-check",
+      "scope": "build-env",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-quick.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "running",
+      "goal_ref": null,
+      "completion_confirmed": false,
+      "completion_status": null,
+      "completion_evidence": null,
+      "completed_at": null,
+      "deferred_reads": [],
+      "load": {
+        "loaded_at": "2026-06-01T19:23:47.209Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\quick.md"
+        ],
+        "deferred_files": [],
+        "resolve_version": "1"
+      },
+      "type": "skill"
+    },
+    {
+      "index": 1,
+      "skill": "maestro-quick",
+      "args": "执行 tauri build 生成 Windows 安装包（NSIS + MSI）",
+      "stage": "build",
+      "scope": "desktop",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-quick.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "pending",
+      "goal_ref": null,
+      "completion_confirmed": false,
+      "completion_status": null,
+      "completion_evidence": null,
+      "completed_at": null,
+      "deferred_reads": [],
+      "load": null,
+      "type": "skill"
+    },
+    {
+      "index": 2,
+      "skill": "maestro-verify",
+      "args": "验证打包产物：安装包存在、大小合理、bundle resources 完整、无签名警告（如未配置签名则记录）",
+      "stage": "verify",
+      "scope": "release-artifacts",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-verify.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "pending",
+      "goal_ref": null,
+      "completion_confirmed": false,
+      "completion_status": null,
+      "completion_evidence": null,
+      "completed_at": null,
+      "deferred_reads": [],
+      "load": null,
+      "type": "skill"
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "running",
+  "boundary_contract": {
+    "in_scope": [
+      "打包环境预检",
+      "tauri build 执行",
+      "打包产物验证（安装包存在、大小、资源完整性）"
+    ],
+    "out_of_scope": [
+      "实际安装测试（需人工）",
+      "自动更新配置（需 pubkey）",
+      "应用商店发布"
+    ]
+  },
+  "execution_criteria": [
+    {
+      "id": "EC-001",
+      "criterion": "打包前置条件满足",
+      "done_when": "Rust/WebView2/Node 等工具链就绪",
+      "evidence": "版本输出"
+    },
+    {
+      "id": "EC-002",
+      "criterion": "tauri build 成功",
+      "done_when": "构建退出码 0，生成 .exe/.msi",
+      "evidence": "构建日志"
+    },
+    {
+      "id": "EC-003",
+      "criterion": "打包产物完整",
+      "done_when": "NSIS/MSI 安装包存在且大小合理",
+      "evidence": "文件列表和大小"
+    }
+  ],
+  "task_decomposition": [
+    {
+      "id": "TD-001",
+      "goal": "打包环境预检",
+      "done_when": "EC-001 满足",
+      "evidence": "工具链版本",
+      "lifecycle": "pre-check",
+      "completion_confirmed": false,
+      "status": "pending"
+    },
+    {
+      "id": "TD-002",
+      "goal": "执行 tauri build",
+      "done_when": "EC-002 满足",
+      "evidence": "构建日志",
+      "lifecycle": "build",
+      "completion_confirmed": false,
+      "status": "pending"
+    },
+    {
+      "id": "TD-003",
+      "goal": "验证打包产物",
+      "done_when": "EC-003 满足",
+      "evidence": "文件列表",
+      "lifecycle": "verify",
+      "completion_confirmed": false,
+      "status": "pending"
+    }
+  ],
+  "task_decomposition_all_done": false,
+  "created_at": "2026-06-01T16:45:00+08:00",
+  "updated_at": "2026-06-01T16:45:00+08:00"
+}

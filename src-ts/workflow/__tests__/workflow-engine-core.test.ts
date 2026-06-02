@@ -169,6 +169,10 @@ describe('State persistence', () => {
     const planId = plan.plan_id!;
 
     const status = engine.getPlanStatus(planId);
+    expect('error' in status).toBe(false);
+    if ('error' in status) {
+      throw new Error(String(status.error));
+    }
     expect(status.plan_id).toBe(planId);
     expect(status.task).toBe('Persistent task');
     expect(status.level).toBe('L2');
@@ -208,9 +212,17 @@ describe('State persistence', () => {
     const planId = plan.plan_id!;
 
     const pauseResult = await engine.lifecycle(planId, 'pause');
+    expect('error' in pauseResult).toBe(false);
+    if ('error' in pauseResult) {
+      throw new Error(String(pauseResult.error));
+    }
     expect(pauseResult.runner_state).toBe('paused');
 
     const status = engine.getPlanStatus(planId);
+    expect('error' in status).toBe(false);
+    if ('error' in status) {
+      throw new Error(String(status.error));
+    }
     expect(status.runner_state).toBe('paused');
   });
 

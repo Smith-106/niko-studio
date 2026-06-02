@@ -77,7 +77,7 @@ describe('VirtualList', () => {
   it('fallback mode activates when virtualizer produces zero items', () => {
     // This test verifies the fallback mechanism triggers correctly
     // In JSDOM, the virtualizer returns 0 items due to 0 scroll dimensions
-    const { container, rerender } = render(
+    const { rerender } = render(
       <VirtualList items={items} estimateSize={estimateSize}>
         {(item) => <span>{item}</span>}
       </VirtualList>
@@ -101,7 +101,7 @@ describe('VirtualList', () => {
   })
 
   it('renders children function with correct item and index', () => {
-    const renderFn = vi.fn((item, index) => <span>{item}</span>)
+    const renderFn = vi.fn((item, _index) => <span>{item}</span>)
     render(
       <VirtualList items={items} estimateSize={estimateSize}>
         {renderFn}

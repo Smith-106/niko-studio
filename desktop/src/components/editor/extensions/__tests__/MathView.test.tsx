@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { NodeViewProps } from '@tiptap/react'
 import { MathView } from '../MathView'
 
 // Mock katex — guard against null container (async render after unmount/switch)
@@ -39,12 +40,12 @@ const mockEditor = {
   chain: mockChain,
 } as any
 
-function createNodeProps(overrides: Record<string, any> = {}) {
+function createNodeProps(overrides: Record<string, any> = {}): NodeViewProps['node'] {
   return {
     attrs: { latex: '' },
     type: { name: 'mathInline' },
     ...overrides,
-  }
+  } as unknown as NodeViewProps['node']
 }
 
 const stubProps = {
@@ -52,9 +53,11 @@ const stubProps = {
   updateAttributes: mockUpdateAttributes,
   deleteNode: mockDeleteNode,
   selected: false,
+  decorations: [] as any,
   decorationManager: {} as any,
   extension: {} as any,
   getPos: () => 0,
+  HTMLAttributes: {} as any,
   innerDecorations: {} as any,
   view: {} as any,
 } as const

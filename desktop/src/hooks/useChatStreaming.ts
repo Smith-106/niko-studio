@@ -178,7 +178,7 @@ export function useChatStreaming() {
         const errPayload = streamErrorPayload as StreamErrorPayload | null
         if (isStreamErrorPayload(errPayload) && errPayload.recoverable && retries < maxRetries) {
           retries++
-          const delay = (errPayload.retry_after ?? 5) * 1000
+          const delay = Math.min(errPayload.retry_after ?? 5, 30) * 1000
           options.onRecoverStatus({ type: 'info', message: `Retrying (${retries}/${maxRetries})...` })
           if (delay > 0) {
             await new Promise(resolve => setTimeout(resolve, delay))

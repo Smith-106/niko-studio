@@ -64,6 +64,10 @@ export { ConfigError, ConfigLoader, loadConfig } from './config';
 export { LLMServiceImpl } from './llm-service';
 export { EmbeddingServiceImpl } from './embedding-service';
 
+// Story Bible Completeness Gate
+export { StoryBibleCompleteness, createStoryBibleCompleteness } from './StoryBibleCompleteness';
+export type { CompletenessLevel, EntityScoreDetail, CompletenessReport } from './StoryBibleCompleteness';
+
 // Manager
 export { ServiceManager } from './manager';
 
