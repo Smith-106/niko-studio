@@ -96,7 +96,7 @@
   ],
   "waves": [],
   "current_step": 0,
-  "status": "running",
+  "status": "completed",
   "boundary_contract": {
     "scope": "Phase 2: Reader Simulation + Visualization (T-031~T-041)",
     "constraints": [
@@ -124,8 +124,8 @@
       "done_when": "All Phase 1 code compiles, no regressions",
       "evidence": "tsc --noEmit passes",
       "lifecycle": "verify",
-      "completion_confirmed": false,
-      "status": "pending"
+      "completion_confirmed": true,
+      "status": "done"
     },
     {
       "id": "TD-2",
@@ -133,8 +133,8 @@
       "done_when": "T-031~T-036 implemented and compile",
       "evidence": "reader/ module files exist",
       "lifecycle": "execute",
-      "completion_confirmed": false,
-      "status": "pending"
+      "completion_confirmed": true,
+      "status": "done"
     },
     {
       "id": "TD-3",
@@ -142,11 +142,11 @@
       "done_when": "T-037~T-041 implemented and compile",
       "evidence": "reader visualization components exist",
       "lifecycle": "execute",
-      "completion_confirmed": false,
-      "status": "pending"
+      "completion_confirmed": true,
+      "status": "done"
     }
   ],
-  "task_decomposition_all_done": false,
+  "task_decomposition_all_done": true,
   "created_at": "2026-06-02T14:00:00+08:00",
-  "updated_at": "2026-06-02T14:00:00+08:00"
+  "updated_at": "2026-06-02T21:38:50+08:00"
 }

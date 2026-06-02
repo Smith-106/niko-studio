@@ -1,0 +1,1 @@
+{"id":"T-041","title":"RS report generation (consensus + dissent)","status":"completed","wave":"wave-2.2","executor":"agent","scope":"desktop/src/components/reader","files":[{"path":"desktop/src/components/reader/ReportGenerator.tsx","change":"created"}],"completed_at":"2026-06-02T16:00:00+08:00"}

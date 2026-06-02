@@ -1,0 +1,1 @@
+{"id":"T-040","title":"QC visualization (constraint status dashboard)","status":"completed","wave":"wave-2.2","executor":"agent","scope":"desktop/src/components/quality","files":[{"path":"desktop/src/components/quality/QCDashboard.tsx","change":"created"}],"completed_at":"2026-06-02T16:00:00+08:00"}

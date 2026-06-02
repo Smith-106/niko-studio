@@ -1,0 +1,1 @@
+{"id":"T-031","title":"Reader persona definition (3 presets + custom schema)","status":"completed","wave":"wave-2.1","executor":"agent","scope":"src-ts/reader","files":[{"path":"src-ts/reader/PersonaDefinition.ts","change":"created"}],"completed_at":"2026-06-02T16:00:00+08:00"}

@@ -9,10 +9,10 @@
       "M17 bridges M13-M16 knowledge engine to UI via API layer + dashboard components",
       "M22 adopts minimum-phase principle: three capabilities in one phase via shared interfaces",
       "M23 extends WritingCraftDimension with hook/cliffhanger + reader-state model",
-      ""M24 scope: F-001~F-006 tech debt + F-007 narrative visualization; F-008 deferred to M25",
+      "M24 scope: F-001~F-006 tech debt + F-007 narrative visualization; F-008 deferred to M25",
       "M25 scope: F-008 intelligent revision workflow + F-009 session intelligence + F-010 style personalization",
       "M25 persistence: write-only via KnowledgeMemoryEngineAdapter.add(), no load-back",
-      "M25 revision: IRevisionService protocol + RevisionServiceImpl + m10-revision MCP endpoint""
+      "M25 revision: IRevisionService protocol + RevisionServiceImpl + m10-revision MCP endpoint"
     ]
   },
   "artifacts": [
@@ -569,11 +569,25 @@
       "completed_at": "2026-06-02T16:00:00+08:00",
       "description": "Execute Phase 2: 11/11 tasks — Reader persona definition, dual-engine architecture, 4-dimension analysis, consensus engine, overlay bridge, MCP endpoints, reader overlay/detail panel, persona selector, QC dashboard, report generator",
       "harvested": false
+    },
+    {
+      "id": "VRF-20260602-writing-tool-new-capabilities",
+      "type": "verify",
+      "milestone": null,
+      "phase": null,
+      "scope": "standalone",
+      "path": ".workflow/scratch/20260602-plan-writing-tool-new-capabilities",
+      "status": "completed",
+      "depends_on": "EXC-20260602-P2-reader-simulation",
+      "created_at": "2026-06-02T17:00:00+08:00",
+      "completed_at": "2026-06-02T21:38:50+08:00",
+      "description": "Verify: src-ts and desktop typecheck passed; targeted Story Bible, Co-Writing, and Reader Simulation test suites passed; all 41 workflow tasks now have completed artifacts.",
+      "harvested": false
     }
   ],
   "current_milestone": "M25",
   "initialized": true,
-  "last_updated": "2026-05-27T00:51:00+08:00",
+  "last_updated": "2026-06-02T21:47:48+08:00",
   "milestone_history": [
     {
       "archive_path": "milestones/M13/",

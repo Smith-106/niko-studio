@@ -1,0 +1,1 @@
+{"id":"T-038","title":"Reader detail panel with click-through linkage","status":"completed","wave":"wave-2.2","executor":"agent","scope":"desktop/src/components/reader","files":[{"path":"desktop/src/components/reader/DetailPanel.tsx","change":"created"}],"completed_at":"2026-06-02T16:00:00+08:00"}

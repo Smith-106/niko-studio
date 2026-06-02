@@ -1,0 +1,1 @@
+{"id":"T-036","title":"MCP endpoint for Reader Simulation","status":"completed","wave":"wave-2.1","executor":"agent","scope":"src-ts/reader/mcp","files":[{"path":"src-ts/reader/mcp/reader-endpoints.ts","change":"created"}],"completed_at":"2026-06-02T16:00:00+08:00"}

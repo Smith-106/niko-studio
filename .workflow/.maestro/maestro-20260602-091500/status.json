@@ -130,7 +130,7 @@
         "resolve_version": "1"
       },
       "type": "cli",
-      "concerns": "Wave 1.1 core types completed (T-001-T-005, T-008, T-009). Remaining 35 tasks need subsequent sessions."
+      "concerns": "Wave 1.1 core types completed in the initial execute pass. The remaining 35 tasks were completed in follow-up sessions, and final verification closed in maestro-20260602-170000."
     },
     {
       "index": 3,
@@ -198,8 +198,8 @@
       "done_when": "产出 ≥3 个差异化方向，每个含价值主张+架构复用点+AI 机制",
       "evidence": "brainstorm artifact 文件存在",
       "lifecycle": "brainstorm",
-      "completion_confirmed": false,
-      "status": "pending"
+      "completion_confirmed": true,
+      "status": "done"
     },
     {
       "id": "TD-2",
@@ -207,8 +207,8 @@
       "done_when": "plan artifact 含任务分解+wave 排列+依赖关系",
       "evidence": "plan artifact 文件存在",
       "lifecycle": "plan",
-      "completion_confirmed": false,
-      "status": "pending"
+      "completion_confirmed": true,
+      "status": "done"
     },
     {
       "id": "TD-3",
@@ -216,8 +216,8 @@
       "done_when": "所有 plan 任务完成，代码可编译，测试通过",
       "evidence": "execute artifact 标记 completed",
       "lifecycle": "execute",
-      "completion_confirmed": false,
-      "status": "pending"
+      "completion_confirmed": true,
+      "status": "done"
     },
     {
       "id": "TD-4",
@@ -225,11 +225,11 @@
       "done_when": "验证所有目标达成，无回归",
       "evidence": "verify artifact 标记 completed",
       "lifecycle": "verify",
-      "completion_confirmed": false,
-      "status": "pending"
+      "completion_confirmed": true,
+      "status": "done"
     }
   ],
-  "task_decomposition_all_done": false,
+  "task_decomposition_all_done": true,
   "created_at": "2026-06-02T09:15:00+08:00",
-  "updated_at": "2026-06-02T09:15:00+08:00"
+  "updated_at": "2026-06-02T21:38:50+08:00"
 }
