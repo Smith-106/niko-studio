@@ -1,0 +1,62 @@
+{
+  "$schema": "context-package/1.0",
+  "source": {
+    "type": "brainstorm",
+    "artifact_id": "BRN-20260602-writing-tool-new-capabilities",
+    "session_path": ".workflow/scratch/20260602-brainstorm-writing-tool-new-capabilities",
+    "generated_at": "2026-06-02T09:30:00+08:00"
+  },
+  "requirements": [
+    { "id": "F-001", "title": "Story Bible 引擎", "description": "扩展 KnowledgeEngine + 自动提取 + 语义层", "priority": "must", "acceptance": "SB entity types defined, auto-extraction from manuscript, inline editing", "ref": "guidance-specification.md#§10" },
+    { "id": "F-002", "title": "AI 自动续写模式", "description": "Auto mode — AI free continuation with context", "priority": "must", "acceptance": "Auto mode generates continuation, creativity slider works, streaming output", "ref": "guidance-specification.md#§10" },
+    { "id": "F-003", "title": "AI 引导选择模式", "description": "Guided mode — 3 scored options for user selection", "priority": "must", "acceptance": "3 options generated, quality scores displayed, user can select and adjust", "ref": "guidance-specification.md#§10" },
+    { "id": "F-004", "title": "AI 指令驱动模式", "description": "Directed mode — user specifies intent, AI generates per instruction", "priority": "should", "acceptance": "User instruction parsed, AI generates per instruction, revision protocol integrated", "ref": "guidance-specification.md#§10" },
+    { "id": "F-005", "title": "读者模拟引擎", "description": "预设 + 自定义角色，4 维度检查", "priority": "must", "acceptance": "3 preset personas, 4-dimension analysis, consensus report", "ref": "guidance-specification.md#§10" },
+    { "id": "F-006", "title": "读者模拟可视化", "description": "叠加现有 + 详情联动", "priority": "must", "acceptance": "Overlay on tension curve, detail panel, click-through linkage", "ref": "guidance-specification.md#§10" },
+    { "id": "F-007", "title": "质量控制机制", "description": "硬约束 + 软约束创意谱图", "priority": "must", "acceptance": "Hard constraints from CAS enforced, creativity spectrum slider, mode-specific enforcement", "ref": "guidance-specification.md#§10" },
+    { "id": "F-008", "title": "多模态故事智能", "description": "文本操作语义 + 可视化扩展", "priority": "may", "acceptance": "Text operation semantics defined (filter/lasso/perspective), visual extension path", "ref": "guidance-specification.md#§10" }
+  ],
+  "constraints": [
+    { "id": "C-001", "area": "architecture", "constraint": "All new capabilities MUST be exposed through MCP endpoints", "rationale": "Unified integration surface, consistent API layer", "status": "locked", "ref": "guidance-specification.md#§4 SA-01" },
+    { "id": "C-002", "area": "storage", "constraint": "Story Bible MUST extend existing KnowledgeEngine", "rationale": "Avoid parallel engine data sync issues", "status": "locked", "ref": "guidance-specification.md#§4 SA-02" },
+    { "id": "C-003", "area": "quality", "constraint": "AI output MUST be framed as first draft quality", "rationale": "Position as writing partner, not replacement", "status": "locked", "ref": "guidance-specification.md#§5 PM-04" },
+    { "id": "C-004", "area": "scope", "constraint": "MVP MUST include Co-Writing (Auto+Guided) + Reader Simulation (3 presets)", "rationale": "Dual-capability MVP demonstrates linkage", "status": "locked", "ref": "guidance-specification.md#§5 PM-02" },
+    { "id": "C-005", "area": "scope", "constraint": "Directed mode MUST NOT have frontend implementation in MVP", "rationale": "Design-only in MVP, implementation in Phase 2", "status": "locked", "ref": "guidance-specification.md#§12 G-001" },
+    { "id": "C-006", "area": "scope", "constraint": "Multi-Modal Intelligence MUST NOT have implementation in MVP", "rationale": "Phase 3, text-only design exploration in Phase 2", "status": "locked", "ref": "guidance-specification.md#§12 G-002" }
+  ],
+  "domain": {
+    "problem_statement": "niko-studio has mature writing analysis capabilities but lacks AI-driven active creation assistance. Users need to upgrade from passive analysis to AI co-creation experience.",
+    "terminology": [
+      { "term": "Story Bible", "definition": "Structured story knowledge base with characters/world rules/plot threads/timeline entities", "ref": "guidance-specification.md#§2" },
+      { "term": "Co-Writing Engine", "definition": "AI co-creation engine supporting Auto/Guided/Directed three modes", "ref": "guidance-specification.md#§2" },
+      { "term": "Reader Simulation", "definition": "Multi-persona multi-dimension reader experience simulation engine", "ref": "guidance-specification.md#§2" },
+      { "term": "Quality Control", "definition": "Two-tier constraint system: hard constraints (CAS) + soft constraints (creativity spectrum)", "ref": "guidance-specification.md#§2" }
+    ],
+    "audience": "Fiction writers using desktop writing assistant",
+    "industry": "Creative writing software"
+  },
+  "non_goals": [
+    { "title": "发布平台", "rationale": "Not writing core capability, belongs to distribution layer", "ref": "guidance-specification.md#§3" },
+    { "title": "模板库系统", "rationale": "Pure rule/template system without AI, violates AI-driven priority constraint", "ref": "guidance-specification.md#§3" },
+    { "title": "排版引擎", "rationale": "Pure formatting feature, not AI-driven", "ref": "guidance-specification.md#§3" },
+    { "title": "实时多人协作", "rationale": "Research shows this domain is not mature yet", "ref": "guidance-specification.md#§3" }
+  ],
+  "insights": [
+    { "role": "system-architect", "area": "Story Bible completeness gate", "summary": "SB quality gate is critical path — incomplete SB degrades all downstream capabilities", "ref": "system-architect/analysis.md#§3" },
+    { "role": "product-manager", "area": "Delivery priority", "summary": "Co-Writing → Reader Simulation → Multi-Modal is the optimal delivery sequence", "ref": "product-manager/analysis.md#§3" },
+    { "role": "ux-expert", "area": "Hybrid display pattern", "summary": "Inline hints + sidebar detail is the optimal display pattern for AI suggestions", "ref": "ux-expert/analysis.md#§3" },
+    { "role": "subject-matter-expert", "area": "Four-dimension quality check", "summary": "Plot coherence, character consistency, style consistency, pacing/tension are the essential quality dimensions", "ref": "subject-matter-expert/analysis.md#§3" }
+  ],
+  "open_questions": [
+    { "area": "F-008 Multi-Modal", "question": "When should Multi-Modal Intelligence move from MAY to SHOULD/MUST?", "options": ["After Co-Writing + Reader Simulation are stable", "When image generation is available", "When user demand justifies"], "ref": "guidance-specification.md#§10" },
+    { "area": "F-004 Directed Mode", "question": "Should Directed mode be available as experimental/alpha in MVP?", "options": ["Design-only in MVP", "Alpha with feature flag", "Full implementation in Phase 2"], "ref": "guidance-specification.md#§12 G-001" }
+  ],
+  "references": [
+    { "type": "guidance", "path": "guidance-specification.md" },
+    { "type": "design-research", "path": "design-research.md" },
+    { "type": "role-analysis", "path": "system-architect/analysis.md" },
+    { "type": "role-analysis", "path": "product-manager/analysis.md" },
+    { "type": "role-analysis", "path": "ux-expert/analysis.md" },
+    { "type": "role-analysis", "path": "subject-matter-expert/analysis.md" }
+  ]
+}

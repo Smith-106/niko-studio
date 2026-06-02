@@ -192,3 +192,32 @@ export {
   learningReadingExtractEndpoint,
   learningStatusEndpoint,
 } from './learning';
+
+export {
+  sbGetEntitiesEndpoint,
+  sbGetEntityEndpoint,
+  sbCreateEntityEndpoint,
+  sbUpdateEntityEndpoint,
+  sbDeleteEntityEndpoint,
+  sbExtractFromManuscriptEndpoint,
+  sbGetCompletenessEndpoint,
+} from '../../knowledge/mcp/story-bible-endpoints';
+
+export {
+  qcValidateOutputEndpoint,
+  qcGetCreativityConfigEndpoint,
+} from '../../knowledge/mcp/qc-endpoints';
+
+export {
+  cwGenerateAutoEndpoint,
+  cwGenerateGuidedEndpoint,
+  cwGetModesEndpoint,
+  cwGetCreativityPresetsEndpoint,
+} from '../../cowriting/mcp/cowriting-endpoints';
+
+export {
+  rsAnalyzeEndpoint,
+  rsGetPersonasEndpoint,
+  rsCreateCustomPersonaEndpoint,
+  rsGetOverlayEndpoint,
+} from '../../reader/mcp/reader-endpoints';

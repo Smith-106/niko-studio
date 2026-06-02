@@ -1,0 +1,12 @@
+{
+  "id": "T-008",
+  "title": "QC hard constraint engine (4 dimensions from CAS)",
+  "status": "completed",
+  "wave": "wave-1.1",
+  "executor": "agent",
+  "scope": "src-ts/quality/",
+  "convergence": { "criteria": ["QualityDimension enum with 4 dimensions", "HardConstraintViolation + HardConstraintResult interfaces", "HardConstraintReport interface"] },
+  "files": [{ "path": "src-ts/quality/types.ts", "change": "created" }],
+  "completed_at": "2026-06-02T10:00:00+08:00",
+  "summary_path": ".summaries/T-008-summary.md"
+}

@@ -43,6 +43,23 @@ import {
   learningReadingSessionEndpoint,
   learningReadingExtractEndpoint,
   learningStatusEndpoint,
+  sbGetEntitiesEndpoint,
+  sbGetEntityEndpoint,
+  sbCreateEntityEndpoint,
+  sbUpdateEntityEndpoint,
+  sbDeleteEntityEndpoint,
+  sbExtractFromManuscriptEndpoint,
+  sbGetCompletenessEndpoint,
+  qcValidateOutputEndpoint,
+  qcGetCreativityConfigEndpoint,
+  cwGenerateAutoEndpoint,
+  cwGenerateGuidedEndpoint,
+  cwGetModesEndpoint,
+  cwGetCreativityPresetsEndpoint,
+  rsAnalyzeEndpoint,
+  rsGetPersonasEndpoint,
+  rsCreateCustomPersonaEndpoint,
+  rsGetOverlayEndpoint,
 } from '../endpoints';
 import type { GatewayRoute } from '../gateway-route-types';
 
@@ -106,4 +123,29 @@ export const contentRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/learning\/reading-session$/, handler: learningReadingSessionEndpoint },
   { method: 'POST', pattern: /^\/learning\/reading-extract$/, handler: learningReadingExtractEndpoint },
   { method: 'GET', pattern: /^\/learning\/status$/, handler: learningStatusEndpoint },
+
+  // Story Bible CRUD (T-010)
+  { method: 'POST', pattern: /^\/story-bible\/entities\/list$/, handler: sbGetEntitiesEndpoint },
+  { method: 'GET', pattern: /^\/story-bible\/entity\/([^/]+)$/, handler: sbGetEntityEndpoint, paramNames: ['entityId'] },
+  { method: 'POST', pattern: /^\/story-bible\/entities$/, handler: sbCreateEntityEndpoint },
+  { method: 'PUT', pattern: /^\/story-bible\/entity\/([^/]+)$/, handler: sbUpdateEntityEndpoint, paramNames: ['entityId'] },
+  { method: 'DELETE', pattern: /^\/story-bible\/entity\/([^/]+)$/, handler: sbDeleteEntityEndpoint, paramNames: ['entityId'] },
+  { method: 'POST', pattern: /^\/story-bible\/extract$/, handler: sbExtractFromManuscriptEndpoint },
+  { method: 'POST', pattern: /^\/story-bible\/completeness$/, handler: sbGetCompletenessEndpoint },
+
+  // Quality Control (T-010)
+  { method: 'POST', pattern: /^\/qc\/validate$/, handler: qcValidateOutputEndpoint },
+  { method: 'POST', pattern: /^\/qc\/creativity-config$/, handler: qcGetCreativityConfigEndpoint },
+
+  // Co-Writing Engine (T-020)
+  { method: 'POST', pattern: /^\/cowriting\/generate\/auto$/, handler: cwGenerateAutoEndpoint },
+  { method: 'POST', pattern: /^\/cowriting\/generate\/guided$/, handler: cwGenerateGuidedEndpoint },
+  { method: 'GET', pattern: /^\/cowriting\/modes$/, handler: cwGetModesEndpoint },
+  { method: 'GET', pattern: /^\/cowriting\/creativity-presets$/, handler: cwGetCreativityPresetsEndpoint },
+
+  // Reader Simulation (T-036)
+  { method: 'POST', pattern: /^\/reader\/analyze$/, handler: rsAnalyzeEndpoint },
+  { method: 'GET', pattern: /^\/reader\/personas$/, handler: rsGetPersonasEndpoint },
+  { method: 'POST', pattern: /^\/reader\/personas\/custom$/, handler: rsCreateCustomPersonaEndpoint },
+  { method: 'POST', pattern: /^\/reader\/overlay$/, handler: rsGetOverlayEndpoint },
 ];

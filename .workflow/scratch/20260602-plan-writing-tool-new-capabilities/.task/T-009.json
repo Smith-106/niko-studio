@@ -1,0 +1,12 @@
+{
+  "id": "T-009",
+  "title": "QC creativity spectrum config + defaults",
+  "status": "completed",
+  "wave": "wave-1.1",
+  "executor": "agent",
+  "scope": "src-ts/quality/",
+  "convergence": { "criteria": ["CreativityPreset enum with 4 presets", "MODE_BALANCED_DEFAULTS per co-writing mode", "resolveCreativityConfig helper function"] },
+  "files": [{ "path": "src-ts/quality/types.ts", "change": "created" }],
+  "completed_at": "2026-06-02T10:00:00+08:00",
+  "summary_path": ".summaries/T-009-summary.md"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "T-001",
+  "title": "Define SB entity types in KnowledgeEngine",
+  "wave": "wave-1.1",
+  "status": "completed",
+  "executor": "agent",
+  "scope": "src-ts/knowledge/entities/",
+  "action": "Define StoryBibleEntityBase interface and union type for all SB entities",
+  "convergence": { "criteria": ["StoryBibleEntityBase interface exists", "StoryBibleEntity union type defined", "SB_ENTITY_TYPES const exported"] },
+  "files": [{ "path": "src-ts/knowledge/entities/story-bible-types.ts", "change": "created" }],
+  "completed_at": "2026-06-02T10:00:00+08:00",
+  "summary_path": ".summaries/T-001-summary.md"
+}
