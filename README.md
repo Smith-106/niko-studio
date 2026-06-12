@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 10.0.0 (Platform Edition)
+> **Version**: 11.0.1 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -37,7 +37,13 @@ Deprecated release surface (removed)
 
 ## Current Release Snapshot
 
-### v10.0.0 (2026-05-28)
+### v11.0.1 (2026-06-12)
+
+- 标准交付版本刷新：`src-ts`、desktop、Tauri bundle 版本统一提升至 `11.0.1`
+- 生产 CORS 发布值校准：保留 `tauri://localhost` 与 `https://tauri.localhost`
+- 重新生成并验收 Windows NSIS 安装包，补齐 packaged-app smoke、安装级 E2E 与 release readiness 证据
+
+### v11.0.0 (2026-05-30)
 
 - 新手引导系统：首次启动自动检测配置状态，引导用户完成 LLM 提供商设置和模板选择
 - 模板管理增强：支持模板收藏、最近使用记录、变量预设持久化
@@ -47,12 +53,12 @@ Deprecated release surface (removed)
 - jsdom 测试环境兼容：debounce 定时器增加 localStorage 存在性守卫，消除测试 teardown 后的未捕获异常
 - E2E 写作流验证：完整的稿件创建→编辑→AI 辅助→导出链路测试覆盖
 - UI/UX 打磨：设置面板布局优化、模板选择交互改进、加载状态反馈增强
-- 依赖与版本同步：desktop/package.json、Cargo.toml、tauri.conf.json 版本号统一至 10.0.0
+- 依赖与版本同步：desktop/package.json、Cargo.toml、tauri.conf.json 版本号统一至 11.0.0
 
 ---
 
-- Current release tag: `v10.0.0`
-- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v10.0.0`
+- Current release tag: `v11.0.1`
+- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v11.0.1`
 - Current local sign-off status: `GO` on current HEAD
 
 如果你只想下载当前正式发布版，直接进入 GitHub Releases 页面获取 Windows 安装包。
@@ -354,4 +360,4 @@ Built on concepts from:
 
 ---
 
-*Version 10.0.0 Platform Edition | Updated: 2026-05-28*
+*Version 11.0.1 Platform Edition | Updated: 2026-06-12*

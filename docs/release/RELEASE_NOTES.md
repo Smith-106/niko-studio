@@ -1,5 +1,28 @@
 # RELEASE NOTES
 
+## v11.0.1 — 标准交付 release refresh (2026-06-12)
+
+### 概览
+
+v11.0.1 是在既有 `v11.0.0` 基线上的标准交付刷新版本。该版本不引入新的产品面功能，而是把版本源、生产 CORS、Windows 安装包验收证据、README 与 docs-site 的公开发布信息全部重新对齐到当前可发布状态。
+
+### 本次交付
+
+- 版本统一提升到 `11.0.1`：`src-ts/config/index.ts`、`src-ts/package.json`、`src-ts/config/niko-studio.yaml`、`desktop/package.json`、`desktop/src-tauri/Cargo.toml`、`desktop/src-tauri/tauri.conf.json`
+- 生产 CORS 发布值对齐：保留 `tauri://localhost` 与 `https://tauri.localhost`
+- Windows NSIS 安装包重新构建并重新留痕 packaged-app smoke
+- 安装级 E2E 验收证据重新绑定当前 retained installer 与当前 HEAD
+- `release-check-summary.md` 与 `release-readiness-artifact.json` 刷新为当前版本的发布结论
+- README 与 docs-site 推荐版本、下载入口、发布快照同步刷新
+
+### 验收口径
+
+- 版本一致性：`python scripts/check_versions.py`
+- 本地链路：`npm --prefix desktop run local:selftest`
+- 安装包 smoke：`python scripts/packaged_app_smoke.py`
+- 安装级 E2E：`npm --prefix desktop run package:e2e:checklist -- ...`
+- 发布总裁决：`python scripts/release_check_summary.py`
+
 ## v10.0.0 — 协作改进三阶段完成 (2026-05-28)
 
 ### 概述

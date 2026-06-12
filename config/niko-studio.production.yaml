@@ -3,7 +3,7 @@
 #   python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml
 
 app_name: niko-studio
-version: "11.0.0"
+version: "11.0.1"
 debug: false
 env: production
 data_dir: .writing
@@ -59,8 +59,8 @@ gateway:
   cors_dev_origins:
     - "*"
   cors_prod_origins:
-    - https://app.example.com
-    - https://gray.example.com
+    - tauri://localhost
+    - https://tauri.localhost
   metrics_enabled: true
 
 integration:

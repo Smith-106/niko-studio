@@ -2089,6 +2089,70 @@ def test_refresh_release_evidence_requires_updated_artifacts(tmp_path: Path) -> 
         )
 
 
+def test_packaged_app_smoke_parses_listening_pid_from_netstat_output() -> None:
+    module = load_script_module(
+        "scripts/packaged_app_smoke.py",
+        "test_packaged_app_smoke_parse_netstat",
+    )
+
+    sample = """
+  TCP    127.0.0.1:5882         0.0.0.0:0              LISTENING       178472
+  TCP    127.0.0.1:8000         0.0.0.0:0              LISTENING       22222
+"""
+
+    assert module._parse_listening_pids(sample, 5882) == [178472]
+    assert module._parse_listening_pids(sample, 8000) == [22222]
+    assert module._parse_listening_pids(sample, 9999) == []
+
+
+def test_packaged_app_smoke_identifies_smoke_managed_processes() -> None:
+    module = load_script_module(
+        "scripts/packaged_app_smoke.py",
+        "test_packaged_app_smoke_identify_process",
+    )
+
+    install_dir = Path(r"C:\Users\niko\AppData\Local\Temp\niko-smoke-1781272354")
+
+    assert module.is_smoke_managed_process(
+        '"C:/Users/niko/AppData/Local/Temp/niko-smoke-1781272354/bin/sidecar/node.exe" gateway-server.js',
+        None,
+        install_dir,
+    )
+    assert module.is_smoke_managed_process(
+        None,
+        r"C:\Users\niko\AppData\Local\Temp\niko-smoke-1781272354\bin\sidecar\node.exe",
+        install_dir,
+    )
+    assert not module.is_smoke_managed_process(
+        r'"C:\Program Files\nodejs\node.exe" C:\workspace\gateway-server.js',
+        r"C:\Program Files\nodejs\node.exe",
+        install_dir,
+    )
+
+
+def test_packaged_app_smoke_rejects_non_smoke_process_on_reserved_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = load_script_module(
+        "scripts/packaged_app_smoke.py",
+        "test_packaged_app_smoke_rejects_non_smoke_process",
+    )
+
+    report = module.SmokeReport()
+
+    monkeypatch.setattr(module, "list_listening_pids", lambda _port: [4321])
+    monkeypatch.setattr(
+        module,
+        "inspect_process",
+        lambda _pid: module.ProcessInfo(
+            pid=4321,
+            executable_path=r"C:\Program Files\nodejs\node.exe",
+            command_line=r'"C:\Program Files\nodejs\node.exe" C:\workspace\gateway-server.js',
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="non-smoke process"):
+        module.clear_stale_smoke_port(5882, report)
+
+
 def test_signed_release_path_uses_generated_tauri_config_without_repo_config_edit() -> None:
     package_json = json.loads((PROJECT_ROOT / "desktop/package.json").read_text(encoding="utf-8"))
     signing_source = (PROJECT_ROOT / "scripts/generate_signed_tauri_config.py").read_text(

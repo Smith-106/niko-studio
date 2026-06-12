@@ -2,7 +2,7 @@
 # 此文件支持热加载，修改后自动生效
 
 app_name: niko-studio
-version: "11.0.0"
+version: "11.0.1"
 debug: false
 env: development
 data_dir: .writing
@@ -58,8 +58,8 @@ gateway:
   cors_dev_origins:
     - "*"
   cors_prod_origins:
-    - https://app.example.com
-    - https://gray.example.com
+    - tauri://localhost
+    - https://tauri.localhost
   metrics_enabled: true
 
 integration:

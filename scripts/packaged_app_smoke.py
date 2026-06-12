@@ -48,6 +48,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+import shutil
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DESKTOP_PACKAGE_JSON = PROJECT_ROOT / "desktop" / "package.json"
@@ -96,6 +97,13 @@ class SmokeReport:
         return json.dumps(asdict(self), indent=2, ensure_ascii=False)
 
 
+@dataclass
+class ProcessInfo:
+    pid: int
+    executable_path: str | None = None
+    command_line: str | None = None
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -112,6 +120,181 @@ def read_package_version() -> str:
 
 def is_windows() -> bool:
     return sys.platform.startswith("win")
+
+
+def _normalize_process_text(value: str | None) -> str:
+    return (value or "").strip().lower().replace("/", "\\")
+
+
+def _parse_listening_pids(netstat_output: str, port: int) -> list[int]:
+    pids: list[int] = []
+
+    for raw_line in netstat_output.splitlines():
+        columns = raw_line.split()
+        if len(columns) < 5:
+            continue
+
+        local_address = columns[1]
+        state = columns[-2].upper()
+        pid_text = columns[-1]
+        port_text = local_address.rsplit(":", 1)[-1].strip("[]")
+
+        if state != "LISTENING" or not pid_text.isdigit() or not port_text.isdigit():
+            continue
+        if int(port_text) != port:
+            continue
+
+        pid = int(pid_text)
+        if pid not in pids:
+            pids.append(pid)
+
+    return pids
+
+
+def list_listening_pids(port: int) -> list[int]:
+    if not is_windows():
+        return []
+
+    completed = subprocess.run(
+        ["netstat", "-ano", "-p", "tcp"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if completed.returncode != 0:
+        return []
+    return _parse_listening_pids(completed.stdout, port)
+
+
+def _resolve_powershell() -> str | None:
+    for candidate in ("pwsh", "powershell.exe", "powershell"):
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+    return None
+
+
+def inspect_process(pid: int) -> ProcessInfo:
+    powershell = _resolve_powershell()
+    if not powershell:
+        return ProcessInfo(pid=pid)
+
+    script = (
+        f'$process = Get-CimInstance Win32_Process -Filter "ProcessId = {pid}"; '
+        'if ($null -eq $process) { exit 0 }; '
+        '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; '
+        '[pscustomobject]@{ '
+        'pid = $process.ProcessId; '
+        'executable_path = $process.ExecutablePath; '
+        'command_line = $process.CommandLine '
+        '} | ConvertTo-Json -Compress'
+    )
+    completed = subprocess.run(
+        [powershell, "-NoProfile", "-Command", script],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if completed.returncode != 0 or not completed.stdout.strip():
+        return ProcessInfo(pid=pid)
+
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return ProcessInfo(pid=pid)
+
+    return ProcessInfo(
+        pid=int(payload.get("pid") or pid),
+        executable_path=payload.get("executable_path"),
+        command_line=payload.get("command_line"),
+    )
+
+
+def is_smoke_managed_process(
+    command_line: str | None,
+    executable_path: str | None,
+    install_dir: Path | None = None,
+) -> bool:
+    normalized_command = _normalize_process_text(command_line)
+    normalized_executable = _normalize_process_text(executable_path)
+    normalized_values = [normalized_command, normalized_executable]
+
+    if any("niko-smoke-" in value for value in normalized_values):
+        return True
+
+    if install_dir is None:
+        return False
+
+    normalized_install_dir = _normalize_process_text(str(install_dir))
+    normalized_sidecar_dir = _normalize_process_text(str(install_dir / "bin" / "sidecar"))
+
+    for value in normalized_values:
+        if normalized_install_dir and normalized_install_dir in value:
+            return True
+        if normalized_sidecar_dir and normalized_sidecar_dir in value:
+            return True
+
+    return False
+
+
+def kill_process_tree(pid: int) -> bool:
+    if not is_windows():
+        return False
+
+    completed = subprocess.run(
+        ["taskkill", "/PID", str(pid), "/T", "/F"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    return completed.returncode == 0
+
+
+def _describe_process(info: ProcessInfo) -> str:
+    return info.command_line or info.executable_path or f"pid={info.pid}"
+
+
+def clear_stale_smoke_port(
+    port: int,
+    report: SmokeReport,
+    install_dir: Path | None = None,
+    *,
+    strict: bool = True,
+) -> list[int]:
+    cleared_pids: list[int] = []
+
+    for pid in list_listening_pids(port):
+        info = inspect_process(pid)
+        if not is_smoke_managed_process(info.command_line, info.executable_path, install_dir):
+            message = (
+                f"smoke port {port} is already in use by non-smoke process: {_describe_process(info)}"
+            )
+            if strict:
+                raise RuntimeError(message)
+            report.notes.append(message)
+            continue
+
+        if not kill_process_tree(pid):
+            raise RuntimeError(
+                f"failed to terminate stale smoke-managed process on port {port}: {_describe_process(info)}"
+            )
+
+        print(
+            f"[smoke] cleared stale smoke-managed process on port {port}: {_describe_process(info)}",
+            flush=True,
+        )
+        report.notes.append(
+            f"Cleared stale smoke-managed process on port {port}: {_describe_process(info)}"
+        )
+        cleared_pids.append(pid)
+
+    return cleared_pids
 
 
 def silent_install(installer: Path, install_dir: Path, report: SmokeReport) -> None:
@@ -405,6 +588,7 @@ def main() -> int:
                     )
                     report.status = "SETUP_ERROR"
                     return EXIT_SETUP_ERROR
+                clear_stale_smoke_port(args.smoke_port, report)
                 report.installer_path = str(args.installer_path)
                 install_dir = (
                     Path(os.environ.get("TEMP", "/tmp")) / f"niko-smoke-{int(time.time())}"
@@ -436,6 +620,8 @@ def main() -> int:
 
         finally:
             terminate(process)
+            if not args.skip_launch:
+                clear_stale_smoke_port(args.smoke_port, report, install_dir, strict=False)
 
         report.status = "PASS" if not report.failures else "FAIL"
         report.finished_at = utc_now_iso()

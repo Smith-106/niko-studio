@@ -1,6 +1,6 @@
 [package]
 name = "niko-studio-desktop"
-version = "11.0.0"
+version = "11.0.1"
 description = "Niko-Studio Desktop - AI Writing Assistant"
 authors = ["Niko-Studio Team"]
 edition = "2021"

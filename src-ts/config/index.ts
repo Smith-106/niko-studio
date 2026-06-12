@@ -23,7 +23,7 @@ const log = createLogger('config')
 // Version - authoritative release version for cross-surface consistency checks
 // ---------------------------------------------------------------------------
 
-const APP_VERSION = '11.0.0'
+const APP_VERSION = '11.0.1'
 
 // ---------------------------------------------------------------------------
 // Enum & helper types
@@ -274,7 +274,7 @@ function defaultGatewayConfig(): GatewayConfig {
     localhostOnly: true,
     localhostOnlyExemptPaths: [],
     corsDevOrigins: ['*'],
-    corsProdOrigins: ['https://app.example.com', 'https://gray.example.com'],
+    corsProdOrigins: ['tauri://localhost', 'https://tauri.localhost'],
     metricsEnabled: true,
     uiBridgeEnabled: false,
     detectionEvasionGuard: true,
@@ -815,8 +815,8 @@ gateway:
   cors_dev_origins:
     - "*"
   cors_prod_origins:
-    - https://app.example.com
-    - https://gray.example.com
+    - tauri://localhost
+    - https://tauri.localhost
   metrics_enabled: true
   ui_bridge_enabled: false
   detection_evasion_guard: true
