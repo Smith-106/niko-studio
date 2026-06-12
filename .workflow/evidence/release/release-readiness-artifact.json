@@ -3,8 +3,8 @@
   "schema_version": "evidence.v2",
   "decision": "GO",
   "go_no_go_reasons": [],
-  "generated_at": "2026-06-12T12:00:11.846758+00:00",
-  "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+  "generated_at": "2026-06-12T12:31:02.479421+00:00",
+  "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
   "version": "11.0.0",
   "freshness_window_hours": 48,
   "checks": [
@@ -30,7 +30,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "script=scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q,status=passed,passed_count=45,junitxml=.workflow/evidence/release/governance-scripts.junit.xml"
+      "detail": "script=scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q,status=passed,passed_count=47,junitxml=.workflow/evidence/release/governance-scripts.junit.xml"
     },
     {
       "check_id": "baseline_tests_and_coverage",
@@ -70,7 +70,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "artifact=.workflow/evidence/release/writing-helper-acceptance.json,strict=True,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,version=11.0.0,current_version=11.0.0,generated_at=2026-06-12T11:54:43.6627577+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.09,supersession_status=current,supersession_reasons=,evidence_state=fresh_current,generated_at_parse_error=none,total_cases=7,passed_cases=7,failed_cases=0,failed_cases_path=none,missing_keys=,json_parse_error=none,decision=go"
+      "detail": "artifact=.workflow/evidence/release/writing-helper-acceptance.json,strict=True,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=b17319ecb73ce0dd2d66ba1576bf71a33cda071a,version=11.0.0,current_version=11.0.0,generated_at=2026-06-12T11:54:43.6627577+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.61,supersession_status=current,supersession_reasons=evidence_only_companion_commit,evidence_state=fresh_current,generated_at_parse_error=none,total_cases=7,passed_cases=7,failed_cases=0,failed_cases_path=none,missing_keys=,json_parse_error=none,decision=go"
     },
     {
       "check_id": "package_e2e_acceptance_signal",
@@ -78,7 +78,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "artifact=.workflow/evidence/release/package-e2e-acceptance.json,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,version=11.0.0,current_version=11.0.0,tester=codex,artifact_path=C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_11.0.0_x64-setup.exe,artifact_sha256=9ffa22c63b8d45aa06b6740973d65f09fb13c404d14aa745fa501893c0ad6f14,generated_at=2026-06-12T11:54:11.155013+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.1,supersession_status=current,supersession_reasons=,evidence_state=fresh_current,generated_at_parse_error=none,install_verified=True,launch_verified=True,core_flow_verified=True,shutdown_verified=True,notes=none,missing_keys=,json_parse_error=none,decision=go"
+      "detail": "artifact=.workflow/evidence/release/package-e2e-acceptance.json,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=b17319ecb73ce0dd2d66ba1576bf71a33cda071a,version=11.0.0,current_version=11.0.0,tester=codex,artifact_path=C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_11.0.0_x64-setup.exe,artifact_sha256=9ffa22c63b8d45aa06b6740973d65f09fb13c404d14aa745fa501893c0ad6f14,generated_at=2026-06-12T11:54:11.155013+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.61,supersession_status=current,supersession_reasons=evidence_only_companion_commit,evidence_state=fresh_current,generated_at_parse_error=none,install_verified=True,launch_verified=True,core_flow_verified=True,shutdown_verified=True,notes=none,missing_keys=,json_parse_error=none,decision=go"
     },
     {
       "check_id": "package_app_smoke_signal",
@@ -364,9 +364,9 @@
   "release_evidence": {
     "status": "fresh_current",
     "blocking_sources": [],
-    "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+    "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
     "version": "11.0.0",
-    "generated_at": "2026-06-12T12:00:11.846758+00:00",
+    "generated_at": "2026-06-12T12:31:02.479421+00:00",
     "freshness_window_hours": 48,
     "evidence_sources": [
       {
@@ -374,8 +374,8 @@
         "source_type": "report",
         "artifact_path": "release-check-summary.md",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -392,8 +392,8 @@
         "source_type": "retained_artifact",
         "artifact_path": ".workflow/evidence/release/authority-alignment.json",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -415,9 +415,11 @@
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
-        "freshness_age_hours": 0.09,
+        "freshness_age_hours": 0.61,
         "supersession_status": "current",
-        "supersession_reasons": [],
+        "supersession_reasons": [
+          "evidence_only_companion_commit"
+        ],
         "evidence_state": "fresh_current",
         "is_fresh": true,
         "is_current": true,
@@ -433,9 +435,11 @@
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
-        "freshness_age_hours": 0.1,
+        "freshness_age_hours": 0.61,
         "supersession_status": "current",
-        "supersession_reasons": [],
+        "supersession_reasons": [
+          "evidence_only_companion_commit"
+        ],
         "evidence_state": "fresh_current",
         "is_fresh": true,
         "is_current": true,
@@ -446,8 +450,8 @@
         "source_type": "junit",
         "artifact_path": ".workflow/evidence/release/governance-scripts.junit.xml",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -464,8 +468,8 @@
         "source_type": "junit",
         "artifact_path": ".workflow/evidence/release/vitest-production-guard.xml",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -482,8 +486,8 @@
         "source_type": "junit",
         "artifact_path": ".workflow/evidence/release/vitest-e2e.xml",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -498,7 +502,7 @@
     ]
   },
   "trace": {
-    "trace_id": "release-readiness-2026-06-12T12:00:11.846758+00:00",
+    "trace_id": "release-readiness-2026-06-12T12:31:02.479421+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",

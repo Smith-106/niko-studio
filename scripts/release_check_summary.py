@@ -30,6 +30,8 @@ DESKTOP_LOCAL_SELFTEST_COMMAND = "npm --prefix desktop run local:selftest"
 DESKTOP_PACKAGING_DRY_RUN_COMMAND = "npm --prefix desktop run validate:package:dry-run"
 RELEASE_EVIDENCE_SCHEMA_VERSION = "evidence.v2"
 RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS = 48
+EVIDENCE_ONLY_COMPANION_PATH_PREFIXES = (".workflow/evidence/release/",)
+EVIDENCE_ONLY_COMPANION_PATHS = ("release-check-summary.md",)
 LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES = (
     "release_summary_report",
     "authority_alignment",
@@ -81,6 +83,8 @@ SCORECARD_DIMENSIONS = (
     ),
 )
 
+_HEAD_RELATION_CACHE: dict[tuple[str, str], tuple[str, list[str]]] = {}
+
 
 @dataclass(frozen=True)
 class FileAnchorRule:
@@ -119,6 +123,54 @@ def parse_pytest_counts(output: str) -> tuple[str, str]:
         fail_match = re.search(r"(\d+)\s+failed", output, flags=re.IGNORECASE)
         return "failed", fail_match.group(1) if fail_match else "unknown"
     return "unknown", "0"
+
+
+def _normalize_git_path(path: str) -> str:
+    normalized = path.replace("\\", "/").strip()
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    while normalized.startswith("/"):
+        normalized = normalized[1:]
+    return normalized
+
+
+def _is_evidence_only_companion_path(path: str) -> bool:
+    normalized = _normalize_git_path(path)
+    if not normalized:
+        return False
+    if normalized in EVIDENCE_ONLY_COMPANION_PATHS:
+        return True
+    return any(
+        normalized.startswith(prefix) for prefix in EVIDENCE_ONLY_COMPANION_PATH_PREFIXES
+    )
+
+
+def _resolve_head_relation(head_sha: str, current_head_sha: str) -> tuple[str, list[str]]:
+    cache_key = (head_sha, current_head_sha)
+    cached = _HEAD_RELATION_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    if head_sha == current_head_sha:
+        result = ("current", [])
+        _HEAD_RELATION_CACHE[cache_key] = result
+        return result
+
+    ancestor_exit, _ = run_cmd(["git", "merge-base", "--is-ancestor", head_sha, current_head_sha])
+    if ancestor_exit == 0:
+        diff_exit, diff_output = run_cmd(["git", "diff", "--name-only", f"{head_sha}..{current_head_sha}"])
+        if diff_exit == 0:
+            changed_paths = [
+                _normalize_git_path(line) for line in diff_output.splitlines() if line.strip()
+            ]
+            if changed_paths and all(_is_evidence_only_companion_path(path) for path in changed_paths):
+                result = ("current", ["evidence_only_companion_commit"])
+                _HEAD_RELATION_CACHE[cache_key] = result
+                return result
+
+    result = ("superseded", ["head_mismatch"])
+    _HEAD_RELATION_CACHE[cache_key] = result
+    return result
 
 
 def _read_project_text(path: str) -> str | None:
@@ -476,10 +528,7 @@ def _evaluate_retained_evidence(
     supersession_reasons: list[str] = []
     supersession_status = "unknown"
     if head_sha and current_head_sha:
-        supersession_status = "current"
-        if head_sha != current_head_sha:
-            supersession_status = "superseded"
-            supersession_reasons.append("head_mismatch")
+        supersession_status, supersession_reasons = _resolve_head_relation(head_sha, current_head_sha)
     elif head_sha:
         supersession_reasons.append("current_head_unknown")
     else:
@@ -1899,7 +1948,7 @@ def writing_helper_acceptance_signal(
         has_blocker = True
     if not generated_at:
         has_blocker = True
-    if not head_sha or not current_head_sha or head_sha != current_head_sha:
+    if not head_sha or not current_head_sha:
         has_blocker = True
     if not retained_evidence["is_fresh"] or not retained_evidence["is_current"]:
         has_blocker = True
@@ -2165,7 +2214,7 @@ def package_e2e_acceptance_signal(
         has_blocker = True
     if not generated_at:
         has_blocker = True
-    if not head_sha or not current_head_sha or head_sha != current_head_sha:
+    if not head_sha or not current_head_sha:
         has_blocker = True
     if not retained_evidence["is_fresh"] or not retained_evidence["is_current"]:
         has_blocker = True

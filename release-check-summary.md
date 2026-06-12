@@ -59,8 +59,8 @@
 {
   "decision": "GO",
   "go_no_go_reasons": [],
-  "generated_at": "2026-06-12T12:00:11.846758+00:00",
-  "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+  "generated_at": "2026-06-12T12:31:02.479421+00:00",
+  "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
   "version": "11.0.0",
   "freshness_window_hours": 48,
   "delivery_contract": {
@@ -152,7 +152,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "script=scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q,status=passed,passed_count=45,junitxml=.workflow/evidence/release/governance-scripts.junit.xml"
+      "detail": "script=scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q,status=passed,passed_count=47,junitxml=.workflow/evidence/release/governance-scripts.junit.xml"
     },
     {
       "check_id": "baseline_tests_and_coverage",
@@ -192,7 +192,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "artifact=.workflow/evidence/release/writing-helper-acceptance.json,strict=True,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,version=11.0.0,current_version=11.0.0,generated_at=2026-06-12T11:54:43.6627577+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.09,supersession_status=current,supersession_reasons=,evidence_state=fresh_current,generated_at_parse_error=none,total_cases=7,passed_cases=7,failed_cases=0,failed_cases_path=none,missing_keys=,json_parse_error=none,decision=go"
+      "detail": "artifact=.workflow/evidence/release/writing-helper-acceptance.json,strict=True,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=b17319ecb73ce0dd2d66ba1576bf71a33cda071a,version=11.0.0,current_version=11.0.0,generated_at=2026-06-12T11:54:43.6627577+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.61,supersession_status=current,supersession_reasons=evidence_only_companion_commit,evidence_state=fresh_current,generated_at_parse_error=none,total_cases=7,passed_cases=7,failed_cases=0,failed_cases_path=none,missing_keys=,json_parse_error=none,decision=go"
     },
     {
       "check_id": "package_e2e_acceptance_signal",
@@ -200,7 +200,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "artifact=.workflow/evidence/release/package-e2e-acceptance.json,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,version=11.0.0,current_version=11.0.0,tester=codex,artifact_path=C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_11.0.0_x64-setup.exe,artifact_sha256=9ffa22c63b8d45aa06b6740973d65f09fb13c404d14aa745fa501893c0ad6f14,generated_at=2026-06-12T11:54:11.155013+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.1,supersession_status=current,supersession_reasons=,evidence_state=fresh_current,generated_at_parse_error=none,install_verified=True,launch_verified=True,core_flow_verified=True,shutdown_verified=True,notes=none,missing_keys=,json_parse_error=none,decision=go"
+      "detail": "artifact=.workflow/evidence/release/package-e2e-acceptance.json,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=b17319ecb73ce0dd2d66ba1576bf71a33cda071a,version=11.0.0,current_version=11.0.0,tester=codex,artifact_path=C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_11.0.0_x64-setup.exe,artifact_sha256=9ffa22c63b8d45aa06b6740973d65f09fb13c404d14aa745fa501893c0ad6f14,generated_at=2026-06-12T11:54:11.155013+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.61,supersession_status=current,supersession_reasons=evidence_only_companion_commit,evidence_state=fresh_current,generated_at_parse_error=none,install_verified=True,launch_verified=True,core_flow_verified=True,shutdown_verified=True,notes=none,missing_keys=,json_parse_error=none,decision=go"
     },
     {
       "check_id": "package_app_smoke_signal",
@@ -486,9 +486,9 @@
   "release_evidence": {
     "status": "fresh_current",
     "blocking_sources": [],
-    "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+    "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
     "version": "11.0.0",
-    "generated_at": "2026-06-12T12:00:11.846758+00:00",
+    "generated_at": "2026-06-12T12:31:02.479421+00:00",
     "freshness_window_hours": 48,
     "evidence_sources": [
       {
@@ -496,8 +496,8 @@
         "source_type": "report",
         "artifact_path": "release-check-summary.md",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -514,8 +514,8 @@
         "source_type": "retained_artifact",
         "artifact_path": ".workflow/evidence/release/authority-alignment.json",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -537,9 +537,11 @@
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
-        "freshness_age_hours": 0.09,
+        "freshness_age_hours": 0.61,
         "supersession_status": "current",
-        "supersession_reasons": [],
+        "supersession_reasons": [
+          "evidence_only_companion_commit"
+        ],
         "evidence_state": "fresh_current",
         "is_fresh": true,
         "is_current": true,
@@ -555,9 +557,11 @@
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
-        "freshness_age_hours": 0.1,
+        "freshness_age_hours": 0.61,
         "supersession_status": "current",
-        "supersession_reasons": [],
+        "supersession_reasons": [
+          "evidence_only_companion_commit"
+        ],
         "evidence_state": "fresh_current",
         "is_fresh": true,
         "is_current": true,
@@ -568,8 +572,8 @@
         "source_type": "junit",
         "artifact_path": ".workflow/evidence/release/governance-scripts.junit.xml",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -586,8 +590,8 @@
         "source_type": "junit",
         "artifact_path": ".workflow/evidence/release/vitest-production-guard.xml",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -604,8 +608,8 @@
         "source_type": "junit",
         "artifact_path": ".workflow/evidence/release/vitest-e2e.xml",
         "status": "PASS",
-        "generated_at": "2026-06-12T12:00:11.846758+00:00",
-        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "generated_at": "2026-06-12T12:31:02.479421+00:00",
+        "head_sha": "b17319ecb73ce0dd2d66ba1576bf71a33cda071a",
         "version": "11.0.0",
         "freshness_window_hours": 48,
         "freshness_status": "fresh",
@@ -642,9 +646,9 @@ Verification path: release check + issue pending inspection + targeted governanc
 
 ## Retained Release Evidence
 
-- current_head_sha: 6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6
+- current_head_sha: b17319ecb73ce0dd2d66ba1576bf71a33cda071a
 - current_version: 11.0.0
-- release_evidence_generated_at: 2026-06-12T12:00:11.846758+00:00
+- release_evidence_generated_at: 2026-06-12T12:31:02.479421+00:00
 - freshness_window_hours: 48
 - release_evidence_status: fresh_current
 - blocking_sources: none
@@ -665,13 +669,13 @@ Verification path: release check + issue pending inspection + targeted governanc
 
 - version_consistency: status=PASS, detail=script=scripts/check_versions.py
 - delivery_semantic_gate: status=PASS, detail=script=scripts/delivery_gate.py
-- governance_scripts_regression: status=PASS, detail=script=scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q,status=passed,passed_count=45,junitxml=.workflow/evidence/release/governance-scripts.junit.xml
+- governance_scripts_regression: status=PASS, detail=script=scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q,status=passed,passed_count=47,junitxml=.workflow/evidence/release/governance-scripts.junit.xml
 - baseline_tests_and_coverage: status=PASS, detail=command=npm --prefix src-ts run test:coverage:phase4,status=passed,passed_count=11
 - desktop_check: status=PASS, detail=command=npm --prefix desktop run check:local,package_script=desktop/package.json -> scripts.check:local
 - desktop_sidecar_readiness: status=PASS, detail=command=npm --prefix desktop run build:sidecar && npm --prefix desktop run validate:sidecar-contract,artifact=desktop/src-tauri/bin/niko-gateway
 - desktop_packaging_dry_run: status=PASS, detail=command=npm --prefix desktop run validate:package:dry-run,target=x86_64-pc-windows-msvc,signing=unsigned_local_dry_run
-- writing_helper_acceptance_signal: status=PASS, detail=artifact=.workflow/evidence/release/writing-helper-acceptance.json,strict=True,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,version=11.0.0,current_version=11.0.0,generated_at=2026-06-12T11:54:43.6627577+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.09,supersession_status=current,supersession_reasons=,evidence_state=fresh_current,generated_at_parse_error=none,total_cases=7,passed_cases=7,failed_cases=0,failed_cases_path=none,missing_keys=,json_parse_error=none,decision=go
-- package_e2e_acceptance_signal: status=PASS, detail=artifact=.workflow/evidence/release/package-e2e-acceptance.json,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,version=11.0.0,current_version=11.0.0,tester=codex,artifact_path=C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_11.0.0_x64-setup.exe,artifact_sha256=9ffa22c63b8d45aa06b6740973d65f09fb13c404d14aa745fa501893c0ad6f14,generated_at=2026-06-12T11:54:11.155013+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.1,supersession_status=current,supersession_reasons=,evidence_state=fresh_current,generated_at_parse_error=none,install_verified=True,launch_verified=True,core_flow_verified=True,shutdown_verified=True,notes=none,missing_keys=,json_parse_error=none,decision=go
+- writing_helper_acceptance_signal: status=PASS, detail=artifact=.workflow/evidence/release/writing-helper-acceptance.json,strict=True,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=b17319ecb73ce0dd2d66ba1576bf71a33cda071a,version=11.0.0,current_version=11.0.0,generated_at=2026-06-12T11:54:43.6627577+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.61,supersession_status=current,supersession_reasons=evidence_only_companion_commit,evidence_state=fresh_current,generated_at_parse_error=none,total_cases=7,passed_cases=7,failed_cases=0,failed_cases_path=none,missing_keys=,json_parse_error=none,decision=go
+- package_e2e_acceptance_signal: status=PASS, detail=artifact=.workflow/evidence/release/package-e2e-acceptance.json,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=b17319ecb73ce0dd2d66ba1576bf71a33cda071a,version=11.0.0,current_version=11.0.0,tester=codex,artifact_path=C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_11.0.0_x64-setup.exe,artifact_sha256=9ffa22c63b8d45aa06b6740973d65f09fb13c404d14aa745fa501893c0ad6f14,generated_at=2026-06-12T11:54:11.155013+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.61,supersession_status=current,supersession_reasons=evidence_only_companion_commit,evidence_state=fresh_current,generated_at_parse_error=none,install_verified=True,launch_verified=True,core_flow_verified=True,shutdown_verified=True,notes=none,missing_keys=,json_parse_error=none,decision=go
 - package_app_smoke_signal: status=PASS, detail=artifact=.workflow/evidence/release/packaged-app-smoke.json,status=PASS,package_version=11.0.0,current_version=11.0.0,version_drift=false,install_verified=true,launch_verified=true,health_version_verified=true,services_verified=true,cors_verified=true,failure_count=0,mode=advisory_first,decision=go
 - external_e2e_smoke: status=PASS, detail=status=passed,passed_count=2
 - production_guard: status=PASS, detail=command=npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts,status=passed,passed_count=2,junitxml=.workflow/evidence/release/vitest-production-guard.xml
@@ -736,8 +740,8 @@ delivery gate: ok
 #### governance_scripts_regression output
 
 ```text
-.............................................                            [100%]
-45 passed in 1.10s
+...............................................                          [100%]
+47 passed in 1.13s
 ```
 
 #### baseline_tests_and_coverage output
@@ -750,405 +754,405 @@ delivery gate: ok
  RUN  v3.2.4 C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/src-ts
       Coverage enabled with v8
 
- ✓ tests/memory/index.test.ts (12 tests) 2002ms
-   ✓ memory/index barrel > covers plugin lifecycle and config-driven factory behavior through the public unified memory engine  329ms
- ✓ tests/memory/unified-memory.integration-adapters.test.ts (8 tests) 1048ms
+ ✓ tests/memory/index.test.ts (12 tests) 1997ms
+   ✓ memory/index barrel > covers plugin lifecycle and config-driven factory behavior through the public unified memory engine  335ms
+ ✓ tests/memory/unified-memory.integration-adapters.test.ts (8 tests) 1024ms
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.006Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-5pEH7F\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.377Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-qQbq0F\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.007Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
+{"timestamp":"2026-06-12T12:25:11.377Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.007Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alicia"}
+{"timestamp":"2026-06-12T12:25:11.378Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alicia"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.007Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Bob"}
+{"timestamp":"2026-06-12T12:25:11.378Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Bob"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.007Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Broken Seal"}
+{"timestamp":"2026-06-12T12:25:11.378Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Broken Seal"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.008Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Late Bell"}
+{"timestamp":"2026-06-12T12:25:11.378Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Late Bell"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.008Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Closed Loop"}
+{"timestamp":"2026-06-12T12:25:11.379Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Closed Loop"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.008Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"KNOWS","toName":"Bob"}
+{"timestamp":"2026-06-12T12:25:11.379Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"KNOWS","toName":"Bob"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.008Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"MENTORS","toName":"Alicia"}
+{"timestamp":"2026-06-12T12:25:11.380Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"MENTORS","toName":"Alicia"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports the remaining search, relationship, foreshadow, and mutation tail behavior
-{"timestamp":"2026-06-12T11:54:51.010Z","level":"info","module":"gateway/graph-engine","message":"Deleted entity: Bob"}
+{"timestamp":"2026-06-12T12:25:11.381Z","level":"info","module":"gateway/graph-engine","message":"Deleted entity: Bob"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > returns bounded errors for missing entities on create, update, and delete flows
-{"timestamp":"2026-06-12T11:54:51.038Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-ZUXcIO\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.407Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-ZvwYdz\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > returns bounded errors for missing entities on create, update, and delete flows
-{"timestamp":"2026-06-12T11:54:51.038Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
+{"timestamp":"2026-06-12T12:25:11.408Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > applies executeCypher guards and bounded typed-node query semantics
-{"timestamp":"2026-06-12T11:54:51.065Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-U62g8K\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.433Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-1rEaa3\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > applies executeCypher guards and bounded typed-node query semantics
-{"timestamp":"2026-06-12T11:54:51.065Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Event","name":"Bridge Alarm"}
+{"timestamp":"2026-06-12T12:25:11.433Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Event","name":"Bridge Alarm"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > applies executeCypher guards and bounded typed-node query semantics
-{"timestamp":"2026-06-12T11:54:51.066Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Event","name":"Harbor Bell"}
+{"timestamp":"2026-06-12T12:25:11.433Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Event","name":"Harbor Bell"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports relationship-match and traversal-like executeCypher queries
-{"timestamp":"2026-06-12T11:54:51.092Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-qbUsOm\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.462Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-wxhgJV\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports relationship-match and traversal-like executeCypher queries
-{"timestamp":"2026-06-12T11:54:51.092Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
+{"timestamp":"2026-06-12T12:25:11.462Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports relationship-match and traversal-like executeCypher queries
-{"timestamp":"2026-06-12T11:54:51.092Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Bob"}
+{"timestamp":"2026-06-12T12:25:11.463Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Bob"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports relationship-match and traversal-like executeCypher queries
-{"timestamp":"2026-06-12T11:54:51.092Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Carol"}
+{"timestamp":"2026-06-12T12:25:11.463Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Carol"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports relationship-match and traversal-like executeCypher queries
-{"timestamp":"2026-06-12T11:54:51.092Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"KNOWS","toName":"Bob"}
+{"timestamp":"2026-06-12T12:25:11.463Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"KNOWS","toName":"Bob"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports relationship-match and traversal-like executeCypher queries
-{"timestamp":"2026-06-12T11:54:51.093Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Bob","relationType":"KNOWS","toName":"Carol"}
+{"timestamp":"2026-06-12T12:25:11.464Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Bob","relationType":"KNOWS","toName":"Carol"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports scoped MERGE mutations for persisted authoring and survives reloads
-{"timestamp":"2026-06-12T11:54:51.119Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-cZ3oLl\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.490Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-4EIYzZ\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > supports scoped MERGE mutations for persisted authoring and survives reloads
-{"timestamp":"2026-06-12T11:54:51.129Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-cZ3oLl\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.499Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-4EIYzZ\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.151Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-config-ZNv2Yy\\data-root\\graph.db"}
+{"timestamp":"2026-06-12T12:25:11.522Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-config-bJVaqj\\data-root\\graph.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.153Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
+{"timestamp":"2026-06-12T12:25:11.524Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.153Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Event","name":"Bridge Alarm"}
+{"timestamp":"2026-06-12T12:25:11.524Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Event","name":"Bridge Alarm"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.153Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Bob"}
+{"timestamp":"2026-06-12T12:25:11.524Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Bob"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.153Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Location","name":"Watchtower"}
+{"timestamp":"2026-06-12T12:25:11.525Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Location","name":"Watchtower"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.154Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Signal Fire"}
+{"timestamp":"2026-06-12T12:25:11.525Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Signal Fire"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.154Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"PARTICIPATES","toName":"Bridge Alarm"}
+{"timestamp":"2026-06-12T12:25:11.525Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"PARTICIPATES","toName":"Bridge Alarm"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.154Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"KNOWS","toName":"Bob"}
+{"timestamp":"2026-06-12T12:25:11.526Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice","relationType":"KNOWS","toName":"Bob"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers config-driven lifecycle, plugin, timeline, and projection compatibility branches
-{"timestamp":"2026-06-12T11:54:51.186Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-config-ZNv2Yy\\configured-graph.db"}
-{"timestamp":"2026-06-12T11:54:51.211Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-config-ZNv2Yy\\configured-niko-graph.db"}
+{"timestamp":"2026-06-12T12:25:11.560Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-config-bJVaqj\\configured-graph.db"}
+{"timestamp":"2026-06-12T12:25:11.584Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-config-bJVaqj\\configured-niko-graph.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.245Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-wnrCSO\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.617Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-rV7TsZ\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.245Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Scoped Hero"}
+{"timestamp":"2026-06-12T12:25:11.617Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Scoped Hero"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.245Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Project Scout"}
+{"timestamp":"2026-06-12T12:25:11.617Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Project Scout"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.245Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Legacy Echo"}
+{"timestamp":"2026-06-12T12:25:11.617Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Legacy Echo"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.246Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Other Realm"}
+{"timestamp":"2026-06-12T12:25:11.617Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Other Realm"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.246Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Null Props"}
+{"timestamp":"2026-06-12T12:25:11.618Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Null Props"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.246Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Scoped Hero","relationType":"KNOWS","toName":"Project Scout"}
+{"timestamp":"2026-06-12T12:25:11.618Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Scoped Hero","relationType":"KNOWS","toName":"Project Scout"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.251Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Scoped Hero","relationType":"ALLY","toName":"Project Scout"}
+{"timestamp":"2026-06-12T12:25:11.621Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Scoped Hero","relationType":"ALLY","toName":"Project Scout"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.272Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-home-fallback-uJOHhm\\.niko\\graph.db"}
-{"timestamp":"2026-06-12T11:54:51.296Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-88Y3Ve\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.643Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-home-fallback-7Saun6\\.niko\\graph.db"}
+{"timestamp":"2026-06-12T12:25:11.669Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-fnsdDx\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.297Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Raw Foreshadow Null"}
+{"timestamp":"2026-06-12T12:25:11.670Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Raw Foreshadow Null"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.317Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-yXMnjU\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.691Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-bwDVAS\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.317Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"CreateOnly Hero"}
+{"timestamp":"2026-06-12T12:25:11.691Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"CreateOnly Hero"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.350Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-m2PIE5\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.725Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-ZGTM67\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.350Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Clamp A"}
+{"timestamp":"2026-06-12T12:25:11.725Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Clamp A"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.350Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Clamp B"}
+{"timestamp":"2026-06-12T12:25:11.725Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Clamp B"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.351Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Clamp C"}
+{"timestamp":"2026-06-12T12:25:11.726Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Clamp C"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.351Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Clamp A","relationType":"KNOWS","toName":"Clamp B"}
+{"timestamp":"2026-06-12T12:25:11.726Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Clamp A","relationType":"KNOWS","toName":"Clamp B"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.351Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Clamp B","relationType":"KNOWS","toName":"Clamp C"}
+{"timestamp":"2026-06-12T12:25:11.726Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Clamp B","relationType":"KNOWS","toName":"Clamp C"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.377Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-pq2rnM\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.752Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-HwUl5b\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.377Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Center"}
+{"timestamp":"2026-06-12T12:25:11.752Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Center"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.378Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Mid"}
+{"timestamp":"2026-06-12T12:25:11.752Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Mid"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.378Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Leaf"}
+{"timestamp":"2026-06-12T12:25:11.752Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Leaf"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.378Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Center","relationType":"KNOWS","toName":"Mid"}
+{"timestamp":"2026-06-12T12:25:11.752Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Center","relationType":"KNOWS","toName":"Mid"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.378Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Center","relationType":"KNOWS","toName":"Leaf"}
+{"timestamp":"2026-06-12T12:25:11.753Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Center","relationType":"KNOWS","toName":"Leaf"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.378Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Mid","relationType":"KNOWS","toName":"Leaf"}
+{"timestamp":"2026-06-12T12:25:11.753Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Mid","relationType":"KNOWS","toName":"Leaf"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.405Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-9aN19q\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.780Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-WjIVPZ\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.405Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alias Hero"}
+{"timestamp":"2026-06-12T12:25:11.780Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alias Hero"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers scoped reads and merge mutation parser edge branches
-{"timestamp":"2026-06-12T11:54:51.413Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Scoped Null Props"}
+{"timestamp":"2026-06-12T12:25:11.791Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Foreshadow","name":"Scoped Null Props"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers remaining helper fallback branches with controlled harnesses
-{"timestamp":"2026-06-12T11:54:51.440Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-6kuLjg\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.820Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-Lj4lrC\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers remaining helper fallback branches with controlled harnesses
-{"timestamp":"2026-06-12T11:54:51.440Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Branch Hero"}
+{"timestamp":"2026-06-12T12:25:11.820Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Branch Hero"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers remaining helper fallback branches with controlled harnesses
-{"timestamp":"2026-06-12T11:54:51.440Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Branch Ally"}
+{"timestamp":"2026-06-12T12:25:11.820Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Branch Ally"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers remaining helper fallback branches with controlled harnesses
-{"timestamp":"2026-06-12T11:54:51.441Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Branch Hero","relationType":"KNOWS","toName":"Branch Ally"}
+{"timestamp":"2026-06-12T12:25:11.820Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Branch Hero","relationType":"KNOWS","toName":"Branch Ally"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers remaining helper fallback branches with controlled harnesses
-{"timestamp":"2026-06-12T11:54:51.460Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-aquDrA\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.840Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-gxMDVZ\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers remaining helper fallback branches with controlled harnesses
-{"timestamp":"2026-06-12T11:54:51.485Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-from-config-GQChh7\\graph.db"}
+{"timestamp":"2026-06-12T12:25:11.866Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-from-config-dLiJjb\\graph.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.518Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-jy68ho\\graph-engine.db"}
+{"timestamp":"2026-06-12T12:25:11.898Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-engine-G2hksL\\graph-engine.db"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.518Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice Scope"}
+{"timestamp":"2026-06-12T12:25:11.898Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice Scope"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.518Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Bob Scope"}
+{"timestamp":"2026-06-12T12:25:11.898Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Bob Scope"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.518Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Carol Scope"}
+{"timestamp":"2026-06-12T12:25:11.898Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Carol Scope"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.519Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Event","name":"Bridge Alarm Scoped"}
+{"timestamp":"2026-06-12T12:25:11.899Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Event","name":"Bridge Alarm Scoped"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.519Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice Scope","relationType":"KNOWS","toName":"Bob Scope"}
+{"timestamp":"2026-06-12T12:25:11.899Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice Scope","relationType":"KNOWS","toName":"Bob Scope"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.519Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Bob Scope","relationType":"KNOWS","toName":"Carol Scope"}
+{"timestamp":"2026-06-12T12:25:11.899Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Bob Scope","relationType":"KNOWS","toName":"Carol Scope"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.519Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice Scope","relationType":"PARTICIPATES","toName":"Bridge Alarm Scoped"}
+{"timestamp":"2026-06-12T12:25:11.899Z","level":"info","module":"gateway/graph-engine","message":"Created relation","fromName":"Alice Scope","relationType":"PARTICIPATES","toName":"Bridge Alarm Scoped"}
 
 stdout | tests/graph/graph-engine.test.ts > graph/graph-engine > covers fallback match and scoped timeline traversal branches
-{"timestamp":"2026-06-12T11:54:51.521Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":".writing/graph_db"}
+{"timestamp":"2026-06-12T12:25:11.901Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":".writing/graph_db"}
 
- ✓ tests/graph/graph-engine.test.ts (9 tests) 547ms
+ ✓ tests/graph/graph-engine.test.ts (9 tests) 554ms
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > supports bounded CRUD, query, stats, and shortest-path behavior
-{"timestamp":"2026-06-12T11:54:51.618Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-0JXTZT\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.618Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Alice","id":"char-alice"}
-{"timestamp":"2026-06-12T11:54:51.619Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Bob","id":"char-bob"}
-{"timestamp":"2026-06-12T11:54:51.619Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"object","name":"Silver Key","id":"item-key"}
-{"timestamp":"2026-06-12T11:54:51.619Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-alice -[KNOWS]-> char-bob"}
-{"timestamp":"2026-06-12T11:54:51.619Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-bob -[OWNS]-> item-key"}
-{"timestamp":"2026-06-12T11:54:51.631Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.003Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-GCc4AP\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.004Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Alice","id":"char-alice"}
+{"timestamp":"2026-06-12T12:25:12.004Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Bob","id":"char-bob"}
+{"timestamp":"2026-06-12T12:25:12.005Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"object","name":"Silver Key","id":"item-key"}
+{"timestamp":"2026-06-12T12:25:12.005Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-alice -[KNOWS]-> char-bob"}
+{"timestamp":"2026-06-12T12:25:12.005Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-bob -[OWNS]-> item-key"}
+{"timestamp":"2026-06-12T12:25:12.015Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > supports the remaining update, relationship, search, and delete tail behavior
-{"timestamp":"2026-06-12T11:54:51.652Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-c6QWYc\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.652Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Alice Tail","id":"char-alice-tail"}
-{"timestamp":"2026-06-12T11:54:51.652Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Bob Tail","id":"char-bob-tail"}
-{"timestamp":"2026-06-12T11:54:51.653Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"location","name":"Watchtower","id":"loc-watchtower"}
-{"timestamp":"2026-06-12T11:54:51.653Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-alice-tail -[KNOWS]-> char-bob-tail"}
-{"timestamp":"2026-06-12T11:54:51.653Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-bob-tail -[LOCATED_IN]-> loc-watchtower"}
-{"timestamp":"2026-06-12T11:54:51.653Z","level":"info","module":"gateway/graph-manager","message":"Updated entity","id":"char-alice-tail"}
-{"timestamp":"2026-06-12T11:54:51.654Z","level":"info","module":"gateway/graph-manager","message":"Deleted relationship: rel-tail-knows"}
-{"timestamp":"2026-06-12T11:54:51.654Z","level":"info","module":"gateway/graph-manager","message":"Deleted entity: char-bob-tail"}
-{"timestamp":"2026-06-12T11:54:51.662Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.039Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-DBZPvY\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.040Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Alice Tail","id":"char-alice-tail"}
+{"timestamp":"2026-06-12T12:25:12.040Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Bob Tail","id":"char-bob-tail"}
+{"timestamp":"2026-06-12T12:25:12.040Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"location","name":"Watchtower","id":"loc-watchtower"}
+{"timestamp":"2026-06-12T12:25:12.040Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-alice-tail -[KNOWS]-> char-bob-tail"}
+{"timestamp":"2026-06-12T12:25:12.040Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-bob-tail -[LOCATED_IN]-> loc-watchtower"}
+{"timestamp":"2026-06-12T12:25:12.041Z","level":"info","module":"gateway/graph-manager","message":"Updated entity","id":"char-alice-tail"}
+{"timestamp":"2026-06-12T12:25:12.041Z","level":"info","module":"gateway/graph-manager","message":"Deleted relationship: rel-tail-knows"}
+{"timestamp":"2026-06-12T12:25:12.041Z","level":"info","module":"gateway/graph-manager","message":"Deleted entity: char-bob-tail"}
+{"timestamp":"2026-06-12T12:25:12.049Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > supports shortest-path edge cases and subgraph compatibility behavior
-{"timestamp":"2026-06-12T11:54:51.682Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-EJTFKb\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.683Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Algo Alice","id":"char-algo-alice"}
-{"timestamp":"2026-06-12T11:54:51.683Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Algo Bob","id":"char-algo-bob"}
-{"timestamp":"2026-06-12T11:54:51.683Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"location","name":"North Tower","id":"loc-algo-tower"}
-{"timestamp":"2026-06-12T11:54:51.683Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Ghost","id":"char-algo-ghost"}
-{"timestamp":"2026-06-12T11:54:51.683Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-algo-alice -[KNOWS]-> char-algo-bob"}
-{"timestamp":"2026-06-12T11:54:51.683Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-algo-bob -[LOCATED_IN]-> loc-algo-tower"}
-{"timestamp":"2026-06-12T11:54:51.691Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.069Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-6hxcj8\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.070Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Algo Alice","id":"char-algo-alice"}
+{"timestamp":"2026-06-12T12:25:12.070Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Algo Bob","id":"char-algo-bob"}
+{"timestamp":"2026-06-12T12:25:12.070Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"location","name":"North Tower","id":"loc-algo-tower"}
+{"timestamp":"2026-06-12T12:25:12.070Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Ghost","id":"char-algo-ghost"}
+{"timestamp":"2026-06-12T12:25:12.070Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-algo-alice -[KNOWS]-> char-algo-bob"}
+{"timestamp":"2026-06-12T12:25:12.070Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-algo-bob -[LOCATED_IN]-> loc-algo-tower"}
+{"timestamp":"2026-06-12T12:25:12.078Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > supports deeper CREATE, property-filter, and relationship-match cypher behavior
-{"timestamp":"2026-06-12T11:54:51.711Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-CYFkZ8\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.712Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Cypher Alice","id":"ffb3be2c-4126-492b-bb8f-b89319da1261"}
-{"timestamp":"2026-06-12T11:54:51.713Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"event","name":"Bridge Alarm","id":"4b7c409d-3efd-4917-a753-6ad1bffa929f"}
-{"timestamp":"2026-06-12T11:54:51.713Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Cypher Bob","id":"char-cypher-bob"}
-{"timestamp":"2026-06-12T11:54:51.713Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"location","name":"North Bridge","id":"loc-cypher-bridge"}
-{"timestamp":"2026-06-12T11:54:51.713Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-cypher-bob -[LOCATED_IN]-> loc-cypher-bridge"}
-{"timestamp":"2026-06-12T11:54:51.720Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.098Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-ivloGf\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.099Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Cypher Alice","id":"85faf0a1-31d7-473a-b8f1-3f3552067173"}
+{"timestamp":"2026-06-12T12:25:12.100Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"event","name":"Bridge Alarm","id":"2823a16f-31e9-41fc-a6cc-470e82a99a25"}
+{"timestamp":"2026-06-12T12:25:12.100Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Cypher Bob","id":"char-cypher-bob"}
+{"timestamp":"2026-06-12T12:25:12.100Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"location","name":"North Bridge","id":"loc-cypher-bridge"}
+{"timestamp":"2026-06-12T12:25:12.101Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-cypher-bob -[LOCATED_IN]-> loc-cypher-bridge"}
+{"timestamp":"2026-06-12T12:25:12.108Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > supports legacy addEntity and addRelation aliases for compatibility
-{"timestamp":"2026-06-12T11:54:51.741Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-aZO4aY\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.742Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Legacy Alice","id":"char-legacy-alice"}
-{"timestamp":"2026-06-12T11:54:51.742Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Legacy Bob","id":"char-legacy-bob"}
-{"timestamp":"2026-06-12T11:54:51.742Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-legacy-alice -[KNOWS]-> char-legacy-bob"}
-{"timestamp":"2026-06-12T11:54:51.749Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.134Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-W6nMoM\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.135Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Legacy Alice","id":"char-legacy-alice"}
+{"timestamp":"2026-06-12T12:25:12.135Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Legacy Bob","id":"char-legacy-bob"}
+{"timestamp":"2026-06-12T12:25:12.135Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-legacy-alice -[KNOWS]-> char-legacy-bob"}
+{"timestamp":"2026-06-12T12:25:12.142Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > covers parser type detection and raw SQL fallback behavior
-{"timestamp":"2026-06-12T11:54:51.771Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-D25QfW\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.771Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"SQL Alice","id":"char-sql-alice"}
-{"timestamp":"2026-06-12T11:54:51.778Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.162Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-07VixR\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.162Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"SQL Alice","id":"char-sql-alice"}
+{"timestamp":"2026-06-12T12:25:12.171Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > covers traversal edge limits and LIKE-search fallback behavior
-{"timestamp":"2026-06-12T11:54:51.799Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-pgnNnt\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.799Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Fallback Alice","id":"char-fallback-alice"}
-{"timestamp":"2026-06-12T11:54:51.799Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Fallback Bob","id":"char-fallback-bob"}
-{"timestamp":"2026-06-12T11:54:51.799Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-fallback-alice -[KNOWS]-> char-fallback-bob"}
-{"timestamp":"2026-06-12T11:54:51.806Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.191Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-HGhzUS\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.192Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Fallback Alice","id":"char-fallback-alice"}
+{"timestamp":"2026-06-12T12:25:12.192Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Fallback Bob","id":"char-fallback-bob"}
+{"timestamp":"2026-06-12T12:25:12.192Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: char-fallback-alice -[KNOWS]-> char-fallback-bob"}
+{"timestamp":"2026-06-12T12:25:12.199Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > covers parser conversions and internal fallback branches
-{"timestamp":"2026-06-12T11:54:51.827Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-zPW9Jb\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.827Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"No Id Entity","id":"3f025757-4ee8-4589-96af-abf7a1859c2c"}
-{"timestamp":"2026-06-12T11:54:51.828Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"concept","name":"Entity_7eb855f3","id":"ff072400-e3ad-48ba-880b-b12176528215"}
-{"timestamp":"2026-06-12T11:54:51.828Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"concept","name":"Fallback Label Entity","id":"fcd21f3c-c2a7-4012-b278-ce8232631d81"}
-{"timestamp":"2026-06-12T11:54:51.828Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Entity_885461cb","id":"17d5e387-2cfc-4c64-bd10-171c47a7429e"}
-{"timestamp":"2026-06-12T11:54:51.829Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Limit Source A","id":"limit-source-a"}
-{"timestamp":"2026-06-12T11:54:51.830Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Limit Source B","id":"limit-source-b"}
-{"timestamp":"2026-06-12T11:54:51.830Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Limit Neighbor","id":"limit-neighbor"}
-{"timestamp":"2026-06-12T11:54:51.830Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: limit-source-a -[KNOWS]-> limit-neighbor"}
-{"timestamp":"2026-06-12T11:54:51.830Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: limit-source-b -[KNOWS]-> limit-neighbor"}
-{"timestamp":"2026-06-12T11:54:51.830Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Isolated Node","id":"isolated-node"}
-{"timestamp":"2026-06-12T11:54:51.830Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Duplicate Root","id":"dup-root"}
-{"timestamp":"2026-06-12T11:54:51.831Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Duplicate Left","id":"dup-left"}
-{"timestamp":"2026-06-12T11:54:51.831Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Duplicate Right","id":"dup-right"}
-{"timestamp":"2026-06-12T11:54:51.831Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Duplicate Leaf","id":"dup-leaf"}
-{"timestamp":"2026-06-12T11:54:51.831Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: dup-root -[KNOWS]-> dup-left"}
-{"timestamp":"2026-06-12T11:54:51.831Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: dup-root -[KNOWS]-> dup-right"}
-{"timestamp":"2026-06-12T11:54:51.831Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: dup-left -[KNOWS]-> dup-leaf"}
-{"timestamp":"2026-06-12T11:54:51.831Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: dup-right -[KNOWS]-> dup-leaf"}
-{"timestamp":"2026-06-12T11:54:51.838Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.219Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-RTLb3c\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.220Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"No Id Entity","id":"79629510-514c-404f-bd12-800c1c96dc94"}
+{"timestamp":"2026-06-12T12:25:12.220Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"concept","name":"Entity_90d35291","id":"64c9a664-6505-4784-ba06-66f3d089a11a"}
+{"timestamp":"2026-06-12T12:25:12.221Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"concept","name":"Fallback Label Entity","id":"04da28e7-da77-4875-9fc7-0e165033fa92"}
+{"timestamp":"2026-06-12T12:25:12.221Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Entity_4ec310ac","id":"78a542fc-78c7-4653-93a9-ab12ebe81a62"}
+{"timestamp":"2026-06-12T12:25:12.222Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Limit Source A","id":"limit-source-a"}
+{"timestamp":"2026-06-12T12:25:12.223Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Limit Source B","id":"limit-source-b"}
+{"timestamp":"2026-06-12T12:25:12.223Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Limit Neighbor","id":"limit-neighbor"}
+{"timestamp":"2026-06-12T12:25:12.223Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: limit-source-a -[KNOWS]-> limit-neighbor"}
+{"timestamp":"2026-06-12T12:25:12.223Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: limit-source-b -[KNOWS]-> limit-neighbor"}
+{"timestamp":"2026-06-12T12:25:12.223Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Isolated Node","id":"isolated-node"}
+{"timestamp":"2026-06-12T12:25:12.224Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Duplicate Root","id":"dup-root"}
+{"timestamp":"2026-06-12T12:25:12.224Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Duplicate Left","id":"dup-left"}
+{"timestamp":"2026-06-12T12:25:12.224Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Duplicate Right","id":"dup-right"}
+{"timestamp":"2026-06-12T12:25:12.224Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Duplicate Leaf","id":"dup-leaf"}
+{"timestamp":"2026-06-12T12:25:12.224Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: dup-root -[KNOWS]-> dup-left"}
+{"timestamp":"2026-06-12T12:25:12.224Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: dup-root -[KNOWS]-> dup-right"}
+{"timestamp":"2026-06-12T12:25:12.225Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: dup-left -[KNOWS]-> dup-leaf"}
+{"timestamp":"2026-06-12T12:25:12.225Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: dup-right -[KNOWS]-> dup-leaf"}
+{"timestamp":"2026-06-12T12:25:12.232Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > covers where-property compare and lifecycle compatibility branches
-{"timestamp":"2026-06-12T11:54:51.860Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-Qxz6LP\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.882Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\.niko\\graph_manager.db"}
-{"timestamp":"2026-06-12T11:54:51.888Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
-{"timestamp":"2026-06-12T11:54:51.889Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Compare Source","id":"compare-source"}
-{"timestamp":"2026-06-12T11:54:51.889Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Compare Target","id":"compare-target"}
-{"timestamp":"2026-06-12T11:54:51.889Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: compare-source -[KNOWS]-> compare-target"}
-{"timestamp":"2026-06-12T11:54:51.897Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.252Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-yTfjz7\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.270Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\.niko\\graph_manager.db"}
+{"timestamp":"2026-06-12T12:25:12.276Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.276Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Compare Source","id":"compare-source"}
+{"timestamp":"2026-06-12T12:25:12.277Z","level":"info","module":"gateway/graph-manager","message":"Created entity","type":"character","name":"Compare Target","id":"compare-target"}
+{"timestamp":"2026-06-12T12:25:12.277Z","level":"info","module":"gateway/graph-manager","message":"Created relationship: compare-source -[KNOWS]-> compare-target"}
+{"timestamp":"2026-06-12T12:25:12.284Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > covers entity embedding helper content and metadata branches
-{"timestamp":"2026-06-12T11:54:51.917Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-wHqcl3\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:51.925Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.303Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-xepklM\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.309Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > logs and swallows vector adapter failures for fire-and-forget embedding hooks
-{"timestamp":"2026-06-12T11:54:51.946Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-KmYtYu\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.329Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-pkf3M0\\graph-manager.db"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > logs and swallows vector adapter failures for fire-and-forget embedding hooks
-{"timestamp":"2026-06-12T11:54:51.956Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.337Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
 stdout | tests/graph/graph-manager.test.ts > graph/graph-manager > covers cache eviction and process-wide default vector search wiring
-{"timestamp":"2026-06-12T11:54:51.980Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-KMq61V\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:52.001Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-d2sHYw\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:52.009Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
-{"timestamp":"2026-06-12T11:54:52.035Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-TLo41O\\graph-manager.db"}
-{"timestamp":"2026-06-12T11:54:52.043Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
-{"timestamp":"2026-06-12T11:54:52.051Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.357Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-cXT105\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.376Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-XNnBqB\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.383Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.403Z","level":"info","module":"gateway/graph-manager","message":"GraphManager initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-manager-2nFdZ8\\graph-manager.db"}
+{"timestamp":"2026-06-12T12:25:12.410Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
+{"timestamp":"2026-06-12T12:25:12.417Z","level":"info","module":"gateway/graph-manager","message":"GraphManager closed"}
 
- ✓ tests/graph/graph-manager.test.ts (12 tests) 456ms
- ✓ tests/store/store-manager.test.ts (8 tests) 354ms
+ ✓ tests/graph/graph-manager.test.ts (12 tests) 438ms
+ ✓ tests/store/store-manager.test.ts (8 tests) 366ms
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > loads persisted mappings with compatibility defaults and skips blank or invalid lines
-{"timestamp":"2026-06-12T11:54:52.564Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-nbitHb"}
+{"timestamp":"2026-06-12T12:25:12.929Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-ryKdo2"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > keeps initialization resilient when mapping persistence is unreadable
-{"timestamp":"2026-06-12T11:54:52.575Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-jjSUgZ"}
+{"timestamp":"2026-06-12T12:25:12.938Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-vzwDh6"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > handles missing mapping file branch when structure setup is bypassed
-{"timestamp":"2026-06-12T11:54:52.579Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-sL8RZx"}
+{"timestamp":"2026-06-12T12:25:12.943Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-udOG4o"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > logs mapping persistence failures without breaking ingest or delete public behavior
-{"timestamp":"2026-06-12T11:54:52.606Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-JCV1Vd"}
-{"timestamp":"2026-06-12T11:54:52.607Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-shadow"}
-{"timestamp":"2026-06-12T11:54:52.608Z","level":"info","module":"gateway/store-contract","message":"Deleted document: doc-shadow"}
+{"timestamp":"2026-06-12T12:25:12.968Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-gIX4hD"}
+{"timestamp":"2026-06-12T12:25:12.970Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-shadow"}
+{"timestamp":"2026-06-12T12:25:12.970Z","level":"info","module":"gateway/store-contract","message":"Deleted document: doc-shadow"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > ingests content, emits memory/citation files, and reports integrity through the public contract
-{"timestamp":"2026-06-12T11:54:52.620Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-sUUMuu"}
-{"timestamp":"2026-06-12T11:54:52.622Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-openkl-1"}
-{"timestamp":"2026-06-12T11:54:52.625Z","level":"info","module":"gateway/store-contract","message":"Created memory: mem-1"}
+{"timestamp":"2026-06-12T12:25:12.981Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-uhtZmF"}
+{"timestamp":"2026-06-12T12:25:12.982Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-openkl-1"}
+{"timestamp":"2026-06-12T12:25:12.986Z","level":"info","module":"gateway/store-contract","message":"Created memory: mem-1"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > covers optional memory metadata, missing citations, and integrity anomaly reporting
-{"timestamp":"2026-06-12T11:54:52.639Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-p0577i"}
-{"timestamp":"2026-06-12T11:54:52.640Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-hash"}
-{"timestamp":"2026-06-12T11:54:52.640Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-missing"}
-{"timestamp":"2026-06-12T11:54:52.641Z","level":"info","module":"gateway/store-contract","message":"Created memory: mem-untagged"}
+{"timestamp":"2026-06-12T12:25:13.000Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-Ynvsrv"}
+{"timestamp":"2026-06-12T12:25:13.001Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-hash"}
+{"timestamp":"2026-06-12T12:25:13.002Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-missing"}
+{"timestamp":"2026-06-12T12:25:13.004Z","level":"info","module":"gateway/store-contract","message":"Created memory: mem-untagged"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > returns null when a citation file exists but contains invalid JSON
-{"timestamp":"2026-06-12T11:54:52.653Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-fevYS2"}
+{"timestamp":"2026-06-12T12:25:13.017Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-z5Sj6B"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > covers doc-id generation and malformed mapping ingestion branches
-{"timestamp":"2026-06-12T11:54:52.664Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-blBLuT"}
+{"timestamp":"2026-06-12T12:25:13.027Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-CNlUzj"}
 {"timestamp":"2026-04-27T12:34:56.000Z","level":"info","module":"gateway/store-contract","message":"Ingested content as document: doc-20260427123456000Z-5640bd18"}
-{"timestamp":"2026-06-12T11:54:52.669Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-blBLuT"}
+{"timestamp":"2026-06-12T12:25:13.032Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-CNlUzj"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > uses copy fallback for topic links on win32 platforms
-{"timestamp":"2026-06-12T11:54:52.679Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-1se2jQ"}
-{"timestamp":"2026-06-12T11:54:52.682Z","level":"info","module":"gateway/store-contract","message":"Created memory: mem-copy-fallback"}
+{"timestamp":"2026-06-12T12:25:13.043Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-z8gmvc"}
+{"timestamp":"2026-06-12T12:25:13.046Z","level":"info","module":"gateway/store-contract","message":"Created memory: mem-copy-fallback"}
 
 stdout | tests/store/openkl-contract.test.ts > store/openkl-contract > covers non-win32 topic link handling branches without breaking memory creation
-{"timestamp":"2026-06-12T11:54:52.694Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-SMuO1O"}
-{"timestamp":"2026-06-12T11:54:52.696Z","level":"info","module":"gateway/store-contract","message":"Created memory: mem-symlink-branch"}
+{"timestamp":"2026-06-12T12:25:13.056Z","level":"info","module":"gateway/store-contract","message":"OpenKL contract initialized","basePath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-openkl-P4XEIU"}
+{"timestamp":"2026-06-12T12:25:13.059Z","level":"info","module":"gateway/store-contract","message":"Created memory: mem-symlink-branch"}
 
- ✓ tests/store/openkl-contract.test.ts (12 tests) 143ms
+ ✓ tests/store/openkl-contract.test.ts (12 tests) 141ms
 stdout | tests/graph/index.test.ts > graph/index barrel > provides a working graph engine through the barrel
-{"timestamp":"2026-06-12T11:54:52.763Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-barrel-70b5a6fb-e61e-4676-aabf-1a8a0f2a69ae\\graph.db"}
+{"timestamp":"2026-06-12T12:25:13.126Z","level":"info","module":"gateway/graph-engine","message":"Graph engine initialized","dbPath":"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-graph-barrel-67b86d35-0417-4277-b835-a2a0ec54fde5\\graph.db"}
 
 stdout | tests/graph/index.test.ts > graph/index barrel > provides a working graph engine through the barrel
-{"timestamp":"2026-06-12T11:54:52.763Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
+{"timestamp":"2026-06-12T12:25:13.127Z","level":"info","module":"gateway/graph-engine","message":"Created entity","entityType":"Character","name":"Alice"}
 
- ✓ tests/graph/index.test.ts (2 tests) 30ms
+ ✓ tests/graph/index.test.ts (2 tests) 29ms
  ✓ tests/mcp/memory-service.test.ts (7 tests) 18ms
- ✓ tests/mcp/graph-service.test.ts (5 tests) 16ms
+ ✓ tests/mcp/graph-service.test.ts (5 tests) 15ms
  ✓ tests/store/index.test.ts (2 tests) 7ms
- ✓ tests/integrations/adapters.test.ts (4 tests) 7ms
+ ✓ tests/integrations/adapters.test.ts (4 tests) 5ms
 
  Test Files  11 passed (11)
       Tests  81 passed (81)
-   Start at  19:54:47
-   Duration  7.55s (transform 397ms, setup 25ms, collect 554ms, tests 4.63s, environment 0ms, prepare 84ms)
+   Start at  20:25:07
+   Duration  7.60s (transform 398ms, setup 27ms, collect 567ms, tests 4.60s, environment 0ms, prepare 86ms)
 
  % Coverage report from v8
 -------------------|---------|----------|---------|---------|-------------------
@@ -1167,78 +1171,78 @@ All files          |     100 |      100 |     100 |     100 |
 -------------------|---------|----------|---------|---------|-------------------
 
 stderr | tests/memory/index.test.ts > memory/index barrel > provides a working unified memory engine through the barrel
-{"timestamp":"2026-06-12T11:54:47.931Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:47.932Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:08.322Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:08.324Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > supports filtered search and temporal windows through the public unified memory engine
-{"timestamp":"2026-06-12T11:54:48.055Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:48.055Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:08.457Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:08.457Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > keeps search, temporal lookup, and conflict detection isolated by memory scope
-{"timestamp":"2026-06-12T11:54:48.197Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:48.197Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:08.605Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:08.605Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > round-trips retrieval profiles and cache entries through the public unified memory engine
-{"timestamp":"2026-06-12T11:54:48.340Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:48.340Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:08.741Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:08.741Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > expires and cleans retrieval cache entries through the public unified memory engine
-{"timestamp":"2026-06-12T11:54:48.477Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:48.477Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:08.885Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:08.885Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > reuses and resets the unified memory singleton through the public barrel helpers
-{"timestamp":"2026-06-12T11:54:48.980Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:48.980Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
-{"timestamp":"2026-06-12T11:54:49.093Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:49.093Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:09.391Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:09.391Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:09.499Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:09.499Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > applies environment-selected default adapters through the public config factory
-{"timestamp":"2026-06-12T11:54:49.203Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:49.203Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:09.611Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:09.611Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > detects and resolves public memory conflicts through the unified engine
-{"timestamp":"2026-06-12T11:54:49.323Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:49.323Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:09.727Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:09.727Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > supports explicit conflict resolution strategies through the unified engine
-{"timestamp":"2026-06-12T11:54:49.486Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:49.486Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:09.876Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:09.876Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/index.test.ts > memory/index barrel > preserves richer metadata when merge resolution combines sparse newer memories
-{"timestamp":"2026-06-12T11:54:49.759Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:49.759Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:10.158Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:10.158Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/unified-memory.integration-adapters.test.ts > UnifiedMemoryEngine integration adapters > keeps the local-first add path when postgres shadow-write is disabled
-{"timestamp":"2026-06-12T11:54:49.959Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:49.959Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:10.349Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:10.349Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/unified-memory.integration-adapters.test.ts > UnifiedMemoryEngine integration adapters > invokes the injected shadow-write adapter when postgres integration is enabled
-{"timestamp":"2026-06-12T11:54:50.077Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:50.078Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:10.465Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:10.465Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/unified-memory.integration-adapters.test.ts > UnifiedMemoryEngine integration adapters > preserves the local write when the shadow-write adapter fails
-{"timestamp":"2026-06-12T11:54:50.202Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:50.202Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:10.583Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:10.583Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/unified-memory.integration-adapters.test.ts > UnifiedMemoryEngine integration adapters > preserves the local write when the shadow-write adapter does not confirm success
-{"timestamp":"2026-06-12T11:54:50.320Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:50.320Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:10.706Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:10.706Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/unified-memory.integration-adapters.test.ts > UnifiedMemoryEngine integration adapters > uses environment-selected default adapters when no integration bundle is injected
-{"timestamp":"2026-06-12T11:54:50.444Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:50.445Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:10.827Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:10.828Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/unified-memory.integration-adapters.test.ts > UnifiedMemoryEngine integration adapters > uses environment-selected default adapters on the singleton accessor path
-{"timestamp":"2026-06-12T11:54:50.573Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:50.573Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:10.951Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:10.951Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/unified-memory.integration-adapters.test.ts > UnifiedMemoryEngine integration adapters > shadow-writes merged memories with inherited metadata on the merge path
-{"timestamp":"2026-06-12T11:54:50.699Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:50.699Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:11.072Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:11.072Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 
 stderr | tests/memory/unified-memory.integration-adapters.test.ts > UnifiedMemoryEngine integration adapters > preserves merge resolution when merge shadow-write throws after local merge is stored
-{"timestamp":"2026-06-12T11:54:50.856Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
-{"timestamp":"2026-06-12T11:54:50.856Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
+{"timestamp":"2026-06-12T12:25:11.222Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED: No embedding model installed — all vectors are dummy/zero, retrieval will not work properly","model":"BAAI/bge-small-zh-v1.5"}
+{"timestamp":"2026-06-12T12:25:11.222Z","level":"error","module":"gateway/memory","message":"EMBEDDING ENGINE DEGRADED at startup — semantic search/retrieval will return poor results"}
 ```
 
 #### desktop_check output
@@ -1271,195 +1275,198 @@ All matched files use Prettier code style!
 
  RUN  v3.2.4 C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop
 
- ✓ src/components/SettingsModal.test.tsx (18 tests) 8055ms
-   ✓ SettingsModal quality presets > persists retrieval and context type settings after save  634ms
-   ✓ SettingsModal quality presets > keeps open drafts local but reloads latest store settings on reopen  587ms
-   ✓ SettingsModal quality presets > adds deterministic id and name attributes to representative labeled fields  541ms
-   ✓ SettingsModal quality presets > renders backend config fields and only enables save for editable changes  682ms
-   ✓ SettingsModal quality presets > saves the backend ui bridge toggle through the shared config contract  2273ms
-   ✓ SettingsModal quality presets > renders backend config labels in english  553ms
-   ✓ SettingsModal quality presets > reloads backend config from the backend section  582ms
-   ✓ SettingsModal quality presets > renders backend sync status and disables actions while syncing  565ms
- ✓ src/components/StoryBiblePanel.test.tsx (10 tests) 6956ms
-   ✓ StoryBiblePanel > migrates the legacy local draft into persisted workspace authority and restores it after reload  775ms
-   ✓ StoryBiblePanel > exports compatibility drafts, imports persisted content, and keeps reset state after reload  1039ms
-   ✓ StoryBiblePanel > keeps the local draft visible and surfaces an explicit failure state when graph save fails  572ms
-   ✓ StoryBiblePanel > authors workspace-scoped scene, event, and timeline records and activates them  2728ms
-   ✓ StoryBiblePanel > renders without errors  419ms
-   ✓ StoryBiblePanel > matches snapshot  426ms
-   ✓ StoryBiblePanel > promotes synopsis into canon and shows the canon review preview  516ms
- ✓ src/components/ChatArea.test.tsx (29 tests) 5253ms
-   ✓ ChatArea P0 flows > sends comparison request and renders dual-model response when comparison is enabled  327ms
-   ✓ ChatArea P0 flows > opens template library panel and applies template in replace mode  321ms
-   ✓ ChatArea P0 flows > applies template in append mode with existing input  478ms
-   ✓ ChatArea P0 flows > restores focus to the trigger on escape and to the composer after apply  448ms
- ✓ src/components/knowledge/MemoryForm.test.tsx (13 tests) 3245ms
-   ✓ MemoryForm > queries temporal facts with an optional time value  403ms
-   ✓ MemoryForm > adds memory with content and optional fields  584ms
-   ✓ MemoryForm > uses the focused entity automatically when no explicit entity is provided  400ms
-   ✓ MemoryForm > prefers the explicit entity over the focused entity when both exist  556ms
-   ✓ MemoryForm > clears memory content input after successful addition  339ms
- ✓ src/components/knowledge/PersistedEntityTab.test.tsx (11 tests) 2883ms
-   ✓ persisted knowledge authoring tabs > creates, edits, and reloads persisted characters  828ms
-   ✓ persisted knowledge authoring tabs > creates persisted locations  304ms
-   ✓ persisted knowledge authoring tabs > creates persisted plot events  463ms
-   ✓ persisted knowledge authoring tabs > shows delete button when editing an existing character  309ms
-   ✓ persisted knowledge authoring tabs > shows confirmation before delete and cancels  419ms
-   ✓ persisted knowledge authoring tabs > deletes entity after confirmation  494ms
- ✓ src/components/WritingHelperPanel.test.tsx (12 tests) 2383ms
-   ✓ WritingHelperPanel mode options and payload > restores the captured handoff preset after the user changes parameters  322ms
-   ✓ WritingHelperPanel mode options and payload > applies selected skill packs through the primary writing request and shows used skills in the result  304ms
-   ✓ WritingHelperPanel mode options and payload > uses revision-safe replace/alternative/undo actions when the current input matches an editor selection snapshot  320ms
- ✓ src/components/EvaluationPanel.test.tsx (16 tests) 2142ms
-   ✓ EvaluationPanel actions > supports direct workflow actions and autofills IDs from response  420ms
- ✓ src/components/knowledge/LocationTab.test.tsx (8 tests) 1957ms
-   ✓ LocationTab > creates a new location via the form  664ms
-   ✓ LocationTab > clears the editor fields when the clear button is clicked  593ms
-   ✓ LocationTab > updates an existing location and persists changes  513ms
- ✓ src/components/knowledge/SkillTab.test.tsx (14 tests) 1930ms
-   ✓ SkillTab CRUD operations > creates a new skill  307ms
-   ✓ SkillTab CRUD operations > edits skill content and saves  515ms
- ✓ src/components/knowledge/PlotTab.test.tsx (8 tests) 1536ms
-   ✓ PlotTab > creates a new plot event via the form  898ms
-   ✓ PlotTab > clears the editor when the clear button is clicked  508ms
- ✓ src/components/knowledge/CharacterTab.test.tsx (9 tests) 1334ms
-   ✓ CharacterTab > creates a new character via the form  416ms
-   ✓ CharacterTab > clears the editor when the clear button is clicked  447ms
- ✓ src/components/AiTextOptimizer.test.tsx (8 tests) 1290ms
-   ✓ AiTextOptimizer > keeps English source labels and hints correct across manual edits and refresh  372ms
- ✓ src/hooks/writerWorkflowExperience.test.tsx (5 tests) 1175ms
-   ✓ writer workflow experience > clears stale workflow identifiers when switching to a legacy conversation  311ms
- ✓ src/components/KnowledgeModal.test.tsx (9 tests) 1102ms
- ✓ src/components/RevisionPreviewCard.test.tsx (15 tests) 1067ms
- ✓ src/components/PromptTemplatePanel.test.tsx (10 tests) 943ms
- ✓ src/components/QuickRollback.test.tsx (6 tests) 1044ms
-   ✓ QuickRollback > calls quickRollbackWorkflow with filled fields and shows success  374ms
-   ✓ QuickRollback > shows error message when rollback fails  401ms
- ✓ src/components/AutomationPanel.test.tsx (4 tests) 874ms
-   ✓ AutomationPanel reliability regressions > handles waiting-confirmation transition and confirm-token recovery  413ms
- ✓ src/components/EvaluationPanel.revision-loop.test.tsx (5 tests) 913ms
-   ✓ EvaluationPanel revision loop > generates a revision preview and applies it through revision-safe editor actions  364ms
- ✓ src/components/AppRightPanels.reload-persistence.test.tsx (1 test) 678ms
-   ✓ AppRightPanels persisted evaluation handoff reload > survives remount with the persisted revision-preview handoff intact  677ms
- ✓ src/components/AppRightPanels.test.tsx (4 tests) 664ms
-   ✓ AppRightPanels writer handoff continuity > keeps the evaluation source summary visible after the real panel switch and guidance clear  362ms
- ✓ src/components/cowriting/InlineHints.test.tsx (8 tests) 574ms
- ✓ src/components/ExportDialog-interaction.test.tsx (6 tests) 481ms
+ ✓ src/components/SettingsModal.test.tsx (18 tests) 8220ms
+   ✓ SettingsModal quality presets > persists retrieval and context type settings after save  671ms
+   ✓ SettingsModal quality presets > keeps open drafts local but reloads latest store settings on reopen  571ms
+   ✓ SettingsModal quality presets > adds deterministic id and name attributes to representative labeled fields  531ms
+   ✓ SettingsModal quality presets > renders backend config fields and only enables save for editable changes  632ms
+   ✓ SettingsModal quality presets > saves the backend ui bridge toggle through the shared config contract  2260ms
+   ✓ SettingsModal quality presets > renders backend config labels in english  613ms
+   ✓ SettingsModal quality presets > reloads backend config from the backend section  589ms
+   ✓ SettingsModal quality presets > renders backend sync status and disables actions while syncing  622ms
+ ✓ src/components/StoryBiblePanel.test.tsx (10 tests) 7082ms
+   ✓ StoryBiblePanel > migrates the legacy local draft into persisted workspace authority and restores it after reload  783ms
+   ✓ StoryBiblePanel > exports compatibility drafts, imports persisted content, and keeps reset state after reload  1029ms
+   ✓ StoryBiblePanel > keeps the local draft visible and surfaces an explicit failure state when graph save fails  569ms
+   ✓ StoryBiblePanel > authors workspace-scoped scene, event, and timeline records and activates them  2829ms
+   ✓ StoryBiblePanel > renders without errors  431ms
+   ✓ StoryBiblePanel > matches snapshot  436ms
+   ✓ StoryBiblePanel > promotes synopsis into canon and shows the canon review preview  528ms
+ ✓ src/components/ChatArea.test.tsx (29 tests) 5353ms
+   ✓ ChatArea P0 flows > sends comparison request and renders dual-model response when comparison is enabled  336ms
+   ✓ ChatArea P0 flows > opens template library panel and applies template in replace mode  381ms
+   ✓ ChatArea P0 flows > applies template in append mode with existing input  457ms
+   ✓ ChatArea P0 flows > restores focus to the trigger on escape and to the composer after apply  445ms
+ ✓ src/components/knowledge/MemoryForm.test.tsx (13 tests) 3308ms
+   ✓ MemoryForm > queries temporal facts with an optional time value  433ms
+   ✓ MemoryForm > adds memory with content and optional fields  602ms
+   ✓ MemoryForm > uses the focused entity automatically when no explicit entity is provided  310ms
+   ✓ MemoryForm > prefers the explicit entity over the focused entity when both exist  619ms
+   ✓ MemoryForm > clears memory content input after successful addition  353ms
+ ✓ src/components/knowledge/PersistedEntityTab.test.tsx (11 tests) 2905ms
+   ✓ persisted knowledge authoring tabs > creates, edits, and reloads persisted characters  816ms
+   ✓ persisted knowledge authoring tabs > creates persisted locations  309ms
+   ✓ persisted knowledge authoring tabs > creates persisted plot events  448ms
+   ✓ persisted knowledge authoring tabs > shows delete button when editing an existing character  308ms
+   ✓ persisted knowledge authoring tabs > shows confirmation before delete and cancels  435ms
+   ✓ persisted knowledge authoring tabs > deletes entity after confirmation  518ms
+ ✓ src/components/WritingHelperPanel.test.tsx (12 tests) 2543ms
+   ✓ WritingHelperPanel mode options and payload > restores the captured handoff preset after the user changes parameters  323ms
+   ✓ WritingHelperPanel mode options and payload > applies selected skill packs through the primary writing request and shows used skills in the result  375ms
+   ✓ WritingHelperPanel mode options and payload > uses revision-safe replace/alternative/undo actions when the current input matches an editor selection snapshot  339ms
+ ✓ src/components/EvaluationPanel.test.tsx (16 tests) 2150ms
+   ✓ EvaluationPanel actions > supports direct workflow actions and autofills IDs from response  439ms
+ ✓ src/components/knowledge/LocationTab.test.tsx (8 tests) 1994ms
+   ✓ LocationTab > creates a new location via the form  690ms
+   ✓ LocationTab > clears the editor fields when the clear button is clicked  570ms
+   ✓ LocationTab > updates an existing location and persists changes  528ms
+ ✓ src/components/knowledge/SkillTab.test.tsx (14 tests) 1883ms
+   ✓ SkillTab CRUD operations > creates a new skill  320ms
+   ✓ SkillTab CRUD operations > edits skill content and saves  497ms
+ ✓ src/components/knowledge/PlotTab.test.tsx (8 tests) 1610ms
+   ✓ PlotTab > creates a new plot event via the form  928ms
+   ✓ PlotTab > clears the editor when the clear button is clicked  529ms
+ ✓ src/components/knowledge/CharacterTab.test.tsx (9 tests) 1305ms
+   ✓ CharacterTab > creates a new character via the form  418ms
+   ✓ CharacterTab > clears the editor when the clear button is clicked  430ms
+ ✓ src/components/AiTextOptimizer.test.tsx (8 tests) 1279ms
+   ✓ AiTextOptimizer > keeps English source labels and hints correct across manual edits and refresh  354ms
+ ✓ src/hooks/writerWorkflowExperience.test.tsx (5 tests) 1218ms
+   ✓ writer workflow experience > clears stale workflow identifiers when switching to a legacy conversation  338ms
+ ✓ src/components/KnowledgeModal.test.tsx (9 tests) 1182ms
+ ✓ src/components/PromptTemplatePanel.test.tsx (10 tests) 1076ms
+ ✓ src/components/QuickRollback.test.tsx (6 tests) 1027ms
+   ✓ QuickRollback > calls quickRollbackWorkflow with filled fields and shows success  389ms
+   ✓ QuickRollback > shows error message when rollback fails  353ms
+ ✓ src/components/RevisionPreviewCard.test.tsx (15 tests) 1034ms
+ ✓ src/components/EvaluationPanel.revision-loop.test.tsx (5 tests) 844ms
+   ✓ EvaluationPanel revision loop > generates a revision preview and applies it through revision-safe editor actions  336ms
+ ✓ src/components/AutomationPanel.test.tsx (4 tests) 836ms
+   ✓ AutomationPanel reliability regressions > handles waiting-confirmation transition and confirm-token recovery  431ms
+ ✓ src/components/AppRightPanels.reload-persistence.test.tsx (1 test) 760ms
+   ✓ AppRightPanels persisted evaluation handoff reload > survives remount with the persisted revision-preview handoff intact  759ms
+ ✓ src/components/AppRightPanels.test.tsx (4 tests) 680ms
+   ✓ AppRightPanels writer handoff continuity > keeps the evaluation source summary visible after the real panel switch and guidance clear  388ms
+ ✓ src/components/cowriting/InlineHints.test.tsx (8 tests) 586ms
+ ✓ src/components/ExportDialog-interaction.test.tsx (6 tests) 533ms
  ✓ src/stores/settingsStore.test.ts (12 tests) 416ms
-   ✓ settingsStore prompt template library > does not persist sensitive api keys to localStorage  405ms
- ✓ src/components/editor/BubbleToolbar.test.tsx (5 tests) 369ms
- ✓ src/App.shell.test.tsx (1 test) 358ms
-   ✓ App shell integration > renders the real app shell wiring through useAppViewModel and routes shell actions to the right coordinators  357ms
- ✓ src/components/DocumentEditor.test.tsx (5 tests) 343ms
- ✓ src/components/QuickPanel.test.tsx (18 tests) 283ms
- ✓ src/components/ExportDialog.test.tsx (4 tests) 283ms
- ✓ src/components/AppHeader.test.tsx (5 tests) 318ms
- ✓ src/components/narrative-visualization/NarrativeVisualizationPanelContent.test.tsx (5 tests) 245ms
- ✓ src/hooks/useAppBackendBootstrap.test.tsx (5 tests) 261ms
- ✓ src/hooks/useAppRuntimeHealth.test.tsx (6 tests) 238ms
- ✓ src/utils/exportDocx.test.ts (25 tests) 206ms
- ✓ src/components/ChatAreaComposer.test.tsx (15 tests) 210ms
- ✓ src/components/panels/__tests__/ConflictResolutionPanel.test.tsx (7 tests) 259ms
- ✓ src/components/editor/SlashCommandMenu.test.tsx (20 tests) 192ms
- ✓ src/components/MessageBubble.test.tsx (6 tests) 166ms
- ✓ src/components/ForeshadowingTrackerPanel.test.tsx (2 tests) 121ms
- ✓ src/components/NikoEditor.revision-handle.test.tsx (7 tests) 142ms
- ✓ src/components/Sidebar.test.tsx (16 tests) 241ms
- ✓ src/components/narrative-visualization/__tests__/CharacterGraphView.test.tsx (16 tests) 153ms
- ✓ src/components/narrative-visualization/__tests__/TensionCurveView.test.tsx (16 tests) 145ms
- ✓ src/components/intelligence/WritingDashboard.test.tsx (7 tests) 172ms
- ✓ src/components/EvaluationDrillDownPanel.test.tsx (2 tests) 124ms
- ✓ src/components/ChatAreaModeControls.test.tsx (13 tests) 164ms
+   ✓ settingsStore prompt template library > does not persist sensitive api keys to localStorage  404ms
+ ✓ src/App.shell.test.tsx (1 test) 341ms
+   ✓ App shell integration > renders the real app shell wiring through useAppViewModel and routes shell actions to the right coordinators  340ms
+ ✓ src/components/editor/BubbleToolbar.test.tsx (5 tests) 323ms
+ ✓ src/components/DocumentEditor.test.tsx (5 tests) 357ms
+ ✓ src/components/AppHeader.test.tsx (5 tests) 298ms
+ ✓ src/components/ExportDialog.test.tsx (4 tests) 305ms
+ ✓ src/components/QuickPanel.test.tsx (18 tests) 285ms
+ ✓ src/components/narrative-visualization/NarrativeVisualizationPanelContent.test.tsx (5 tests) 272ms
+ ✓ src/hooks/useAppBackendBootstrap.test.tsx (5 tests) 257ms
+ ✓ src/hooks/useAppRuntimeHealth.test.tsx (6 tests) 254ms
+ ✓ src/utils/exportDocx.test.ts (25 tests) 202ms
+ ✓ src/components/editor/SlashCommandMenu.test.tsx (20 tests) 235ms
+ ✓ src/components/ChatAreaComposer.test.tsx (15 tests) 226ms
+ ✓ src/components/panels/__tests__/ConflictResolutionPanel.test.tsx (7 tests) 219ms
+ ✓ src/components/MessageBubble.test.tsx (6 tests) 177ms
+ ✓ src/components/intelligence/WritingDashboard.test.tsx (7 tests) 161ms
+ ✓ src/components/NikoEditor.revision-handle.test.tsx (7 tests) 166ms
+ ✓ src/components/ChatAreaModeControls.test.tsx (13 tests) 152ms
+ ✓ src/components/Sidebar.test.tsx (16 tests) 177ms
+ ✓ src/components/EvaluationDrillDownPanel.test.tsx (2 tests) 131ms
  ✓ src/components/narrative-visualization/__tests__/TimelineView.test.tsx (15 tests) 137ms
- ✓ src/components/AnalysisPanel.test.tsx (1 test) 115ms
- ✓ src/components/CharacterRelationshipsPanel.test.tsx (2 tests) 105ms
- ✓ src/components/narrative-visualization/__tests__/VisualizationToolbar.test.tsx (14 tests) 136ms
- ✓ src/components/editor/extensions/__tests__/MathView.test.tsx (11 tests) 146ms
- ✓ src/components/AppMainContent.test.tsx (9 tests) 133ms
- ✓ src/components/PatternDashboardPanel.test.tsx (2 tests) 130ms
- ✓ src/components/SessionAnalyticsPanel.test.tsx (2 tests) 115ms
- ✓ src/components/AiToolbar.test.tsx (10 tests) 110ms
- ✓ src/components/NikoEditor.test.tsx (6 tests) 95ms
- ✓ src/components/ErrorBoundary.test.tsx (9 tests) 93ms
- ✓ src/App.test.tsx (2 tests) 108ms
+ ✓ src/components/narrative-visualization/__tests__/TensionCurveView.test.tsx (16 tests) 136ms
+ ✓ src/components/ForeshadowingTrackerPanel.test.tsx (2 tests) 131ms
+ ✓ src/components/narrative-visualization/__tests__/CharacterGraphView.test.tsx (16 tests) 138ms
+ ✓ src/components/editor/extensions/__tests__/MathView.test.tsx (11 tests) 155ms
+ ✓ src/components/PatternDashboardPanel.test.tsx (2 tests) 124ms
+ ✓ src/components/AiToolbar.test.tsx (10 tests) 121ms
+ ✓ src/components/AnalysisPanel.test.tsx (1 test) 104ms
+ ✓ src/components/AppContextFooter.test.tsx (8 tests) 71ms
+ ✓ src/components/SessionAnalyticsPanel.test.tsx (2 tests) 96ms
+ ✓ src/components/CharacterRelationshipsPanel.test.tsx (2 tests) 109ms
+ ✓ src/components/narrative-visualization/__tests__/VisualizationToolbar.test.tsx (14 tests) 116ms
+ ✓ src/components/AppMainContent.test.tsx (9 tests) 114ms
+ ✓ src/components/ErrorBoundary.test.tsx (9 tests) 105ms
+ ✓ src/App.test.tsx (2 tests) 123ms
  ✓ src/components/McpStatusPanel.test.tsx (4 tests) 81ms
- ✓ src/components/ContentSearch.test.tsx (5 tests) 84ms
- ✓ src/components/AppContextFooter.test.tsx (8 tests) 70ms
- ✓ src/components/ToastContainer.test.tsx (8 tests) 75ms
- ✓ src/components/HistoryPanel.test.tsx (1 test) 73ms
- ✓ src/hooks/__tests__/useChatStreaming.test.ts (4 tests) 71ms
- ✓ src/components/__tests__/VirtualList.test.tsx (7 tests) 63ms
- ✓ src/components/ChatAreaStreamStatus.test.tsx (21 tests) 58ms
- ✓ src/components/VirtualList.test.tsx (4 tests) 59ms
- ✓ src/components/ChatSidebar.test.tsx (6 tests) 49ms
- ✓ src/api/ipc-chunk.test.ts (23 tests) 54ms
- ✓ src/components/ThinkingEffect.test.tsx (9 tests) 45ms
- ✓ src/components/intelligence/AccordionWrapper.test.tsx (5 tests) 42ms
- ✓ src/api/client.test.ts (55 tests) 45ms
+ ✓ src/components/NikoEditor.test.tsx (6 tests) 92ms
+ ✓ src/components/HistoryPanel.test.tsx (1 test) 72ms
+ ✓ src/components/ContentSearch.test.tsx (5 tests) 77ms
+ ✓ src/components/ToastContainer.test.tsx (8 tests) 88ms
+ ✓ src/components/__tests__/VirtualList.test.tsx (7 tests) 64ms
+ ✓ src/components/VirtualList.test.tsx (4 tests) 65ms
+ ✓ src/components/ChatAreaStreamStatus.test.tsx (21 tests) 107ms
  ✓ src/components/ChatAreaInlineActions.test.tsx (13 tests) 56ms
- ✓ src/components/ChatMessageList.test.tsx (5 tests) 37ms
- ✓ src/hooks/useChatStreaming.test.tsx (10 tests) 37ms
- ✓ src/stores/selectors.test.ts (23 tests) 32ms
+ ✓ src/hooks/__tests__/useChatStreaming.test.ts (4 tests) 59ms
+ ✓ src/api/ipc-chunk.test.ts (23 tests) 52ms
+ ✓ src/components/ThinkingEffect.test.tsx (9 tests) 48ms
+ ✓ src/components/ChatSidebar.test.tsx (6 tests) 61ms
+ ✓ src/components/intelligence/AccordionWrapper.test.tsx (5 tests) 40ms
+ ✓ src/api/client.test.ts (55 tests) 48ms
+ ✓ src/components/ChatMessageList.test.tsx (5 tests) 34ms
  ✓ src/components/intelligence/IntelligenceBadge.test.tsx (4 tests) 34ms
- ✓ src/hooks/useEditorAI.test.tsx (11 tests) 38ms
- ✓ src/hooks/useMemoryUpload.test.tsx (11 tests) 33ms
- ✓ src/hooks/useSmoothStream.test.tsx (8 tests) 30ms
- ✓ src/api/workflow.test.ts (22 tests) 29ms
- ✓ src/components/evaluation/EvaluationSupportToolsSection.test.tsx (1 test) 37ms
+ ✓ src/stores/selectors.test.ts (23 tests) 30ms
+ ✓ src/components/evaluation/EvaluationSupportToolsSection.test.tsx (1 test) 35ms
+ ✓ src/hooks/useEvaluationQualityCheck.test.tsx (12 tests) 32ms
+ ✓ src/hooks/useEditorAI.test.tsx (11 tests) 34ms
+ ✓ src/api/workflow.test.ts (22 tests) 26ms
+ ✓ src/hooks/useChatRecovery.test.tsx (12 tests) 29ms
+ ✓ src/hooks/useEvaluationWorkflow.test.tsx (13 tests) 38ms
+ ✓ src/hooks/useMemoryUpload.test.tsx (11 tests) 45ms
+ ✓ src/hooks/useSmoothStream.test.tsx (8 tests) 31ms
+ ✓ src/hooks/useChatStreaming.test.tsx (10 tests) 30ms
  ✓ src/components/AppRestoreStatusBanner.test.tsx (7 tests) 28ms
- ✓ src/hooks/useEvaluationWorkflow.test.tsx (13 tests) 31ms
- ✓ src/stores/appStore.test.ts (24 tests) 15ms
- ✓ src/hooks/useChatRecovery.test.tsx (12 tests) 28ms
- ✓ src/utils/export.test.ts (18 tests) 18ms
- ✓ src/hooks/useEvaluationQualityCheck.test.tsx (12 tests) 28ms
- ✓ src/hooks/useChatRequestBuilder.test.tsx (15 tests) 26ms
- ✓ src/api/workspace-store.integration.test.ts (6 tests) 11ms
- ✓ src/components/intelligence/SectionHeader.test.tsx (2 tests) 20ms
- ✓ src/hooks/useChatStreaming.integration.test.tsx (5 tests) 22ms
- ✓ src/hooks/useExportHistory.test.ts (6 tests) 23ms
- ✓ src/hooks/useSettingsDiagnostics.test.tsx (9 tests) 23ms
- ✓ src/hooks/useAppUiPersistence.test.tsx (9 tests) 20ms
- ✓ src/components/narrative-visualization/__tests__/useVisualizationState.test.ts (11 tests) 20ms
- ✓ src/components/ChatContextBar.test.tsx (2 tests) 26ms
- ✓ src/components/intelligence/MetricValue.test.tsx (2 tests) 23ms
- ✓ src/hooks/useDraftCache.test.tsx (10 tests) 21ms
- ✓ src/components/intelligence/ProgressBar.test.tsx (3 tests) 20ms
- ✓ src/components/narrative-visualization/__tests__/useVisualizationData.test.ts (11 tests) 17ms
- ✓ src/hooks/useAppPanelOrchestration.test.tsx (5 tests) 20ms
- ✓ src/hooks/useAppShellViewModel.test.tsx (6 tests) 27ms
- ✓ src/hooks/useToast.test.ts (4 tests) 17ms
+ ✓ src/components/ChatContextBar.test.tsx (2 tests) 20ms
+ ✓ src/hooks/useChatRequestBuilder.test.tsx (15 tests) 24ms
+ ✓ src/stores/appStore.test.ts (24 tests) 22ms
+ ✓ src/utils/export.test.ts (18 tests) 21ms
+ ✓ src/components/narrative-visualization/__tests__/useVisualizationState.test.ts (11 tests) 31ms
+ ✓ src/hooks/useDraftCache.test.tsx (10 tests) 31ms
+ ✓ src/hooks/useExportHistory.test.ts (6 tests) 24ms
  ✓ src/hooks/useScrollPosition.test.tsx (4 tests) 17ms
- ✓ src/utils/export-edge.test.ts (14 tests) 15ms
- ✓ src/hooks/useAppViewModel.test.tsx (2 tests) 15ms
+ ✓ src/components/intelligence/ProgressBar.test.tsx (3 tests) 19ms
+ ✓ src/components/intelligence/SectionHeader.test.tsx (2 tests) 18ms
+ ✓ src/hooks/useSettingsDiagnostics.test.tsx (9 tests) 34ms
+ ✓ src/hooks/useAppShellViewModel.test.tsx (6 tests) 21ms
+ ✓ src/hooks/useChatStreaming.integration.test.tsx (5 tests) 34ms
+ ✓ src/api/workspace-store.integration.test.ts (6 tests) 15ms
+ ✓ src/hooks/useAppUiPersistence.test.tsx (9 tests) 21ms
+ ✓ src/components/intelligence/MetricValue.test.tsx (2 tests) 20ms
+ ✓ src/hooks/useAppPanelOrchestration.test.tsx (5 tests) 18ms
+ ✓ src/components/narrative-visualization/__tests__/useVisualizationData.test.ts (11 tests) 18ms
+ ✓ src/services/projectFileService.test.ts (32 tests) 13ms
+ ✓ src/hooks/useToast.test.ts (4 tests) 16ms
+ ✓ src/utils/export-edge.test.ts (14 tests) 19ms
+ ✓ src/hooks/useAppViewModel.test.tsx (2 tests) 16ms
  ✓ src/hooks/useSettingsBackendConfig.test.tsx (10 tests) 12ms
- ✓ src/services/projectFileService.test.ts (32 tests) 18ms
- ✓ src/stores/app/projectSlice.test.ts (18 tests) 14ms
+ ✓ src/services/workflowService.test.ts (21 tests) 9ms
+ ✓ src/stores/app/projectSlice.test.ts (18 tests) 13ms
+ ✓ src/api/knowledge.test.ts (14 tests) 10ms
  ✓ src/services/intelligenceService.test.ts (9 tests) 9ms
+ ✓ src/services/migrationService.test.ts (12 tests) 9ms
+ ✓ src/api/transport.test.ts (21 tests) 8ms
+ ✓ src/api/evaluation.test.ts (12 tests) 7ms
+ ✓ src/api/agents.test.ts (12 tests) 7ms
+ ✓ src/api/writing-craft.integration.test.ts (2 tests) 8ms
+ ✓ src/services/consistencyEngine.test.ts (10 tests) 7ms
+ ✓ src/api/m10-apis.test.ts (7 tests) 5ms
+ ✓ src/stores/app/workflowSlice.test.ts (12 tests) 6ms
  ✓ src/services/templateService.test.ts (14 tests) 8ms
- ✓ src/services/workflowService.test.ts (21 tests) 10ms
- ✓ src/api/knowledge.test.ts (14 tests) 8ms
- ✓ src/api/evaluation.test.ts (12 tests) 8ms
- ✓ src/api/agents.test.ts (12 tests) 9ms
- ✓ src/api/transport.test.ts (21 tests) 11ms
- ✓ src/services/migrationService.test.ts (12 tests) 8ms
- ✓ src/api/writing-craft.integration.test.ts (2 tests) 9ms
- ✓ src/api/m10-apis.test.ts (7 tests) 6ms
- ✓ src/services/styleProfile.test.ts (9 tests) 5ms
- ✓ src/api/contracts.test.ts (33 tests) 6ms
- ✓ src/services/consistencyEngine.test.ts (10 tests) 6ms
- ✓ src/stores/app/workflowSlice.test.ts (12 tests) 7ms
  ✓ src/api/chat.test.ts (23 tests) 5ms
- ✓ src/api/core.test.ts (7 tests) 4ms
- ✓ src/services/versionService.test.ts (5 tests) 5ms
- ✓ src/api/writing-craft.test.ts (2 tests) 3ms
- ✓ src/stores/app/templateSlice.test.ts (7 tests) 5ms
- ✓ src/types/project.test.ts (5 tests) 4ms
- ✓ src/api/analysis.test.ts (6 tests) 4ms
- ✓ src/api/wiki.test.ts (3 tests) 4ms
- ✓ src/stores/uiSlice.test.ts (5 tests) 3ms
- ✓ src/types/workspace.test.ts (3 tests) 3ms
+ ✓ src/api/contracts.test.ts (33 tests) 7ms
+ ✓ src/types/workspace.test.ts (3 tests) 4ms
+ ✓ src/services/styleProfile.test.ts (9 tests) 5ms
+ ✓ src/api/analysis.test.ts (6 tests) 5ms
  ✓ src/stores/app/intelligenceSlice.test.ts (6 tests) 4ms
- ✓ src/utils/revisionLoop.test.ts (4 tests) 6ms
+ ✓ src/utils/failurePresentation.test.ts (4 tests) 3ms
+ ✓ src/services/versionService.test.ts (5 tests) 4ms
+ ✓ src/api/core.test.ts (7 tests) 5ms
+ ✓ src/api/knowledge.integration.test.ts (4 tests) 4ms
+ ✓ src/api/wiki.test.ts (3 tests) 6ms
+ ✓ src/utils/revisionLoop.test.ts (4 tests) 4ms
+ ✓ src/stores/uiSlice.test.ts (5 tests) 3ms
+ ✓ src/types/project.test.ts (5 tests) 4ms
+ ✓ src/stores/app/templateSlice.test.ts (7 tests) 4ms
+ ✓ src/api/writing-craft.test.ts (2 tests) 3ms
+ ✓ src/utils/writingSessionTelemetry.test.ts (2 tests) 3ms
 stdout | src/services/revisionOrchestrator.test.ts > RevisionOrchestrator > returns revision session metadata alongside the legacy loop result
 Created checkpoint cp-1
 Evaluating content snippet: 原始正文
@@ -1474,23 +1481,20 @@ Revising content based on 'generic' suggestion: 增加冲突
 stdout | src/services/revisionOrchestrator.test.ts > RevisionOrchestrator > returns revision session metadata alongside the legacy loop result
 Evaluating content snippet: 改写后的正文
 
- ✓ src/services/revisionOrchestrator.test.ts (1 test) 4ms
- ✓ src/services/contextAssembler.test.ts (6 tests) 3ms
- ✓ src/api/knowledge.integration.test.ts (4 tests) 3ms
+ ✓ src/services/revisionOrchestrator.test.ts (1 test) 3ms
+ ✓ src/api/workflow/revision.test.ts (3 tests) 3ms
+ ✓ src/utils/stableKey.test.ts (11 tests) 3ms
  ✓ src/utils/wordCount.test.ts (11 tests) 3ms
- ✓ src/api/workflow/revision.test.ts (3 tests) 4ms
- ✓ src/utils/writingSessionTelemetry.test.ts (2 tests) 3ms
- ✓ src/utils/stableKey.test.ts (11 tests) 4ms
- ✓ src/utils/failurePresentation.test.ts (4 tests) 3ms
- ✓ src/adapters/chapterAdapter.test.ts (5 tests) 3ms
- ✓ src/api/narrative-visualization.test.ts (1 test) 3ms
+ ✓ src/services/contextAssembler.test.ts (6 tests) 3ms
+ ✓ src/api/narrative-visualization.test.ts (1 test) 4ms
+ ✓ src/adapters/chapterAdapter.test.ts (5 tests) 2ms
  ↓ src/api/writing-craft.e2e.test.ts (2 tests | 2 skipped)
- ✓ scripts/run_local_vite_shell.test.ts (5 tests) 19ms
+ ✓ scripts/run_local_vite_shell.test.ts (5 tests) 17ms
 
  Test Files  147 passed | 1 skipped (148)
       Tests  1387 passed | 2 skipped (1389)
-   Start at  19:56:21
-   Duration  179.51s (transform 3.23s, setup 10.07s, collect 19.92s, tests 57.33s, environment 60.80s, prepare 10.65s)
+   Start at  20:27:09
+   Duration  180.61s (transform 3.27s, setup 10.01s, collect 20.45s, tests 58.28s, environment 60.62s, prepare 10.57s)
 
 
 > niko-studio-desktop@11.0.0 build:sidecar
@@ -1756,7 +1760,7 @@ dist/assets/vendor-editor-pm-BRjesWX5.js              251.48 kB │ gzip:  77.66
 dist/assets/vendor-katex-B4uVxgnO.js                  259.10 kB │ gzip:  77.03 kB │ map:   969.83 kB
 dist/assets/vendor-docx-C11IHjUO.js                   349.71 kB │ gzip: 101.66 kB │ map: 1,317.17 kB
 dist/assets/index-BYt7Gb34.js                         491.49 kB │ gzip: 148.24 kB │ map: 1,312.24 kB
-✓ built in 7.18s
+✓ built in 7.34s
 
 stderr | src/components/SettingsModal.test.tsx > SettingsModal quality presets > renders workflow backend mode labels in english
 Warning: An update to TemplateManagerPanel inside a test was not wrapped in act(...).
@@ -2510,7 +2514,7 @@ dist/assets/vendor-editor-pm-BRjesWX5.js              251.48 kB │ gzip:  77.66
 dist/assets/vendor-katex-B4uVxgnO.js                  259.10 kB │ gzip:  77.03 kB │ map:   969.83 kB
 dist/assets/vendor-docx-C11IHjUO.js                   349.71 kB │ gzip: 101.66 kB │ map: 1,317.17 kB
 dist/assets/index-BYt7Gb34.js                         491.49 kB │ gzip: 148.24 kB │ map: 1,312.24 kB
-✓ built in 8.22s
+✓ built in 8.78s
 
         Info Looking up installed tauri packages to check mismatched versions...
      Running beforeBuildCommand `npm run build`
@@ -2543,7 +2547,7 @@ warning: field `vault_path` is never read
    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
 
 warning: `niko-studio-desktop` (bin "niko-studio-desktop") generated 3 warnings (run `cargo fix --bin "niko-studio-desktop" -p niko-studio-desktop` to apply 2 suggestions)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 30.94s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 56.51s
        Built application at: C:\Users\niko\Desktop\工作目录\niko-studio-coverage-delivery\desktop\src-tauri\target\x86_64-pc-windows-msvc\debug\niko-studio-desktop.exe
 ```
 
@@ -2570,16 +2574,16 @@ warning: `niko-studio-desktop` (bin "niko-studio-desktop") generated 3 warnings 
 ```text
 RUN  v3.2.4 C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery
 
- ✓ src-ts/tests/mcp/workflow-critic-smoke.integration.test.ts (1 test) 1837ms
-   ✓ workflow + critic smoke integration > generates workflow content and evaluates it through critic endpoints  1836ms
- ✓ src-ts/tests/mcp/workflow-endpoints.integration.test.ts (10 tests) 3244ms
-   ✓ workflow endpoints integration > runs route -> plan -> execute through real workflow endpoints  1753ms
+ ✓ src-ts/tests/mcp/workflow-critic-smoke.integration.test.ts (1 test) 1792ms
+   ✓ workflow + critic smoke integration > generates workflow content and evaluates it through critic endpoints  1791ms
+ ✓ src-ts/tests/mcp/workflow-endpoints.integration.test.ts (10 tests) 3335ms
+   ✓ workflow endpoints integration > runs route -> plan -> execute through real workflow endpoints  1702ms
 
 
  Test Files  2 passed (2)
       Tests  11 passed (11)
-   Start at  20:00:03
-   Duration  3.95s (transform 1.04s, setup 0ms, collect 100ms, tests 5.08s, environment 0ms, prepare 238ms)
+   Start at  20:30:53
+   Duration  4.14s (transform 1.02s, setup 0ms, collect 108ms, tests 5.13s, environment 0ms, prepare 276ms)
 
 JUNIT report written to C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/.workflow/evidence/release/vitest-e2e.xml
 
@@ -2597,10 +2601,10 @@ Remove 'basic' from 'reporters' option. To match 'basic' reporter 100%, use conf
     ]
   }
 }
-(node:65964) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(node:182480) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:65964) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGINT listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
-(node:65964) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGTERM listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(node:182480) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGINT listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(node:182480) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGTERM listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
 ```
 
 #### production_guard output
@@ -2608,14 +2612,14 @@ Remove 'basic' from 'reporters' option. To match 'basic' reporter 100%, use conf
 ```text
 RUN  v3.2.4 C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery
 
- ✓ src-ts/tests/mcp/health-endpoints.test.ts (5 tests) 16ms
+ ✓ src-ts/tests/mcp/health-endpoints.test.ts (5 tests) 19ms
  ✓ src-ts/tests/gateway-server.runtime.test.ts (2 tests) 7ms
 
 
  Test Files  2 passed (2)
       Tests  7 passed (7)
-   Start at  20:00:08
-   Duration  2.89s (transform 1.41s, setup 0ms, collect 2.66s, tests 23ms, environment 0ms, prepare 280ms)
+   Start at  20:30:58
+   Duration  3.07s (transform 1.50s, setup 0ms, collect 2.81s, tests 25ms, environment 0ms, prepare 294ms)
 
 JUNIT report written to C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/.workflow/evidence/release/vitest-production-guard.xml
 
@@ -2640,14 +2644,14 @@ Remove 'basic' from 'reporters' option. To match 'basic' reporter 100%, use conf
 ```text
 RUN  v3.2.4 C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery
 
- ✓ src-ts/tests/mcp/health-endpoints.test.ts (5 tests) 16ms
+ ✓ src-ts/tests/mcp/health-endpoints.test.ts (5 tests) 19ms
  ✓ src-ts/tests/gateway-server.runtime.test.ts (2 tests) 7ms
 
 
  Test Files  2 passed (2)
       Tests  7 passed (7)
-   Start at  20:00:08
-   Duration  2.89s (transform 1.41s, setup 0ms, collect 2.66s, tests 23ms, environment 0ms, prepare 280ms)
+   Start at  20:30:58
+   Duration  3.07s (transform 1.50s, setup 0ms, collect 2.81s, tests 25ms, environment 0ms, prepare 294ms)
 
 JUNIT report written to C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/.workflow/evidence/release/vitest-production-guard.xml
 

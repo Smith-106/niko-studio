@@ -1099,6 +1099,60 @@ def test_writing_helper_acceptance_signal_returns_pass_for_fresh_current_artifac
     assert "decision=go" in detail
 
 
+def test_writing_helper_acceptance_signal_accepts_evidence_only_companion_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_writing_helper_companion_commit",
+    )
+
+    def fake_run_cmd(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str]:
+        _ = env
+        if cmd[:3] == ["git", "merge-base", "--is-ancestor"]:
+            return 0, ""
+        if cmd[:3] == ["git", "diff", "--name-only"]:
+            return (
+                0,
+                "\n".join(
+                    [
+                        "release-check-summary.md",
+                        ".workflow/evidence/release/writing-helper-acceptance.json",
+                    ]
+                ),
+            )
+        pytest.fail(f"Unexpected command: {cmd}")
+
+    monkeypatch.setattr(module, "run_cmd", fake_run_cmd)
+    module._HEAD_RELATION_CACHE.clear()
+
+    status, exit_code, detail = module.writing_helper_acceptance_signal(
+        True,
+        {
+            "status": "PASS",
+            "strict": True,
+            "generated_at": "2026-04-17T11:30:00+00:00",
+            "head_sha": "6066c334d6954d29a126af413f6d53af6d39d99f",
+            "version": "9.0.8",
+            "total_cases": 7,
+            "passed_cases": 7,
+            "failed_cases": 0,
+            "failed_cases_path": None,
+        },
+        "8d12cdb2f7cb3ad80f01f59c5c858ebb5dff45c2",
+        None,
+        "9.0.8",
+        now=datetime(2026, 4, 17, 12, 0, tzinfo=timezone.utc),
+    )
+
+    assert status == "PASS"
+    assert exit_code == 0
+    assert "supersession_status=current" in detail
+    assert "supersession_reasons=evidence_only_companion_commit" in detail
+    assert "evidence_state=fresh_current" in detail
+    assert "decision=go" in detail
+
+
 def test_writing_helper_acceptance_signal_returns_fail_for_stale_superseded_artifact() -> None:
     module = load_script_module(
         "scripts/release_check_summary.py",
@@ -1385,6 +1439,63 @@ def test_package_e2e_acceptance_signal_returns_pass_for_fresh_current_artifact()
     assert status == "PASS"
     assert exit_code == 0
     assert "artifact=.workflow/evidence/release/package-e2e-acceptance.json" in detail
+    assert "decision=go" in detail
+
+
+def test_package_e2e_acceptance_signal_accepts_evidence_only_companion_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_package_e2e_companion_commit",
+    )
+
+    def fake_run_cmd(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str]:
+        _ = env
+        if cmd[:3] == ["git", "merge-base", "--is-ancestor"]:
+            return 0, ""
+        if cmd[:3] == ["git", "diff", "--name-only"]:
+            return (
+                0,
+                "\n".join(
+                    [
+                        "release-check-summary.md",
+                        ".workflow/evidence/release/package-e2e-acceptance.json",
+                    ]
+                ),
+            )
+        pytest.fail(f"Unexpected command: {cmd}")
+
+    monkeypatch.setattr(module, "run_cmd", fake_run_cmd)
+    module._HEAD_RELATION_CACHE.clear()
+
+    payload = {
+        "status": "PASS",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "head_sha": "deadbeef",
+        "version": "9.0.8",
+        "tester": "qa",
+        "artifact_path": "desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.0.8_x64-setup.exe",
+        "artifact_sha256": "abc123",
+        "install_verified": True,
+        "launch_verified": True,
+        "core_flow_verified": True,
+        "shutdown_verified": True,
+        "notes": "",
+    }
+
+    status, exit_code, detail = module.package_e2e_acceptance_signal(
+        True,
+        payload,
+        "feedface",
+        None,
+        current_version="9.0.8",
+    )
+
+    assert status == "PASS"
+    assert exit_code == 0
+    assert "supersession_status=current" in detail
+    assert "supersession_reasons=evidence_only_companion_commit" in detail
     assert "decision=go" in detail
 
 
