@@ -400,7 +400,7 @@ export class NovelAdapter extends BaseDomainAdapter {
       version: state.draft_version ?? 1,
       score: critiquePayload.total_score,
       decision: critiquePayload.decision,
-      feedback: critiquePayload.actionable_feedback.substring(0, 200),
+      feedback: (critiquePayload.actionable_feedback ?? '').substring(0, 200),
     };
     const revisionHistory = [...(state.revision_history ?? []), historyEntry];
 

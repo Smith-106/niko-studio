@@ -51,6 +51,12 @@ export async function analysisNarrativeVisualizationEndpoint(request: HttpReques
     chapterNumber: Number(chapter.chapterNumber ?? chapterMeta[index]?.chapterNumber ?? index + 1),
     title: String(chapter.title ?? chapterMeta[index]?.title ?? `Chapter ${index + 1}`),
   }));
+  const normalizedChapterMeta: Array<{ chapterNumber: number; title: string }> = normalizedChapters.map(
+    (chapter) => ({
+      chapterNumber: Number(chapter.chapterNumber ?? 0),
+      title: String(chapter.title ?? ''),
+    }),
+  );
 
   if (normalizedChapters.length === 0) {
     return jsonResponse(buildNarrativeVisualizationBundle({ chapters: [] }));
@@ -59,10 +65,7 @@ export async function analysisNarrativeVisualizationEndpoint(request: HttpReques
   const consistencyResult = await runConsistencyCheck({
     ...body,
     chapters: normalizedChapters.map((chapter) => chapter.content),
-    chapterMeta: normalizedChapters.map((chapter) => ({
-      chapterNumber: chapter.chapterNumber,
-      title: chapter.title,
-    })),
+    chapterMeta: normalizedChapterMeta,
   });
 
   const relationshipRoot = String(body.relationshipRoot ?? '').trim();

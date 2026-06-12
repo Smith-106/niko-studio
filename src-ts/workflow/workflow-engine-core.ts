@@ -1746,6 +1746,9 @@ export class WorkflowEngine {
       canonicalizeStepStatus: (status) => this._canonicalStepStatus(status),
       getPlanAuthority: (planId) => {
         const authority = this.getPlanAuthority(planId);
+        if (!authority.sessionId) {
+          return null;
+        }
         return {
           sessionId: authority.sessionId,
           workspaceId: authority.workspaceId,
@@ -1793,6 +1796,9 @@ export class WorkflowEngine {
       plan,
       getPlanAuthority: (planId) => {
         const authority = this.getPlanAuthority(planId);
+        if (!authority.sessionId) {
+          return null;
+        }
         return {
           sessionId: authority.sessionId,
           workspaceId: authority.workspaceId,

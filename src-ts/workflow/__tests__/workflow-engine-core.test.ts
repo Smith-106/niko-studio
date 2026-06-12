@@ -464,7 +464,7 @@ describe('WorkflowEngine - advanced public APIs', () => {
     if (result.status !== 'completed') {
       throw new Error(`Expected completed result, received ${result.status}`);
     }
-    expect(result.final_status.progress).toBe('3/3');
+    expect((result.final_status as Record<string, unknown>).progress).toBe('3/3');
     expect((result.last_step as Record<string, unknown>)['step_name']).toBe('generate');
   });
 

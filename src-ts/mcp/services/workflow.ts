@@ -248,8 +248,8 @@ function cloneWorkflowAuthority(
 }
 
 function resolveCheckpointAuthority(
-  workspace?: ProjectWorkspaceContext | null,
   workspaceRoot: string,
+  workspace?: ProjectWorkspaceContext | null,
 ): WorkflowAuthority | null {
   return resolveWorkflowAuthority(
     workspace
@@ -1370,7 +1370,7 @@ export async function checkpointCreate(
   const engine = getEngine(workspaceRoot);
   const result = await engine.createCheckpoint(description, autoCommit);
   const checkpointId = typeof result['checkpoint_id'] === 'string' ? result['checkpoint_id'] : null;
-  const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
+  const authority = resolveCheckpointAuthority(workspaceRoot, workspace);
   if (checkpointId && authority) {
     caches.checkpointAuthorityBindings.set(checkpointId, authority);
   }
@@ -1389,7 +1389,7 @@ export async function checkpointRestore(
     return { error: `Checkpoint '${checkpointId}' not found` };
   }
   const storedAuthority = resolveStoredCheckpointAuthority(engine, checkpoint, workspaceRoot);
-  const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
+  const authority = resolveCheckpointAuthority(workspaceRoot, workspace);
   const resolvedAuthority = resolveCheckpointRequestAuthority({
     checkpoint,
     storedAuthority,
@@ -1407,7 +1407,7 @@ export async function checkpointList(
 ): Promise<WorkflowCheckpointSummary[]> {
   const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
   const engine = getEngine(workspaceRoot);
-  const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
+  const authority = resolveCheckpointAuthority(workspaceRoot, workspace);
   const checkpoints = await engine.listCheckpoints(limit) as WorkflowCheckpointSummary[];
   return checkpoints.filter((summary) => {
     const checkpoint = engine.getCheckpoint?.(summary.id) ?? null;

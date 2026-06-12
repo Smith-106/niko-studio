@@ -238,6 +238,7 @@ function qualityDefaultPayload(): Record<string, unknown> {
  */
 async function evaluateNovelQuality(
   content: string,
+  _options?: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const result: EvaluateContentResult = await evaluateContent(
     content,

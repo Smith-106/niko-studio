@@ -21,7 +21,7 @@ vi.mock('node:child_process', () => {
   }
 
   return {
-    spawn: vi.fn((_cmd: string, _args: string[], _opts: unknown) => createMockSpawn('', '', 1)),
+    spawn: vi.fn((_cmd: string, _args: readonly string[], _opts: unknown) => createMockSpawn('', '', 1)),
   };
 });
 
@@ -31,7 +31,7 @@ const mockSpawn = vi.mocked(spawn);
 
 function mockStdout(data: string, exitCode = 0) {
   const { EventEmitter } = require('events');
-  mockSpawn.mockImplementation((_cmd: string, _args: string[], _opts: unknown) => {
+  mockSpawn.mockImplementation((_cmd: string, _args: readonly string[], _opts: unknown) => {
     const child = new EventEmitter();
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
@@ -46,7 +46,7 @@ function mockStdout(data: string, exitCode = 0) {
 
 function mockError(message: string) {
   const { EventEmitter } = require('events');
-  mockSpawn.mockImplementation((_cmd: string, _args: string[], _opts: unknown) => {
+  mockSpawn.mockImplementation((_cmd: string, _args: readonly string[], _opts: unknown) => {
     const child = new EventEmitter();
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
@@ -61,7 +61,7 @@ function mockError(message: string) {
 
 function mockTimeout(stdout = '', stderr = '') {
   const { EventEmitter } = require('events');
-  mockSpawn.mockImplementation((_cmd: string, _args: string[], _opts: unknown) => {
+  mockSpawn.mockImplementation((_cmd: string, _args: readonly string[], _opts: unknown) => {
     const child = new EventEmitter();
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
@@ -77,7 +77,7 @@ function mockTimeout(stdout = '', stderr = '') {
 
 function mockCloseWithNullCode(stdout = '') {
   const { EventEmitter } = require('events');
-  mockSpawn.mockImplementation((_cmd: string, _args: string[], _opts: unknown) => {
+  mockSpawn.mockImplementation((_cmd: string, _args: readonly string[], _opts: unknown) => {
     const child = new EventEmitter();
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
