@@ -1,14 +1,14 @@
 {
   "status": "PASS",
-  "started_at": "2026-06-12T11:53:15.428679+00:00",
-  "finished_at": "2026-06-12T11:53:53.771800+00:00",
-  "package_version": "11.0.0",
-  "installer_path": "C:\\Users\\niko\\Desktop\\工作目录\\niko-studio-coverage-delivery\\desktop\\src-tauri\\target\\release\\bundle\\nsis\\Niko-Studio_11.0.0_x64-setup.exe",
-  "install_dir": "C:\\Users\\niko\\AppData\\Local\\Temp\\niko-smoke-1781265195",
+  "started_at": "2026-06-12T14:26:34.790697+00:00",
+  "finished_at": "2026-06-12T14:27:14.674575+00:00",
+  "package_version": "11.0.1",
+  "installer_path": "desktop\\src-tauri\\target\\release\\bundle\\nsis\\Niko-Studio_11.0.1_x64-setup.exe",
+  "install_dir": "C:\\Users\\niko\\AppData\\Local\\Temp\\niko-smoke-1781274394",
   "runtime_port": 5882,
   "health_response": {
     "status": "healthy",
-    "version": "11.0.0",
+    "version": "11.0.1",
     "services": {
       "memory": "ok",
       "graph": "ok",
@@ -72,10 +72,10 @@
     ],
     "skills_count": 43,
     "mcp_runtime": {
-      "session_id": "gw-1781262649285",
+      "session_id": "gw-1781274431954",
       "connection_state": "connected",
       "reconnect_state": "idle",
-      "last_probe_at": "2026-06-12T11:53:53.732Z",
+      "last_probe_at": "2026-06-12T14:27:13.485Z",
       "reconnect_attempts": 0,
       "last_error": null,
       "diagnostic": null,
@@ -204,7 +204,7 @@
       "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
       "access-control-allow-headers": "Content-Type, Authorization",
       "access-control-max-age": "86400",
-      "date": "Fri, 12 Jun 2026 11:53:53 GMT",
+      "date": "Fri, 12 Jun 2026 14:27:13 GMT",
       "connection": "close"
     }
   },
@@ -215,7 +215,8 @@
   "cors_verified": true,
   "failures": [],
   "notes": [
-    "Installed launcher: C:\\Users\\niko\\AppData\\Local\\Temp\\niko-smoke-1781265195\\niko-studio-desktop.exe",
-    "Spawned PID 76028 (NIKO_GATEWAY_PORT=5882)"
+    "Installed launcher: C:\\Users\\niko\\AppData\\Local\\Temp\\niko-smoke-1781274394\\niko-studio-desktop.exe",
+    "Spawned PID 127608 (NIKO_GATEWAY_PORT=5882)",
+    "Cleared stale smoke-managed process on port 5882: \"C:\\Users\\niko\\AppData\\Local\\Temp\\niko-smoke-1781274394\\bin\\sidecar/node.exe\" C:\\Users\\niko\\AppData\\Local\\Temp\\niko-smoke-1781274394\\bin\\sidecar\\gateway-server.js"
   ]
 }

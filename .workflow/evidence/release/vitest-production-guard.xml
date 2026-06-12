@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.0252376">
-    <testsuite name="src-ts/tests/gateway-server.runtime.test.ts" timestamp="2026-06-12T12:31:01.965Z" hostname="DESKTOP-I75C5QK" tests="2" failures="0" errors="0" skipped="0" time="0.0066471">
-        <testcase classname="src-ts/tests/gateway-server.runtime.test.ts" name="gateway-server runtime wiring &gt; buildConfigAccess exposes snake_case config payloads and maps updates back to shared config" time="0.0028888">
+<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.0267436">
+    <testsuite name="src-ts/tests/gateway-server.runtime.test.ts" timestamp="2026-06-12T14:33:01.137Z" hostname="DESKTOP-I75C5QK" tests="2" failures="0" errors="0" skipped="0" time="0.0073144">
+        <testcase classname="src-ts/tests/gateway-server.runtime.test.ts" name="gateway-server runtime wiring &gt; buildConfigAccess exposes snake_case config payloads and maps updates back to shared config" time="0.0027437">
         </testcase>
-        <testcase classname="src-ts/tests/gateway-server.runtime.test.ts" name="gateway-server runtime wiring &gt; buildGatewayDeps wires real service/runtime helpers and seeded MCP configs" time="0.0029329">
+        <testcase classname="src-ts/tests/gateway-server.runtime.test.ts" name="gateway-server runtime wiring &gt; buildGatewayDeps wires real service/runtime helpers and seeded MCP configs" time="0.0034926">
         </testcase>
     </testsuite>
-    <testsuite name="src-ts/tests/mcp/health-endpoints.test.ts" timestamp="2026-06-12T12:31:01.966Z" hostname="DESKTOP-I75C5QK" tests="5" failures="0" errors="0" skipped="0" time="0.0185905">
-        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; reports runtime_unavailable when runtime session is missing" time="0.0143272">
+    <testsuite name="src-ts/tests/mcp/health-endpoints.test.ts" timestamp="2026-06-12T14:33:01.138Z" hostname="DESKTOP-I75C5QK" tests="5" failures="0" errors="0" skipped="0" time="0.0194292">
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; reports runtime_unavailable when runtime session is missing" time="0.0147824">
         </testcase>
-        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; classifies parser_missing from engine health errors" time="0.0009055">
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; classifies parser_missing from engine health errors" time="0.0010608">
         </testcase>
-        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; classifies integration_degraded when services fail without prerequisite signature" time="0.0007054">
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; classifies integration_degraded when services fail without prerequisite signature" time="0.0013095">
         </testcase>
-        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoints model listing parity &gt; lists provider models from the loaded services config" time="0.000957">
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoints model listing parity &gt; lists provider models from the loaded services config" time="0.0007865">
         </testcase>
-        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoints model listing parity &gt; filters by provider and returns not_found for unknown providers" time="0.0006006">
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoints model listing parity &gt; filters by provider and returns not_found for unknown providers" time="0.0004285">
         </testcase>
     </testsuite>
 </testsuites>
