@@ -1,0 +1,507 @@
+{
+  "artifact_type": "release_readiness",
+  "schema_version": "evidence.v2",
+  "decision": "GO",
+  "go_no_go_reasons": [],
+  "generated_at": "2026-06-12T12:00:11.846758+00:00",
+  "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+  "version": "11.0.0",
+  "freshness_window_hours": 48,
+  "checks": [
+    {
+      "check_id": "version_consistency",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "script=scripts/check_versions.py"
+    },
+    {
+      "check_id": "delivery_semantic_gate",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "script=scripts/delivery_gate.py"
+    },
+    {
+      "check_id": "governance_scripts_regression",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "script=scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q,status=passed,passed_count=45,junitxml=.workflow/evidence/release/governance-scripts.junit.xml"
+    },
+    {
+      "check_id": "baseline_tests_and_coverage",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "command=npm --prefix src-ts run test:coverage:phase4,status=passed,passed_count=11"
+    },
+    {
+      "check_id": "desktop_check",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "command=npm --prefix desktop run check:local,package_script=desktop/package.json -> scripts.check:local"
+    },
+    {
+      "check_id": "desktop_sidecar_readiness",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "command=npm --prefix desktop run build:sidecar && npm --prefix desktop run validate:sidecar-contract,artifact=desktop/src-tauri/bin/niko-gateway"
+    },
+    {
+      "check_id": "desktop_packaging_dry_run",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "command=npm --prefix desktop run validate:package:dry-run,target=x86_64-pc-windows-msvc,signing=unsigned_local_dry_run"
+    },
+    {
+      "check_id": "writing_helper_acceptance_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "artifact=.workflow/evidence/release/writing-helper-acceptance.json,strict=True,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,version=11.0.0,current_version=11.0.0,generated_at=2026-06-12T11:54:43.6627577+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.09,supersession_status=current,supersession_reasons=,evidence_state=fresh_current,generated_at_parse_error=none,total_cases=7,passed_cases=7,failed_cases=0,failed_cases_path=none,missing_keys=,json_parse_error=none,decision=go"
+    },
+    {
+      "check_id": "package_e2e_acceptance_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "artifact=.workflow/evidence/release/package-e2e-acceptance.json,status=PASS,head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,current_head_sha=6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6,version=11.0.0,current_version=11.0.0,tester=codex,artifact_path=C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_11.0.0_x64-setup.exe,artifact_sha256=9ffa22c63b8d45aa06b6740973d65f09fb13c404d14aa745fa501893c0ad6f14,generated_at=2026-06-12T11:54:11.155013+00:00,freshness_window_hours=48,freshness_status=fresh,freshness_age_hours=0.1,supersession_status=current,supersession_reasons=,evidence_state=fresh_current,generated_at_parse_error=none,install_verified=True,launch_verified=True,core_flow_verified=True,shutdown_verified=True,notes=none,missing_keys=,json_parse_error=none,decision=go"
+    },
+    {
+      "check_id": "package_app_smoke_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "artifact=.workflow/evidence/release/packaged-app-smoke.json,status=PASS,package_version=11.0.0,current_version=11.0.0,version_drift=false,install_verified=true,launch_verified=true,health_version_verified=true,services_verified=true,cors_verified=true,failure_count=0,mode=advisory_first,decision=go"
+    },
+    {
+      "check_id": "external_e2e_smoke",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "status=passed,passed_count=2"
+    },
+    {
+      "check_id": "production_guard",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "command=npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts,status=passed,passed_count=2,junitxml=.workflow/evidence/release/vitest-production-guard.xml"
+    },
+    {
+      "check_id": "metrics_guard",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "command=npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts,status=passed,passed_count=2,junitxml=.workflow/evidence/release/vitest-production-guard.xml"
+    },
+    {
+      "check_id": "codecov_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "strict_mode=false,token_present=false,coverage_xml=yes,result=coverage_available"
+    },
+    {
+      "check_id": "evidence_completeness_blocker_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "quality_non_template=2,weekly_non_template=5,machine_payload_available=yes,missing_evidence_classes=,decision=go"
+    },
+    {
+      "check_id": "gate_score_or_critical_blocker_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_or_critical_or_unresolved_triage_is_fail,decision=go"
+    },
+    {
+      "check_id": "runtime_policy_conformance_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "policy_pass=99.0,runtime_pass=99.0,policy_human_review=95.0,runtime_human_review=95.0,policy_revise_lower=50.0,runtime_revise_lower=50.0,policy_rewrite_below=50.0,runtime_rewrite_below=50.0,publish_from_go=pass,publish_from_soft_go=revise,publish_from_no_go=block,terminal_default_decision=go,terminal_no_go_preserved=yes,quality_mode_consistent=yes,workflow_hard_gate_present=yes,public_entry_api_present=yes,mismatches=,decision=go"
+    },
+    {
+      "check_id": "authority_alignment_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "checked_rules=96,passed_rules=96,failed_rules=0,checked_files=17,mismatches=,json_parse_error=none"
+    },
+    {
+      "check_id": "issue_pending_blocker_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "issue_history=.workflow/issues/issue-history.jsonl,roadmap_issues_checked=0,pending_issues=0,pending_issue_ids=none,terminal_statuses=completed,closed,resolved,done,decision=go"
+    },
+    {
+      "check_id": "evidence_coverage_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "quality_non_template=2,weekly_non_template=5"
+    },
+    {
+      "check_id": "slo_baseline_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "keywords_present=ttft,e2e,effective_hit_rate,context_budget_utilization,gate consistency"
+    },
+    {
+      "check_id": "evidence_links_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "evidence_links_key=present,traceable_link=present"
+    },
+    {
+      "check_id": "self_learning_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "fields_present=reflector,curator,playbook"
+    },
+    {
+      "check_id": "memory_observability_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "metrics_present=c_effective,s_final,r_memory"
+    },
+    {
+      "check_id": "quality_level_trace_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "effective_quality_level=high,quality_level_used=high"
+    },
+    {
+      "check_id": "degrade_trace_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "degrade_reason=present,degrade_steps=present"
+    },
+    {
+      "check_id": "critical_gate_enforcement_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "critical_gate=enforced"
+    },
+    {
+      "check_id": "chapter_gate_scoring_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "quality_score=99.0,threshold=99.0,publish_recommendation=pass,critical_issue_count=0,decision=go"
+    },
+    {
+      "check_id": "cycle_time_kpi_measurement_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "window_policy=full_7_day_only,manual_override=forbidden,missing_rules=,present_exclusion_reason_codes=missing_timestamps"
+    },
+    {
+      "check_id": "comparable_quality_rubric_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "rubric_version=v1,quality_score=99.0,threshold=99.0,critical_issue_count=0,publish_recommendation=pass,quality_level_match=yes,degrade_trace_complete=yes,decision=comparable"
+    },
+    {
+      "check_id": "weekly_kpi_dashboard_schema_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "schema_name=weekly_kpi_dashboard,schema_version=v1,manual_override=forbidden,missing_fields="
+    },
+    {
+      "check_id": "weekly_kpi_rollup_readiness_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "rollup_source=canonical_evidence,manual_override=forbidden,baseline_state=ready,cycle_time_trend=down,missing_fields="
+    },
+    {
+      "check_id": "weekly_kpi_comparability_visibility_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "visibility_source=comparable_quality_plus_cycle_time,manual_override=forbidden,comparability_decision=comparable,cycle_time_trend=down,baseline_state=ready,missing_fields="
+    },
+    {
+      "check_id": "critical_conflict_blocker_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0,decision=go"
+    },
+    {
+      "check_id": "unresolved_triage_blocker_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "state_files_scanned=0,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=0,ignored_legacy_records=0,blocker_semantics=current_parseable_triage_state_not_in_{resolved,rejected}_and_not_legacy_noise,decision=go"
+    },
+    {
+      "check_id": "feedback_artifact_linkage_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "WARN",
+      "exit_code": 0,
+      "detail": "snapshots_scanned=0,linked_feedback_artifacts=0,invalid_snapshots=0"
+    },
+    {
+      "check_id": "conflict_artifact_linkage_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "WARN",
+      "exit_code": 0,
+      "detail": "snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0"
+    },
+    {
+      "check_id": "chapter_gate_evidence_linkage_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "WARN",
+      "exit_code": 0,
+      "detail": "snapshots_scanned=0,eligible_release_gate_runs=0,chapter_gate_checks_linked=0,aggregation_window=active_sessions,result=insufficient_data,invalid_snapshots=0"
+    },
+    {
+      "check_id": "evidence_freshness_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "fresh_files=7,stale_files=0,window_days=14"
+    },
+    {
+      "check_id": "migration_rollback_evidence_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "migration=present,rollback=present,traceable_link=present"
+    },
+    {
+      "check_id": "compliance_keywords_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "keywords_present=rbac,audit,rollback"
+    },
+    {
+      "check_id": "tasks_completion_signal",
+      "priority": "P1",
+      "blocking": false,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "checked=29,unchecked=0,completion_ratio=100.0%,json_parse_error=none"
+    },
+    {
+      "check_id": "local_selftest_enforcement",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "command=npm --prefix desktop run local:selftest,required_when=retained_release_evidence_for_release_sign_off_is_not_fresh_current,proof_binding=same_head_fresh_current_release_evidence,release_evidence_status=fresh_current,bound_sources=release_summary_report,authority_alignment,writing_helper_acceptance,governance_scripts_regression,blocking_sources=none,proof_state=fresh_current,decision=optional_with_fresh_current_evidence"
+    },
+    {
+      "check_id": "delivery_contract_100_signal",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "contract_id=ISS-20260423-001,label=100% delivery contract,required_dimensions=4,passed_dimensions=4,failed_dimensions=none,completion_percent=100.0,decision=go"
+    }
+  ],
+  "release_evidence": {
+    "status": "fresh_current",
+    "blocking_sources": [],
+    "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+    "version": "11.0.0",
+    "generated_at": "2026-06-12T12:00:11.846758+00:00",
+    "freshness_window_hours": 48,
+    "evidence_sources": [
+      {
+        "source_id": "release_summary_report",
+        "source_type": "report",
+        "artifact_path": "release-check-summary.md",
+        "status": "PASS",
+        "generated_at": "2026-06-12T12:00:11.846758+00:00",
+        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "version": "11.0.0",
+        "freshness_window_hours": 48,
+        "freshness_status": "fresh",
+        "freshness_age_hours": 0.0,
+        "supersession_status": "current",
+        "supersession_reasons": [],
+        "evidence_state": "fresh_current",
+        "is_fresh": true,
+        "is_current": true,
+        "generated_at_parse_error": "none"
+      },
+      {
+        "source_id": "authority_alignment",
+        "source_type": "retained_artifact",
+        "artifact_path": ".workflow/evidence/release/authority-alignment.json",
+        "status": "PASS",
+        "generated_at": "2026-06-12T12:00:11.846758+00:00",
+        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "version": "11.0.0",
+        "freshness_window_hours": 48,
+        "freshness_status": "fresh",
+        "freshness_age_hours": 0.0,
+        "supersession_status": "current",
+        "supersession_reasons": [],
+        "evidence_state": "fresh_current",
+        "is_fresh": true,
+        "is_current": true,
+        "generated_at_parse_error": "none"
+      },
+      {
+        "source_id": "writing_helper_acceptance",
+        "source_type": "retained_artifact",
+        "artifact_path": ".workflow/evidence/release/writing-helper-acceptance.json",
+        "status": "PASS",
+        "generated_at": "2026-06-12T11:54:43.6627577+00:00",
+        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "version": "11.0.0",
+        "freshness_window_hours": 48,
+        "freshness_status": "fresh",
+        "freshness_age_hours": 0.09,
+        "supersession_status": "current",
+        "supersession_reasons": [],
+        "evidence_state": "fresh_current",
+        "is_fresh": true,
+        "is_current": true,
+        "generated_at_parse_error": "none"
+      },
+      {
+        "source_id": "package_e2e_acceptance",
+        "source_type": "retained_artifact",
+        "artifact_path": ".workflow/evidence/release/package-e2e-acceptance.json",
+        "status": "PASS",
+        "generated_at": "2026-06-12T11:54:11.155013+00:00",
+        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "version": "11.0.0",
+        "freshness_window_hours": 48,
+        "freshness_status": "fresh",
+        "freshness_age_hours": 0.1,
+        "supersession_status": "current",
+        "supersession_reasons": [],
+        "evidence_state": "fresh_current",
+        "is_fresh": true,
+        "is_current": true,
+        "generated_at_parse_error": "none"
+      },
+      {
+        "source_id": "governance_scripts_regression",
+        "source_type": "junit",
+        "artifact_path": ".workflow/evidence/release/governance-scripts.junit.xml",
+        "status": "PASS",
+        "generated_at": "2026-06-12T12:00:11.846758+00:00",
+        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "version": "11.0.0",
+        "freshness_window_hours": 48,
+        "freshness_status": "fresh",
+        "freshness_age_hours": 0.0,
+        "supersession_status": "current",
+        "supersession_reasons": [],
+        "evidence_state": "fresh_current",
+        "is_fresh": true,
+        "is_current": true,
+        "generated_at_parse_error": "none"
+      },
+      {
+        "source_id": "production_guard",
+        "source_type": "junit",
+        "artifact_path": ".workflow/evidence/release/vitest-production-guard.xml",
+        "status": "PASS",
+        "generated_at": "2026-06-12T12:00:11.846758+00:00",
+        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "version": "11.0.0",
+        "freshness_window_hours": 48,
+        "freshness_status": "fresh",
+        "freshness_age_hours": 0.0,
+        "supersession_status": "current",
+        "supersession_reasons": [],
+        "evidence_state": "fresh_current",
+        "is_fresh": true,
+        "is_current": true,
+        "generated_at_parse_error": "none"
+      },
+      {
+        "source_id": "external_e2e_smoke",
+        "source_type": "junit",
+        "artifact_path": ".workflow/evidence/release/vitest-e2e.xml",
+        "status": "PASS",
+        "generated_at": "2026-06-12T12:00:11.846758+00:00",
+        "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+        "version": "11.0.0",
+        "freshness_window_hours": 48,
+        "freshness_status": "fresh",
+        "freshness_age_hours": 0.0,
+        "supersession_status": "current",
+        "supersession_reasons": [],
+        "evidence_state": "fresh_current",
+        "is_fresh": true,
+        "is_current": true,
+        "generated_at_parse_error": "none"
+      }
+    ]
+  },
+  "trace": {
+    "trace_id": "release-readiness-2026-06-12T12:00:11.846758+00:00",
+    "session_id": "release-summary",
+    "run_id": "release-check-summary",
+    "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",
+    "report_path": "release-check-summary.md"
+  }
+}

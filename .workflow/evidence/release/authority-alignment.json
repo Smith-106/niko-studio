@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "checked_rules": 96,
+  "passed_rules": 96,
+  "failed_rules": 0,
+  "checked_files": [
+    ".github/workflows/external-release-gate.yml",
+    ".github/workflows/integration-tests.yml",
+    ".pre-commit-config.yaml",
+    "README.md",
+    "desktop/README.md",
+    "desktop/SIDECAR_IMPLEMENTATION_SUMMARY.md",
+    "desktop/package.json",
+    "desktop/scripts/choose_sidecar.cjs",
+    "docs/INDEX.md",
+    "docs/SECURITY_VISIBILITY.md",
+    "docs/operations/DESKTOP_RUNBOOK.md",
+    "docs/operations/ROLLBACK.md",
+    "docs/release/RELEASE_NOTES.md",
+    "docs/testing/TEST_TIER_MATRIX.md",
+    "docs/workflow-entrypoint-inventory.md",
+    "scripts/start_gateway.py",
+    "src-ts/package.json"
+  ],
+  "mismatches": []
+}

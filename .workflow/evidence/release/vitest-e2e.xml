@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="11" failures="0" errors="0" time="5.0802359">
+    <testsuite name="src-ts/tests/mcp/workflow-critic-smoke.integration.test.ts" timestamp="2026-06-12T12:00:07.393Z" hostname="DESKTOP-I75C5QK" tests="1" failures="0" errors="0" skipped="0" time="1.836628">
+        <testcase classname="src-ts/tests/mcp/workflow-critic-smoke.integration.test.ts" name="workflow + critic smoke integration &gt; generates workflow content and evaluates it through critic endpoints" time="1.8357231">
+        </testcase>
+    </testsuite>
+    <testsuite name="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" timestamp="2026-06-12T12:00:07.394Z" hostname="DESKTOP-I75C5QK" tests="10" failures="0" errors="0" skipped="0" time="3.2436079">
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; runs route -&gt; plan -&gt; execute through real workflow endpoints" time="1.7530495">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; supports lifecycle endpoint over a real workflow plan" time="0.214303">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; runs revision session endpoints through the workflow surface" time="0.1520147">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; blocks destructive execute until confirm token is provided" time="0.1807614">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; requires confirm token for destructive checkpoint restore and succeeds after confirmation" time="0.1518861">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; does not persist checkpoint state when quick rollback restore fails" time="0.1896308">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; scopes checkpoint create/list and restore to the request workspace authority" time="0.165121">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; imports lite-plan tasks into scheduler with force level and workspace authority" time="0.1433115">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; supports workflow scheduler register/list/pause/resume/run-now with workspace authority guards" time="0.1723721">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/workflow-endpoints.integration.test.ts" name="workflow endpoints integration &gt; forwards request trace context to workflow plan service" time="0.1201222">
+        </testcase>
+    </testsuite>
+</testsuites>

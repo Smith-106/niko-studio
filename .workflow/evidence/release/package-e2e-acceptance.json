@@ -1,0 +1,26 @@
+{
+  "artifact_type": "package_e2e_acceptance",
+  "schema_version": "evidence.v2",
+  "status": "PASS",
+  "generated_at": "2026-06-12T11:54:11.155013+00:00",
+  "head_sha": "6bada9c1e67683f1bc15cd7eb206fe099f4a6bf6",
+  "version": "11.0.0",
+  "tester": "codex",
+  "artifact_path": "C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_11.0.0_x64-setup.exe",
+  "artifact_name": "Niko-Studio_11.0.0_x64-setup.exe",
+  "artifact_kind": "exe",
+  "artifact_sha256": "9ffa22c63b8d45aa06b6740973d65f09fb13c404d14aa745fa501893c0ad6f14",
+  "artifact_size_bytes": 73243847,
+  "checklist_path": "C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/docs/operations/E2E_VERIFICATION.md",
+  "install_verified": true,
+  "launch_verified": true,
+  "core_flow_verified": true,
+  "shutdown_verified": true,
+  "notes": "",
+  "trace": {
+    "trace_id": "package-e2e-2026-06-12T11:54:11.155013+00:00",
+    "session_id": "package-e2e-checklist",
+    "run_id": "package-e2e-checklist",
+    "artifact_path": "C:/Users/niko/Desktop/工作目录/niko-studio-coverage-delivery/.workflow/evidence/release/package-e2e-acceptance.json"
+  }
+}

@@ -1,0 +1,221 @@
+{
+  "status": "PASS",
+  "started_at": "2026-06-12T11:53:15.428679+00:00",
+  "finished_at": "2026-06-12T11:53:53.771800+00:00",
+  "package_version": "11.0.0",
+  "installer_path": "C:\\Users\\niko\\Desktop\\工作目录\\niko-studio-coverage-delivery\\desktop\\src-tauri\\target\\release\\bundle\\nsis\\Niko-Studio_11.0.0_x64-setup.exe",
+  "install_dir": "C:\\Users\\niko\\AppData\\Local\\Temp\\niko-smoke-1781265195",
+  "runtime_port": 5882,
+  "health_response": {
+    "status": "healthy",
+    "version": "11.0.0",
+    "services": {
+      "memory": "ok",
+      "graph": "ok",
+      "search": "ok",
+      "workflow": "ok",
+      "critic": "ok",
+      "agent": "ok",
+      "skills": "ok"
+    },
+    "engine_health": {
+      "memory": {
+        "status": "ok"
+      },
+      "graph": {
+        "status": "ok"
+      },
+      "search": {
+        "status": "ok"
+      },
+      "workflow": {
+        "status": "ok"
+      },
+      "critic": {
+        "status": "ok"
+      }
+    },
+    "diagnostic": null,
+    "observability": {
+      "runtime": {
+        "ready": 7,
+        "total": 7,
+        "health_ratio": 1
+      },
+      "layers": {
+        "status": {
+          "memory": "ok",
+          "retrieval": "ok",
+          "workflow": "ok"
+        },
+        "health": {
+          "memory": {
+            "status": "ok"
+          },
+          "retrieval": {
+            "status": "ok"
+          },
+          "workflow": {
+            "status": "ok"
+          }
+        }
+      }
+    },
+    "agents": [
+      "commander",
+      "architect",
+      "writer",
+      "critic",
+      "plot",
+      "worldbuilding",
+      "character"
+    ],
+    "skills_count": 43,
+    "mcp_runtime": {
+      "session_id": "gw-1781262649285",
+      "connection_state": "connected",
+      "reconnect_state": "idle",
+      "last_probe_at": "2026-06-12T11:53:53.732Z",
+      "reconnect_attempts": 0,
+      "last_error": null,
+      "diagnostic": null,
+      "servers": {
+        "memory": {
+          "state": "connected",
+          "loading": false,
+          "lastError": null,
+          "enabled": true
+        },
+        "graph": {
+          "state": "connected",
+          "loading": false,
+          "lastError": null,
+          "enabled": true
+        },
+        "search": {
+          "state": "connected",
+          "loading": false,
+          "lastError": null,
+          "enabled": true
+        },
+        "workflow": {
+          "state": "connected",
+          "loading": false,
+          "lastError": null,
+          "enabled": true
+        },
+        "critic": {
+          "state": "connected",
+          "loading": false,
+          "lastError": null,
+          "enabled": true
+        },
+        "agent": {
+          "state": "connected",
+          "loading": false,
+          "lastError": null,
+          "enabled": true
+        },
+        "skills": {
+          "state": "connected",
+          "loading": false,
+          "lastError": null,
+          "enabled": true
+        }
+      },
+      "service_configs": [
+        {
+          "id": "memory",
+          "name": "Memory",
+          "path": "/memory",
+          "enabled": true,
+          "builtin": true,
+          "transport": "streamable-http",
+          "health_url": null,
+          "status": "ok"
+        },
+        {
+          "id": "graph",
+          "name": "Graph",
+          "path": "/graph",
+          "enabled": true,
+          "builtin": true,
+          "transport": "streamable-http",
+          "health_url": null,
+          "status": "ok"
+        },
+        {
+          "id": "search",
+          "name": "Search",
+          "path": "/search",
+          "enabled": true,
+          "builtin": true,
+          "transport": "streamable-http",
+          "health_url": null,
+          "status": "ok"
+        },
+        {
+          "id": "workflow",
+          "name": "Workflow",
+          "path": "/workflow",
+          "enabled": true,
+          "builtin": true,
+          "transport": "streamable-http",
+          "health_url": null,
+          "status": "ok"
+        },
+        {
+          "id": "critic",
+          "name": "Critic",
+          "path": "/critic",
+          "enabled": true,
+          "builtin": true,
+          "transport": "streamable-http",
+          "health_url": null,
+          "status": "ok"
+        },
+        {
+          "id": "agent",
+          "name": "Agent",
+          "path": "/agent",
+          "enabled": true,
+          "builtin": true,
+          "transport": "streamable-http",
+          "health_url": null,
+          "status": "ok"
+        },
+        {
+          "id": "skills",
+          "name": "Skills",
+          "path": "/skills",
+          "enabled": true,
+          "builtin": true,
+          "transport": "streamable-http",
+          "health_url": null,
+          "status": "ok"
+        }
+      ]
+    }
+  },
+  "cors_response": {
+    "status": 204,
+    "headers": {
+      "access-control-allow-origin": "tauri://localhost",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-max-age": "86400",
+      "date": "Fri, 12 Jun 2026 11:53:53 GMT",
+      "connection": "close"
+    }
+  },
+  "install_verified": true,
+  "launch_verified": true,
+  "health_version_verified": true,
+  "services_verified": true,
+  "cors_verified": true,
+  "failures": [],
+  "notes": [
+    "Installed launcher: C:\\Users\\niko\\AppData\\Local\\Temp\\niko-smoke-1781265195\\niko-studio-desktop.exe",
+    "Spawned PID 76028 (NIKO_GATEWAY_PORT=5882)"
+  ]
+}

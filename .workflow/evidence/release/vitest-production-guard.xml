@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.0229649">
+    <testsuite name="src-ts/tests/gateway-server.runtime.test.ts" timestamp="2026-06-12T12:00:11.433Z" hostname="DESKTOP-I75C5QK" tests="2" failures="0" errors="0" skipped="0" time="0.0067157">
+        <testcase classname="src-ts/tests/gateway-server.runtime.test.ts" name="gateway-server runtime wiring &gt; buildConfigAccess exposes snake_case config payloads and maps updates back to shared config" time="0.0029564">
+        </testcase>
+        <testcase classname="src-ts/tests/gateway-server.runtime.test.ts" name="gateway-server runtime wiring &gt; buildGatewayDeps wires real service/runtime helpers and seeded MCP configs" time="0.0030179">
+        </testcase>
+    </testsuite>
+    <testsuite name="src-ts/tests/mcp/health-endpoints.test.ts" timestamp="2026-06-12T12:00:11.434Z" hostname="DESKTOP-I75C5QK" tests="5" failures="0" errors="0" skipped="0" time="0.0162492">
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; reports runtime_unavailable when runtime session is missing" time="0.012239">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; classifies parser_missing from engine health errors" time="0.0006498">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoint diagnostics &gt; classifies integration_degraded when services fail without prerequisite signature" time="0.0008366">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoints model listing parity &gt; lists provider models from the loaded services config" time="0.0008681">
+        </testcase>
+        <testcase classname="src-ts/tests/mcp/health-endpoints.test.ts" name="health endpoints model listing parity &gt; filters by provider and returns not_found for unknown providers" time="0.0003942">
+        </testcase>
+    </testsuite>
+</testsuites>
