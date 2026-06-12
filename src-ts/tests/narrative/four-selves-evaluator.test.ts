@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { FourSelvesEvaluator } from '../../narrative/evaluators/four-selves-evaluator';
 
 describe('narrative/evaluators/four-selves-evaluator', () => {
+  it('exposes public metadata getters', () => {
+    const evaluator = new FourSelvesEvaluator();
+
+    expect(evaluator.name).toContain('四个自我');
+    expect(evaluator.description).toContain('四个自我层次');
+    expect(evaluator.relatedSkill).toBe('four-selves');
+  });
+
   it('evaluate returns layered metrics for a character with multiple revealed selves', async () => {
     const evaluator = new FourSelvesEvaluator();
 

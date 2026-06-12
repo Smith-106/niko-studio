@@ -83,15 +83,14 @@ export interface LLMRequest {
 
 export function createLLMRequest(overrides?: Partial<LLMRequest>): LLMRequest {
   return {
-    prompt: '',
-    modelTier: ModelTier.DEFAULT,
-    modelOverride: null,
-    temperature: 0.7,
-    maxTokens: null,
-    stopSequences: [],
-    systemPrompt: null,
-    responseFormat: null,
-    ...overrides,
+    prompt: overrides?.prompt ?? '',
+    modelTier: overrides?.modelTier ?? ModelTier.DEFAULT,
+    modelOverride: overrides?.modelOverride ?? null,
+    temperature: overrides?.temperature ?? 0.7,
+    maxTokens: overrides?.maxTokens ?? null,
+    stopSequences: overrides?.stopSequences ?? [],
+    systemPrompt: overrides?.systemPrompt ?? null,
+    responseFormat: overrides?.responseFormat ?? null,
   };
 }
 

@@ -83,12 +83,11 @@ function extractStyle(text: string): Record<string, unknown> {
 
   return {
     avgSentenceLength,
-    vocabRichness: totalWords > 0 ? Math.round((uniqueWords / totalWords) * 1000) / 1000 : 0,
+    vocabRichness: Math.round((uniqueWords / totalWords) * 1000) / 1000,
     dialogueRatio: sentences.length > 0 ? Math.round((dialogueSentences / sentences.length) * 1000) / 1000 : 0,
     tensePreference: detectTense(text),
-    avgParagraphLength: paragraphs.length > 0
-      ? Math.round((paragraphs.reduce((a, p) => a + countWords(p), 0) / paragraphs.length) * 10) / 10
-      : 0,
+    avgParagraphLength:
+      Math.round((paragraphs.reduce((a, p) => a + countWords(p), 0) / paragraphs.length) * 10) / 10,
     sentenceLengthDistribution: distribution,
     dominantPOV: detectPOV(text),
     sampleHash: hashContent(text),

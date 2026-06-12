@@ -6,6 +6,7 @@ import {
   createProjectNarrativeEventRecord,
   createProjectNarrativeProjectionBoundary,
   createProjectNarrativeRecordAuthority,
+  createProjectNarrativeRecordId,
   createProjectNarrativeSceneRecord,
   createProjectNarrativeTimelineRecord,
   normalizeProjectNarrativeRecordSetId,
@@ -147,6 +148,137 @@ describe('project narrative record helpers', () => {
       promotionMode: 'manual',
       status: 'draft',
       promotedFrom: 'research',
+    });
+  });
+
+  it('applies fallback defaults when narrative scene inputs are blank or invalid', () => {
+    const scene = createProjectNarrativeSceneRecord({
+      workspaceId: 'Atlas Project',
+      recordSetId: '---',
+      sourcePageId: '   ',
+      promotedFrom: 'invalid' as never,
+      status: 'invalid' as never,
+      id: '   ',
+      idSeed: '   ',
+      title: '   ',
+      summary: '   ',
+      tags: [' hero ', 'hero', ' ', 42 as never],
+      relatedEntityIds: [' ally ', 'ally', '', null as never],
+      projections: {
+        graphEntityIds: [' scene-1 ', 'scene-1', ' '],
+        memoryEntryIds: 'invalid' as never,
+        wikiPageIds: undefined,
+      },
+      sceneOrder: Number.POSITIVE_INFINITY,
+      locationId: '   ',
+      eventIds: [' event-1 ', 'event-1', ' '],
+      storyTime: {
+        order: '3' as never,
+        label: '   ',
+        anchorEventId: '   ',
+      },
+      narrativeTime: {
+        chapterId: '   ',
+        sceneOrder: '   ' as never,
+        label: '   ',
+      },
+    });
+
+    expect(scene.id).toBe(createProjectNarrativeRecordId('scene', 'scene:scene-record'));
+    expect(scene.title).toBe('scene-record');
+    expect(scene.summary).toBe('');
+    expect(scene.authority).toMatchObject({
+      workspaceId: 'atlas-project',
+      recordSetId: 'workspace-records',
+      sourcePageId: null,
+      status: 'curated',
+      promotedFrom: 'manual',
+    });
+    expect(scene.tags).toEqual(['hero']);
+    expect(scene.relatedEntityIds).toEqual(['ally']);
+    expect(scene.projections).toEqual({
+      graphEntityIds: ['scene-1'],
+      memoryEntryIds: [],
+      wikiPageIds: [],
+    });
+    expect(scene.sceneOrder).toBeNull();
+    expect(scene.locationId).toBeNull();
+    expect(scene.eventIds).toEqual(['event-1']);
+    expect(scene.storyTime).toEqual({
+      order: 3,
+      label: null,
+      anchorEventId: null,
+    });
+    expect(scene.narrativeTime).toEqual({
+      chapterId: null,
+      sceneOrder: null,
+      label: null,
+    });
+    expect(Date.parse(scene.createdAt)).not.toBeNaN();
+    expect(Date.parse(scene.updatedAt)).not.toBeNaN();
+  });
+
+  it('falls back for normalized ids when record set or seed input collapses to empty', () => {
+    expect(normalizeProjectNarrativeRecordSetId(undefined, '   ')).toBe('workspace-records');
+    expect(normalizeProjectNarrativeRecordSetId('---', 'Atlas Project')).toBe('workspace-records');
+    expect(createProjectNarrativeRecordId('event', '   ')).toBe(createProjectNarrativeRecordId('event', 'event'));
+  });
+
+  it('sanitizes timeline entries and projection boundaries for invalid optional inputs', () => {
+    const timeline = createProjectNarrativeTimelineRecord({
+      workspaceId: 'Atlas Project',
+      title: 'Atlas projection timeline',
+      mode: 'outline' as never,
+      sourcePageId: '   ',
+      anchorSceneId: '   ',
+      anchorEventId: '   ',
+      entries: [
+        {
+          order: 'oops' as never,
+          recordId: '   ',
+          recordKind: 'chapter' as never,
+          label: 'Dropped entry',
+        },
+        {
+          order: '2' as never,
+          recordId: ' event-1 ',
+          recordKind: 'chapter' as never,
+          label: '   ',
+        },
+      ] as never,
+      projections: {
+        wikiPageIds: ['wiki-1', 'wiki-1', ' '],
+      },
+    });
+
+    const narrativeTimeline = createProjectNarrativeTimelineRecord({
+      workspaceId: 'Atlas Project',
+      title: 'Narrative order view',
+      mode: 'narrative',
+      entries: null,
+    });
+
+    const boundary = createProjectNarrativeProjectionBoundary(timeline);
+
+    expect(timeline.mode).toBe('story');
+    expect(timeline.anchorSceneId).toBeNull();
+    expect(timeline.anchorEventId).toBeNull();
+    expect(timeline.entries).toEqual([
+      {
+        order: 2,
+        recordId: 'event-1',
+        recordKind: 'event',
+        label: null,
+      },
+    ]);
+    expect(narrativeTimeline.mode).toBe('narrative');
+    expect(narrativeTimeline.entries).toEqual([]);
+    expect(boundary).toEqual({
+      authority: timeline.authority,
+      canonPageId: null,
+      graphEntityIds: [],
+      memoryEntryIds: [],
+      wikiPageIds: ['wiki-1'],
     });
   });
 });

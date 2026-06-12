@@ -50,6 +50,35 @@ describe('workflow/graph', () => {
     expect((result as Record<string, unknown>).done).toBe(true);
   });
 
+  it('handles direct edges, cycles, and missing nodes without throwing', async () => {
+    const direct = new SimpleWorkflowGraph();
+    direct.addNode('start', async () => ({ step: 'start' }));
+    direct.addNode('end', async () => ({ done: true }));
+    direct.addEdge('start', 'end');
+    direct.setEntryPoint('start');
+
+    await expect(direct.compile().invoke({} as never)).resolves.toMatchObject({
+      step: 'start',
+      done: true,
+    });
+
+    const cycle = new SimpleWorkflowGraph();
+    cycle.addNode('loop', async () => ({ looped: true }));
+    cycle.addEdge('loop', 'loop');
+    cycle.setEntryPoint('loop');
+
+    await expect(cycle.compile().invoke({} as never)).resolves.toMatchObject({
+      looped: true,
+    });
+
+    const missing = new SimpleWorkflowGraph();
+    missing.setEntryPoint('missing');
+
+    await expect(missing.compile().invoke({ untouched: true } as never)).resolves.toEqual({
+      untouched: true,
+    });
+  });
+
   it('processes distillation results and helper functions over draft state', () => {
     const node = new DistillationNode(DistillationTemplate.SUMMARY);
     const processed = node.process({
@@ -94,6 +123,34 @@ describe('workflow/graph', () => {
 
     expect(createdResult.distillation_result).toMatchObject({
       template: DistillationTemplate.CHARACTER_ARC,
+    });
+  });
+
+  it('records distillation warnings when distillation execution fails', () => {
+    const node = new DistillationNode(DistillationTemplate.FULL);
+    (node as unknown as { _executeDistillation: () => never })._executeDistillation =
+      () => {
+        throw new Error('distill failed');
+      };
+
+    const processed = node.process({
+      draft_content: 'draft text',
+      current_scene: {
+        scene_id: 'scene-warning',
+        chapter_num: 4,
+      },
+      errors: ['existing'],
+    } as never) as Record<string, unknown>;
+
+    expect(processed.errors).toEqual([
+      'existing',
+      expect.stringContaining('Distillation warning: Error: distill failed'),
+    ]);
+    expect(processed.distillation_state).toMatchObject({
+      scene_id: 'scene-warning',
+      chapter_num: 4,
+      is_completed: false,
+      error: 'Error: distill failed',
     });
   });
 

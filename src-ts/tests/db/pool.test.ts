@@ -404,4 +404,27 @@ describe('closeAllPools', () => {
   it('is safe to call when no pools exist', () => {
     expect(() => closeAllPools()).not.toThrow();
   });
+
+  it('registers an exit shutdown hook that closes global pools', async () => {
+    closeAllPools();
+    const registered: Array<() => void> = [];
+    const processOnSpy = vi.spyOn(process, 'on').mockImplementation((event, listener) => {
+      if (event === 'exit') {
+        registered.push(listener as () => void);
+      }
+      return process;
+    });
+
+    vi.resetModules();
+    const poolModule = await import('../../db/pool');
+    const hookedPool = poolModule.getPool(createTempDbPath(), 1);
+
+    expect(hookedPool.isInitialized).toBe(true);
+    expect(registered).toHaveLength(1);
+
+    registered[0]();
+
+    expect(hookedPool.isInitialized).toBe(false);
+    processOnSpy.mockRestore();
+  });
 });

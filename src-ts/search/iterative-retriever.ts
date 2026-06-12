@@ -845,13 +845,7 @@ export class IterativeRetriever {
 
     for (const ext of this._fileExtensions) {
       const pattern = new RegExp(`\\${ext}$`, 'i')
-      let entries: string[]
-
-      try {
-        entries = await walkDir(this._projectRoot)
-      } catch {
-        continue
-      }
+      const entries = await walkDir(this._projectRoot)
 
       for (const filePath of entries) {
         if (!pattern.test(filePath)) continue
@@ -877,12 +871,7 @@ export class IterativeRetriever {
           const score = Math.min(0.9, 0.3 + matchCount * 0.1)
           const snippet = extractSnippet(content, keywords, 200)
 
-          let relativePath: string
-          try {
-            relativePath = relative(this._projectRoot, filePath)
-          } catch {
-            relativePath = filePath
-          }
+          const relativePath = relative(this._projectRoot, filePath)
 
           results.push({
             id: relativePath,
@@ -1094,11 +1083,6 @@ function extractSnippet(
   for (const kw of keywords) {
     const pos = contentLower.indexOf(kw)
     if (pos !== -1 && pos < firstPos) firstPos = pos
-  }
-
-  if (firstPos === content.length) {
-    const sliced = content.slice(0, maxLen).trim()
-    return content.length > maxLen ? `${sliced}...` : sliced
   }
 
   const start = Math.max(0, firstPos - 50)

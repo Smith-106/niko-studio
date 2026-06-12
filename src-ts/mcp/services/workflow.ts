@@ -72,7 +72,6 @@ interface WorkflowEngine {
     params?: { confirmToken?: string | null }
   ): Promise<Record<string, unknown>>;
   listCheckpoints(limit: number): Promise<WorkflowCheckpointSummary[]>;
-  bindPlanSession(planId: string, sessionId: string): string;
 }
 
 interface WorkflowRuntimeCaches {
@@ -91,26 +90,16 @@ function normalizeWorkspaceKey(workspaceRoot: string): string {
   return workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
 }
 
-function resolveWorkspaceCacheKey(workspaceRoot?: string): string {
-  return normalizeWorkspaceKey(workspaceRoot ?? resolveWorkflowWorkspace());
+function resolveWorkspaceCacheKey(workspaceRoot: string): string {
+  return normalizeWorkspaceKey(workspaceRoot);
 }
 
-function getWorkspaceRootFromCacheKey(cacheKey: string): string {
-  for (const cache of workflowRuntimeCachesByWorkspace.values()) {
-    if (resolveWorkspaceCacheKey(cache.workspaceRoot) === cacheKey) {
-      return cache.workspaceRoot;
-    }
-  }
-  return cacheKey;
-}
-
-function getOrCreateWorkspaceCaches(workspaceRoot?: string): WorkflowRuntimeCaches {
-  const resolvedWorkspaceRoot = workspaceRoot ?? resolveWorkflowWorkspace();
-  const cacheKey = resolveWorkspaceCacheKey(resolvedWorkspaceRoot);
+function getOrCreateWorkspaceCaches(workspaceRoot: string): WorkflowRuntimeCaches {
+  const cacheKey = resolveWorkspaceCacheKey(workspaceRoot);
   let caches = workflowRuntimeCachesByWorkspace.get(cacheKey);
   if (!caches) {
     caches = {
-      workspaceRoot: resolvedWorkspaceRoot,
+      workspaceRoot,
       workflowEngineInstance: null,
       workflowEngineInstanceProviderVersion: -1,
       checkpointAuthorityBindings: new Map<string, WorkflowAuthority>(),
@@ -122,12 +111,6 @@ function getOrCreateWorkspaceCaches(workspaceRoot?: string): WorkflowRuntimeCach
   }
   return caches;
 }
-
-function clearWorkspaceCaches(workspaceRoot?: string): void {
-  const cacheKey = resolveWorkspaceCacheKey(workspaceRoot);
-  workflowRuntimeCachesByWorkspace.delete(cacheKey);
-}
-
 
 export function setWorkflowEngineRuntimeProvider(
   provider?: WorkflowEngineRuntimeProvider | null,
@@ -266,12 +249,12 @@ function cloneWorkflowAuthority(
 
 function resolveCheckpointAuthority(
   workspace?: ProjectWorkspaceContext | null,
-  workspaceRoot?: string,
+  workspaceRoot: string,
 ): WorkflowAuthority | null {
   return resolveWorkflowAuthority(
     workspace
     ?? normalizeProjectWorkspaceContext({}, {
-      workspaceRoot: workspaceRoot ?? resolveWorkflowWorkspace(),
+      workspaceRoot,
     }),
   );
 }
@@ -363,7 +346,7 @@ function resolveCheckpointRequestAuthority(params: {
 function resolveStoredCheckpointAuthority(
   engine: WorkflowEngine,
   checkpoint: WorkflowCheckpointRecord,
-  workspaceRoot?: string,
+  workspaceRoot: string,
 ): WorkflowAuthority | null {
   if (checkpoint.plan_id && typeof engine.getPlanAuthority === 'function') {
     return cloneWorkflowAuthority(engine.getPlanAuthority(checkpoint.plan_id));
@@ -489,30 +472,23 @@ function schedulerTaskMatchesAuthority(
 
 function getFallbackWorkspaceCachesForAuthority(
   requestAuthority: WorkflowAuthority | null,
-  preferredWorkspaceRoot?: string,
-): WorkflowRuntimeCaches | null {
-  const preferredCaches = preferredWorkspaceRoot
-    ? getOrCreateWorkspaceCaches(preferredWorkspaceRoot)
-    : null;
+  preferredWorkspaceRoot: string,
+): WorkflowRuntimeCaches {
+  const preferredCaches = getOrCreateWorkspaceCaches(preferredWorkspaceRoot);
 
   if (!requestAuthority) {
     return preferredCaches;
   }
 
-  const preferredKey = preferredWorkspaceRoot
-    ? resolveWorkspaceCacheKey(preferredWorkspaceRoot)
-    : null;
-
   const entries = [...workflowRuntimeCachesByWorkspace.entries()];
-  if (preferredKey) {
-    const preferredIndex = entries.findIndex(([key]) => key === preferredKey);
-    if (preferredIndex > 0) {
-      const [preferred] = entries.splice(preferredIndex, 1);
-      entries.unshift(preferred);
-    }
+  const preferredKey = resolveWorkspaceCacheKey(preferredWorkspaceRoot);
+  const preferredIndex = entries.findIndex(([key]) => key === preferredKey);
+  if (preferredIndex > 0) {
+    const [preferred] = entries.splice(preferredIndex, 1);
+    entries.unshift(preferred);
   }
 
-  for (const [cacheKey, cache] of entries) {
+  for (const [, cache] of entries) {
     const matches = [...cache.schedulerEntries.values()].some((taskRecord) => {
       if (!taskRecord.authority) {
         return false;
@@ -525,32 +501,7 @@ function getFallbackWorkspaceCachesForAuthority(
     });
 
     if (matches) {
-      return getOrCreateWorkspaceCaches(getWorkspaceRootFromCacheKey(cacheKey));
-    }
-  }
-
-  for (const [cacheKey, cache] of entries) {
-    const matches = [...cache.checkpointAuthorityBindings.values()].some((storedAuthority) => {
-      if (!storedAuthority) {
-        return false;
-      }
-      return !resolveCheckpointRequestAuthority({
-        checkpoint: {
-          id: 'checkpoint',
-          description: '',
-          commit_hash: null,
-          created_at: '',
-          plan_id: null,
-          step_id: null,
-          replay_payload: {},
-        },
-        storedAuthority,
-        requestAuthority,
-      }).error;
-    });
-
-    if (matches) {
-      return getOrCreateWorkspaceCaches(getWorkspaceRootFromCacheKey(cacheKey));
+      return cache;
     }
   }
 
@@ -560,34 +511,32 @@ function getFallbackWorkspaceCachesForAuthority(
 function ensureSchedulerTaskAccess(params: {
   taskId: string;
   requestAuthority: WorkflowAuthority | null;
-  workspaceRoot?: string;
-}):
+  workspaceRoot: string;
+}): 
   | { task: WorkflowSchedulerTaskRecord; authority: WorkflowAuthority | null; caches: WorkflowRuntimeCaches }
   | { error: string } {
   const triedCaches = new Set<string>();
   const candidateCaches: WorkflowRuntimeCaches[] = [];
+  const preferredWorkspaceRoot = params.workspaceRoot;
 
-  const pushCandidate = (cache: WorkflowRuntimeCaches | null) => {
-    if (!cache) return;
+  const pushCandidate = (cache: WorkflowRuntimeCaches) => {
     const key = resolveWorkspaceCacheKey(cache.workspaceRoot);
     if (triedCaches.has(key)) return;
     triedCaches.add(key);
     candidateCaches.push(cache);
   };
 
-  pushCandidate(params.workspaceRoot ? getOrCreateWorkspaceCaches(params.workspaceRoot) : null);
-  pushCandidate(getFallbackWorkspaceCachesForAuthority(params.requestAuthority, params.workspaceRoot));
+  pushCandidate(getOrCreateWorkspaceCaches(preferredWorkspaceRoot));
+  pushCandidate(getFallbackWorkspaceCachesForAuthority(params.requestAuthority, preferredWorkspaceRoot));
   for (const cache of workflowRuntimeCachesByWorkspace.values()) {
     pushCandidate(cache);
   }
 
-  let sawTask = false;
   for (const cache of candidateCaches) {
     const task = cache.schedulerEntries.get(params.taskId);
     if (!task) {
       continue;
     }
-    sawTask = true;
 
     const resolved = resolveSchedulerRequestAuthority({
       taskId: params.taskId,
@@ -606,11 +555,7 @@ function ensureSchedulerTaskAccess(params: {
     };
   }
 
-  if (!sawTask) {
-    return { error: `Scheduler task '${params.taskId}' not found` };
-  }
-
-  return { error: `Scheduler task '${params.taskId}' is not accessible in current authority scope` };
+  return { error: `Scheduler task '${params.taskId}' not found` };
 }
 
 function parseSchedulerTaskDefinition(input: unknown): WorkflowSchedulerTaskDefinition | null {
@@ -712,27 +657,9 @@ async function loadSchedulerEntriesFromStore(params: {
   caches.schedulerStoreLoaded = true;
 }
 
-async function loadSchedulerEntriesAcrossWorkspaces(taskId: string): Promise<void> {
-  const loaded = new Set<string>();
-
+async function loadSchedulerEntriesAcrossWorkspaces(): Promise<void> {
   for (const cache of workflowRuntimeCachesByWorkspace.values()) {
-    const root = cache.workspaceRoot;
-    const key = resolveWorkspaceCacheKey(root);
-    if (loaded.has(key)) {
-      continue;
-    }
-    loaded.add(key);
-    await loadSchedulerEntriesFromStore({ workspaceRoot: root });
-  }
-
-  if (!taskId) {
-    return;
-  }
-
-  const fallbackRoot = resolveWorkflowWorkspace();
-  const fallbackKey = resolveWorkspaceCacheKey(fallbackRoot);
-  if (!loaded.has(fallbackKey)) {
-    await loadSchedulerEntriesFromStore({ workspaceRoot: fallbackRoot });
+    await loadSchedulerEntriesFromStore({ workspaceRoot: cache.workspaceRoot });
   }
 }
 
@@ -821,7 +748,7 @@ async function resolveLitePlanSessionId(baseDir: string, requestedSessionId?: st
   }));
 
   ranked.sort((left, right) => right.mtimeMs - left.mtimeMs);
-  return ranked[0]?.name ?? null;
+  return ranked[0]!.name;
 }
 
 function normalizeImportedTaskId(sessionId: string, taskId: string): string {
@@ -855,9 +782,8 @@ function buildImportedSchedulerDefinition(params: {
   };
 }
 
-function getEngine(workspaceRoot?: string): WorkflowEngine | null {
-  const resolvedWorkspaceRoot = workspaceRoot ?? resolveWorkflowWorkspace();
-  const caches = getOrCreateWorkspaceCaches(resolvedWorkspaceRoot);
+function getEngine(workspaceRoot: string): WorkflowEngine {
+  const caches = getOrCreateWorkspaceCaches(workspaceRoot);
   const providerVersion = getWorkflowEngineRuntimeProviderVersion();
   if (
     caches.workflowEngineInstance
@@ -869,7 +795,7 @@ function getEngine(workspaceRoot?: string): WorkflowEngine | null {
   if (!caches.workflowEngineInstance) {
     const runtimeProvider = getWorkflowEngineRuntimeProvider();
     const engine = runtimeProvider({
-      workspace: resolvedWorkspaceRoot,
+      workspace: workspaceRoot,
       sessionNamespace: 'mcp-workflow',
     });
     caches.workflowEngineInstance = {
@@ -883,10 +809,7 @@ function getEngine(workspaceRoot?: string): WorkflowEngine | null {
         return authority;
       },
       getPlanAuthority(planId: string) {
-        if (typeof engine.getPlanAuthority === 'function') {
-          return engine.getPlanAuthority(planId);
-        }
-        return {
+        return engine.getPlanAuthority?.(planId) ?? {
           sessionId: null,
           workspaceId: null,
           projectId: null,
@@ -914,14 +837,14 @@ function getEngine(workspaceRoot?: string): WorkflowEngine | null {
         task: string,
         level?: string | null,
         params?: {
-          recommendations?: WorkflowRecommendationInput | null;
+          recommendations?: WorkflowRecommendationInput;
           traceContext?: WorkflowTraceContext | null;
         },
       ) {
         return engine.plan(
           task,
           level ?? undefined,
-          params?.recommendations ?? undefined,
+          params?.recommendations,
           params?.traceContext
             ? {
                 trace_context: params.traceContext as unknown as Record<string, unknown>,
@@ -984,9 +907,6 @@ function getEngine(workspaceRoot?: string): WorkflowEngine | null {
         const records = await engine.listCheckpoints(limit);
         return records as unknown as WorkflowCheckpointSummary[];
       },
-      bindPlanSession(planId: string, sessionId: string) {
-        return engine.bindPlanSession(planId, sessionId);
-      },
     };
     caches.workflowEngineInstanceProviderVersion = providerVersion;
   }
@@ -1003,7 +923,6 @@ export async function workflowRoute(
 ): Promise<Record<string, unknown>> {
   const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
   const engine = getEngine(workspaceRoot);
-  if (!engine) return { level: 'L1', reason: 'Workflow engine unavailable' };
   return engine.route(task);
 }
 
@@ -1019,19 +938,14 @@ export async function workflowPlan(params: {
 
   const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
   const engine = getEngine(workspaceRoot);
-  if (!engine) return { error: 'Workflow engine unavailable' };
   const result = await engine.plan(params.task, params.level, {
     recommendations: mergedRecommendations,
     traceContext: params.traceContext ?? null,
   });
   const planId = result['plan_id'];
   const authority = resolveWorkflowAuthority(params.workspace);
-  if (typeof planId === 'string' && planId && authority) {
-    if (engine.bindPlanAuthority) {
-      engine.bindPlanAuthority(planId, authority);
-    } else if (authority.sessionId) {
-      engine.bindPlanSession(planId, authority.sessionId);
-    }
+  if (typeof planId === 'string' && planId && authority && engine.bindPlanAuthority) {
+    engine.bindPlanAuthority(planId, authority);
   }
   return result;
 }
@@ -1045,7 +959,6 @@ export async function workflowExecute(params: {
 }): Promise<Record<string, unknown>> {
   const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
   const engine = getEngine(workspaceRoot);
-  if (!engine) return { error: 'Workflow engine unavailable' };
   const authority = resolveWorkflowAuthority(params.workspace);
   return engine.execute(params.planId, params.stepId ?? null, {
     recommendations: params.recommendations ?? null,
@@ -1061,7 +974,6 @@ export async function workflowQuickRollback(params: {
 }): Promise<Record<string, unknown>> {
   const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
   const engine = getEngine(workspaceRoot);
-  if (!engine) return { error: 'Workflow engine unavailable' };
   const authority = resolveWorkflowAuthority(params.workspace);
   return engine.quickRollback({
     planId: params.planId,
@@ -1077,7 +989,6 @@ export async function workflowLifecycle(
 ): Promise<Record<string, unknown>> {
   const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
   const engine = getEngine(workspaceRoot);
-  if (!engine) return { error: 'Workflow engine unavailable' };
   const authority = resolveWorkflowAuthority(workspace);
 
   // Quality gate check for stage-advancing actions
@@ -1284,7 +1195,7 @@ export async function workflowSchedulerList(params: {
     };
   }
 
-  await loadSchedulerEntriesAcrossWorkspaces('');
+  await loadSchedulerEntriesAcrossWorkspaces();
 
   const dedupedByTaskId = new Map<string, WorkflowSchedulerTaskRecord>();
   for (const cache of workflowRuntimeCachesByWorkspace.values()) {
@@ -1457,7 +1368,6 @@ export async function checkpointCreate(
   const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
   const caches = getOrCreateWorkspaceCaches(workspaceRoot);
   const engine = getEngine(workspaceRoot);
-  if (!engine) return { error: 'Workflow engine unavailable' };
   const result = await engine.createCheckpoint(description, autoCommit);
   const checkpointId = typeof result['checkpoint_id'] === 'string' ? result['checkpoint_id'] : null;
   const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
@@ -1474,7 +1384,6 @@ export async function checkpointRestore(
 ): Promise<Record<string, unknown>> {
   const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
   const engine = getEngine(workspaceRoot);
-  if (!engine) return { error: 'Workflow engine unavailable' };
   const checkpoint = engine.getCheckpoint?.(checkpointId) ?? null;
   if (!checkpoint) {
     return { error: `Checkpoint '${checkpointId}' not found` };
@@ -1498,7 +1407,6 @@ export async function checkpointList(
 ): Promise<WorkflowCheckpointSummary[]> {
   const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
   const engine = getEngine(workspaceRoot);
-  if (!engine) return [];
   const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
   const checkpoints = await engine.listCheckpoints(limit) as WorkflowCheckpointSummary[];
   return checkpoints.filter((summary) => {

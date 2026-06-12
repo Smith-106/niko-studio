@@ -115,14 +115,15 @@ export class ModelRouter {
 
     // Step 2: Check context size against model's maxTokens
     if (contextSize > selectedModel.maxTokens) {
+      const exceededModel = selectedModel;
       _log.warn('Context exceeds model maxTokens, routing to fallback', {
         contextSize,
-        modelMaxTokens: selectedModel.maxTokens,
+        modelMaxTokens: exceededModel.maxTokens,
         fallbackModel: this.config.fallbackModel.name,
       });
 
       selectedModel = this.config.fallbackModel;
-      reason = `Context size (${contextSize} tokens) exceeds ${selectedModel.name} max tokens (${selectedModel.maxTokens}), routing to fallback with truncation warning`;
+      reason = `Context size (${contextSize} tokens) exceeds ${exceededModel.name} max tokens (${exceededModel.maxTokens}), routing to fallback with truncation warning`;
     }
 
     // Step 3: Estimate latency based on provider and context size

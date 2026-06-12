@@ -267,5 +267,35 @@ describe('gateway-state', () => {
 
       expect(deps.utcNowIso()).toBe('2026-04-21T12:00:00.000Z');
     });
+
+    it('serializeServiceConfig falls back to inline values for unknown services', async () => {
+      const { buildGatewayDeps } = await import('../../mcp/gateway-state');
+      const mockContainer = {} as unknown as import('../../container/ServiceContainer').ServiceContainer;
+      const deps = buildGatewayDeps(mockContainer);
+
+      expect(
+        deps.serializeServiceConfig(
+          {
+            id: ' custom-service ',
+            name: 'Custom Service',
+            path: '/custom',
+            enabled: false,
+            builtin: true,
+            transport: 'stdio',
+            healthUrl: 'https://health.example.com',
+          },
+          { 'custom-service': 'degraded' },
+        ),
+      ).toEqual({
+        id: 'custom-service',
+        name: 'Custom Service',
+        path: '/custom',
+        enabled: false,
+        builtin: true,
+        transport: 'stdio',
+        health_url: 'https://health.example.com',
+        status: 'degraded',
+      });
+    });
   });
 });

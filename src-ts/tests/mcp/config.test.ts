@@ -83,6 +83,17 @@ describe('mcp config resolvers', () => {
     ConfigManager.resetInstance();
   });
 
+  it('coerces non-boolean localhost-only config values through the truthy-string fallback', async () => {
+    const { ConfigManager, setConfigValue } = await import('../../config/index.js');
+    setConfigValue('gateway.localhostOnly', 'yes');
+
+    const { resolveLocalhostOnlyEnabled } = await import('../../mcp/config.js');
+
+    expect(resolveLocalhostOnlyEnabled()).toBe(true);
+
+    ConfigManager.resetInstance();
+  });
+
   it('uses injected llm availability probe instead of direct container lookups', async () => {
     const {
       isLlmAvailable,

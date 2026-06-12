@@ -1581,7 +1581,7 @@ export class FileSyncAdapterChain implements IFileSyncAdapter {
     if (sourceLower.startsWith('obsidian:') || targetLower.startsWith('obsidian:')) {
       return this.adapters.get('obsidian')!;
     }
-    if (sourceLower.startsWith('cloud:') || targetLower.startsWith('cloud:') || targetLower.startsWith('http')) {
+    if (sourceLower.startsWith('cloud:') || targetLower.startsWith('cloud:')) {
       return this.adapters.get('cloud')!;
     }
     if (sourceLower.startsWith('knowledge:') || targetLower.startsWith('knowledge:')) {

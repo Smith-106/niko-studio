@@ -380,6 +380,40 @@ describe('EmbeddingServiceImpl', () => {
       const stats = await service.getCacheStats();
       expect(stats).toMatchObject({ size: 0 });
     });
+
+    it('should preserve prior batch dimensions when a later batch omits them', async () => {
+      class FlakyDimensionsProvider extends MockEmbeddingProvider {
+        private callCount = 0;
+
+        override async embed(texts: string[], model: string): Promise<BatchEmbeddingResponse> {
+          this.callCount += 1;
+          return {
+            embeddings: texts.map((_, index) => [this.callCount, index]),
+            model,
+            provider: this.providerType,
+            dimensions: this.callCount === 1 ? 2 : 0,
+          };
+        }
+      }
+
+      const provider = new FlakyDimensionsProvider();
+      const service = new EmbeddingServiceImpl(
+        new Map([[ProviderType.OPENAI, provider]]),
+      );
+
+      const response = await (service as any)._executeWithCache(
+        ['first', 'second'],
+        'test-model',
+        1,
+      );
+
+      expect(response.providerDimensions).toBe(2);
+      expect(response.cacheHits).toBe(0);
+      expect(response.results).toEqual({
+        first: [1, 0],
+        second: [2, 0],
+      });
+    });
   });
 
   // ============================================================
@@ -509,6 +543,38 @@ describe('EmbeddingServiceImpl', () => {
 
       // Provider will throw when trying to embed
       await expect(service.embed('test')).rejects.toThrow();
+    });
+
+    it('should use the first available provider for health checks when the requested provider is missing', async () => {
+      const openaiProvider = new MockEmbeddingProvider(ProviderType.OPENAI);
+      const service = new EmbeddingServiceImpl(
+        new Map([[ProviderType.OPENAI, openaiProvider]])
+      );
+
+      await expect(service.healthCheck(ProviderType.LOCAL)).resolves.toBe(true);
+    });
+
+    it('should throw ProviderUnavailableError when the provider registry becomes empty', async () => {
+      const service = new EmbeddingServiceImpl(
+        new Map([[ProviderType.OPENAI, mockProvider]])
+      );
+
+      (service as unknown as { providers: Map<ProviderType, EmbeddingProvider> }).providers.clear();
+
+      await expect(service.healthCheck(ProviderType.LOCAL)).rejects.toThrow(ProviderUnavailableError);
+    });
+  });
+
+  describe('default model selection', () => {
+    it('should fall back to the OpenAI default model for unknown provider types', () => {
+      const customProvider = new MockEmbeddingProvider('custom-provider');
+      customProvider.setDimensions('text-embedding-3-small', 321);
+
+      const service = new EmbeddingServiceImpl(
+        new Map([[ProviderType.OPENAI, customProvider as unknown as EmbeddingProvider]])
+      );
+
+      expect(service.getDimensions()).toBe(321);
     });
   });
 

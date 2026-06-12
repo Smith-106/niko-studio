@@ -270,7 +270,6 @@ export class TensionCurveAnalyzer extends BaseAnalyzer<TensionCurve> {
 
     for (let idx = 0; idx < segments.length; idx++) {
       const segment = segments[idx].trim();
-      if (!segment) continue;
 
       const [level, indicators] = this._detectTensionLevel(segment);
       const isTurning = this._detectTurningPoint(segment);

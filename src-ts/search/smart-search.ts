@@ -215,7 +215,7 @@ export class SmartSearch implements SearchInterface {
     const filtered = results.filter(r => r.score >= minScore);
 
     // Update mode_used
-    const modeStr = typeof mode === 'string' ? mode : (mode as SearchMode).toString();
+    const modeStr = String(mode);
     for (const r of filtered) {
       r.mode_used = modeStr;
     }

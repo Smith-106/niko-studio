@@ -376,8 +376,8 @@ export class ConflictResolver implements IConflictResolver {
     }
 
     // Fallback: Jaccard similarity
-    const wordsA = new Set(contentA.toLowerCase().split(/\s+/));
-    const wordsB = new Set(contentB.toLowerCase().split(/\s+/));
+    const wordsA = new Set(contentA.toLowerCase().split(/\s+/).filter(Boolean));
+    const wordsB = new Set(contentB.toLowerCase().split(/\s+/).filter(Boolean));
 
     if (wordsA.size === 0 || wordsB.size === 0) {
       return 0.0;
@@ -386,7 +386,7 @@ export class ConflictResolver implements IConflictResolver {
     const intersection = new Set([...wordsA].filter((w) => wordsB.has(w)));
     const union = new Set([...wordsA, ...wordsB]);
 
-    return union.size > 0 ? intersection.size / union.size : 0.0;
+    return intersection.size / union.size;
   }
 
   /**

@@ -88,4 +88,45 @@ describe('NarrativeVoiceManager', () => {
     expect(result.strongPassages).toEqual(['雾气沿街灯爬行']);
     expect(result.overallAssessment.length).toBeGreaterThan(0);
   });
+
+  it('maps every strength level to a concrete overall assessment', () => {
+    expect(computeOverallAssessment({
+      detailSpecificity: 9,
+      sensoryRichness: 9,
+      voiceConfidence: 9,
+      authorPresence: 9,
+    })).toContain('权威');
+    expect(computeOverallAssessment({
+      detailSpecificity: 7,
+      sensoryRichness: 7,
+      voiceConfidence: 7,
+      authorPresence: 7,
+    })).toContain('较强');
+    expect(computeOverallAssessment({
+      detailSpecificity: 5,
+      sensoryRichness: 5,
+      voiceConfidence: 5,
+      authorPresence: 5,
+    })).toContain('中等');
+    expect(computeOverallAssessment({
+      detailSpecificity: 1,
+      sensoryRichness: 1,
+      voiceConfidence: 1,
+      authorPresence: 1,
+    })).toContain('薄弱');
+  });
+
+  it('extracts strong passages through the llm path when no cached weak-passages response exists', async () => {
+    const llmClient = {
+      generateJson: vi.fn().mockResolvedValueOnce({
+        strong_passages: ['standalone strong passage'],
+      }),
+    };
+    const manager = new NarrativeVoiceManager(llmClient as never);
+
+    await expect(manager.extractStrongPassages('content')).resolves.toEqual([
+      'standalone strong passage',
+    ]);
+    expect(llmClient.generateJson).toHaveBeenCalledTimes(1);
+  });
 });

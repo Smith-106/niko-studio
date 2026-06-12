@@ -76,4 +76,83 @@ describe('narrative/fictional_dream/empathy', () => {
       textLocation: '中段',
     });
   });
+
+  it('falls back to extracted details when llm refinement fails', async () => {
+    const llm = {
+      generateJson: vi.fn(async () => {
+        throw new Error('llm unavailable');
+      }),
+    };
+    const deepener = new EmpathyDeepener(llm);
+
+    const result = await deepener.analyze(
+      '她看见冷雨打在窗上，听见钟声回响，手心发抖，胸口发紧。',
+      undefined,
+      60,
+    );
+
+    expect(llm.generateJson).toHaveBeenCalledTimes(1);
+    expect(result.sensoryDetails.length).toBeGreaterThan(0);
+    expect(result.sensoryDetails.every((detail) => detail.emotionEvoked.length > 0)).toBe(true);
+  });
+
+  it('keeps extracted details when llm returns a primitive payload', async () => {
+    const llm = {
+      generateJson: vi.fn(async () => 'invalid-payload'),
+    };
+    const deepener = new EmpathyDeepener(llm);
+
+    const result = await deepener.analyze(
+      '她看见冷雨打在窗上，听见钟声回响。',
+      undefined,
+      20,
+    );
+
+    expect(llm.generateJson).toHaveBeenCalledTimes(1);
+    expect(result.carrieTechnique.isDetected).toBe(false);
+    expect(result.carrieTechnique.effectiveness).toBe(0);
+    expect(result.sensoryDetails.length).toBeGreaterThan(0);
+  });
+
+  it('accepts top-level llm arrays and falls back for invalid candidate fields', async () => {
+    const llm = {
+      generateJson: vi.fn(async () => ([
+        {},
+        {
+          type: SenseType.VISUAL,
+          content: '她看见冷雨打在窗上',
+          emotion_evoked: 42,
+          body_plant_effect: 'not-a-number',
+          text_location: 0,
+        },
+        {
+          content: '听见钟声回响',
+          emotion_evoked: false,
+          body_plant_effect: 'NaN',
+          text_location: null,
+        },
+      ])),
+    };
+    const deepener = new EmpathyDeepener(llm);
+
+    const result = await deepener.analyze(
+      '她看见冷雨打在窗上，听见钟声回响，手心发抖，胸口发紧。',
+      undefined,
+      60,
+    );
+
+    expect(llm.generateJson).toHaveBeenCalledTimes(1);
+    expect(
+      result.sensoryDetails.find((detail) => detail.senseType === SenseType.VISUAL),
+    ).toMatchObject({
+      emotionEvoked: '待分析',
+      bodyPlantEffect: 0.5,
+    });
+    expect(
+      result.sensoryDetails.find((detail) => detail.senseType === SenseType.AUDITORY),
+    ).toMatchObject({
+      emotionEvoked: '待分析',
+      bodyPlantEffect: 0.5,
+    });
+  });
 });

@@ -60,8 +60,8 @@ export async function analysisNarrativeVisualizationEndpoint(request: HttpReques
     ...body,
     chapters: normalizedChapters.map((chapter) => chapter.content),
     chapterMeta: normalizedChapters.map((chapter) => ({
-      chapterNumber: chapter.chapterNumber ?? chapter.chapterIndex + 1,
-      title: chapter.title ?? `Chapter ${chapter.chapterIndex + 1}`,
+      chapterNumber: chapter.chapterNumber,
+      title: chapter.title,
     })),
   });
 

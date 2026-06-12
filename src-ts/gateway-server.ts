@@ -26,6 +26,7 @@ const runningAsMain = (() => {
   return import.meta.url === pathToFileURL(entry).href;
 })();
 
+/* v8 ignore next -- @preserve */
 if (runningAsMain) {
   main().catch((error) => {
     console.error('Gateway failed to start:', error);

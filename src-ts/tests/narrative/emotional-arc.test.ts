@@ -49,6 +49,18 @@ describe('Emotional Arc', () => {
     expect(result.curveMatches[0].similarity).toBeGreaterThanOrEqual(result.curveMatches[1].similarity);
   });
 
+  it('extends classic curves when the chapter count exceeds template length', () => {
+    const chapters = Array.from({ length: 13 }, (_, index) => ({
+      content: NEUTRAL_CHAPTER,
+      chapterIndex: index + 1,
+    }));
+
+    const result = analyzeEmotionalArc(chapters);
+
+    expect(result.curveMatches).toHaveLength(4);
+    expect(result.curveMatches.every((match) => Number.isFinite(match.similarity))).toBe(true);
+  });
+
   it('each timeline point has required fields', () => {
     const result = analyzeEmotionalArc([
       { content: EMOTIONAL_CHAPTER, chapterIndex: 0 },
@@ -69,5 +81,19 @@ describe('Emotional Arc', () => {
     const result = analyzeEmotionalArc([]);
     expect(result.timeline).toHaveLength(0);
     expect(result.overallArcScore).toBe(0);
+  });
+
+  it('adds a severe desert suggestion for long flat emotional stretches', () => {
+    const chapters = Array.from({ length: 5 }, (_, index) => ({
+      content: NEUTRAL_CHAPTER,
+      chapterIndex: index + 1,
+    }));
+
+    const result = analyzeEmotionalArc(chapters);
+
+    expect(result.tensionDeserts).toEqual([
+      expect.objectContaining({ startChapter: 1, endChapter: 5, length: 5, severity: 'high' }),
+    ]);
+    expect(result.suggestions).toContain('存在 1 处严重的情感沙漠（连续 5+ 章缺乏情感变化），建议在章节 1-5 加入情感冲突');
   });
 });

@@ -83,7 +83,6 @@ class PoolSemaphore {
   drain(): void {
     for (const item of this._queue) {
       clearTimeout(item.timer);
-      item.resolve = () => {}; // 防止悬挂 resolve
     }
     this._queue.length = 0;
   }

@@ -274,6 +274,14 @@ function getEffectiveIntegrationFlags(capabilities: IntegrationCapabilityMap): I
   };
 }
 
+function instantiateAdapter<T>(
+  enabled: boolean,
+  enabledFactory: () => T,
+  disabledFactory: () => T,
+): T {
+  return enabled ? enabledFactory() : disabledFactory();
+}
+
 function createInactiveStatus(capability: IntegrationCapability): IntegrationStatus {
   if (!capability.requested) {
     return createStatus(
@@ -622,24 +630,36 @@ export function createIntegrationAdapters(): IntegrationAdapterBundle {
   const flags = getEffectiveIntegrationFlags(capabilities);
 
   return {
-    storageShadow: flags.postgresEnabled
-      ? new StubPostgresShadowAdapter()
-      : new NoopStorageShadowAdapter(createInactiveStatus(capabilities.postgresEnabled)),
-    cacheRateLimit: flags.redisCacheEnabled
-      ? new StubRedisCacheRateLimitAdapter()
-      : new NoopCacheRateLimitAdapter(createInactiveStatus(capabilities.redisCacheEnabled)),
-    search: flags.elasticsearchEnabled
-      ? new StubElasticsearchAdapter()
-      : new NoopSearchAdapter(createInactiveStatus(capabilities.elasticsearchEnabled)),
-    graphProjection: flags.neo4jEnabled
-      ? new StubNeo4jProjectionAdapter()
-      : new NoopGraphProjectionAdapter(createInactiveStatus(capabilities.neo4jEnabled)),
-    governance: flags.dbhubGovernanceEnabled
-      ? new StubDbhubGovernanceHook()
-      : new NoopGovernanceHookAdapter(createInactiveStatus(capabilities.dbhubGovernanceEnabled)),
-    orchestration: flags.langflowEnabled
-      ? new StubLangflowOrchestrationHook()
-      : new NoopOrchestrationHookAdapter(createInactiveStatus(capabilities.langflowEnabled)),
+    storageShadow: instantiateAdapter(
+      flags.postgresEnabled,
+      () => new StubPostgresShadowAdapter(),
+      () => new NoopStorageShadowAdapter(createInactiveStatus(capabilities.postgresEnabled)),
+    ),
+    cacheRateLimit: instantiateAdapter(
+      flags.redisCacheEnabled,
+      () => new StubRedisCacheRateLimitAdapter(),
+      () => new NoopCacheRateLimitAdapter(createInactiveStatus(capabilities.redisCacheEnabled)),
+    ),
+    search: instantiateAdapter(
+      flags.elasticsearchEnabled,
+      () => new StubElasticsearchAdapter(),
+      () => new NoopSearchAdapter(createInactiveStatus(capabilities.elasticsearchEnabled)),
+    ),
+    graphProjection: instantiateAdapter(
+      flags.neo4jEnabled,
+      () => new StubNeo4jProjectionAdapter(),
+      () => new NoopGraphProjectionAdapter(createInactiveStatus(capabilities.neo4jEnabled)),
+    ),
+    governance: instantiateAdapter(
+      flags.dbhubGovernanceEnabled,
+      () => new StubDbhubGovernanceHook(),
+      () => new NoopGovernanceHookAdapter(createInactiveStatus(capabilities.dbhubGovernanceEnabled)),
+    ),
+    orchestration: instantiateAdapter(
+      flags.langflowEnabled,
+      () => new StubLangflowOrchestrationHook(),
+      () => new NoopOrchestrationHookAdapter(createInactiveStatus(capabilities.langflowEnabled)),
+    ),
     flags,
     requestedFlags,
     capabilities,

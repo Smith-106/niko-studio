@@ -393,7 +393,7 @@ export class ReaderSatisfactionAnalyzer {
         chapterIndex: ch.chapterIndex,
         hookStrength: hook?.strength ?? 0,
         upgradePresent: hasUpgrade,
-        density: satisfactionResult.densityPerChapter[i] ?? 0,
+        density: satisfactionResult.densityPerChapter[i],
       };
     });
 

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { CharacterStateAnalyzer } from '../../narrative/analyzers/character-state-analyzer';
+import {
+  CharacterState,
+  CharacterStateAnalyzer,
+} from '../../narrative/analyzers/character-state-analyzer';
 
 describe('CharacterStateAnalyzer', () => {
   it('quickAnalyze extracts state segments with emotions, goals, conflicts, and agency', () => {
@@ -68,5 +71,52 @@ describe('CharacterStateAnalyzer', () => {
     expect(result.items[0]?.agencyScore).toBe(0.8);
     expect(result.summary).toBe('LLM state summary');
     expect(result.metadata['analysis_source']).toBe('llm');
+  });
+
+  it('serializes character states and exposes analyzer metadata', async () => {
+    const analyzer = new CharacterStateAnalyzer();
+    const state = new CharacterState(
+      3,
+      'x'.repeat(140),
+      ['neutral'],
+      ['observe'],
+      ['but'],
+      0.25,
+    );
+
+    expect(analyzer.name).toBe('CharacterStateAnalyzer');
+    expect(analyzer.description.length).toBeGreaterThan(0);
+    expect(state.toDict()).toEqual({
+      position: 3,
+      content: 'x'.repeat(120),
+      emotions: ['neutral'],
+      goals: ['observe'],
+      conflicts: ['but'],
+      agency_score: 0.25,
+    });
+  });
+
+  it('uses quick analysis when no llm client is configured', async () => {
+    const analyzer = new CharacterStateAnalyzer();
+
+    const result = await analyzer.analyze('plain text without matching markers');
+
+    expect(result.isEmpty).toBe(true);
+    expect(result.metadata['average_agency']).toBe(0);
+  });
+
+  it('falls back to quick analysis when llm returns no states', async () => {
+    const llmClient = {
+      generateJson: vi.fn().mockResolvedValue({ states: [] }),
+    };
+    const analyzer = new CharacterStateAnalyzer(llmClient as never);
+
+    const result = await analyzer.analyze(
+      '濂瑰鎬曞け璐ワ紝鍗村喅瀹氱户缁拷鏌ョ湡鐩搞€?',
+    );
+
+    expect(llmClient.generateJson).toHaveBeenCalled();
+    expect(result.metadata['analysis_source']).toBeUndefined();
+    expect(result.metadata['segment_count']).toBeGreaterThan(0);
   });
 });

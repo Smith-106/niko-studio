@@ -319,6 +319,18 @@ describe('store/openkl-contract', () => {
     }
   });
 
+  it('returns null when a citation file exists but contains invalid JSON', () => {
+    const basePath = createBasePath();
+    const contract = new OpenKLContract(basePath);
+
+    try {
+      writeFileSync(join(contract.paths.citations, 'broken-citation.json'), '{not-json', 'utf-8');
+      expect(contract.getCitation('broken-citation')).toBeNull();
+    } finally {
+      rmSync(basePath, { recursive: true, force: true });
+    }
+  });
+
   it('covers doc-id generation and malformed mapping ingestion branches', () => {
     const basePath = createBasePath();
     const contract = new OpenKLContract(basePath);

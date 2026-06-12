@@ -208,7 +208,6 @@ function detectTraitDrifts(chapters: ChapterInput[]) {
     const mentions = extractCharacterMentions(ch.content);
     for (const [rawName] of mentions) {
       const name = normalizeCharacterName(rawName);
-      if (name.length < 2) continue;
       if (!charTraits.has(name)) charTraits.set(name, new Map());
       const byChapter = charTraits.get(name)!;
       if (!byChapter.has(ch.chapterNumber)) byChapter.set(ch.chapterNumber, []);

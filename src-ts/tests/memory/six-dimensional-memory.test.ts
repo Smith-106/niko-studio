@@ -156,11 +156,26 @@ describe('ProcessedContent', () => {
 // ---------------------------------------------------------------------------
 
 describe('BaseDimensionProcessor', () => {
+  it('exposes the configured dimension', () => {
+    const processor = new BaseDimensionProcessor(DimensionType.CONTEXT, []);
+    expect(processor.dimension).toBe(DimensionType.CONTEXT);
+  });
+
   it('classifies empty content as zero score', () => {
     const processor = new BaseDimensionProcessor(DimensionType.CONTEXT, [
       'scene', 'chapter', 'story',
     ]);
     const score = processor.classify('');
+    expect(score.score).toBe(0.0);
+    expect(score.confidence).toBe(0.0);
+    expect(score.keywordsMatched).toEqual([]);
+  });
+
+  it('classifies whitespace-only content as zero score', () => {
+    const processor = new BaseDimensionProcessor(DimensionType.CONTEXT, [
+      'scene',
+    ]);
+    const score = processor.classify('   ');
     expect(score.score).toBe(0.0);
     expect(score.confidence).toBe(0.0);
     expect(score.keywordsMatched).toEqual([]);
@@ -266,6 +281,14 @@ describe('CharacterProcessor', () => {
     expect(result.extractedData.has_relationships).toBe(true);
   });
 
+  it('extracts sentence-start and dialogue speaker names', () => {
+    const processor = new CharacterProcessor();
+    const entities = processor.extractEntities(
+      'Alice waited. Bob felt afraid. "Leave now," shouted Clara.',
+    );
+    expect(entities).toEqual(expect.arrayContaining(['Bob', 'Clara']));
+  });
+
   it('has static CHARACTER_KEYWORDS', () => {
     expect(CharacterProcessor.CHARACTER_KEYWORDS).toContain('protagonist');
     expect(CharacterProcessor.CHARACTER_KEYWORDS).toContain('antagonist');
@@ -287,6 +310,14 @@ describe('WorldviewProcessor', () => {
     const processor = new WorldviewProcessor();
     const entities = processor.extractEntities('The Kingdom of Eldoria and the Empire of Valoria fought.');
     expect(entities.length).toBeGreaterThan(0);
+  });
+
+  it('extracts named systems from world-building content', () => {
+    const processor = new WorldviewProcessor();
+    const entities = processor.extractEntities(
+      'The Celestial Magic governs every oath in the realm.',
+    );
+    expect(entities).toContain('The Celestial');
   });
 
   it('has static WORLDVIEW_KEYWORDS', () => {
@@ -383,6 +414,20 @@ describe('DimensionRouter', () => {
     const result = router.process('The timeline began before the war ended.');
     expect(result).toBeInstanceOf(ProcessedContent);
     expect(result.dimension).toBeDefined();
+  });
+
+  it('defaults classification to context when no dimension scores match', () => {
+    const router = new DimensionRouter();
+    const result = router.classify('');
+    expect(result.primaryDimension).toBe(DimensionType.CONTEXT);
+    expect(result.extractedEntities).toEqual([]);
+  });
+
+  it('throws when processing an unknown dimension', () => {
+    const router = new DimensionRouter();
+    expect(() => router.process('content', 'unknown' as DimensionType)).toThrow(
+      'Unknown dimension',
+    );
   });
 
   it('processAll returns results for all dimensions', () => {

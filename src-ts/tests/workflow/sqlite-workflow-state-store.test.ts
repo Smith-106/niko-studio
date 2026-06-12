@@ -99,4 +99,20 @@ describe.runIf(sqliteAvailable)('SqliteWorkflowStateStore', () => {
       expect(cps).toHaveLength(2);
     });
   });
+
+  describe('audit', () => {
+    it('appends audit events as serialized JSON data', () => {
+      store.appendAudit('p1', 'plan_saved', { step: 'draft', ok: true });
+
+      const row = store.db
+        .prepare('SELECT plan_id, event_type, data FROM workflow_audit WHERE plan_id = ?')
+        .get('p1');
+
+      expect(row).toMatchObject({
+        plan_id: 'p1',
+        event_type: 'plan_saved',
+      });
+      expect(JSON.parse(row.data)).toEqual({ step: 'draft', ok: true });
+    });
+  });
 });

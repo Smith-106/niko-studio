@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { DreamEvaluator } from '../../narrative/evaluators/dream-evaluator';
 
 describe('narrative/evaluators/dream-evaluator', () => {
+  it('exposes public metadata getters', () => {
+    const evaluator = new DreamEvaluator();
+
+    expect(evaluator.name).toContain('虚构梦境');
+    expect(evaluator.description).toContain('情感沉浸');
+    expect(evaluator.relatedSkill).toBe('fictional-dream');
+  });
+
   it('quickScan returns a stable score and issue envelope for bounded dream inputs', () => {
     const evaluator = new DreamEvaluator();
 

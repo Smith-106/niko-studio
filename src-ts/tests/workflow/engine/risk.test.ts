@@ -4,12 +4,14 @@ import {
   buildWorkflowQualityMetrics,
   determineWorkflowLane,
   evaluateWorkflowRiskGate,
-  restoreWorkflowCheckpoint,
-  isDestructiveWorkflowStep,
   hasValidWorkflowConfirmToken,
+  isDestructiveWorkflowStep,
+  resolveAdaptiveWorkflowLevel,
+  resolveWorkflowGateProfile,
+  restoreWorkflowCheckpoint,
 } from '../../../workflow/engine/risk.js';
 import type { WorkflowCheckpointLike } from '../../../workflow/engine/risk.js';
-import { WorkflowDecision } from '../../../workflow/types.js';
+import { WorkflowDecision, WorkflowLevel } from '../../../workflow/types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -123,6 +125,126 @@ describe('risk', () => {
     });
   });
 
+  describe('resolveAdaptiveWorkflowLevel', () => {
+    it('keeps the incoming level outside maintenance lane', () => {
+      expect(
+        resolveAdaptiveWorkflowLevel(WorkflowLevel.L2_LITE, 'default', {
+          risk_score: 0.95,
+          pass_rate: 40,
+          recovery_latency: 500,
+        }),
+      ).toBe(WorkflowLevel.L2_LITE);
+    });
+
+    it('promotes the level by maintenance severity bands', () => {
+      expect(
+        resolveAdaptiveWorkflowLevel(WorkflowLevel.L2_LITE, 'maintenance', {
+          risk_score: 0.95,
+          pass_rate: 90,
+          recovery_latency: 100,
+        }),
+      ).toBe(WorkflowLevel.L5_COORDINATOR);
+
+      expect(
+        resolveAdaptiveWorkflowLevel(WorkflowLevel.L2_LITE, 'maintenance', {
+          risk_score: 0.1,
+          pass_rate: 79,
+          recovery_latency: 100,
+        }),
+      ).toBe(WorkflowLevel.L5_COORDINATOR);
+
+      expect(
+        resolveAdaptiveWorkflowLevel(WorkflowLevel.L2_LITE, 'maintenance', {
+          risk_score: 0.8,
+          pass_rate: 92,
+          recovery_latency: 100,
+        }),
+      ).toBe(WorkflowLevel.L4_BRAINSTORM);
+
+      expect(
+        resolveAdaptiveWorkflowLevel(WorkflowLevel.L2_LITE, 'maintenance', {
+          risk_score: 0.2,
+          pass_rate: 92,
+          recovery_latency: 260,
+        }),
+      ).toBe(WorkflowLevel.L4_BRAINSTORM);
+
+      expect(
+        resolveAdaptiveWorkflowLevel(WorkflowLevel.L2_LITE, 'maintenance', {
+          risk_score: 0.2,
+          pass_rate: 87,
+          recovery_latency: 120,
+        }),
+      ).toBe(WorkflowLevel.L3_STANDARD);
+
+      expect(
+        resolveAdaptiveWorkflowLevel(WorkflowLevel.L2_LITE, 'maintenance', {
+          risk_score: 0.2,
+          pass_rate: 92,
+          recovery_latency: 120,
+        }),
+      ).toBe(WorkflowLevel.L2_LITE);
+    });
+  });
+
+  describe('resolveWorkflowGateProfile', () => {
+    it('uses maintenance-specific profiles and falls back to default-soft', () => {
+      expect(
+        resolveWorkflowGateProfile(
+          WorkflowLevel.L3_STANDARD,
+          'maintenance',
+          { risk_score: 0.95, recovery_latency: 100 },
+          {},
+        ),
+      ).toBe('maintenance-hard');
+
+      expect(
+        resolveWorkflowGateProfile(
+          WorkflowLevel.L3_STANDARD,
+          'maintenance',
+          { risk_score: 0.8, recovery_latency: 100 },
+          {},
+        ),
+      ).toBe('maintenance-selective-hard');
+
+      expect(
+        resolveWorkflowGateProfile(
+          WorkflowLevel.L3_STANDARD,
+          'maintenance',
+          { risk_score: 0.2, recovery_latency: 260 },
+          {},
+        ),
+      ).toBe('maintenance-selective-hard');
+
+      expect(
+        resolveWorkflowGateProfile(
+          WorkflowLevel.L3_STANDARD,
+          'maintenance',
+          { risk_score: 0.2, recovery_latency: 120 },
+          {},
+        ),
+      ).toBe('maintenance-soft');
+
+      expect(
+        resolveWorkflowGateProfile(
+          WorkflowLevel.L3_STANDARD,
+          'default',
+          {},
+          { 3: { gate_profile: 'custom-soft' } },
+        ),
+      ).toBe('custom-soft');
+
+      expect(
+        resolveWorkflowGateProfile(
+          WorkflowLevel.L2_LITE,
+          'default',
+          {},
+          {},
+        ),
+      ).toBe('default-soft');
+    });
+  });
+
   // ------------------------------------------------------------------
   // evaluateWorkflowRiskGate
   // ------------------------------------------------------------------
@@ -194,6 +316,20 @@ describe('risk', () => {
         3, 'checkpoint', undefined, null, lowRiskMeta, new Set(),
       );
       expect(result.decision).toBe(WorkflowDecision.GO);
+    });
+
+    it('falls back to low risk when template metadata is missing', () => {
+      const result = evaluateWorkflowRiskGate(
+        999,
+        'checkpoint',
+        [{ title: 'keep state' }],
+        null,
+        {},
+        new Set(),
+      );
+
+      expect(result.decision).toBe(WorkflowDecision.GO);
+      expect(result.risk).toBe('low');
     });
   });
 
@@ -350,6 +486,11 @@ describe('risk', () => {
     it('returns false when recommendations have no destructive tokens', () => {
       const recs = [{ action: 'create file', title: 'add new module' }];
       expect(isDestructiveWorkflowStep('normal', recs, new Set())).toBe(false);
+    });
+
+    it('handles sparse recommendation objects without destructive markers', () => {
+      const recs = [{}, { title: 'safe change' }];
+      expect(isDestructiveWorkflowStep('normal', recs as Record<string, unknown>[], new Set())).toBe(false);
     });
 
     it('returns false for empty recommendations array', () => {

@@ -768,9 +768,10 @@ function rrfFusion(
 
   return sortedIds.map((id) => {
     const original = resultMap.get(id)!;
+    const score = scores.get(id)!;
     return {
       ...original,
-      score: Math.round((scores.get(id) ?? 0) * 10_000) / 10_000,
+      score: Math.round(score * 10_000) / 10_000,
       metadata: { ...original.metadata, original_score: original.score, fusion: 'rrf' },
     };
   });
@@ -808,3 +809,11 @@ export function resetMemoryService(): void {
   _instance = null;
   _engineProvider = null;
 }
+
+export const __memoryServiceTestUtils = {
+  packEmbedding,
+  unpackEmbedding,
+  cosineSimilarityWithNorms,
+  extractKeywords,
+  rrfFusion,
+};

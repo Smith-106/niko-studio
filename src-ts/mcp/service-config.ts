@@ -33,31 +33,70 @@ export interface McpServiceConfig {
 // Service Configuration Registry
 // ============================================================
 
-function makeConfig(
-  serviceId: string,
-  name: string,
-  path: string,
-  opts?: Partial<Pick<McpServiceConfig, 'enabled' | 'builtin' | 'healthUrl' | 'transport'>>,
-): McpServiceConfig {
-  return {
-    serviceId,
-    name,
-    path,
-    enabled: opts?.enabled ?? true,
-    builtin: opts?.builtin ?? false,
-    healthUrl: opts?.healthUrl ?? null,
-    transport: opts?.transport ?? 'streamable-http',
-  };
-}
-
 export const MCP_SERVICE_CONFIGS: Record<string, McpServiceConfig> = {
-  memory: makeConfig('memory', 'Memory', '/memory', { builtin: true }),
-  graph: makeConfig('graph', 'Graph', '/graph', { builtin: true }),
-  search: makeConfig('search', 'Search', '/search', { builtin: true }),
-  workflow: makeConfig('workflow', 'Workflow', '/workflow', { builtin: true }),
-  critic: makeConfig('critic', 'Critic', '/critic', { builtin: true }),
-  agent: makeConfig('agent', 'Agent', '/agent', { builtin: true }),
-  skills: makeConfig('skills', 'Skills', '/skills', { builtin: true }),
+  memory: {
+    serviceId: 'memory',
+    name: 'Memory',
+    path: '/memory',
+    enabled: true,
+    builtin: true,
+    healthUrl: null,
+    transport: 'streamable-http',
+  },
+  graph: {
+    serviceId: 'graph',
+    name: 'Graph',
+    path: '/graph',
+    enabled: true,
+    builtin: true,
+    healthUrl: null,
+    transport: 'streamable-http',
+  },
+  search: {
+    serviceId: 'search',
+    name: 'Search',
+    path: '/search',
+    enabled: true,
+    builtin: true,
+    healthUrl: null,
+    transport: 'streamable-http',
+  },
+  workflow: {
+    serviceId: 'workflow',
+    name: 'Workflow',
+    path: '/workflow',
+    enabled: true,
+    builtin: true,
+    healthUrl: null,
+    transport: 'streamable-http',
+  },
+  critic: {
+    serviceId: 'critic',
+    name: 'Critic',
+    path: '/critic',
+    enabled: true,
+    builtin: true,
+    healthUrl: null,
+    transport: 'streamable-http',
+  },
+  agent: {
+    serviceId: 'agent',
+    name: 'Agent',
+    path: '/agent',
+    enabled: true,
+    builtin: true,
+    healthUrl: null,
+    transport: 'streamable-http',
+  },
+  skills: {
+    serviceId: 'skills',
+    name: 'Skills',
+    path: '/skills',
+    enabled: true,
+    builtin: true,
+    healthUrl: null,
+    transport: 'streamable-http',
+  },
 };
 
 /** Service health status cache. */

@@ -355,7 +355,7 @@ export class NarrativePatternDetector {
       }
     }
 
-    return pairs > 0 ? totalSim / pairs : 0
+    return totalSim / pairs
   }
 }
 

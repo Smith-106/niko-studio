@@ -3,6 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { VoiceEvaluator } from '../../narrative/evaluators/voice-evaluator';
 
 describe('narrative/evaluators/voice-evaluator', () => {
+  it('exposes public metadata getters and quickScan weak-detail branches', () => {
+    const evaluator = new VoiceEvaluator();
+
+    const result = evaluator.quickScan('很非常特别好坏大少，很非常特别好坏大少。');
+
+    expect(evaluator.name).toContain('叙事语气');
+    expect(evaluator.description).toContain('叙述语气');
+    expect(evaluator.relatedSkill).toBe('voice-workshop');
+    expect(result.issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining(['VOICE_QUICK_VAGUE', 'VOICE_QUICK_DETAIL_WEAK']),
+    );
+  });
+
   it('quickScan returns voice-related metrics and lightweight issue signals', () => {
     const evaluator = new VoiceEvaluator();
 
@@ -35,5 +48,28 @@ describe('narrative/evaluators/voice-evaluator', () => {
     });
     expect(Array.isArray(result.issues)).toBe(true);
     expect(result.summary).toContain('语气强度');
+  });
+  it('treats empty content as zero vagueness density', async () => {
+    const evaluator = new VoiceEvaluator();
+
+    const result = await evaluator.evaluate('');
+
+    expect(result.metrics).toMatchObject({
+      specificity: 50,
+      vagueness_penalty: 0,
+      narrator_presence: 30,
+    });
+    expect(result.issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining(['VOICE_LACKS_DETAIL', 'VOICE_INVISIBLE']),
+    );
+  });
+
+  it('emits the vague-voice issue when vague wording dominates the content', async () => {
+    const evaluator = new VoiceEvaluator();
+
+    const result = await evaluator.evaluate('很非常特别十分好坏大小多少很非常特别十分好坏大小多少');
+
+    expect(result.metrics.vagueness_penalty).toBeGreaterThan(40);
+    expect(result.issues.map((issue) => issue.code)).toContain('VOICE_TOO_VAGUE');
   });
 });

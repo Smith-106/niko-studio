@@ -74,4 +74,56 @@ describe('SensoryAnalyzer', () => {
     ).toBe(true);
     expect(result.summary).toContain('LLM');
   });
+
+  it('serializes sensory details and skips invalid llm entries', async () => {
+    const llmClient = {
+      generateJson: vi.fn().mockResolvedValue({
+        sensory_details: [
+          { type: 'invalid', content: 'ignored' },
+          {
+            type: 'tactile',
+            content: 'cold stone',
+            intensity: 0.7,
+            context: 'surface detail',
+          },
+        ],
+      }),
+    };
+    const analyzer = new SensoryAnalyzer(llmClient as never);
+
+    const result = await analyzer.analyze('');
+    const dict = result.toDict();
+
+    expect(result.count).toBe(1);
+    expect(result.metadata['llm_count']).toBe(1);
+    expect(dict['items']).toEqual([
+      {
+        type: SensoryType.TACTILE,
+        content: 'cold stone',
+        keywords: [],
+        position: 1,
+        intensity: 0.7,
+        context: 'surface detail',
+      },
+    ]);
+  });
+
+  it('returns zero density for empty content and exposes analyzer metadata', async () => {
+    const analyzer = new SensoryAnalyzer();
+
+    expect(analyzer.name).toBe('SensoryAnalyzer');
+    expect(analyzer.description.length).toBeGreaterThan(0);
+
+    const result = await analyzer.analyze('');
+    expect(result.isEmpty).toBe(true);
+
+    const density = analyzer.getSensoryDensity('');
+    expect(density).toEqual({
+      [SensoryType.VISUAL]: 0,
+      [SensoryType.AUDITORY]: 0,
+      [SensoryType.OLFACTORY]: 0,
+      [SensoryType.TACTILE]: 0,
+      [SensoryType.GUSTATORY]: 0,
+    });
+  });
 });

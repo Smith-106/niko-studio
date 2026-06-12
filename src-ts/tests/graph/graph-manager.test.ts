@@ -835,4 +835,205 @@ describe('graph/graph-manager', () => {
       rmSync(join(dbPath, '..'), { recursive: true, force: true });
     }
   });
+
+  it('covers entity embedding helper content and metadata branches', () => {
+    const dbPath = createDbPath();
+    const manager = new GraphManager(dbPath);
+
+    try {
+      const managerPrivate = manager as unknown as {
+        _buildEmbeddingContent: (entity: Entity) => string;
+        _buildEmbeddingMetadata: (entity: Entity) => Record<string, unknown>;
+      };
+
+      const describedEntity = new Entity({
+        id: 'entity-described',
+        name: 'Described Entity',
+        type: EntityType.CONCEPT,
+        properties: {
+          description: '  keeps trimmed description text  ',
+        },
+      });
+      const blankDescriptionEntity = new Entity({
+        id: 'entity-blank-description',
+        name: 'Blank Description Entity',
+        type: EntityType.CHARACTER,
+        properties: {
+          description: '   ',
+        },
+      });
+
+      expect(managerPrivate._buildEmbeddingContent(describedEntity)).toBe(
+        'concept: Described Entity — keeps trimmed description text',
+      );
+      expect(managerPrivate._buildEmbeddingContent(blankDescriptionEntity)).toBe(
+        'character: Blank Description Entity',
+      );
+      expect(managerPrivate._buildEmbeddingMetadata(describedEntity)).toEqual({
+        entity_id: 'entity-described',
+        entity_type: EntityType.CONCEPT,
+        entity_name: 'Described Entity',
+      });
+    } finally {
+      manager.close();
+      rmSync(join(dbPath, '..'), { recursive: true, force: true });
+    }
+  });
+
+  it('logs and swallows vector adapter failures for fire-and-forget embedding hooks', async () => {
+    const dbPath = createDbPath();
+    const manager = new GraphManager(dbPath);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const vectorSearch = {
+        add: vi.fn().mockRejectedValue(new Error('vector add failed')),
+        delete: vi.fn().mockRejectedValue('vector delete failed'),
+      };
+      const managerPrivate = manager as unknown as {
+        _rowToEntity: (row: Record<string, unknown>) => Entity;
+        _rowToRelationship: (row: Record<string, unknown>) => Relationship;
+        _embedEntity: (entity: Entity) => void;
+        _removeEntityEmbedding: (entityId: string) => void;
+      };
+      const entity = new Entity({
+        id: 'entity-embed-error',
+        name: 'Embedding Failure Entity',
+        type: EntityType.CONCEPT,
+        properties: { description: 'vector fallback should stay synchronous' },
+      });
+
+      const emptyPropsEntity = managerPrivate._rowToEntity({
+        id: 'empty-props-entity',
+        name: 'Empty Props Entity',
+        type: 'character',
+        properties: '',
+      });
+      const nonJsonPropsEntity = managerPrivate._rowToEntity({
+        id: 'non-json-props-entity',
+        name: 'Non Json Props Entity',
+        type: 'character',
+        properties: 'not-json',
+      });
+      const arrayPropsRelationship = managerPrivate._rowToRelationship({
+        id: 'array-props-relation',
+        source_id: 'source',
+        target_id: 'target',
+        type: 'KNOWS',
+        properties: '[]',
+      });
+      expect(emptyPropsEntity.properties).toEqual({});
+      expect(nonJsonPropsEntity.properties).toEqual({});
+      expect(Array.isArray(arrayPropsRelationship.properties)).toBe(true);
+
+      manager.setVectorSearch(vectorSearch);
+      managerPrivate._embedEntity(entity);
+      managerPrivate._removeEntityEmbedding(entity.id);
+
+      manager.setVectorSearch({
+        add: vi.fn().mockRejectedValue('vector add failed as string'),
+        delete: vi.fn().mockRejectedValue(new Error('vector delete failed as error')),
+      });
+      managerPrivate._embedEntity(new Entity({
+        id: 'entity-embed-string-error',
+        name: 'Embedding String Failure Entity',
+        type: EntityType.CONCEPT,
+      }));
+      managerPrivate._removeEntityEmbedding('entity-delete-error');
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(vectorSearch.add).toHaveBeenCalledWith(
+        entity.id,
+        expect.stringContaining('Embedding Failure Entity'),
+        {
+          entity_id: entity.id,
+          entity_type: EntityType.CONCEPT,
+          entity_name: 'Embedding Failure Entity',
+        },
+        'entity',
+      );
+      expect(vectorSearch.delete).toHaveBeenCalledWith(entity.id);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Entity embedding failed for entity-embed-error'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Entity embedding delete failed for entity-embed-error'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Entity embedding failed for entity-embed-string-error'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Entity embedding delete failed for entity-delete-error'),
+      );
+    } finally {
+      manager.close();
+      rmSync(join(dbPath, '..'), { recursive: true, force: true });
+    }
+  });
+
+  it('covers cache eviction and process-wide default vector search wiring', () => {
+    const dbPath = createDbPath();
+    const manager = new GraphManager(dbPath);
+
+    try {
+      const managerPrivate = manager as unknown as {
+        _propsCache: Map<string, Record<string, unknown>>;
+        _setPropsCache: (key: string, value: Record<string, unknown>) => void;
+        _vectorSearch: unknown;
+      };
+      const originalDefault = {
+        add: vi.fn().mockResolvedValue(undefined),
+        delete: vi.fn().mockResolvedValue(true),
+      };
+      const replacementDefault = {
+        add: vi.fn().mockResolvedValue(undefined),
+        delete: vi.fn().mockResolvedValue(true),
+      };
+
+      GraphManager.setDefaultVectorSearch(originalDefault);
+      const inheritedManager = new GraphManager(createDbPath());
+      try {
+        expect(
+          (inheritedManager as unknown as { _vectorSearch: unknown })._vectorSearch,
+        ).toBe(originalDefault);
+      } finally {
+        inheritedManager.close();
+        rmSync(join((inheritedManager as unknown as { db_path: string }).db_path, '..'), {
+          recursive: true,
+          force: true,
+        });
+      }
+
+      for (let index = 0; index < 2000; index += 1) {
+        managerPrivate._setPropsCache(`cache-${index}`, { index });
+      }
+      managerPrivate._setPropsCache('cache-overflow', { index: 2000 });
+
+      expect(managerPrivate._propsCache.has('cache-0')).toBe(false);
+      expect(managerPrivate._propsCache.get('cache-overflow')).toEqual({ index: 2000 });
+
+      GraphManager.setDefaultVectorSearch(replacementDefault);
+      const replacementManager = new GraphManager(createDbPath());
+      try {
+        expect(
+          (replacementManager as unknown as { _vectorSearch: unknown })._vectorSearch,
+        ).toBe(replacementDefault);
+      } finally {
+        replacementManager.close();
+        rmSync(join((replacementManager as unknown as { db_path: string }).db_path, '..'), {
+          recursive: true,
+          force: true,
+        });
+      }
+
+      GraphManager.setDefaultVectorSearch(null);
+    } finally {
+      manager.close();
+      rmSync(join(dbPath, '..'), { recursive: true, force: true });
+      GraphManager.setDefaultVectorSearch(null);
+    }
+  });
 });

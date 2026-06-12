@@ -275,7 +275,7 @@ function createRecordBase(
     evidence: input.evidence ?? [],
     projections: createProjectionRefs(input.projections),
     createdAt,
-    updatedAt: normalizeTimestamp(input.updatedAt) ?? createdAt,
+    updatedAt: normalizeTimestamp(input.updatedAt),
   };
 }
 

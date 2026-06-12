@@ -43,6 +43,10 @@ class MockStorage implements StorageAdapter {
     this.meta = { ...this.meta, ...partial };
     return this.meta;
   }
+
+  put(entry: SyncData): void {
+    this.store.set(entry.key, entry);
+  }
 }
 
 import { SyncEngine } from '../../sync/sync-engine.js';
@@ -128,5 +132,72 @@ describe('SyncEngine', () => {
     const result = await engine.syncFull();
     // Both exist, same content — no push or pull needed
     expect(result.pushed + result.pulled).toBeLessThanOrEqual(2);
+  });
+
+  it('pushes a newer local version over an older remote version', async () => {
+    local.put({
+      key: 'shared',
+      data: { text: 'new local' },
+      version: 3,
+      updatedAt: 300,
+      deviceId: 'device-local',
+    });
+    remote.put({
+      key: 'shared',
+      data: { text: 'old remote' },
+      version: 2,
+      updatedAt: 200,
+      deviceId: 'device-remote',
+    });
+
+    const result = await engine.syncFull();
+
+    expect(result).toMatchObject({
+      pushed: 1,
+      pulled: 0,
+      conflicts: 0,
+      changes: [
+        expect.objectContaining({
+          key: 'shared',
+          action: 'push',
+          resolved: expect.objectContaining({ data: { text: 'new local' } }),
+        }),
+      ],
+    });
+    expect((await remote.get('shared'))?.data).toEqual({ text: 'new local' });
+  });
+
+  it('resolves equal-timestamp version conflicts and records the conflict change', async () => {
+    local.put({
+      key: 'same-time',
+      data: { text: 'local wins by version' },
+      version: 7,
+      updatedAt: 500,
+      deviceId: 'device-local',
+    });
+    remote.put({
+      key: 'same-time',
+      data: { text: 'remote loses by version' },
+      version: 4,
+      updatedAt: 500,
+      deviceId: 'device-remote',
+    });
+
+    const result = await engine.syncFull();
+
+    expect(result).toMatchObject({
+      pushed: 0,
+      pulled: 0,
+      conflicts: 1,
+      changes: [
+        expect.objectContaining({
+          key: 'same-time',
+          action: 'conflict',
+          resolved: expect.objectContaining({ data: { text: 'local wins by version' } }),
+        }),
+      ],
+    });
+    expect((await local.get('same-time'))?.data).toEqual({ text: 'local wins by version' });
+    expect((await remote.get('same-time'))?.data).toEqual({ text: 'local wins by version' });
   });
 });

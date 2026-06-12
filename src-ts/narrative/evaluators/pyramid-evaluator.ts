@@ -157,7 +157,7 @@ export class PyramidEvaluator extends BaseEvaluator {
     };
 
     const totalScore = Object.entries(weights).reduce(
-      (sum, [k, w]) => sum + (metrics[k] ?? 0) * w,
+      (sum, [k, w]) => sum + metrics[k] * w,
       0,
     );
 

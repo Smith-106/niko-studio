@@ -280,18 +280,22 @@ export class QCIntegration {
 
     // Run heuristic checks (placeholder for CAS)
     const report = runHeuristicChecks(textToCheck, characterNames);
+    const blockedViolations =
+      qcMode === QCEforcementMode.BLOCKING
+        ? report.allViolations
+        : [];
 
     _log.debug('QC check complete', {
       overallScore: report.overallScore,
       violationCount: report.allViolations.length,
-      blockingCount: report.blockingViolations.length,
+      blockingCount: blockedViolations.length,
     });
 
     // Determine if output passes
     const passed =
       qcMode === QCEforcementMode.ADVISORY
         ? true // Advisory mode always allows output
-        : report.blockingViolations.length === 0; // Blocking mode requires no blocking violations
+        : blockedViolations.length === 0; // Blocking mode rejects any hard-constraint violation
 
     // Build enforcement result
     const qcResult: QCEnforcementResult = {
@@ -300,14 +304,14 @@ export class QCIntegration {
       warnings:
         qcMode === QCEforcementMode.ADVISORY ? report.allViolations : [],
       blocked:
-        qcMode === QCEforcementMode.BLOCKING ? report.blockingViolations : [],
+        blockedViolations,
       creativityConfig,
     };
 
     // Build blocked reasons
     const blockedReasons: string[] = passed
       ? []
-      : report.blockingViolations.map(
+      : blockedViolations.map(
           v => `[${v.dimension}] ${v.message}: ${v.evidence}`,
         );
 
@@ -315,7 +319,7 @@ export class QCIntegration {
       _log.warn('Output blocked by QC', {
         mode,
         blockedReasons: blockedReasons.length,
-        violations: report.blockingViolations.map(v => v.message),
+        violations: blockedViolations.map(v => v.message),
       });
     } else if (report.allViolations.length > 0) {
       _log.info('Output passed with warnings', {

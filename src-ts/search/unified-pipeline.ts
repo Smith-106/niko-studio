@@ -141,18 +141,6 @@ function normaliseSmartSearch(raw: unknown[]): RankedSearchResult[] {
   });
 }
 
-function normaliseHybrid(raw: unknown[]): RankedSearchResult[] {
-  return raw.map((item): RankedSearchResult => {
-    const r = item as Record<string, unknown>;
-    return {
-      content: typeof r.content === 'string' ? r.content : String(r.content ?? ''),
-      source: 'hybrid',
-      score: normaliseScore(typeof r.score === 'number' ? r.score : 0),
-      metadata: (r.metadata as Record<string, unknown>) ?? {},
-    };
-  });
-}
-
 function normaliseVector(raw: unknown[]): RankedSearchResult[] {
   return raw.map((item): RankedSearchResult => {
     const r = item as Record<string, unknown>;
@@ -395,7 +383,7 @@ export class UnifiedSearchPipeline implements IUnifiedSearchPipeline {
             strategies: ['keyword', 'semantic'],
             topK: step.topK,
           });
-          return normaliseHybrid(Array.isArray(raw) ? raw : []);
+          return normaliseObsidian(Array.isArray(raw) ? raw : []);
         }
 
         default:
@@ -461,6 +449,12 @@ export class UnifiedSearchPipeline implements IUnifiedSearchPipeline {
       const name = this.backendName(step.strategy);
       if (!weightMap.has(name)) {
         weightMap.set(name, step.weight);
+      }
+      if (step.strategy === SearchStrategyType.SEMANTIC && !weightMap.has('smart-search')) {
+        weightMap.set('smart-search', step.weight);
+      }
+      if (step.strategy === SearchStrategyType.EXTERNAL && !weightMap.has('hybrid')) {
+        weightMap.set('hybrid', step.weight);
       }
     }
 

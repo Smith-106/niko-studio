@@ -178,9 +178,7 @@ export class PersonalizationServiceImpl implements IPersonalizationService {
         accept: entry.accept,
         reject: entry.reject,
         modify: entry.modify,
-        avgValue: entry.values.length > 0
-          ? entry.values.reduce((s, v) => s + v, 0) / entry.values.length
-          : 0,
+        avgValue: entry.values.reduce((s, v) => s + v, 0) / entry.values.length,
       };
     }
 

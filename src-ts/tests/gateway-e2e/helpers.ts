@@ -1,7 +1,7 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, request as httpRequest, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { buildConfigAccess, buildGatewayDeps } from '../../gateway-server';
+import { buildGatewayDeps } from '../../gateway-server';
 import { ConfigManager } from '../../config';
 import { ServiceContainer } from '../../container/ServiceContainer';
 import { ServiceTypes } from '../../container/types';
@@ -71,10 +71,48 @@ export async function fetchJSON<T = unknown>(
   url: string,
   options?: RequestInit,
 ): Promise<{ status: number; data: T }> {
-  const response = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', Origin: 'http://localhost' },
-    ...options,
+  const target = new URL(url);
+  const headers = {
+    'Content-Type': 'application/json',
+    Origin: 'http://localhost',
+    ...((options?.headers as Record<string, string> | undefined) ?? {}),
+  };
+
+  return await new Promise<{ status: number; data: T }>((resolve, reject) => {
+    const request = httpRequest(
+      {
+        protocol: target.protocol,
+        hostname: target.hostname,
+        port: target.port,
+        path: `${target.pathname}${target.search}`,
+        method: options?.method ?? 'GET',
+        headers,
+      },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk) => {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        });
+        response.on('end', () => {
+          try {
+            const raw = Buffer.concat(chunks).toString('utf8');
+            resolve({
+              status: response.statusCode ?? 0,
+              data: (raw ? JSON.parse(raw) : null) as T,
+            });
+          } catch (error) {
+            reject(error);
+          }
+        });
+      },
+    );
+
+    request.on('error', reject);
+
+    if (options?.body != null) {
+      request.write(typeof options.body === 'string' ? options.body : String(options.body));
+    }
+
+    request.end();
   });
-  const data = (await response.json()) as T;
-  return { status: response.status, data };
 }

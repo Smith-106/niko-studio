@@ -207,10 +207,6 @@ function mapCanonMatchToEntity(match: ProjectWikiQueryMatch): ProjectWikiKnowled
   };
 }
 
-function readAuthorityWorkspaceId(authority: ProjectWikiQueryAuthorityMetadata | null | undefined): string | null {
-  return authority?.workspaceId ?? null;
-}
-
 function resolveFactPacketWorkspaceId(
   payload: ProjectWikiKnowledgeEntity | ProjectWikiKnowledgeRelation | ProjectWikiKnowledgeMemory,
 ): string {
@@ -218,16 +214,10 @@ function resolveFactPacketWorkspaceId(
     return payload.workspaceId;
   }
   if ('authority' in payload) {
-    const workspaceId = readAuthorityWorkspaceId(payload.authority);
+    const workspaceId = readString(payload.authority.workspaceId);
     if (workspaceId) return workspaceId;
   }
   return 'workspace';
-}
-
-function resolveFactPacketAuthority(
-  payload: ProjectWikiKnowledgeEntity | ProjectWikiKnowledgeRelation | ProjectWikiKnowledgeMemory,
-): ProjectWikiQueryAuthorityMetadata | null {
-  return 'authority' in payload ? payload.authority : null;
 }
 
 function mapEvidenceSource(
@@ -540,7 +530,6 @@ async function readProjectionMemoriesForMatch(
     workspace.identity.workspaceRoot,
     workspace.identity.workspaceId,
   );
-  if (!store.available) return [];
 
   const projection = await readProjectWikiProjectionSnapshot<unknown>(store, 'memory', match.pageId);
   if (!projection) return [];

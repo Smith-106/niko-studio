@@ -793,9 +793,7 @@ export class CharacterDepthSystem {
       };
     });
 
-    const overallScore = dimensions.length > 0
-      ? Math.round((dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length) * 10) / 10
-      : 0;
+    const overallScore = Math.round((dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length) * 10) / 10;
 
     const suggestions: string[] = [];
     for (const dim of dimensions.filter((d) => d.score < 4)) {

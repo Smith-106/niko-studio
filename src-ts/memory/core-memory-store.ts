@@ -536,7 +536,7 @@ export class CoreMemoryStore {
           content,
           memoryId,
           metadata,
-          importance: importance ?? 0.5,
+          importance,
           summary,
         });
         if (archived) {
@@ -558,11 +558,11 @@ export class CoreMemoryStore {
       content,
       summary,
       archived,
-      metadata: metadata ?? {},
-      createdAt: createdAt ?? now,
-      updatedAt: updatedAt ?? now,
-      importance: importance ?? 0.5,
-      accessCount: accessCount ?? 0,
+      metadata,
+      createdAt,
+      updatedAt,
+      importance,
+      accessCount,
     });
   }
 
@@ -826,9 +826,6 @@ export class CoreMemoryStore {
         ...tokens.map((t) => t.toLowerCase()),
       ]),
     ];
-    if (searchTerms.length === 0) {
-      return [];
-    }
 
     const conn = this._getCoreConnection();
     let rows: Array<Record<string, unknown>>;
@@ -1211,10 +1208,8 @@ export class CoreMemoryStore {
     const sentences = content.replace(/\n/g, " ").split(".");
     if (sentences.length > 0) {
       const firstSentence = sentences[0].trim();
-      if (firstSentence.length <= maxLength) {
-        return firstSentence.endsWith(".")
-          ? firstSentence
-          : firstSentence + ".";
+      if (firstSentence.length > 0 && firstSentence.length <= maxLength) {
+        return firstSentence + ".";
       }
     }
 

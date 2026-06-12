@@ -136,12 +136,11 @@ export class NovelAdapter extends BaseDomainAdapter {
    */
   async executePipeline(state: WritingState): Promise<WritingState> {
     let current: WritingState = { ...state };
+    const config = this.config as Record<string, unknown>;
     const maxPipelineIterations = Math.max(
       1,
       Number(
-        (this.config as Record<string, unknown> ?? {}).max_revisions
-        ?? DEFAULT_CONFIG.max_revisions
-        ?? 3,
+        config.max_revisions ?? DEFAULT_CONFIG.max_revisions,
       ) + 1,
     );
 
@@ -389,7 +388,7 @@ export class NovelAdapter extends BaseDomainAdapter {
             : 'REVISE',
       decision_reason: `quality=${qualityResult.quality_score}; recommendation=${recommendation}`,
       total_score: qualityResult.quality_score,
-      lock_score: Number(lockAnalysis.total_score ?? 0),
+      lock_score: Number(lockAnalysis.total_score),
       style_score: Number((qualityResult.metrics['dimension_scores'] as Record<string, number> | undefined)?.tone ?? 0),
       logic_score: Number((qualityResult.metrics['dimension_scores'] as Record<string, number> | undefined)?.causality ?? 0),
       lock_analysis: lockAnalysis,
@@ -399,9 +398,9 @@ export class NovelAdapter extends BaseDomainAdapter {
 
     const historyEntry = {
       version: state.draft_version ?? 1,
-      score: critiquePayload.total_score ?? 0,
+      score: critiquePayload.total_score,
       decision: critiquePayload.decision,
-      feedback: (critiquePayload.actionable_feedback ?? '').substring(0, 200),
+      feedback: critiquePayload.actionable_feedback.substring(0, 200),
     };
     const revisionHistory = [...(state.revision_history ?? []), historyEntry];
 
@@ -426,7 +425,7 @@ export class NovelAdapter extends BaseDomainAdapter {
       revision_count: revisionCount + 1,
       revision_history: revisionHistory,
       feedback_context: critiquePayload.actionable_feedback,
-      revision_instructions: critiquePayload.revision_instructions ?? [],
+      revision_instructions: critiquePayload.revision_instructions,
       feedback_artifacts: feedbackArtifacts,
       checkpoint_trace: checkpointTrace,
       last_checkpoint_id: checkpointId,
@@ -474,8 +473,8 @@ export class NovelAdapter extends BaseDomainAdapter {
           round_identifier: roundIdentifier,
           step_id: roundIdentifier,
           stage: 'critic',
-          decision: critiquePayload.decision ?? 'REVISE',
-          score: critiquePayload.total_score ?? 0,
+          decision: critiquePayload.decision,
+          score: critiquePayload.total_score,
           trace: {
             revision_checkpoint_id: checkpointId,
             state_trace_id: `${sessionId}:${roundIdentifier}`,
@@ -492,7 +491,7 @@ export class NovelAdapter extends BaseDomainAdapter {
       }
     }
 
-    _log.info(`Score: ${critiquePayload.total_score ?? 0}`);
+    _log.info(`Score: ${critiquePayload.total_score}`);
     _log.info(`Decision: ${critiquePayload.decision}`);
 
     return response;
@@ -755,7 +754,7 @@ export class NovelAdapter extends BaseDomainAdapter {
       };
     }
 
-    const config = this.config as Record<string, unknown> ?? {};
+    const config = this.config as Record<string, unknown>;
     const maxRules = Math.max(1, Number(config.self_learning_max_rules ?? DEFAULT_CONFIG.self_learning_max_rules));
 
     const normalizedExisting: string[] = [];
@@ -810,7 +809,7 @@ export class NovelAdapter extends BaseDomainAdapter {
   }
 
   private contextGovernancePassed(state: WritingState): boolean {
-    const config = this.config as Record<string, unknown> ?? {};
+    const config = this.config as Record<string, unknown>;
     if (!(config.enable_context_governance ?? DEFAULT_CONFIG.enable_context_governance)) {
       return true;
     }

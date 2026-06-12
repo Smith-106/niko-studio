@@ -84,9 +84,7 @@ export class DialogueAnalyzer {
     const subtextRatio = this.computeSubtextRatio(lines);
     const voiceDistinctness = this.computeVoiceDistinctness(lines);
 
-    const overallScore = qualityScores.length > 0
-      ? Math.round((qualityScores.reduce((s, q) => s + q.score, 0) / qualityScores.length) * 10) / 10
-      : 0;
+    const overallScore = Math.round((qualityScores.reduce((s, q) => s + q.score, 0) / qualityScores.length) * 10) / 10;
 
     const suggestions = this.generateSuggestions(qualityScores, subtextRatio, voiceDistinctness);
 

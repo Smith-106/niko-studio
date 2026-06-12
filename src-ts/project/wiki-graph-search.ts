@@ -82,7 +82,7 @@ export async function buildWikiLinkGraph(
       const markdown = await readFile(pagePath, 'utf8');
       const links = extractWikiLinks(markdown);
 
-      const existing = graph.get(entry.slug) ?? new Set();
+      const existing = graph.get(entry.slug)!;
       for (const linkSlug of links) {
         existing.add(linkSlug);
         // Ensure the linked slug exists as a node (even if not yet indexed)

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   thoughtDataFromDict,
+  thoughtDataFromDictProper,
   thoughtDataToDict,
   SequentialThinking,
   ThoughtStatus,
@@ -35,6 +36,19 @@ describe('SequentialThinking', () => {
       depth: 0,
       confidence: 0.8,
     });
+  });
+
+  it('falls back to active status and analysis type for unknown serialized values', () => {
+    const parsed = thoughtDataFromDictProper({
+      id: 'thought-unknown',
+      content: 'fallback',
+      thought_type: 'not-a-real-type',
+      status: 'not-a-real-status',
+      created_at: '2026-04-04T00:00:00.000Z',
+    });
+
+    expect(parsed.thoughtType).toBe(ThoughtType.ANALYSIS);
+    expect(parsed.status).toBe(ThoughtStatus.ACTIVE);
   });
 
   it('builds thoughts on the main branch and exposes active thought chains', () => {
@@ -93,5 +107,17 @@ describe('SequentialThinking', () => {
 
     expect(thinking.getThoughtChain()).toEqual([]);
     expect(thinking.getActiveThoughts()).toEqual([]);
+  });
+
+  it('falls back to the main branch when no active branches remain', () => {
+    const thinking = new SequentialThinking() as SequentialThinking & {
+      _branches: Map<string, { status: ThoughtStatus }>;
+    };
+
+    for (const branch of thinking._branches.values()) {
+      branch.status = ThoughtStatus.COMPLETED;
+    }
+
+    expect(thinking.getBestBranch().id).toBe('main');
   });
 });

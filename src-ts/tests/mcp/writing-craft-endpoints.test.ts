@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writingCraftAnalyzeEndpoint } from '../../mcp/endpoints/writing-craft.js';
 import { writingCraftLLMEndpoint } from '../../mcp/endpoints/writing-craft-llm.js';
 import type { HttpResponse } from '../../mcp/http-types.js';
@@ -41,7 +41,7 @@ describe('writingCraftAnalyzeEndpoint', () => {
   it('returns 400 when text is empty', async () => {
     const response = await writingCraftAnalyzeEndpoint(mockRequest({ text: '' }));
     expect(response.statusCode).toBe(400);
-    expect(getBody(response).success).toBe(false);
+    expect(getBody(response).error).toBe('text is required');
   });
 
   it('returns 400 when text is missing', async () => {
@@ -53,12 +53,11 @@ describe('writingCraftAnalyzeEndpoint', () => {
     const response = await writingCraftAnalyzeEndpoint(mockRequest({ text: SAMPLE_TEXT }));
     expect(response.statusCode).toBe(200);
     const body = getBody(response);
-    expect(body.success).toBe(true);
-    expect(body.data.dimensions).toHaveLength(6);
-    expect(body.data.overallScore).toBeGreaterThanOrEqual(0);
-    expect(body.data.textLength).toBe(SAMPLE_TEXT.length);
+    expect(body.dimensions).toHaveLength(6);
+    expect(body.overallScore).toBeGreaterThanOrEqual(0);
+    expect(body.textLength).toBe(SAMPLE_TEXT.length);
 
-    const dims = body.data.dimensions.map((d: any) => d.dimension);
+    const dims = body.dimensions.map((d: any) => d.dimension);
     expect(dims).toContain('structure');
     expect(dims).toContain('character');
     expect(dims).toContain('suspense');
@@ -73,9 +72,9 @@ describe('writingCraftAnalyzeEndpoint', () => {
     );
     expect(response.statusCode).toBe(200);
     const body = getBody(response);
-    expect(body.data.dimensions).toHaveLength(2);
-    expect(body.data.dimensions[0].dimension).toBe('emotion');
-    expect(body.data.dimensions[1].dimension).toBe('dialogue');
+    expect(body.dimensions).toHaveLength(2);
+    expect(body.dimensions[0].dimension).toBe('emotion');
+    expect(body.dimensions[1].dimension).toBe('dialogue');
   });
 
   it('each dimension has required fields', async () => {
@@ -83,7 +82,7 @@ describe('writingCraftAnalyzeEndpoint', () => {
       mockRequest({ text: SAMPLE_TEXT, dimensions: ['suspense'] }),
     );
     const body = getBody(response);
-    const dim = body.data.dimensions[0];
+    const dim = body.dimensions[0];
     expect(dim).toHaveProperty('dimension', 'suspense');
     expect(dim).toHaveProperty('label');
     expect(dim).toHaveProperty('score');
@@ -100,7 +99,7 @@ describe('writingCraftAnalyzeEndpoint', () => {
       mockRequest({ text: SAMPLE_TEXT, dimensions: ['suspense'] }),
     );
     const body = getBody(response);
-    const dim = body.data.dimensions[0];
+    const dim = body.dimensions[0];
     expect(dim.score).toBeGreaterThanOrEqual(0);
     expect(dim.score).toBeLessThanOrEqual(10);
     expect(typeof dim.details.techniqueScore).toBe('number');
@@ -111,7 +110,7 @@ describe('writingCraftAnalyzeEndpoint', () => {
       mockRequest({ text: SAMPLE_TEXT, dimensions: ['emotion'] }),
     );
     const body = getBody(response);
-    const dim = body.data.dimensions[0];
+    const dim = body.dimensions[0];
     expect(typeof dim.details.showTellRatio).toBe('number');
     expect(typeof dim.details.emotionScore).toBe('number');
   });
@@ -121,7 +120,7 @@ describe('writingCraftAnalyzeEndpoint', () => {
       mockRequest({ text: SAMPLE_TEXT, dimensions: ['character'] }),
     );
     const body = getBody(response);
-    const dim = body.data.dimensions[0];
+    const dim = body.dimensions[0];
     expect(typeof dim.score).toBe('number');
     expect(dim.details).toHaveProperty('creationDimensions');
     expect(dim.details).toHaveProperty('plotCharacterBalance');
@@ -132,7 +131,7 @@ describe('writingCraftAnalyzeEndpoint', () => {
       mockRequest({ text: SAMPLE_TEXT, dimensions: ['dialogue'] }),
     );
     const body = getBody(response);
-    const dim = body.data.dimensions[0];
+    const dim = body.dimensions[0];
     expect(typeof dim.details.subtextRatio).toBe('number');
     expect(typeof dim.details.voiceDistinctness).toBe('number');
   });
@@ -142,7 +141,7 @@ describe('writingCraftAnalyzeEndpoint', () => {
       mockRequest({ text: SAMPLE_TEXT, dimensions: ['hook'] }),
     );
     const body = getBody(response);
-    const dim = body.data.dimensions[0];
+    const dim = body.dimensions[0];
     expect(dim.dimension).toBe('hook');
     expect(typeof dim.score).toBe('number');
     expect(typeof dim.details.hookScore).toBe('number');
@@ -154,7 +153,7 @@ describe('writingCraftAnalyzeEndpoint', () => {
       mockRequest({ text: SAMPLE_TEXT, dimensions: ['cliffhanger'] }),
     );
     const body = getBody(response);
-    const dim = body.data.dimensions[0];
+    const dim = body.dimensions[0];
     expect(dim.dimension).toBe('cliffhanger');
     expect(typeof dim.score).toBe('number');
     expect(typeof dim.details.cliffhangerScore).toBe('number');
@@ -164,6 +163,10 @@ describe('writingCraftAnalyzeEndpoint', () => {
 
 describe('writingCraftLLMEndpoint', () => {
   beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
     vi.unstubAllGlobals();
   });
 

@@ -340,16 +340,17 @@ export class StoryBibleExtractor {
       for (const [traitName, keywords] of Object.entries(TRAIT_KEYWORDS)) {
         for (const keyword of keywords) {
           if (combinedContext.includes(keyword)) {
-            const existingTrait = character.traits.find(t => t.trait === traitName)
-            if (existingTrait) {
-              existingTrait.intensity = Math.min(1, existingTrait.intensity + 0.1)
-            } else {
-              character.traits.push({
-                trait: traitName,
-                intensity: 0.5,
-                evidence: keyword,
-              })
-            }
+            const trait = character.traits.find(t => t.trait === traitName)
+              ?? (() => {
+                const created = {
+                  trait: traitName,
+                  intensity: 0.4,
+                  evidence: keyword,
+                }
+                character.traits.push(created)
+                return created
+              })()
+            trait.intensity = Math.min(1, trait.intensity + 0.1)
             break
           }
         }
@@ -373,7 +374,7 @@ export class StoryBibleExtractor {
     // Filter by occurrence threshold and confidence
     const minOccurrences = 2
     const result = Array.from(characters.values())
-      .filter(c => (nameOccurrences.get(c.name) ?? 0) >= minOccurrences)
+      .filter(c => nameOccurrences.get(c.name)! >= minOccurrences)
       .filter(c => c.completenessScore >= this.options.minConfidence)
 
     return result
@@ -441,9 +442,8 @@ export class StoryBibleExtractor {
         const fullMatch = match[0]
         const parts = match.slice(1).filter(Boolean)
 
-        if (parts.length === 0) continue
-
-        const premise = parts[0] ?? ''
+        const premise = parts[0]
+        if (!premise) continue
         const goal = parts[1] ?? ''
 
         // Determine status

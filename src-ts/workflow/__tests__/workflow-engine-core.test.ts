@@ -413,4 +413,216 @@ describe('WorkflowEngine - plan', () => {
     expect(plan.budget_guardrail).toBeTruthy();
     expect(plan.execution_mode).toBeTruthy();
   });
+
+  it('adapts maintenance-heavy tasks and persists execution context metadata', async () => {
+    const engine = new WorkflowEngine(workspace, 'plan-adaptive');
+    const plan = await engine.plan({
+      task: 'perform maintenance repair on the workflow pipeline with rollback checks',
+      level: 'L2',
+      executionContext: {
+        chat_canon_prompt: 'Use the canonical maintenance brief',
+        active_scene_id: 'scene-42',
+      },
+    });
+
+    expect(plan.level).toBe('L4');
+    expect(plan.template_meta['adaptive_from_level']).toBe('L2');
+    expect(plan.template_meta['execution_context']).toMatchObject({
+      chat_canon_prompt: 'Use the canonical maintenance brief',
+      active_scene_id: 'scene-42',
+    });
+  });
+});
+
+describe('WorkflowEngine - advanced public APIs', () => {
+  let workspace: string;
+
+  beforeEach(async () => {
+    workspace = await createWorkspace();
+  });
+
+  afterEach(async () => {
+    await rm(workspace, { recursive: true, force: true });
+  });
+
+  it('invokes workflow hooks during route resolution when a hook registry is present', async () => {
+    const hooks = {
+      execute: vi.fn().mockResolvedValue(undefined),
+    };
+    const engine = new WorkflowEngine(workspace, 'route-hooks', undefined, undefined, hooks as never);
+
+    await engine.route('Route hook task');
+
+    expect(hooks.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('completes an L2 workflow through the run API', async () => {
+    const engine = new WorkflowEngine(workspace, 'run-l2');
+    const result = await engine.run('Write a short conflict scene', 'L2');
+
+    expect(result.status).toBe('completed');
+    if (result.status !== 'completed') {
+      throw new Error(`Expected completed result, received ${result.status}`);
+    }
+    expect(result.final_status.progress).toBe('3/3');
+    expect((result.last_step as Record<string, unknown>)['step_name']).toBe('generate');
+  });
+
+  it('returns blocked when an L3 workflow reaches destructive checkpoint confirmation', async () => {
+    const engine = new WorkflowEngine(workspace, 'run-blocked');
+    const result = await engine.run('Write a chapter with escalating conflict and aftermath', 'L3');
+
+    expect(result.status).toBe('blocked');
+    if (result.status !== 'blocked') {
+      throw new Error(`Expected blocked result, received ${result.status}`);
+    }
+
+    const lastStep = result.last_step as Record<string, unknown>;
+    const gate = lastStep['gate'] as Record<string, unknown>;
+
+    expect(lastStep['status']).toBe('waiting_confirmation');
+    expect(lastStep['step_name']).toBe('checkpoint');
+    expect(gate['confirm_required']).toBe(true);
+  });
+
+  it('returns failed when run reaches an unsupported L4 execution step', async () => {
+    const engine = new WorkflowEngine(workspace, 'run-failed');
+    const result = await engine.run('Brainstorm a multi-chapter maintenance roadmap', 'L4');
+
+    expect(result.status).toBe('failed');
+    if (result.status !== 'failed') {
+      throw new Error(`Expected failed result, received ${result.status}`);
+    }
+    expect(String(result.error)).toContain('Unsupported workflow step');
+  });
+
+  it('prefers execution context canon prompt when running with execution context', async () => {
+    const engine = new WorkflowEngine(workspace, 'run-context');
+    const result = await engine.runWithExecutionContext(
+      'Original answer request',
+      { chat_canon_prompt: 'Canonical answer request' },
+      'L1',
+    );
+
+    expect(result.status).toBe('completed');
+    if (result.status !== 'completed') {
+      throw new Error(`Expected completed result, received ${result.status}`);
+    }
+
+    const answer = String(
+      ((result.last_step as Record<string, unknown>)['result'] as Record<string, unknown>)['answer'] ?? '',
+    );
+    expect(answer).toContain('Canonical answer request');
+    expect(answer).not.toContain('Original answer request');
+  });
+
+  it('emits a blocked terminal event when runStream reaches checkpoint confirmation', async () => {
+    const engine = new WorkflowEngine(workspace, 'stream-blocked');
+    const events: Array<Record<string, unknown>> = [];
+
+    for await (const event of engine.runStream('Write a chapter with a reveal at the end', 'L3')) {
+      events.push(event as Record<string, unknown>);
+    }
+
+    expect(events[0]?.['type']).toBe('plan_created');
+    expect(events.some((event) => event['type'] === 'step_complete')).toBe(true);
+    expect(events.at(-1)?.['type']).toBe('plan_blocked');
+    expect(events.at(-1)?.['status']).toBe('waiting_confirmation');
+  });
+
+  it('propagates execution context through runStreamWithExecutionContext', async () => {
+    const engine = new WorkflowEngine(workspace, 'stream-context');
+    const events: Array<Record<string, unknown>> = [];
+
+    for await (const event of engine.runStreamWithExecutionContext(
+      'Ignored prompt',
+      { chat_canon_prompt: 'Canonical streamed answer' },
+      'L1',
+    )) {
+      events.push(event as Record<string, unknown>);
+    }
+
+    const finalEvent = events.at(-1) as Record<string, unknown>;
+    const lastStep = finalEvent['last_step'] as Record<string, unknown>;
+    const result = lastStep['result'] as Record<string, unknown>;
+
+    expect(finalEvent['type']).toBe('plan_complete');
+    expect(String(result['answer'] ?? '')).toContain('Canonical streamed answer');
+  });
+
+  it('binds explicit authority and rejects mismatched execution authority', async () => {
+    const engine = new WorkflowEngine(workspace, 'authority-test');
+    const plan = await engine.plan('Authority-sensitive task', 'L2');
+    const planId = plan.plan_id;
+
+    const authority = engine.bindPlanAuthority(planId, {
+      sessionId: 'sess-1',
+      workspaceId: 'ws-1',
+      projectId: 'proj-1',
+    });
+
+    expect(authority).toEqual({
+      sessionId: 'sess-1',
+      workspaceId: 'ws-1',
+      projectId: 'proj-1',
+    });
+    expect(engine.getPlanAuthority(planId)).toEqual(authority);
+
+    const mismatch = await engine.execute({
+      planId,
+      authority: {
+        sessionId: 'sess-2',
+        workspaceId: 'ws-1',
+        projectId: 'proj-1',
+      },
+    });
+
+    expect('error' in mismatch).toBe(true);
+    if (!('error' in mismatch)) {
+      throw new Error('Expected authority mismatch error');
+    }
+    expect(String(mismatch.error)).toContain("workflow session 'sess-1'");
+  });
+
+  it('completes an L3 workflow with injected llm output and confirmed checkpoint', async () => {
+    const llmService = {
+      generate: vi.fn().mockResolvedValue('Injected draft content from the llm service.'),
+    };
+    const engine = new WorkflowEngine(workspace, 'l3-complete', llmService as never);
+    const plan = await engine.plan('Write a chapter outline with dialogue and fallout', 'L3');
+    const planId = plan.plan_id;
+
+    let result = await engine.execute({ planId, confirmToken: 'confirmed-token' });
+    let guard = 0;
+    while (!('error' in result) && Number((result as Record<string, unknown>)['remaining_steps'] ?? 0) > 0) {
+      result = await engine.execute({ planId, confirmToken: 'confirmed-token' });
+      guard += 1;
+      if (guard > 20) {
+        throw new Error('Execution loop exceeded safety guard');
+      }
+    }
+
+    expect('error' in result).toBe(false);
+    if ('error' in result) {
+      throw new Error(String(result.error));
+    }
+
+    expect((result as Record<string, unknown>)['step_name']).toBe('checkpoint');
+    expect((result as Record<string, unknown>)['plan_status']).toBe('completed');
+    expect(llmService.generate).toHaveBeenCalled();
+
+    const terminal = await engine.execute({ planId, confirmToken: 'confirmed-token' });
+    expect((terminal as Record<string, unknown>)['status']).toBe('completed');
+    expect(String((terminal as Record<string, unknown>)['message'] ?? '')).toContain('All steps completed');
+
+    const status = engine.getPlanStatus(planId);
+    expect('error' in status).toBe(false);
+    if ('error' in status) {
+      throw new Error(String(status.error));
+    }
+
+    expect(status.progress).toBe('8/8');
+    const checkpointStep = status.steps.find((step) => step.name === 'checkpoint');
+    expect((checkpointStep?.output as Record<string, unknown> | undefined)?.['checkpoint_id']).toBeTruthy();
+  });
 });

@@ -164,19 +164,25 @@ export class ConsensusEngine {
   private groupFindings(
     findings: NormalizedFinding[],
   ): Map<GroupKey, NormalizedFinding[]> {
-    const groups = new Map<GroupKey, NormalizedFinding[]>();
+    const grouped = new Map<string, { key: GroupKey; findings: NormalizedFinding[] }>();
 
     for (const finding of findings) {
       const key = this.makeGroupKey(finding);
-      const existing = groups.get(key);
+      const serializedKey = `${key.dimension}|${key.chapter}|${key.paragraphRange}`;
+      const existing = grouped.get(serializedKey);
       if (existing) {
-        existing.push(finding);
+        existing.findings.push(finding);
       } else {
-        groups.set(key, [finding]);
+        grouped.set(serializedKey, { key, findings: [finding] });
       }
     }
 
-    return groups;
+    return new Map(
+      Array.from(grouped.values(), ({ key, findings: groupedFindings }) => [
+        key,
+        groupedFindings,
+      ]),
+    );
   }
 
   /**
@@ -352,11 +358,6 @@ export class ConsensusEngine {
 
     for (const [dimKey, dimName] of Object.entries(dimensionMap)) {
       const scores = reactions.map((r) => r.dimensions[dimKey as keyof typeof r.dimensions]);
-
-      if (scores.length === 0) {
-        summaries[dimName] = { avgScore: 0, consensus: 0 };
-        continue;
-      }
 
       const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
 

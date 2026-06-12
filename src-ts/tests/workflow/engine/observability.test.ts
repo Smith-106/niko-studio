@@ -289,6 +289,21 @@ describe('observability', () => {
       // undefined description => length 0 (via nullish coalescing)
       expect(result.budgetGuardrail['token_used']).toBe(4);  // 'task'.length
     });
+
+    it('treats a missing task string as zero additional token usage', () => {
+      const result = refreshWorkflowBudgetGuardrail(
+        undefined,
+        [{ description: 'abc' }],
+        undefined as unknown as string,
+        new Date().toISOString(),
+        10000,
+        60,
+        'eco',
+      );
+
+      expect(result.budgetGuardrail['token_used']).toBe(3);
+      expect(result.overBudget).toBe(false);
+    });
   });
 
   // ===================================================================

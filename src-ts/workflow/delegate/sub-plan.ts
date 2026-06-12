@@ -83,7 +83,7 @@ function buildExecutionGroups(specs: SubTaskSpec[]): SubTaskSpec[][] {
     for (const dep of spec.dependsOn ?? []) {
       if (specMap.has(dep)) {
         adjacency.get(dep)!.push(spec.id);
-        inDegree.set(spec.id, (inDegree.get(spec.id) ?? 0) + 1);
+        inDegree.set(spec.id, inDegree.get(spec.id)! + 1);
       }
     }
   }
@@ -95,7 +95,7 @@ function buildExecutionGroups(specs: SubTaskSpec[]): SubTaskSpec[][] {
     // Collect all nodes with inDegree 0 that haven't been visited
     const ready: SubTaskSpec[] = [];
     for (const spec of specs) {
-      if (!visited.has(spec.id) && (inDegree.get(spec.id) ?? 0) === 0) {
+      if (!visited.has(spec.id) && inDegree.get(spec.id)! === 0) {
         ready.push(spec);
       }
     }
@@ -111,8 +111,8 @@ function buildExecutionGroups(specs: SubTaskSpec[]): SubTaskSpec[][] {
 
     for (const spec of ready) {
       visited.add(spec.id);
-      for (const next of adjacency.get(spec.id) ?? []) {
-        inDegree.set(next, (inDegree.get(next) ?? 0) - 1);
+      for (const next of adjacency.get(spec.id)!) {
+        inDegree.set(next, inDegree.get(next)! - 1);
       }
     }
   }

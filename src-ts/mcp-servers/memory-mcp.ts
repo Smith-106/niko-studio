@@ -503,14 +503,22 @@ export class KnowledgeGraphStore {
     // Record heat tracking
     if (trackHeat) {
       const now = new Date().toISOString();
+      const updateSearchHistory = this.db.prepare(`
+        UPDATE search_history
+        SET hit_count = hit_count + 1,
+            last_accessed = ?
+        WHERE entity_name = ? AND query = ?
+      `);
+      const insertSearchHistory = this.db.prepare(`
+        INSERT INTO search_history (entity_name, query, hit_count, last_accessed)
+        VALUES (?, ?, 1, ?)
+      `);
+
       for (const r of results) {
-        this.db.prepare(`
-          INSERT INTO search_history (entity_name, query, hit_count, last_accessed)
-          VALUES (?, ?, 1, ?)
-          ON CONFLICT(entity_name, query) DO UPDATE SET
-            hit_count = hit_count + 1,
-            last_accessed = excluded.last_accessed
-        `).run(r.name, query, now);
+        const updated = updateSearchHistory.run(now, r.name, query);
+        if (updated.changes === 0) {
+          insertSearchHistory.run(r.name, query, now);
+        }
       }
     }
 

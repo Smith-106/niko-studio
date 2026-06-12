@@ -41,6 +41,7 @@ describe('gateway-http-adapter', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
     if (process.env) {
       delete process.env.NIKO_CORS_DEV_ORIGINS;
       delete process.env.NIKO_CORS_PROD_ORIGINS;
@@ -90,6 +91,10 @@ describe('gateway-http-adapter', () => {
       const result = parseQuery('/page?flag');
       expect(result).toHaveProperty('flag', '');
     });
+
+    it('preserves raw values when decoding fails', () => {
+      expect(parseQuery('/search?bad=%E0%A4%A')).toEqual({ bad: '%E0%A4%A' });
+    });
   });
 
   describe('readRequestBody', () => {
@@ -131,6 +136,51 @@ describe('gateway-http-adapter', () => {
       (req as unknown as { on: ReturnType<typeof vi.fn> }).on = onFn;
 
       await expect(readRequestBody(req)).rejects.toThrow('stream broken');
+    });
+
+    it('rejects when request body reading times out', async () => {
+      vi.useFakeTimers();
+      const req = createMockReq({ on: vi.fn() });
+
+      const promise = readRequestBody(req, 5);
+      const assertion = expect(promise).rejects.toThrow('Request body read timed out after 5ms');
+      await vi.advanceTimersByTimeAsync(6);
+
+      await assertion;
+    });
+
+    it('rejects when the request body exceeds the size limit', async () => {
+      const handlers: Record<string, Array<(...args: unknown[]) => void>> = {};
+      const req = createMockReq();
+      (req as unknown as { on: ReturnType<typeof vi.fn> }).on = vi.fn(
+        (event: string, handler: (...args: unknown[]) => void) => {
+          (handlers[event] ??= []).push(handler);
+          return req;
+        },
+      );
+
+      const promise = readRequestBody(req);
+      handlers['data']?.forEach((handler) => handler(Buffer.alloc(10 * 1024 * 1024 + 1)));
+
+      await expect(promise).rejects.toThrow('Request body exceeds 10MB limit');
+    });
+
+    it('rejects when the client disconnects before the body is complete', async () => {
+      const handlers: Record<string, Array<(...args: unknown[]) => void>> = {};
+      const req = createMockReq();
+      (req as unknown as { on: ReturnType<typeof vi.fn> }).on = vi.fn(
+        (event: string, handler: (...args: unknown[]) => void) => {
+          (handlers[event] ??= []).push(handler);
+          return req;
+        },
+      );
+
+      const promise = readRequestBody(req);
+      handlers['close']?.forEach((handler) => handler());
+
+      await expect(promise).rejects.toThrow(
+        'Client disconnected before request body was fully received',
+      );
     });
   });
 

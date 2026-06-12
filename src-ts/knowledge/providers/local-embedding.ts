@@ -77,12 +77,6 @@ export class LocalEmbeddingProvider {
         const mod = await import('fastembed');
         const FlagEmbedding = mod.FlagEmbedding;
         const EmbeddingModel = mod.EmbeddingModel;
-        if (!FlagEmbedding) {
-          throw new EmbeddingError(
-            'fastembed package does not export FlagEmbedding',
-            ProviderType.LOCAL,
-          );
-        }
         // Map model name to EmbeddingModel enum value
         const modelMapping: Record<string, string> = {
           'BAAI/bge-small-zh-v1.5': EmbeddingModel.BGESmallZH,
@@ -95,7 +89,6 @@ export class LocalEmbeddingProvider {
         const modelKey = modelMapping[this._modelName] ?? EmbeddingModel.BGESmallZH;
         this._model = await FlagEmbedding.init({ model: modelKey as any });
       } catch (e) {
-        if (e instanceof EmbeddingError) throw e;
         throw new EmbeddingError(
           'fastembed package not installed. Run: npm install fastembed',
           ProviderType.LOCAL,
@@ -106,15 +99,8 @@ export class LocalEmbeddingProvider {
         // Dynamic import for optional dependency
         const mod = await import('@xenova/transformers') as any;
         const pipeline = mod.pipeline;
-        if (!pipeline) {
-          throw new EmbeddingError(
-            '@xenova/transformers package does not export pipeline',
-            ProviderType.LOCAL,
-          );
-        }
         this._model = await pipeline('feature-extraction', this._modelName);
       } catch (e) {
-        if (e instanceof EmbeddingError) throw e;
         throw new EmbeddingError(
           '@xenova/transformers package not installed. Run: npm install @xenova/transformers',
           ProviderType.LOCAL,

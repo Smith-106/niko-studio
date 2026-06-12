@@ -240,3 +240,12 @@ export function analyzeEmotionalArc(
 
   return { timeline, tensionDeserts, curveMatches, overallArcScore, suggestions };
 }
+
+export const __test__ = {
+  NARRATIVE_CURVES,
+  inferDominantEmotion,
+  normalizePoints,
+  cosineSimilarity,
+  matchCurves,
+  detectTensionDeserts,
+};

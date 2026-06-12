@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { PremiseEvaluator } from '../../narrative/evaluators/premise-evaluator';
 
 describe('narrative/evaluators/premise-evaluator', () => {
+  it('exposes public metadata getters', () => {
+    const evaluator = new PremiseEvaluator();
+
+    expect(evaluator.name).toContain('预设');
+    expect(evaluator.description).toContain('故事预设');
+    expect(evaluator.relatedSkill).toBe('premise-magic');
+  });
+
   it('quickScan returns premise-related metrics and lightweight issue signals', () => {
     const evaluator = new PremiseEvaluator();
 

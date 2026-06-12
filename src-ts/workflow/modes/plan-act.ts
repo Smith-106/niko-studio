@@ -40,14 +40,14 @@ function okPhaseResult(
   phase: WorkflowPhase,
   output: unknown,
   nextPhase: WorkflowPhase | null = null,
-  metadata?: Record<string, unknown>,
+  metadata: Record<string, unknown> = {},
   durationMs = 0,
 ): PhaseResult {
   return {
     phase,
     success: true,
     output,
-    metadata: metadata ?? {},
+    metadata,
     error: null,
     durationMs,
     nextPhase,
@@ -78,15 +78,6 @@ export interface Checkpoint {
   timestamp: string;
   state: Record<string, unknown>;
   iteration: number;
-}
-
-function checkpointToDict(cp: Checkpoint): Record<string, unknown> {
-  return {
-    phase: cp.phase,
-    timestamp: cp.timestamp,
-    state: cp.state,
-    iteration: cp.iteration,
-  };
 }
 
 // ============================================================

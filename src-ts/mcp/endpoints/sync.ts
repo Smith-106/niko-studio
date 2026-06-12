@@ -26,15 +26,16 @@ function validateRemoteUrl(remoteUrl: string): string | null {
   }
 
   const host = url.hostname.toLowerCase();
+  const normalizedHost = host.replace(/^\[(.*)\]$/, '$1');
 
   // Reject localhost variants
-  if (host === 'localhost' || host === '::1' || host === '0:0:0:0:0:0:0:1') {
+  if (normalizedHost === 'localhost' || normalizedHost === '::1' || normalizedHost === '0:0:0:0:0:0:0:1') {
     return 'Localhost URLs are not allowed';
   }
 
   // Reject IPv4 private ranges
   const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-  const match = host.match(ipv4Regex);
+  const match = normalizedHost.match(ipv4Regex);
   if (match) {
     const octets = [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10), parseInt(match[4], 10)];
 
@@ -80,13 +81,13 @@ function validateRemoteUrl(remoteUrl: string): string | null {
   }
 
   // Reject IPv6 private/link-local ranges (simplified check)
-  if (host.startsWith('fc') || host.startsWith('fd')) {
+  if (normalizedHost.startsWith('fc') || normalizedHost.startsWith('fd')) {
     return 'IPv6 unique local addresses are not allowed';
   }
-  if (host.startsWith('fe80:')) {
+  if (normalizedHost.startsWith('fe80:')) {
     return 'IPv6 link-local addresses are not allowed';
   }
-  if (host === '::' || host === '0:0:0:0:0:0:0:0') {
+  if (normalizedHost === '::' || normalizedHost === '0:0:0:0:0:0:0:0') {
     return 'IPv6 unspecified address is not allowed';
   }
 

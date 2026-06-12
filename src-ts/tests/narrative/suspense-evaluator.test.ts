@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { SuspenseEvaluator } from '../../narrative/evaluators/suspense-evaluator';
 
 describe('narrative/evaluators/suspense-evaluator', () => {
+  it('exposes public metadata getters', () => {
+    const evaluator = new SuspenseEvaluator();
+
+    expect(evaluator.name).toContain('悬念');
+    expect(evaluator.description).toContain('悬念');
+    expect(evaluator.relatedSkill).toBe('suspense-craft');
+  });
+
   it('quickScan returns a stable score envelope for bounded suspense inputs', () => {
     const evaluator = new SuspenseEvaluator();
 

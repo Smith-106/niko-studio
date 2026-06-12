@@ -28,6 +28,16 @@ describe('WorkflowEventRelay', () => {
     return new WebSocket(`ws://localhost:${port}/ws/events`);
   }
 
+  async function waitForOpen(ws: WebSocket): Promise<void> {
+    if (ws.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      ws.once('open', () => resolve());
+    });
+  }
+
   it('accepts WebSocket connections', async () => {
     const ws = connectWs();
     const msg = await new Promise<WorkflowEvent>((resolve) => {
@@ -196,21 +206,23 @@ describe('WorkflowEventRelay', () => {
   it('close shuts down relay and disconnects all clients', async () => {
     const ws1 = connectWs();
     const ws2 = connectWs();
+    const ws1Closed = new Promise<void>((resolve) => {
+      ws1.on('close', () => resolve());
+    });
+    const ws2Closed = new Promise<void>((resolve) => {
+      ws2.on('close', () => resolve());
+    });
 
-    await new Promise<void>((resolve) => {
-      ws1.on('open', () => resolve());
-    });
-    await new Promise<void>((resolve) => {
-      ws2.on('open', () => resolve());
-    });
+    await Promise.all([waitForOpen(ws1), waitForOpen(ws2)]);
 
     expect(relay.clientCount).toBe(2);
 
     await relay.close();
+    await Promise.all([ws1Closed, ws2Closed]);
 
     expect(relay.clientCount).toBe(0);
-    expect(ws1.readyState).not.toBe(WebSocket.OPEN);
-    expect(ws2.readyState).not.toBe(WebSocket.OPEN);
+    expect(ws1.readyState).toBe(WebSocket.CLOSED);
+    expect(ws2.readyState).toBe(WebSocket.CLOSED);
   });
 
   it('does not broadcast after close', async () => {

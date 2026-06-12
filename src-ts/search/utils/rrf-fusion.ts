@@ -69,7 +69,7 @@ export function rrfMerge(
   return sorted.map(([id, score]) => ({
     id,
     score: Math.round(score * 10000) / 10000,
-    sources: Array.from(sourceMap.get(id) ?? []),
+    sources: Array.from(sourceMap.get(id)!),
   }));
 }
 

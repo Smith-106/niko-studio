@@ -43,8 +43,7 @@ function resolveWorkspaceRootForRequest(workspace?: ProjectWorkspaceContext | nu
   return resolveWorkflowWorkspace();
 }
 
-function resolveWorkflowAuthority(workspace?: ProjectWorkspaceContext | null): RevisionSessionAuthority | null {
-  if (!workspace) return null;
+function resolveWorkflowAuthority(workspace: ProjectWorkspaceContext): RevisionSessionAuthority | null {
   const scope = projectWorkspaceToWorkflowAuthority(workspace);
   const sessionId = readString(scope.sessionId);
   const workspaceId = readString(scope.workspaceId);
@@ -147,14 +146,10 @@ async function readAllSessions(workspaceRoot: string): Promise<RevisionSession[]
 
 function getCurrentIteration(session: RevisionSession): RevisionIteration | null {
   if (session.iterations.length === 0) return null;
-  return session.iterations[session.iterations.length - 1] ?? null;
+  return session.iterations[session.iterations.length - 1] as RevisionIteration;
 }
 
 function upsertIteration(session: RevisionSession, iteration: RevisionIteration): void {
-  if (session.iterations.length === 0) {
-    session.iterations.push(iteration);
-    return;
-  }
   session.iterations[session.iterations.length - 1] = iteration;
 }
 

@@ -91,6 +91,14 @@ describe('ArchitectAgent', () => {
     expect(blueprint.lock_analysis.L_protagonist).toContain('林岚');
   });
 
+  it('falls back to the default protagonist label when the user idea does not match the heuristic pattern', async () => {
+    const agent = new ArchitectAgent(null);
+
+    const blueprint = await agent.plan('一个没有明确主角模式的故事设定', '悬疑', 12, 120000);
+
+    expect(blueprint.lock_analysis.L_protagonist).toBe('主角');
+  });
+
   it('uses default distillation service in planWithDistillation', async () => {
     const llm = createMockLlmService();
     const agent = new ArchitectAgent({ llmService: llm, enableDistillation: true });

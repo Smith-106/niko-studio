@@ -183,7 +183,7 @@ export class HybridSearch implements SearchInterface {
 
     // Execute cascade steps with fallback threshold
     const allResults: Map<string, { weight: number; items: HybridSearchResult[] }> = new Map();
-    const executedSteps: SearchCascadeStep[] = [];
+    const executedSteps: Array<{ step: SearchCascadeStep; strategy: StrategyWeight }> = [];
 
     for (const step of config.cascade) {
       const strategy = resolveStrategy(step.strategy);
@@ -200,7 +200,7 @@ export class HybridSearch implements SearchInterface {
         { topK: step.topK, typeFilter: options.typeFilter },
       );
 
-      executedSteps.push(step);
+      executedSteps.push({ step, strategy });
       allResults.set(strategy.name, { weight: step.weight, items: stepResults });
 
       // Check fallback threshold
@@ -214,11 +214,8 @@ export class HybridSearch implements SearchInterface {
 
     // Merge all gathered results using RRF with cascade weights
     const sources: RrfSource[] = [];
-    for (const step of executedSteps) {
-      const strategy = resolveStrategy(step.strategy);
-      if (!strategy) continue;
-      const entry = allResults.get(strategy.name);
-      if (!entry) continue;
+    for (const { step, strategy } of executedSteps) {
+      const entry = allResults.get(strategy.name)!;
 
       sources.push({
         name: strategy.name,
@@ -244,8 +241,7 @@ export class HybridSearch implements SearchInterface {
     }
 
     return merged.map(({ id, score }) => {
-      const result = resultMap.get(id);
-      if (!result) return { id, score, content: '', type: 'unknown', source: 'hybrid', strategy: 'cascade', metadata: {} };
+      const result = resultMap.get(id)!;
       return {
         id: result.id,
         content: result.content,

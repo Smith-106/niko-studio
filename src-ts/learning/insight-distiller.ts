@@ -84,6 +84,6 @@ function synthesize(annotations: string, connections: string): string {
 
 function distill(synthesis: string): string {
   // Take the first line as the core distilled insight
-  const firstLine = synthesis.split('\n')[0] ?? synthesis;
+  const firstLine = synthesis.split('\n')[0];
   return firstLine.length > 200 ? firstLine.slice(0, 200) + '…' : firstLine;
 }

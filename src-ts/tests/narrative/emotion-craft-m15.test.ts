@@ -54,5 +54,16 @@ describe('EmotionCraft — M15 description quality', () => {
       const result = assessDescriptionQuality(text);
       expect(result.suggestions.length).toBeGreaterThan(0);
     });
+    it('adds the high-quality suggestion for multi-dimensional vivid description', () => {
+      const text = '冰凉的雨滴落在粗糙的青石台阶上，刺鼻的草木腥味混着潮湿泥土扑面而来。'
+        + '那把裂了口的铜灯在这个阴沉、压抑而又明亮得诡异的长廊里闪烁摇曳。'
+        + '她正好在第三道门前停住，分明看见某个影子一模一样地贴在墙上，精确得像刻出来的一样。'
+        + '她攥紧手中的纸条，转身推开半掩的木门，蹲下身抓住湿滑的栏杆，随即跳起奔向尽头。'
+        + '风声翻滚，尘灰流淌，墙上的影子旋转、蔓延又收缩。';
+      const result = assessDescriptionQuality(text);
+
+      expect(result.overallScore).toBeGreaterThanOrEqual(7);
+      expect(result.suggestions).toContain('描写质量较高，多维度描写充分');
+    });
   });
 });

@@ -238,21 +238,12 @@ function qualityDefaultPayload(): Record<string, unknown> {
  */
 async function evaluateNovelQuality(
   content: string,
-  options?: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const dimensions = Array.isArray(options?.dimensions)
-    ? (options.dimensions as string[])
-    : undefined;
-
-  const qualityGoals = (options?.quality_goals ?? options?.qualityGoals) as
-    | Record<string, unknown>
-    | undefined;
-
   const result: EvaluateContentResult = await evaluateContent(
     content,
     undefined,
-    dimensions,
-    qualityGoals,
+    undefined,
+    undefined,
   );
 
   return {
@@ -302,7 +293,7 @@ export async function novelQualityCheckEndpoint(
     body = {}
   }
 
-  if (typeof body !== 'object' || body === null) body = {}
+  if (typeof body !== 'object') body = {}
 
   const content = body.content as string
   if (typeof content !== 'string' || !content.trim()) {
@@ -342,7 +333,7 @@ export async function writingHelperProcessEndpoint(
     body = {}
   }
 
-  if (typeof body !== 'object' || body === null) body = {}
+  if (typeof body !== 'object') body = {}
 
   const content = body.content as string
   if (typeof content !== 'string' || !content.trim()) {
@@ -434,7 +425,7 @@ export async function writingStreamEndpoint(
     body = {}
   }
 
-  if (typeof body !== 'object' || body === null) body = {}
+  if (typeof body !== 'object') body = {}
 
   const content = body.content as string
   if (typeof content !== 'string' || !content.trim()) {

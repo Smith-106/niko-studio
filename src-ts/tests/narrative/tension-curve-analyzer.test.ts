@@ -47,6 +47,17 @@ describe('TensionCurveAnalyzer', () => {
     expect(result.summary.length).toBeGreaterThan(0);
   });
 
+  it('routes analyze directly to quickAnalyze when no llm client is configured', async () => {
+    const analyzer = new TensionCurveAnalyzer();
+
+    const result = await analyzer.analyze(
+      '平静之后，危机骤然逼近，随后冲突爆发。',
+    );
+
+    expect(result.count).toBe(1);
+    expect(result.items[0]?.points.length).toBeGreaterThan(0);
+  });
+
   it('uses llm curve data and enriches with rule fallback when sparse', async () => {
     const llmClient = {
       generateJson: vi.fn().mockResolvedValue({

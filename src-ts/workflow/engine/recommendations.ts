@@ -36,9 +36,10 @@ function stableTemplateMetaForHash(templateMeta: Record<string, unknown>): Recor
 export function canonicalizeWorkflowRecommendations(
   recommendations?: WorkflowRecommendationInput,
 ): WorkflowRecommendationRecord[] {
+  const input = recommendations ?? [];
   const normalized: WorkflowRecommendationRecord[] = [];
-  for (let index = 0; index < (recommendations ?? []).length; index++) {
-    const raw = (recommendations ?? [])[index];
+  for (let index = 0; index < input.length; index++) {
+    const raw = input[index];
     if (typeof raw === 'object' && raw !== null) {
       const record = raw as Record<string, unknown>;
       normalized.push({

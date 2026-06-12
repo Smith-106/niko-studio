@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { contentRoutes } from '../../../mcp/routes/content';
 
 describe('contentRoutes', () => {
-  it('should have 45 routes', () => {
-    expect(contentRoutes).toHaveLength(45);
+  it('should have 62 routes', () => {
+    expect(contentRoutes).toHaveLength(62);
   });
 
   it('every route has a valid method', () => {
@@ -174,10 +174,10 @@ describe('contentRoutes', () => {
     });
   });
 
-  describe('all routes are POST or GET method', () => {
-    it('every content route uses POST or GET method', () => {
+  describe('all routes use supported HTTP methods', () => {
+    it('every content route uses GET, POST, PUT, or DELETE', () => {
       for (const route of contentRoutes) {
-        expect(['POST', 'GET']).toContain(route.method);
+        expect(['POST', 'GET', 'PUT', 'DELETE']).toContain(route.method);
       }
     });
   });

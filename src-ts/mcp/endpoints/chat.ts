@@ -98,52 +98,44 @@ export function adaptiveChunkContent(
 ): string[] {
   if (!content) return [];
 
+  const safeMaxChunkSize = Math.max(1, maxChunkSize);
+  const safeMinChunkSize = Math.max(1, minChunkSize);
   const sentenceEndings = /([.!??\n])/;
   const chunks: string[] = [];
   let currentChunk = '';
 
-  const parts = content.split(sentenceEndings);
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (!part) continue;
-
-    if (sentenceEndings.test(part)) {
-      currentChunk += part;
-      continue;
-    }
-
-    if (currentChunk.length + part.length > maxChunkSize) {
-      if (currentChunk && currentChunk.length >= minChunkSize) {
-        chunks.push(currentChunk);
-        currentChunk = part;
-      } else if (currentChunk) {
-        currentChunk += part;
-      } else {
-        let remaining = part;
-        while (remaining.length > maxChunkSize) {
-          chunks.push(remaining.slice(0, maxChunkSize));
-          remaining = remaining.slice(maxChunkSize);
-        }
-        currentChunk = remaining;
-      }
-    } else {
-      currentChunk += part;
-    }
-
-    if (
-      /[.!??\n]$/.test(currentChunk) &&
-      currentChunk.length >= minChunkSize
-    ) {
+  const flush = () => {
+    if (currentChunk) {
       chunks.push(currentChunk);
       currentChunk = '';
     }
+  };
+
+  const appendText = (text: string) => {
+    let remaining = text;
+    while (remaining) {
+      const available = safeMaxChunkSize - currentChunk.length;
+      if (remaining.length > available) {
+        currentChunk += remaining.slice(0, available);
+        flush();
+        remaining = remaining.slice(available);
+      } else {
+        currentChunk += remaining;
+        remaining = '';
+      }
+    }
+  };
+
+  for (const part of content.split(sentenceEndings)) {
+    if (!part) continue;
+
+    appendText(part);
+    if (sentenceEndings.test(part) && currentChunk.length >= safeMinChunkSize) {
+      flush();
+    }
   }
 
-  if (currentChunk) {
-    chunks.push(currentChunk);
-  }
-
+  flush();
   return chunks;
 }
 
@@ -378,8 +370,6 @@ function buildChatCanonPrompt(
   userMessage: string,
   matches: ChatCanonContextMatch[],
 ): string {
-  if (matches.length === 0) return userMessage;
-
   return [
     '## Workspace Canon Context',
     'Use the following canon excerpts as authoritative workspace knowledge when relevant.',
@@ -393,8 +383,6 @@ function buildChatCanonPrompt(
 }
 
 function buildChatCanonAppendix(matches: ChatCanonContextMatch[]): string {
-  if (matches.length === 0) return '';
-
   return [
     '## Canon Context',
     ...matches.map((match, index) => (

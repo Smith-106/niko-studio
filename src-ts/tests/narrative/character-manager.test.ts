@@ -80,6 +80,53 @@ describe('CharacterManager', () => {
     expect((dialogueCheck.issues as string[]).length).toBeGreaterThan(0);
   });
 
+  it('flags casual dialogue for a formal and reserved speaking style', () => {
+    const manager = new CharacterManager();
+    const character = manager.createCharacter('苏砚', 'supporting');
+
+    manager.setDialogueStyle(character.id, {
+      formality: 'formal',
+      verbalTics: [],
+      emotionalExpression: 'reserved',
+    });
+
+    const result = manager.checkDialogueConsistency(
+      character.id,
+      '嘿哟整?! ... ~ !',
+    );
+
+    expect(result.consistent).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('过于随意'),
+        expect.stringContaining('情感表达过于强烈'),
+      ]),
+    );
+  });
+
+  it('flags overly formal dialogue for a casual speaking style', () => {
+    const manager = new CharacterManager();
+    const character = manager.createCharacter('周野', 'supporting');
+
+    manager.setDialogueStyle(character.id, {
+      formality: 'casual',
+      verbalTics: [],
+      emotionalExpression: 'expressive',
+    });
+
+    const result = manager.checkDialogueConsistency(
+      character.id,
+      '请问您是否愿意现在与我详谈？是的，好的。',
+    );
+
+    expect(result.consistent).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('过于正式'),
+      ]),
+    );
+  });
+
   it('exports and re-imports characters with configured dimensions', () => {
     const manager = new CharacterManager();
     const character = manager.createCharacter('周衡', 'mentor');

@@ -194,4 +194,75 @@ describe('AgentFactoryAdapter', () => {
       structural_function: 'Rising',
     });
   });
+
+  it('resets the underlying factory and rejects unsupported runtime contracts', async () => {
+    getAgentMock
+      .mockReturnValueOnce({})
+      .mockReturnValueOnce({});
+
+    const { AgentFactoryAdapter } = await import('../../container/adapters.js');
+    const adapter = new AgentFactoryAdapter();
+
+    await expect(
+      adapter.getAgent(ContainerAgentType.Plot, 'plot-missing').execute('plot task'),
+    ).rejects.toThrow('does not expose an executable runtime contract');
+
+    adapter.reset();
+
+    await expect(
+      adapter.getAgent(ContainerAgentType.Writer, 'writer-missing').execute('', { mode: 'write' }),
+    ).rejects.toThrow('Writer agent does not support write()');
+  });
+
+  it('rejects missing writer revise contracts and normalizes sparse write inputs', async () => {
+    const sparseWriteMock = vi.fn().mockResolvedValue({ content: 'fallback draft' });
+    getAgentMock
+      .mockReturnValueOnce({
+        write: vi.fn().mockResolvedValue({ ok: true }),
+      })
+      .mockReturnValueOnce({ write: sparseWriteMock });
+
+    const { AgentFactoryAdapter } = await import('../../container/adapters.js');
+    const adapter = new AgentFactoryAdapter();
+
+    await expect(
+      adapter.getAgent(ContainerAgentType.Writer, 'writer-revise-missing').execute('', {
+        mode: 'revise',
+      }),
+    ).rejects.toThrow('Writer agent does not support revise()');
+
+    await expect(
+      adapter.getAgent(ContainerAgentType.Writer, 'writer-sparse').execute('', {
+        mode: 'write',
+        scene_card: {
+          scene_id: 'SC-10',
+          sensory_guidance: 'foggy',
+          character_profiles: [{ id: 'hero-1' }],
+          foreshadows_to_plant: 'bell',
+          foreshadows_to_harvest: ['clue'],
+        },
+      }),
+    ).resolves.toEqual({ content: 'fallback draft' });
+
+    expect(sparseWriteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scene_id: 'SC-10',
+        world_settings: {},
+        sensory_guidance: 'foggy',
+        character_profiles: [{ id: 'hero-1' }],
+        foreshadows_to_plant: [],
+        foreshadows_to_harvest: ['clue'],
+      }),
+      true,
+    );
+  });
+
+  it('rejects unsupported container agent types', async () => {
+    const { AgentFactoryAdapter } = await import('../../container/adapters.js');
+    const adapter = new AgentFactoryAdapter();
+
+    expect(() =>
+      adapter.getAgent('unknown-agent' as ContainerAgentType, 'bad-agent'),
+    ).toThrow('Unsupported agent type: unknown-agent');
+  });
 });

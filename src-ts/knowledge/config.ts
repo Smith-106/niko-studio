@@ -55,20 +55,6 @@ function parseProviderType(value: string): ProviderType {
 }
 
 /**
- * Parse a ModelTier string value
- */
-function parseModelTier(value: string): ModelTier {
-  const normalized = value.toLowerCase().trim();
-  const validTiers = Object.values(ModelTier) as string[];
-  if (validTiers.includes(normalized)) {
-    return normalized as ModelTier;
-  }
-  throw new ConfigError(
-    `Invalid model tier: '${value}', valid values: ${validTiers.join(', ')}`
-  );
-}
-
-/**
  * Substitute environment variables in a string
  *
  * Supports:

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { InMemoryRateLimiter } from '../../mcp/rate-limiter';
 
@@ -45,7 +45,26 @@ describe('InMemoryRateLimiter', () => {
   it('start and stop do not throw', () => {
     limiter = new InMemoryRateLimiter(3600);
     expect(() => limiter.start()).not.toThrow();
+    expect(() => limiter.start()).not.toThrow();
     expect(() => limiter.stop()).not.toThrow();
     expect(() => limiter.stop()).not.toThrow();
+  });
+
+  it('reports current window counts and falls back to zero for missing windows', () => {
+    limiter = new InMemoryRateLimiter(3600);
+
+    expect(limiter.getCount('diagnostic-key', 10, 60)).toBe(0);
+    expect(limiter.allow('diagnostic-key', 10, 60)).toBe(true);
+    expect(limiter.allow('diagnostic-key', 10, 60)).toBe(true);
+    expect(limiter.getCount('diagnostic-key', 10, 60)).toBe(2);
+  });
+
+  it('runs cleanup when the entry cap is exceeded', () => {
+    limiter = new InMemoryRateLimiter(3600, 0);
+    const cleanupSpy = vi.spyOn(limiter, 'cleanup');
+
+    expect(limiter.allow('capped-key', 10, 60)).toBe(true);
+    expect(limiter.allow('capped-key', 10, 60)).toBe(true);
+    expect(cleanupSpy).toHaveBeenCalled();
   });
 });
