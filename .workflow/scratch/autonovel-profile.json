@@ -1,0 +1,113 @@
+{
+  "name": "autonovel",
+  "url": "https://github.com/NousResearch/autonovel",
+  "tagline": "An autonomous pipeline for writing, revising, typesetting, illustrating, and narrating a complete novel — from seed concept to print-ready PDF, ePub, audiobook, and landing page.",
+  "core_features": [
+    "Five-phase novel production pipeline: Foundation → First Draft → Automated Revision → Opus Review Loop → Export",
+    "World bible generation from seed concept",
+    "Character registry with arcs and relationships",
+    "24-chapter outline with beats and foreshadowing ledger",
+    "Voice fingerprinting and style discovery",
+    "Sequential chapter drafting with anti-pattern rules",
+    "Mechanical slop detection (regex-based banned words, clichés, show-don't-tell violations)",
+    "Adversarial editing (\"cut 500 words\" analysis with classified cuts)",
+    "Head-to-head chapter Elo tournament comparison",
+    "4-persona reader panel novel-level evaluation",
+    "Dual-persona review (literary critic + professor of fiction) via Claude Opus",
+    "LaTeX typesetting with EB Garamond font (trade paperback format)",
+    "ePub generation",
+    "Cover art and chapter ornament generation",
+    "Print-ready full-wrap cover (Lulu/KDP specs)",
+    "Multi-voice audiobook generation with speaker-attributed segments",
+    "Responsive landing page generation",
+    "Propagation debt tracking across 5 co-evolving layers"
+  ],
+  "ai_capabilities": [
+    "Autonomous world bible, character, and outline generation",
+    "Sequential chapter drafting with context loading (voice + world + characters + previous chapter)",
+    "LLM judge evaluation (prose quality, voice adherence, character distinctiveness, beat coverage)",
+    "Self-evaluation with keep/discard loop based on scores",
+    "Iterative revision with plateau detection",
+    "Dual-persona deep review (Claude Opus as literary critic and professor of fiction)",
+    "Multi-voice audiobook narration via ElevenLabs",
+    "Art generation via fal.ai (Nano Banana 2)",
+    "Seed concept generation"
+  ],
+  "tech_stack": {
+    "language": "Python 3.12+",
+    "framework": "uv (package manager), httpx, python-dotenv",
+    "ui": "Static HTML/CSS landing page (no framework), LaTeX typesetting"
+  },
+  "target_users": "Writers seeking AI-assisted novel production, developers interested in autonomous creative pipelines, publishers exploring AI-generated content workflows",
+  "license": "information unavailable (no LICENSE file found in repository)",
+  "business_model": "open source",
+  "community_metrics": {
+    "stars": 1152,
+    "forks": 229,
+    "contributors": 2,
+    "last_update": "2026-03-20"
+  },
+  "strengths": [
+    "Complete end-to-end pipeline from concept to finished products (PDF, ePub, audiobook, landing page)",
+    "Two-layer quality control: mechanical regex scanning + LLM judge evaluation",
+    "Sophisticated dual-persona review loop with Claude Opus for deep prose analysis",
+    "Five co-evolving document layers with propagation debt tracking",
+    "Proven production history: first novel \"The Second Son of the House of Bells\" at 79,456 words",
+    "Comprehensive anti-slop and anti-pattern detection systems",
+    "Extensive craft education embedded (Save the Cat, Story Circle, Sanderson frameworks)",
+    "Branch-based per-novel workflow (framework on master, content on branches)",
+    "Git-based version control with keep/discard commits"
+  ],
+  "weaknesses": [
+    "Requires paid API keys (Anthropic required, fal.ai and ElevenLabs optional) — not self-hostable for core functionality",
+    "No explicit open-source license file in repository",
+    "Only 2 contributors, indicating limited community contribution",
+    "Python-only, no GUI or web interface for non-technical users",
+    "No releases published",
+    "Very minimal Python dependencies (only httpx and python-dotenv) — most logic is prompt-driven",
+    "Last update was March 2026, may not be actively maintained",
+    "No issue tracking or community discussion infrastructure visible"
+  ],
+  "sources": [
+    {
+      "url": "https://github.com/NousResearch/autonovel",
+      "description": "Main repository page with README, file structure, and project overview"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/README.md",
+      "description": "Full README with quick start, pipeline phases, tools list, and production history"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/pyproject.toml",
+      "description": "Python project configuration: Python 3.12+, dependencies httpx and python-dotenv"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/.env.example",
+      "description": "API key configuration template showing Anthropic, fal.ai, and ElevenLabs integrations"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/program.md",
+      "description": "Agent instructions per phase with detailed loop specifications and evaluation criteria"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/PIPELINE.md",
+      "description": "Full automation technical specification with tool inventory and per-novel branch workflow"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/CRAFT.md",
+      "description": "Operationalizable writing craft frameworks (Save the Cat, Story Circle, Sanderson)"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/ANTI-SLOP.md",
+      "description": "AI writing tell detection reference with banned words and phrases"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/landing/index.html",
+      "description": "Responsive landing page template using CSS Grid and EB Garamond font"
+    },
+    {
+      "url": "https://github.com/NousResearch/autonovel/blob/main/typeset/novel.tex",
+      "description": "LaTeX template for trade paperback (5.5 x 8.5 inches) with EB Garamond and drop caps"
+    }
+  ]
+}
