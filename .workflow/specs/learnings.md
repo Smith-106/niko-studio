@@ -62,3 +62,43 @@ Milestone: M13
 Milestone: M13
 
 </spec-entry>
+
+<spec-entry category="learning" keywords="release,evidence-refresh,dependency-order" date="2026-06-13" title="先修 gate 再刷 evidence — 否则产生无效 NO_GO 证据" description="若先刷新 retained evidence 再修脚本，会产生更新但仍无效的 NO_GO 证据。不可 blanket disable triage blocker">
+### 先修 gate 再刷 evidence — 否则产生无效 NO_GO 证据
+若先刷新 retained evidence 再修脚本，会产生更新但仍无效的 NO_GO 证据。不可 blanket disable triage blocker。
+</spec-entry>
+
+<spec-entry category="learning" keywords="BookWorld,ablation,environment-response,scene-mode" date="2026-06-13" title="BookWorld ablation：移除环境响应损害沉浸感；移除场景模式损害所有维度" description="验证 win rate 75.36%，环境响应和场景模式是核心贡献因子">
+### BookWorld ablation：移除环境响应损害沉浸感；移除场景模式损害所有维度
+验证 win rate 75.36%，环境响应和场景模式是核心贡献因子。
+</spec-entry>
+
+<spec-entry category="learning" keywords="decision-threshold,writing,critic,quality,alignment" date="2026-06-18" title="决策阈值不一致已修复" description="writing.ts 与 critic.ts 的 totalScore 阈值统一为 APPROVED>=80, REVISE>=60, REWRITE<60">
+### 决策阈值不一致已修复
+writing.ts 使用 totalScore >= 40 判定 REWRITE 但 critic.ts 使用 >= 60。修复后统一为：APPROVED >= 80, REVISE >= 60, REWRITE < 60。移除了未文档化的 HUMAN_REVIEW 层级。
+</spec-entry>
+
+<spec-entry category="learning" keywords="autonovel,competitor-analysis,AI-novel-pipeline,quality-control" date="2026-06-18" title="autonovel 竞品分析：端到端 AI 小说生成管道的关键洞察" description="NousResearch/autonovel 展示了完整的 AI 小说生成管道，其双层质量控制系统和反 slop 机制值得借鉴">
+
+### autonovel 竞品分析：端到端 AI 小说生成管道的关键洞察
+
+**项目**: https://github.com/NousResearch/autonovel (1.2k stars, 229 forks)
+
+**核心架构**:
+- 5 层协同演化文档：voice.md → world.md → characters.md → outline.md → chapters/
+- 4 阶段管道：Foundation → First Draft → Revision → Export
+- 双层质量控制系统：
+  - 机械层：regex 禁用词 + 结构反模式检测（OVER-EXPLAIN, TRIADIC LISTING 等）
+  - LLM 层：Claude Opus 双角色评审（文学评论家 + 小说教授）
+- 读者模拟：4 人格评审面板（编辑/类型读者/作家/初读者）
+
+**与 niko-studio 的差异与启示**:
+1. **autonovel 优势**: 完整的出版级输出（LaTeX PDF + ePub + 有声书 + 封面），niko-studio 目前缺少排版和导出能力
+2. **niko-studio 优势**: 更丰富的中文写作知识库（54 本书 + 网文研究），更精细的读者满意度分析（爽点密度/钩子检测）
+3. **可借鉴点**: 反 slop 检测机制（ANTI-SLOP.md + ANTI-PATTERNS.md）可补充到 writing-craft 分析器中；Elo 章节对比可用于 niko-studio 的章节质量排序
+4. **关键差距**: autonovel 已实现端到端自动化，niko-studio 的 AI 共创引擎仍需人工介入较多
+
+**Why**: 了解竞品技术路线有助于定位 niko-studio 的独特价值和改进方向。
+**How to apply**: 将 autonovel 的反 slop 检测和双层质量控制思想整合到 niko-studio 的写作分析引擎中，同时保持中文写作知识库的优势壁垒。
+
+</spec-entry>
