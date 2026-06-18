@@ -47,6 +47,12 @@ export interface RevisionConfig {
   degrade_on_timeout: boolean;
   degrade_on_error: boolean;
   quality_phase_timeout_seconds: number;
+  /** Optional quality goals / revision instructions injected by caller (e.g. de-ai instructions) */
+  quality_goals?: string[];
+  /** Optional target style for style-shift mode */
+  target_style?: string;
+  /** Optional revision mode hint */
+  revision_mode?: 'de-ai' | 'style-shift' | 'default';
 }
 
 export const DEFAULT_REVISION_CONFIG: RevisionConfig = {

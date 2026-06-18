@@ -24,8 +24,19 @@ import { ConsensusEngine } from '../ConsensusEngine';
 import { detectAIFlavor } from '../ai-flavor-detector';
 import type { AIFlavorResult } from '../ai-flavor-detector';
 import { createLogger } from '../../logger';
+import { RevisionServiceImpl } from '../../services/revision-service';
 
 const _log = createLogger('reader-endpoint');
+
+// RevisionService singleton for de-AI endpoint
+let revisionServiceInstance: RevisionServiceImpl | null = null;
+
+function getRevisionService(): RevisionServiceImpl {
+  if (!revisionServiceInstance) {
+    revisionServiceInstance = new RevisionServiceImpl();
+  }
+  return revisionServiceInstance;
+}
 
 // ConsensusEngine singleton
 let consensusEngineInstance: ConsensusEngine | null = null;
@@ -51,8 +62,26 @@ export interface CreatePersonaRequest {
   parameters: Record<string, any>;
 }
 
-export interface OverlayRequest {
+export interface DeAIRequest {
   novelId: string;
+  text?: string;
+  mode?: 'de-ai' | 'style-shift';
+  targetStyle?: string;
+}
+
+export interface DeAIResponse {
+  novelId: string;
+  originalText: string;
+  revisedText: string;
+  aiFlavorScore: number;
+  improvements?: {
+    delta: Record<string, number>;
+    improvedDimensions: string[];
+    regressedDimensions: string[];
+    unchangedDimensions: string[];
+  };
+  suggestions: string[];
+  mode: string;
 }
 
 // ============================================================
@@ -460,4 +489,105 @@ export function getCustomPersonaStore(): Map<string, ReaderPersona> {
 
 export function getAnalysisResultCache(): Map<string, DualEngineResult> {
   return analysisResultCache;
+}
+
+/**
+ * POST /reader/de-ai — de-AI rewrite endpoint
+ *
+ * Detects AI-generated prose patterns in the provided text and rewrites
+ * it to sound more natural and human-written. Uses the RevisionService
+ * with AI-flavor detection results injected as quality goals.
+ *
+ * Request: { novelId, text?, mode: 'de-ai'|'style-shift', targetStyle? }
+ * Response: { novelId, originalText, revisedText, aiFlavorScore, improvements?, suggestions, mode }
+ */
+export async function rsDeAIEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+
+  const novelId = body.novelId as string | undefined;
+  const text = body.text as string | undefined;
+  const mode = (body.mode as 'de-ai' | 'style-shift' | undefined) ?? 'de-ai';
+  const targetStyle = body.targetStyle as string | undefined;
+
+  if (!novelId || typeof novelId !== 'string') {
+    return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
+  }
+
+  const analysisText = text ?? '';
+
+  _log.info('De-AI rewrite requested', { novelId, textLength: analysisText.length, mode, hasTargetStyle: !!targetStyle });
+
+  // Handle empty text gracefully
+  if (!analysisText.trim()) {
+    return jsonResponse({
+      novelId,
+      originalText: analysisText,
+      revisedText: analysisText,
+      aiFlavorScore: 0,
+      suggestions: ['文本为空，无法检测 AI 味或进行重写'],
+      mode,
+    });
+  }
+
+  try {
+    // Step 1: Detect AI flavor
+    const aiFlavorResult: AIFlavorResult = detectAIFlavor(analysisText);
+
+    // Step 2: Build quality goals from detection results
+    const qualityGoals: string[] = [
+      ...aiFlavorResult.suggestions,
+      `AI flavor score: ${aiFlavorResult.aiFlavorScore} (confidence: ${aiFlavorResult.confidence})`,
+    ];
+
+    // Add mode-specific instructions
+    if (mode === 'style-shift' && targetStyle) {
+      qualityGoals.push(`Shift writing style to: ${targetStyle}`);
+    } else {
+      qualityGoals.push('Remove AI-generated template expressions and make prose sound natural and human-written');
+    }
+
+    // Step 3: Call RevisionService with de-AI quality goals
+    const revisionService = getRevisionService();
+    await revisionService.initialize();
+
+    const revisionResult = await revisionService.revise(analysisText, {
+      quality_goals: qualityGoals,
+      target_style: targetStyle,
+      revision_mode: mode,
+      max_revisions: 2, // De-AI typically needs fewer iterations
+      pass_score: 7.0,
+    });
+
+    // Step 4: Build response
+    const improvements = revisionResult.comparison
+      ? {
+          delta: revisionResult.comparison.delta,
+          improvedDimensions: revisionResult.comparison.improvedDimensions,
+          regressedDimensions: revisionResult.comparison.regressedDimensions,
+          unchangedDimensions: revisionResult.comparison.unchangedDimensions,
+        }
+      : undefined;
+
+    _log.info('De-AI rewrite complete', {
+      novelId,
+      aiFlavorScore: aiFlavorResult.aiFlavorScore,
+      finalScore: revisionResult.finalScore,
+      totalIterations: revisionResult.totalIterations,
+      textChanged: revisionResult.finalDraft !== analysisText,
+    });
+
+    return jsonResponse({
+      novelId,
+      originalText: analysisText,
+      revisedText: revisionResult.finalDraft,
+      aiFlavorScore: aiFlavorResult.aiFlavorScore,
+      improvements,
+      suggestions: aiFlavorResult.suggestions,
+      mode,
+    });
+  } catch (exc) {
+    const message = exc instanceof Error ? exc.message : String(exc);
+    _log.error('De-AI rewrite failed', { error: message, novelId });
+    return jsonResponse({ error: message }, 500);
+  }
 }
