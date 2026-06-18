@@ -166,6 +166,60 @@ export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpRespo
     // For now, use empty placeholder text
     const manuscriptText = '';
 
+    // Handle empty text gracefully — return empty consensus report
+    if (!manuscriptText || manuscriptText.trim().length === 0) {
+      const emptyDimensionScores = personas.map((persona) => ({
+        personaId: persona.id,
+        personaName: persona.name,
+        scores: [
+          { dimension: 'plotCoherence', score: 0, weight: persona.parameters.plotWeight },
+          { dimension: 'characterConsistency', score: 0, weight: persona.parameters.characterWeight },
+          { dimension: 'styleConsistency', score: 0, weight: persona.parameters.styleWeight },
+          { dimension: 'pacingTension', score: 0, weight: persona.parameters.pacingWeight },
+        ],
+      }));
+
+      const emptyResult: DualEngineResult = {
+        readerReactions: [],
+        editorialAnalysis: {
+          structuralIssues: [],
+          styleNotes: [],
+          pacingAssessment: '',
+          recommendations: [],
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      // Cache result for overlay endpoint
+      analysisResultCache.set(novelId, emptyResult);
+
+      _log.info('Reader simulation analysis complete (empty text)', {
+        novelId,
+        personaCount: personas.length,
+        reactionCount: 0,
+      });
+
+      return jsonResponse({
+        novelId,
+        readerReactions: [],
+        editorialAnalysis: {
+          structuralIssues: [],
+          styleNotes: [],
+          pacingAssessment: '',
+          recommendations: [],
+        },
+        consensus: {
+          items: [],
+          overallAssessment: '',
+          criticalIssues: [],
+          dissentItems: [],
+          dimensionSummaries: {},
+        },
+        dimensionScores: emptyDimensionScores,
+        timestamp: emptyResult.timestamp,
+      });
+    }
+
     const result: DualEngineResult = await getDualEngine().analyze(
       manuscriptText,
       personas,
