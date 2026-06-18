@@ -21,6 +21,8 @@ import type { DualEngineResult, ReaderReaction } from '../DualEngine';
 import { DimensionAnalyzer, createDimensionAnalyzer } from '../DimensionAnalyzer';
 import type { DimensionScore } from '../DimensionAnalyzer';
 import { ConsensusEngine } from '../ConsensusEngine';
+import { detectAIFlavor } from '../ai-flavor-detector';
+import type { AIFlavorResult } from '../ai-flavor-detector';
 import { createLogger } from '../../logger';
 
 const _log = createLogger('reader-endpoint');
@@ -401,9 +403,51 @@ export async function rsGetOverlayEndpoint(request: HttpRequest): Promise<HttpRe
   });
 }
 
-// ============================================================
-// Export for testing
-// ============================================================
+/**
+ * POST /reader/ai-flavor — detect AI-generated prose patterns in text
+ *
+ * Runs rule-based AI flavor detection on provided text.
+ * Returns score, indicators, confidence, evidence, and suggestions.
+ */
+export async function rsAIFlavorEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+
+  const novelId = body.novelId as string | undefined;
+  const text = body.text as string | undefined;
+
+  if (!novelId || typeof novelId !== 'string') {
+    return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
+  }
+
+  // Use provided text or fall back to empty string
+  const analysisText = text ?? '';
+
+  _log.info('AI flavor detection requested', { novelId, textLength: analysisText.length });
+
+  try {
+    const result: AIFlavorResult = detectAIFlavor(analysisText);
+
+    _log.info('AI flavor detection complete', {
+      novelId,
+      aiFlavorScore: result.aiFlavorScore,
+      indicatorCount: result.indicators.length,
+      confidence: result.confidence,
+    });
+
+    return jsonResponse({
+      novelId,
+      score: result.aiFlavorScore,
+      indicators: result.indicators,
+      confidence: result.confidence,
+      evidence: result.evidence,
+      suggestions: result.suggestions,
+    });
+  } catch (exc) {
+    const message = exc instanceof Error ? exc.message : String(exc);
+    _log.error('AI flavor detection failed', { error: message, novelId });
+    return jsonResponse({ error: message }, 500);
+  }
+}
 
 export function clearReaderStores(): void {
   customPersonaStore.clear();

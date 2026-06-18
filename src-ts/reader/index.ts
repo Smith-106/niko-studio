@@ -36,5 +36,5 @@ export { DualEngine } from './DualEngine';
 // Consensus engine
 export { ConsensusEngine, createConsensusEngine } from './ConsensusEngine';
 
-// Overlay bridge
-export { transformToOverlay, resetOverlayBridge } from './OverlayBridge';
+export type { AIFlavorIndicator, AIFlavorResult } from './ai-flavor-detector';
+export { detectAIFlavor, createAIFlavorDetector } from './ai-flavor-detector';

@@ -14,6 +14,8 @@
 import type { ReaderPersona } from './PersonaDefinition';
 import { DimensionAnalyzer } from './DimensionAnalyzer';
 import { QualityDimension } from '../quality/types';
+import { detectAIFlavor } from './ai-flavor-detector';
+import type { AIFlavorResult } from './ai-flavor-detector';
 
 // ============================================================
 // Interfaces
@@ -50,6 +52,7 @@ export interface EditorialAnalysis {
   styleNotes: string[];
   pacingAssessment: string;
   recommendations: string[];
+  aiFlavor?: AIFlavorResult; // Optional AI flavor detection result
 }
 
 /**
@@ -232,6 +235,7 @@ export class DualEngine {
    *
    * For now, uses heuristic-based analysis as placeholder.
    * Will be replaced with LLM-powered editorial analysis.
+   * Optionally includes AI flavor detection result.
    */
   private async runEditorEngine(
     text: string,
@@ -282,11 +286,15 @@ export class DualEngine {
     }
     recommendations.push('建议进行多轮修订以打磨细节');
 
+    // Optional: AI flavor detection (non-blocking, doesn't affect existing analysis)
+    const aiFlavor = text.trim().length > 0 ? detectAIFlavor(text) : undefined;
+
     return {
       structuralIssues,
       styleNotes,
       pacingAssessment,
       recommendations,
+      aiFlavor,
     };
   }
 
