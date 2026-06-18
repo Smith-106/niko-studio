@@ -38,6 +38,15 @@ export interface ConsensusReport {
   dimensionSummaries: Record<string, { avgScore: number; consensus: number }>;
 }
 
+export interface ConsensusComparisonItem {
+  dimension: string;
+  versionAScore: number;
+  versionBScore: number;
+  delta: number;
+  winner: 'A' | 'B' | 'tie';
+  notes: string;
+}
+
 // ============================================================
 // Internal Types
 // ============================================================
@@ -164,19 +173,25 @@ export class ConsensusEngine {
   private groupFindings(
     findings: NormalizedFinding[],
   ): Map<GroupKey, NormalizedFinding[]> {
-    const groups = new Map<GroupKey, NormalizedFinding[]>();
+    const grouped = new Map<string, { key: GroupKey; findings: NormalizedFinding[] }>();
 
     for (const finding of findings) {
       const key = this.makeGroupKey(finding);
-      const existing = groups.get(key);
+      const serializedKey = `${key.dimension}|${key.chapter}|${key.paragraphRange}`;
+      const existing = grouped.get(serializedKey);
       if (existing) {
-        existing.push(finding);
+        existing.findings.push(finding);
       } else {
-        groups.set(key, [finding]);
+        grouped.set(serializedKey, { key, findings: [finding] });
       }
     }
 
-    return groups;
+    return new Map(
+      Array.from(grouped.values(), ({ key, findings: groupedFindings }) => [
+        key,
+        groupedFindings,
+      ]),
+    );
   }
 
   /**
@@ -353,11 +368,6 @@ export class ConsensusEngine {
     for (const [dimKey, dimName] of Object.entries(dimensionMap)) {
       const scores = reactions.map((r) => r.dimensions[dimKey as keyof typeof r.dimensions]);
 
-      if (scores.length === 0) {
-        summaries[dimName] = { avgScore: 0, consensus: 0 };
-        continue;
-      }
-
       const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
 
       // Consensus = 1 - normalized standard deviation
@@ -434,6 +444,67 @@ export class ConsensusEngine {
     }
 
     return parts.join('');
+  }
+
+  // ============================================================
+  // Compare Consensus
+  // ============================================================
+
+  /**
+   * Compare two consensus reports dimension by dimension
+   *
+   * Produces a side-by-side comparison with delta and winner for each
+   * dimension present in either report. Also computes an overall winner.
+   *
+   * @param reportA - Consensus report for version A
+   * @param reportB - Consensus report for version B
+   * @returns Array of per-dimension comparison items
+   */
+  compareConsensus(
+    reportA: ConsensusReport,
+    reportB: ConsensusReport,
+  ): ConsensusComparisonItem[] {
+    const allDimensions = new Set<string>([
+      ...Object.keys(reportA.dimensionSummaries),
+      ...Object.keys(reportB.dimensionSummaries),
+    ]);
+
+    const items: ConsensusComparisonItem[] = [];
+
+    for (const dimension of allDimensions) {
+      const summaryA = reportA.dimensionSummaries[dimension];
+      const summaryB = reportB.dimensionSummaries[dimension];
+
+      const versionAScore = summaryA?.avgScore ?? 0;
+      const versionBScore = summaryB?.avgScore ?? 0;
+      const delta = Math.round((versionBScore - versionAScore) * 1000) / 1000;
+
+      let winner: 'A' | 'B' | 'tie';
+      let notes: string;
+
+      if (versionAScore > versionBScore) {
+        winner = 'A';
+        notes = `Version A scores higher by ${Math.abs(delta).toFixed(3)}`;
+      } else if (versionBScore > versionAScore) {
+        winner = 'B';
+        notes = `Version B scores higher by ${Math.abs(delta).toFixed(3)}`;
+      } else {
+        winner = 'tie';
+        notes = 'Both versions score equally';
+      }
+
+      items.push({
+        dimension,
+        versionAScore,
+        versionBScore,
+        delta,
+        winner,
+        notes,
+      });
+    }
+
+    // Sort by absolute delta descending (most significant differences first)
+    return items.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
   }
 
   // ============================================================

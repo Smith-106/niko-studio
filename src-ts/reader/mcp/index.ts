@@ -7,6 +7,7 @@ export {
   rsGetPersonasEndpoint,
   rsCreateCustomPersonaEndpoint,
   rsGetOverlayEndpoint,
+  rsCompareEndpoint,
   clearReaderStores,
   getCustomPersonaStore,
   getAnalysisResultCache,
@@ -15,6 +16,8 @@ export {
 export type {
   AnalyzeRequest,
   CreatePersonaRequest,
-  OverlayRequest,
   OverlayMarker,
+  CompareRequest,
+  CompareResult,
+  CompareVersionInput,
 } from './reader-endpoints';

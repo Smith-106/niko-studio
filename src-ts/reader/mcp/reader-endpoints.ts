@@ -84,6 +84,30 @@ export interface DeAIResponse {
   mode: string;
 }
 
+// --- A/B Compare Types ---
+
+export interface CompareVersionInput {
+  text: string;
+  label?: string;
+}
+
+export interface CompareRequest {
+  novelId: string;
+  versionA: CompareVersionInput;
+  versionB: CompareVersionInput;
+  personaIds?: string[];
+}
+
+export interface CompareResult {
+  novelId: string;
+  versionAConsensus: import('../ConsensusEngine').ConsensusReport;
+  versionBConsensus: import('../ConsensusEngine').ConsensusReport;
+  comparison: import('../ConsensusEngine').ConsensusComparisonItem[];
+  overallWinner: 'A' | 'B' | 'tie';
+  versionALabel?: string;
+  versionBLabel?: string;
+}
+
 // ============================================================
 // In-memory storage
 // ============================================================
@@ -489,6 +513,122 @@ export function getCustomPersonaStore(): Map<string, ReaderPersona> {
 
 export function getAnalysisResultCache(): Map<string, DualEngineResult> {
   return analysisResultCache;
+}
+
+/**
+ * POST /reader/compare — A/B comparison endpoint
+ *
+ * Accepts two versions of text (A and B), runs reader simulation
+ * with the specified personas on both versions, builds consensus
+ * reports for each, and returns a side-by-side comparison.
+ *
+ * Request: { novelId, versionA: { text, label? }, versionB: { text, label? }, personaIds? }
+ * Response: { novelId, versionAConsensus, versionBConsensus, comparison, overallWinner, versionALabel?, versionBLabel? }
+ */
+export async function rsCompareEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+
+  const novelId = body.novelId as string | undefined;
+  const versionA = body.versionA as Record<string, unknown> | undefined;
+  const versionB = body.versionB as Record<string, unknown> | undefined;
+  const personaIds = body.personaIds as string[] | undefined;
+
+  if (!novelId || typeof novelId !== 'string') {
+    return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
+  }
+
+  if (!versionA || typeof versionA !== 'object' || Array.isArray(versionA)) {
+    return jsonResponse({ error: 'versionA is required and must be an object with a text field' }, 400);
+  }
+
+  if (!versionB || typeof versionB !== 'object' || Array.isArray(versionB)) {
+    return jsonResponse({ error: 'versionB is required and must be an object with a text field' }, 400);
+  }
+
+  const textA = versionA.text as string | undefined;
+  const textB = versionB.text as string | undefined;
+
+  if (!textA || typeof textA !== 'string') {
+    return jsonResponse({ error: 'versionA.text is required and must be a string' }, 400);
+  }
+
+  if (!textB || typeof textB !== 'string') {
+    return jsonResponse({ error: 'versionB.text is required and must be a string' }, 400);
+  }
+
+  // Validate persona IDs if provided
+  if (personaIds !== undefined) {
+    if (!Array.isArray(personaIds)) {
+      return jsonResponse({ error: 'personaIds must be an array of strings' }, 400);
+    }
+    for (const id of personaIds) {
+      if (typeof id !== 'string') {
+        return jsonResponse({ error: 'Each personaId must be a string' }, 400);
+      }
+    }
+  }
+
+  _log.info('A/B comparison requested', {
+    novelId,
+    textALength: textA.length,
+    textBLength: textB.length,
+    personaIds: personaIds ?? 'all',
+  });
+
+  try {
+    const personas = resolvePersonas(personaIds);
+    const engine = getDualEngine();
+    const consensus = getConsensusEngine();
+
+    // Analyze both versions concurrently
+    const [resultA, resultB] = await Promise.all([
+      engine.analyze(textA, personas),
+      engine.analyze(textB, personas),
+    ]);
+
+    // Build consensus reports for each version
+    const consensusA = consensus.buildConsensus(resultA.readerReactions);
+    const consensusB = consensus.buildConsensus(resultB.readerReactions);
+
+    // Compare the two consensus reports
+    const comparison = consensus.compareConsensus(consensusA, consensusB);
+
+    // Determine overall winner based on average score across all dimensions
+    let overallWinner: 'A' | 'B' | 'tie';
+    if (comparison.length === 0) {
+      overallWinner = 'tie';
+    } else {
+      const aWins = comparison.filter((c) => c.winner === 'A').length;
+      const bWins = comparison.filter((c) => c.winner === 'B').length;
+      if (aWins > bWins) {
+        overallWinner = 'A';
+      } else if (bWins > aWins) {
+        overallWinner = 'B';
+      } else {
+        overallWinner = 'tie';
+      }
+    }
+
+    _log.info('A/B comparison complete', {
+      novelId,
+      overallWinner,
+      comparisonCount: comparison.length,
+    });
+
+    return jsonResponse({
+      novelId,
+      versionAConsensus: consensusA,
+      versionBConsensus: consensusB,
+      comparison,
+      overallWinner,
+      versionALabel: (versionA.label as string | undefined) ?? undefined,
+      versionBLabel: (versionB.label as string | undefined) ?? undefined,
+    });
+  } catch (exc) {
+    const message = exc instanceof Error ? exc.message : String(exc);
+    _log.error('A/B comparison failed', { error: message, novelId });
+    return jsonResponse({ error: message }, 500);
+  }
 }
 
 /**
