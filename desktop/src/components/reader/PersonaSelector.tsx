@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Zap, BookOpen, User, Plus, X, Check, Sliders } from 'lucide-react'
+import { Zap, BookOpen, User, Plus, X, Check, Sliders, Gauge, Shield, Heart, Globe } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 // ============================================================
@@ -22,6 +22,12 @@ export interface Persona {
   toleranceThreshold: number // 0-1
   focusAreas: string[]
   isPreset: boolean
+  // Extended fields (optional, for Anti-AI Flavor 2.0)
+  ageGroup?: string
+  culturalBackground?: string
+  readingPreference?: string
+  genrePreference?: string
+  aiFlavorSensitivity?: number
 }
 
 export interface PersonaSelectorProps {
@@ -65,6 +71,66 @@ const PRESET_PERSONAS: Persona[] = [
     focusAreas: ['故事性', '代入感', '可读性'],
     isPreset: true,
   },
+  {
+    id: 'pacing-hawk',
+    name: '节奏猎手',
+    description: '零容忍拖沓，追求高密度钩子与紧凑节奏',
+    icon: Gauge,
+    weights: { plot: 0.85, character: 0.4, style: 0.3, pacing: 1.0 },
+    toleranceThreshold: 0.2,
+    focusAreas: ['钩子密度', '章节结尾', '节奏', '拖沓检测'],
+    isPreset: true,
+    ageGroup: 'young-adult',
+    culturalBackground: 'chinese-webnovel',
+    readingPreference: 'fast-paced',
+    genrePreference: 'webnovel',
+    aiFlavorSensitivity: 0.6,
+  },
+  {
+    id: 'anti-ai-flavor-critic',
+    name: '反 AI 味评论家',
+    description: '极度敏感 AI 生成痕迹，偏好自然有机的文笔',
+    icon: Shield,
+    weights: { plot: 0.5, character: 0.7, style: 0.95, pacing: 0.4 },
+    toleranceThreshold: 0.75,
+    focusAreas: ['AI 味检测', '文笔自然度', '对话真实感', '原创性'],
+    isPreset: true,
+    ageGroup: 'adult',
+    culturalBackground: 'western-literary',
+    readingPreference: 'analytical',
+    genrePreference: 'literary-fiction',
+    aiFlavorSensitivity: 0.95,
+  },
+  {
+    id: 'young-adult-reader',
+    name: '青春文学读者',
+    description: '关注角色成长与情感共鸣，偏好易读性强的作品',
+    icon: Heart,
+    weights: { plot: 0.6, character: 0.85, style: 0.5, pacing: 0.65 },
+    toleranceThreshold: 0.45,
+    focusAreas: ['角色成长', '情感共鸣', '代入感', '易读性'],
+    isPreset: true,
+    ageGroup: 'young-adult',
+    culturalBackground: 'western-contemporary',
+    readingPreference: 'immersive',
+    genrePreference: 'young-adult',
+    aiFlavorSensitivity: 0.5,
+  },
+  {
+    id: 'web-novel-veteran',
+    name: '网文老读者',
+    description: '深谙网文套路，重视爽点密度与章节结构',
+    icon: Globe,
+    weights: { plot: 0.8, character: 0.55, style: 0.35, pacing: 0.9 },
+    toleranceThreshold: 0.35,
+    focusAreas: ['爽点', '套路执行', '章节结构', '节奏'],
+    isPreset: true,
+    ageGroup: 'adult',
+    culturalBackground: 'chinese-webnovel',
+    readingPreference: 'fast-paced',
+    genrePreference: 'webnovel',
+    aiFlavorSensitivity: 0.7,
+  },
 ]
 
 const FOCUS_AREA_OPTIONS = [
@@ -82,6 +148,17 @@ const FOCUS_AREA_OPTIONS = [
   '情感共鸣',
   '世界观',
   '对话',
+  '钩子密度',
+  '章节结尾',
+  '拖沓检测',
+  'AI 味检测',
+  '文笔自然度',
+  '对话真实感',
+  '原创性',
+  '角色成长',
+  '爽点',
+  '套路执行',
+  '章节结构',
 ]
 
 const WEIGHT_LABELS: Record<keyof PersonaWeights, string> = {
@@ -90,6 +167,33 @@ const WEIGHT_LABELS: Record<keyof PersonaWeights, string> = {
   style: '风格',
   pacing: '节奏',
 }
+
+const AGE_GROUP_OPTIONS = [
+  { value: 'young-adult', label: '青少年' },
+  { value: 'adult', label: '成年' },
+  { value: 'mature', label: '成熟' },
+]
+
+const CULTURAL_BG_OPTIONS = [
+  { value: 'chinese-webnovel', label: '中国网文' },
+  { value: 'western-literary', label: '西方文学' },
+  { value: 'western-contemporary', label: '西方当代' },
+  { value: 'chinese-literary', label: '中国文学' },
+]
+
+const READING_PREF_OPTIONS = [
+  { value: 'fast-paced', label: '快节奏' },
+  { value: 'immersive', label: '沉浸式' },
+  { value: 'analytical', label: '分析式' },
+]
+
+const GENRE_PREF_OPTIONS = [
+  { value: 'webnovel', label: '网文' },
+  { value: 'literary-fiction', label: '文学小说' },
+  { value: 'young-adult', label: '青春文学' },
+  { value: 'suspense', label: '悬疑' },
+  { value: 'romance', label: '言情' },
+]
 
 // ============================================================
 // Sub-components
@@ -208,6 +312,12 @@ function CustomPersonaModal({
   })
   const [toleranceThreshold, setToleranceThreshold] = useState(0.5)
   const [focusAreas, setFocusAreas] = useState<string[]>([])
+  // Extended fields
+  const [ageGroup, setAgeGroup] = useState('')
+  const [culturalBackground, setCulturalBackground] = useState('')
+  const [readingPreference, setReadingPreference] = useState('')
+  const [genrePreference, setGenrePreference] = useState('')
+  const [aiFlavorSensitivity, setAiFlavorSensitivity] = useState(0.5)
 
   const handleWeightChange = useCallback((key: keyof PersonaWeights, value: number) => {
     setWeights((prev) => ({ ...prev, [key]: value }))
@@ -230,6 +340,11 @@ function CustomPersonaModal({
       toleranceThreshold,
       focusAreas,
       isPreset: false,
+      ageGroup: ageGroup || undefined,
+      culturalBackground: culturalBackground || undefined,
+      readingPreference: readingPreference || undefined,
+      genrePreference: genrePreference || undefined,
+      aiFlavorSensitivity,
     }
     onSave(persona)
     onClose()
@@ -238,7 +353,12 @@ function CustomPersonaModal({
     setWeights({ plot: 0.5, character: 0.5, style: 0.5, pacing: 0.5 })
     setToleranceThreshold(0.5)
     setFocusAreas([])
-  }, [name, weights, toleranceThreshold, focusAreas, onSave, onClose])
+    setAgeGroup('')
+    setCulturalBackground('')
+    setReadingPreference('')
+    setGenrePreference('')
+    setAiFlavorSensitivity(0.5)
+  }, [name, weights, toleranceThreshold, focusAreas, ageGroup, culturalBackground, readingPreference, genrePreference, aiFlavorSensitivity, onSave, onClose])
 
   if (!isOpen) return null
 
@@ -313,6 +433,89 @@ function CustomPersonaModal({
               <p className="mt-2 text-[10px] text-dark-text-muted">
                 较高值表示对缺陷更宽容，较低值表示更严格
               </p>
+            </div>
+          </div>
+
+          {/* AI Flavor Sensitivity */}
+          <div>
+            <label className="block text-xs text-dark-text-secondary mb-2">AI 味敏感度</label>
+            <div className="p-3 bg-dark-bg rounded border border-dark-border">
+              <WeightSlider
+                label="敏感度"
+                value={aiFlavorSensitivity}
+                onChange={setAiFlavorSensitivity}
+                disabled={false}
+              />
+              <p className="mt-2 text-[10px] text-dark-text-muted">
+                较高值表示对 AI 生成痕迹更敏感
+              </p>
+            </div>
+          </div>
+
+          {/* Extended Profile Fields */}
+          <div>
+            <label className="block text-xs text-dark-text-secondary mb-2">画像属性</label>
+            <div className="space-y-2 p-3 bg-dark-bg rounded border border-dark-border">
+              {/* Age Group */}
+              <div>
+                <label className="block text-[10px] text-dark-text-muted mb-1">年龄段</label>
+                <select
+                  value={ageGroup}
+                  onChange={(e) => setAgeGroup(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs bg-dark-surface border border-dark-border rounded
+                    text-dark-text focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">未选择</option>
+                  {AGE_GROUP_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Cultural Background */}
+              <div>
+                <label className="block text-[10px] text-dark-text-muted mb-1">文化背景</label>
+                <select
+                  value={culturalBackground}
+                  onChange={(e) => setCulturalBackground(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs bg-dark-surface border border-dark-border rounded
+                    text-dark-text focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">未选择</option>
+                  {CULTURAL_BG_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Reading Preference */}
+              <div>
+                <label className="block text-[10px] text-dark-text-muted mb-1">阅读偏好</label>
+                <select
+                  value={readingPreference}
+                  onChange={(e) => setReadingPreference(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs bg-dark-surface border border-dark-border rounded
+                    text-dark-text focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">未选择</option>
+                  {READING_PREF_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Genre Preference */}
+              <div>
+                <label className="block text-[10px] text-dark-text-muted mb-1">题材偏好</label>
+                <select
+                  value={genrePreference}
+                  onChange={(e) => setGenrePreference(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs bg-dark-surface border border-dark-border rounded
+                    text-dark-text focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">未选择</option>
+                  {GENRE_PREF_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

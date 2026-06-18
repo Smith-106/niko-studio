@@ -23,6 +23,12 @@ export interface ReaderPersona {
     toleranceThreshold: number; // 0-1, below this = flags issue
     focusAreas: string[];       // specific aspects this reader pays attention to
     biases: string[];           // known biases (e.g., "prefers fast pacing")
+    // Extended fields (optional, for Anti-AI Flavor 2.0)
+    ageGroup?: string;          // e.g., "young-adult", "adult", "mature"
+    culturalBackground?: string; // e.g., "chinese-webnovel", "western-literary"
+    readingPreference?: string;  // e.g., "fast-paced", "immersive", "analytical"
+    genrePreference?: string;      // e.g., "suspense", "romance", "webnovel"
+    aiFlavorSensitivity?: number; // 0-1, sensitivity to AI-generated prose flavor
   };
 }
 
@@ -141,8 +147,175 @@ export function createGeneralReader(): ReaderPersona {
   };
 }
 
+/**
+ * Pacing Hawk
+ * - Values: ultra-fast pacing, hook density, zero tolerance for drag
+ * - Genre: webnovel / serial fiction
+ * - Low tolerance for slow sections, high AI flavor sensitivity
+ */
+export function createPacingHawk(): ReaderPersona {
+  return {
+    id: 'preset-pacing-hawk',
+    name: 'Pacing Hawk',
+    type: 'preset',
+    description: 'Ruthless pace-driven reader with zero tolerance for slow sections. Demands constant hooks, tight cliffhangers, and immediate payoff. Common in webnovel binge readers.',
+    parameters: {
+      plotWeight: 0.85,
+      characterWeight: 0.4,
+      styleWeight: 0.3,
+      pacingWeight: 1.0,
+      toleranceThreshold: 0.2,
+      focusAreas: [
+        'hook-density',
+        'chapter-ending-cliffhanger',
+        'pacing-rhythm',
+        'drag-detection',
+        'scene-efficiency',
+        'tension-escalation',
+      ],
+      biases: [
+        'zero tolerance for slow pacing',
+        'demands immediate engagement',
+        'values hook over depth',
+        'binge-reading mindset',
+      ],
+      ageGroup: 'young-adult',
+      culturalBackground: 'chinese-webnovel',
+      readingPreference: 'fast-paced',
+      genrePreference: 'webnovel',
+      aiFlavorSensitivity: 0.6,
+    },
+  };
+}
+
+/**
+ * Anti-AI Flavor Critic
+ * - Values: human-like prose, originality, natural dialogue
+ * - High sensitivity to AI-generated patterns
+ * - Prefers organic, imperfect, authentic writing
+ */
+export function createAntiAIFlavorCritic(): ReaderPersona {
+  return {
+    id: 'preset-anti-ai-flavor-critic',
+    name: 'Anti-AI Flavor Critic',
+    type: 'preset',
+    description: 'Hyper-sensitive to AI-generated prose patterns. Values human imperfection, organic dialogue, and original voice. Flags repetitive structures, generic descriptions, and formulaic transitions.',
+    parameters: {
+      plotWeight: 0.5,
+      characterWeight: 0.7,
+      styleWeight: 0.95,
+      pacingWeight: 0.4,
+      toleranceThreshold: 0.75,
+      focusAreas: [
+        'ai-flavor-detection',
+        'prose-authenticity',
+        'dialogue-naturalness',
+        'originality-score',
+        'repetitive-structure',
+        'generic-description',
+        'formulaic-transition',
+      ],
+      biases: [
+        'extremely sensitive to AI patterns',
+        'values human imperfection',
+        'prefers organic over polished',
+        'flags repetitive phrasing',
+      ],
+      ageGroup: 'adult',
+      culturalBackground: 'western-literary',
+      readingPreference: 'analytical',
+      genrePreference: 'literary-fiction',
+      aiFlavorSensitivity: 0.95,
+    },
+  };
+}
+
+/**
+ * Young Adult Reader
+ * - Values: character growth, emotional resonance, accessibility
+ * - Prefers relatable protagonists and clear emotional arcs
+ * - Moderate tolerance, seeks connection over complexity
+ */
+export function createYoungAdultReader(): ReaderPersona {
+  return {
+    id: 'preset-young-adult-reader',
+    name: 'Young Adult Reader',
+    type: 'preset',
+    description: 'Seeks emotional connection and character growth. Values relatable protagonists, accessible prose, and satisfying emotional arcs. Moderate standards with preference for clarity over complexity.',
+    parameters: {
+      plotWeight: 0.6,
+      characterWeight: 0.85,
+      styleWeight: 0.5,
+      pacingWeight: 0.65,
+      toleranceThreshold: 0.45,
+      focusAreas: [
+        'character-growth',
+        'emotional-resonance',
+        'relatability',
+        'coming-of-age-elements',
+        'friendship-dynamics',
+        'identity-themes',
+        'accessible-prose',
+      ],
+      biases: [
+        'values emotional connection',
+        'prefers relatable characters',
+        'seeks growth arcs',
+        'moderate complexity tolerance',
+      ],
+      ageGroup: 'young-adult',
+      culturalBackground: 'western-contemporary',
+      readingPreference: 'immersive',
+      genrePreference: 'young-adult',
+      aiFlavorSensitivity: 0.5,
+    },
+  };
+}
+
+/**
+ * Web Novel Veteran
+ * - Values: update rhythm,爽点 (satisfaction moments), trope mastery
+ * - High tolerance for formula if executed well
+ * - Sensitive to pacing within chapter structure
+ */
+export function createWebNovelVeteran(): ReaderPersona {
+  return {
+    id: 'preset-web-novel-veteran',
+    name: 'Web Novel Veteran',
+    type: 'preset',
+    description: 'Experienced webnovel reader with deep genre knowledge. Values satisfying plot beats (爽点), trope execution, and chapter-level pacing. High tolerance for formula when well-executed.',
+    parameters: {
+      plotWeight: 0.8,
+      characterWeight: 0.55,
+      styleWeight: 0.35,
+      pacingWeight: 0.9,
+      toleranceThreshold: 0.35,
+      focusAreas: [
+        '爽点-density',
+        'trope-execution',
+        'chapter-structure',
+        'update-rhythm-simulation',
+        'power-progression',
+        'face-slapping-timing',
+        'cliffhanger-quality',
+      ],
+      biases: [
+        'values satisfying plot beats',
+        'appreciates trope mastery',
+        'high formula tolerance',
+        'chapter-level pacing focus',
+      ],
+      ageGroup: 'adult',
+      culturalBackground: 'chinese-webnovel',
+      readingPreference: 'fast-paced',
+      genrePreference: 'webnovel',
+      aiFlavorSensitivity: 0.7,
+    },
+  };
+}
+
 // ============================================================
-// Custom Persona Factory
+// Legacy Presets (kept for backward compatibility)
 // ============================================================
 
 /**
@@ -204,6 +377,10 @@ export const PRESET_PERSONAS = {
   'suspense-enthusiast': createSuspenseEnthusiast,
   'literary-critic': createLiteraryCritic,
   'general-reader': createGeneralReader,
+  'pacing-hawk': createPacingHawk,
+  'anti-ai-flavor-critic': createAntiAIFlavorCritic,
+  'young-adult-reader': createYoungAdultReader,
+  'web-novel-veteran': createWebNovelVeteran,
 } as const;
 
 export type PresetPersonaId = keyof typeof PRESET_PERSONAS;
