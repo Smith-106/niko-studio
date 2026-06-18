@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { FileText, Download, RefreshCw, AlertTriangle, CheckCircle, XCircle, Users } from 'lucide-react'
 import type { ConsensusReport, ConsensusItem } from '../../../../src-ts/reader/ConsensusEngine'
+import { analyzeReader } from '../../api/reader'
 
 // ============================================================
 // Types
@@ -58,7 +59,7 @@ function SeverityBadge({ severity }: { severity: string }) {
   )
 }
 
-function ConsensusBar({ strength }: { strength: number }) {
+export function ConsensusBar({ strength }: { strength: number }) {
   const pct = Math.round(strength * 100)
   const barColor =
     pct >= 80
@@ -79,7 +80,7 @@ function ConsensusBar({ strength }: { strength: number }) {
   )
 }
 
-function DimensionCard({
+export function DimensionCard({
   dimension,
   summary,
 }: {
@@ -120,7 +121,7 @@ function DimensionCard({
   )
 }
 
-function ConsensusIssueItem({ item }: { item: ConsensusItem }) {
+export function ConsensusIssueItem({ item }: { item: ConsensusItem }) {
   const dimensionLabel = DIMENSION_LABELS[item.dimension] ?? item.dimension
 
   return (
@@ -151,7 +152,7 @@ function ConsensusIssueItem({ item }: { item: ConsensusItem }) {
   )
 }
 
-function DissentItem({ item }: { item: ConsensusItem }) {
+export function DissentItem({ item }: { item: ConsensusItem }) {
   const dimensionLabel = DIMENSION_LABELS[item.dimension] ?? item.dimension
 
   return (
@@ -221,27 +222,16 @@ export function ReportGenerator({ novelId, onReportGenerated }: ReportGeneratorP
     setState({ status: 'loading', report: null, error: null })
 
     try {
-      // Call /reader/analyze endpoint
-      const response = await fetch('/reader/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ novelId }),
-      })
+      const response = await analyzeReader(novelId)
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error ?? `HTTP ${response.status}`)
+      if (!response.success || !response.data) {
+        throw new Error(response.error ?? '分析请求失败')
       }
 
-      const data = await response.json()
+      const data = response.data
 
-      // The endpoint returns readerReactions, editorialAnalysis, etc.
-      // We need to build a ConsensusReport from this
-      // For now, we'll use a placeholder structure
-      // In a real implementation, this would call the ConsensusEngine
-
-      // Build consensus report from the response
-      const report: ConsensusReport = {
+      // Directly consume the backend ConsensusReport — no local aggregation
+      const report: ConsensusReport = data.consensus ?? {
         items: [],
         overallAssessment: data.editorialAnalysis?.pacingAssessment ?? '分析完成',
         criticalIssues: [],
@@ -249,46 +239,22 @@ export function ReportGenerator({ novelId, onReportGenerated }: ReportGeneratorP
         dimensionSummaries: {},
       }
 
-      // Extract dimension summaries from dimensionScores if available
-      if (data.dimensionScores && Array.isArray(data.dimensionScores)) {
+      // Fallback: if backend consensus is empty but we have dimension scores,
+      // populate dimensionSummaries from dimensionScores
+      if (
+        Object.keys(report.dimensionSummaries).length === 0 &&
+        data.dimensionScores &&
+        Array.isArray(data.dimensionScores)
+      ) {
         for (const personaScore of data.dimensionScores) {
           for (const ds of personaScore.scores ?? []) {
             const dimName = ds.dimension
             if (!report.dimensionSummaries[dimName]) {
               report.dimensionSummaries[dimName] = { avgScore: 0, consensus: 0 }
             }
-            // Accumulate scores (simplified)
             report.dimensionSummaries[dimName].avgScore = ds.score
           }
         }
-      }
-
-      // Build items from reader reactions
-      if (data.readerReactions && Array.isArray(data.readerReactions)) {
-        for (const reaction of data.readerReactions) {
-          for (const highlight of reaction.highlights ?? []) {
-            report.items.push({
-              description: highlight.comment ?? highlight.text?.substring(0, 80) ?? '未描述',
-              dimension: highlight.dimension,
-              agreeingPersonas: [reaction.personaId],
-              disagreeingPersonas: [],
-              severity: highlight.reaction === 'negative' ? 'high' : 'medium',
-              consensusStrength: 0.7,
-              location: {
-                chapter: highlight.position?.chapter,
-                paragraph: highlight.position?.paragraph,
-              },
-            })
-          }
-        }
-
-        // Categorize into critical and dissent
-        report.criticalIssues = report.items.filter(
-          (item) => item.severity === 'critical' || item.severity === 'high'
-        )
-        report.dissentItems = report.items.filter(
-          (item) => item.disagreeingPersonas.length > 0 && item.consensusStrength < 0.6
-        )
       }
 
       setState({ status: 'success', report, error: null })

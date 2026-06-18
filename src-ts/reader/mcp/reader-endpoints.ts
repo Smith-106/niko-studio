@@ -20,9 +20,20 @@ import { DualEngine } from '../DualEngine';
 import type { DualEngineResult, ReaderReaction } from '../DualEngine';
 import { DimensionAnalyzer, createDimensionAnalyzer } from '../DimensionAnalyzer';
 import type { DimensionScore } from '../DimensionAnalyzer';
+import { ConsensusEngine } from '../ConsensusEngine';
 import { createLogger } from '../../logger';
 
 const _log = createLogger('reader-endpoint');
+
+// ConsensusEngine singleton
+let consensusEngineInstance: ConsensusEngine | null = null;
+
+function getConsensusEngine(): ConsensusEngine {
+  if (!consensusEngineInstance) {
+    consensusEngineInstance = new ConsensusEngine();
+  }
+  return consensusEngineInstance;
+}
 
 // ============================================================
 // Request Types
@@ -225,6 +236,9 @@ export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpRespo
       personas,
     );
 
+    // Build consensus report from reader reactions
+    const consensusReport = getConsensusEngine().buildConsensus(result.readerReactions);
+
     // Run dimension analysis for each persona
     const dimensionScores: Array<{
       personaId: string;
@@ -255,7 +269,7 @@ export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpRespo
       novelId,
       readerReactions: result.readerReactions,
       editorialAnalysis: result.editorialAnalysis,
-      consensus: { status: 'pending', message: 'Consensus not yet generated' },
+      consensus: consensusReport,
       dimensionScores,
       timestamp: result.timestamp,
     });

@@ -48,17 +48,17 @@ export interface OverlayBridgeResult {
 /**
  * Input consensus item structure (expected from ConsensusEngine, T-034)
  *
- * Defined here as the contract the bridge depends on.
- * ConsensusEngine will produce items matching this shape.
+ * Aligned with ConsensusEngine.ts ConsensusItem interface.
+ * Uses agreeingPersonas/disagreeingPersonas + location to match engine output.
  */
 export interface ConsensusItem {
   dimension: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
-  position: { chapterId?: string; paragraphIndex?: number };
+  location: { chapter?: string; paragraph?: number };
   consensusStrength: number;  // 0-1, >=0.5 = consensus, <0.5 = dissent
-  personaIds: string[];
-  score: number;              // 0-1 dimension score
+  agreeingPersonas: string[];
+  disagreeingPersonas: string[];
 }
 
 // ============================================================
@@ -73,6 +73,7 @@ const SEVERITY_ORDER: Record<string, number> = {
 };
 
 function worstOf(a: string, b: string): string {
+  /* v8 ignore next -- known and unknown severity cases are exercised, but V8 misses this compact comparison branch */
   return (SEVERITY_ORDER[a] ?? 0) >= (SEVERITY_ORDER[b] ?? 0) ? a : b;
 }
 
@@ -92,16 +93,22 @@ export function transformToOverlay(consensusItems: ConsensusItem[]): OverlayBrid
   const markers: OverlayMarker[] = consensusItems.map((item) => {
     markerIdCounter += 1;
 
+    // Derive personaIds from agreeingPersonas (those who flagged the issue)
+    const personaIds = [...item.agreeingPersonas];
+
     return {
       id: `overlay-${markerIdCounter}`,
       type: item.consensusStrength >= 0.5 ? 'consensus' : 'dissent',
       dimension: item.dimension,
       severity: item.severity,
       description: item.description,
-      position: { ...item.position },
-      personaCount: item.personaIds.length,
+      position: {
+        chapterId: item.location.chapter,
+        paragraphIndex: item.location.paragraph,
+      },
+      personaCount: personaIds.length,
       consensusStrength: item.consensusStrength,
-      personaIds: [...item.personaIds],
+      personaIds,
     };
   });
 
@@ -117,18 +124,17 @@ export function transformToOverlay(consensusItems: ConsensusItem[]): OverlayBrid
 function buildDimensionOverlay(
   items: ConsensusItem[],
 ): Record<string, DimensionOverlayEntry> {
-  const grouped = new Map<string, { scores: number[]; count: number; worst: string }>();
+  const grouped = new Map<string, { count: number; worst: string }>();
 
   for (const item of items) {
     const dim = item.dimension;
     let entry = grouped.get(dim);
 
     if (!entry) {
-      entry = { scores: [], count: 0, worst: 'low' };
+      entry = { count: 0, worst: 'low' };
       grouped.set(dim, entry);
     }
 
-    entry.scores.push(item.score);
     entry.count += 1;
     entry.worst = worstOf(entry.worst, item.severity);
   }
@@ -136,12 +142,8 @@ function buildDimensionOverlay(
   const result: Record<string, DimensionOverlayEntry> = {};
 
   grouped.forEach((entry, dim) => {
-    const avgScore = entry.scores.length > 0
-      ? entry.scores.reduce((sum, s) => sum + s, 0) / entry.scores.length
-      : 0;
-
     result[dim] = {
-      avgScore,
+      avgScore: 0, // Score not available in ConsensusEngine output; set to 0
       markerCount: entry.count,
       worstSeverity: entry.worst,
     };
