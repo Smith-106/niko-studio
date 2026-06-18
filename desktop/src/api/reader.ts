@@ -121,6 +121,24 @@ export interface CreateCustomPersonaResult {
   persona: ReaderPersona
 }
 
+export interface SubmitFeedbackParams {
+  novelId: string
+  personaId: string
+  feedbackId: string
+  action: 'helpful' | 'not_helpful' | 'ignore'
+  dimension?: string
+}
+
+export interface SubmitFeedbackResult {
+  novelId: string
+  personaId: string
+  feedbackId: string
+  action: string
+  dimension?: string
+  updatedWeights?: Record<string, number>
+  weightsChanged: boolean
+}
+
 // ============================================================
 // API Functions — direct callApi, no inner envelope
 // ============================================================
@@ -172,6 +190,18 @@ export async function createCustomPersona(
   return callApi<CreateCustomPersonaResult>('/reader/personas/custom', 'POST', params as unknown as Record<string, unknown>)
 }
 
+/**
+ * Submit feedback on a reader simulation result.
+ *
+ * Calls POST /reader/feedback to record user feedback on a specific
+ * analysis result, which may trigger persona weight adjustments.
+ */
+export async function submitFeedback(
+  params: SubmitFeedbackParams,
+): Promise<ApiResponse<SubmitFeedbackResult>> {
+  return callApi<SubmitFeedbackResult>('/reader/feedback', 'POST', params as unknown as Record<string, unknown>)
+}
+
 // ============================================================
 // Barrel export
 // ============================================================
@@ -181,4 +211,5 @@ export const readerApi = {
   getReaderOverlay,
   getReaderPersonas,
   createCustomPersona,
+  submitFeedback,
 }

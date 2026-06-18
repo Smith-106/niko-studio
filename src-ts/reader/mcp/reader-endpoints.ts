@@ -84,6 +84,39 @@ export interface DeAIResponse {
   mode: string;
 }
 
+// --- Feedback Types ---
+
+export type FeedbackAction = 'helpful' | 'not_helpful' | 'ignore';
+
+export interface FeedbackRequest {
+  novelId: string;
+  personaId: string;
+  feedbackId: string;
+  action: FeedbackAction;
+  dimension?: string;
+}
+
+export interface FeedbackAggregate {
+  /** 该 persona 在该 dimension 上的接受计数 */
+  accept: number;
+  /** 该 persona 在该 dimension 上的拒绝计数 */
+  reject: number;
+  /** 该 persona 在该 dimension 上的修改计数 */
+  modify: number;
+  /** 最近一次更新时间 */
+  lastUpdated: string;
+}
+
+export interface FeedbackResponse {
+  novelId: string;
+  personaId: string;
+  feedbackId: string;
+  action: FeedbackAction;
+  dimension?: string;
+  updatedWeights?: Record<string, number>;
+  weightsChanged: boolean;
+}
+
 // --- A/B Compare Types ---
 
 export interface CompareVersionInput {
@@ -114,6 +147,35 @@ export interface CompareResult {
 
 const customPersonaStore = new Map<string, ReaderPersona>();
 const analysisResultCache = new Map<string, DualEngineResult>();
+
+// Feedback aggregate store: personaId -> dimension -> FeedbackAggregate
+const feedbackAggregateStore = new Map<string, Map<string, FeedbackAggregate>>();
+
+// Threshold for writing back persona weights (accept + reject + modify >= threshold)
+const FEEDBACK_THRESHOLD = 5;
+
+// Weight adjustment step size
+const WEIGHT_STEP = 0.05;
+
+// Weight bounds
+const MIN_WEIGHT = 0.0;
+const MAX_WEIGHT = 1.0;
+
+// Map dimension names to persona parameter keys
+const DIMENSION_TO_PARAM: Record<string, keyof ReaderPersona['parameters']> = {
+  plotCoherence: 'plotWeight',
+  characterConsistency: 'characterWeight',
+  styleConsistency: 'styleWeight',
+  pacingTension: 'pacingWeight',
+  'Plot Coherence': 'plotWeight',
+  'Character Consistency': 'characterWeight',
+  'Style Consistency': 'styleWeight',
+  'Pacing & Tension': 'pacingWeight',
+  Plot: 'plotWeight',
+  Character: 'characterWeight',
+  Style: 'styleWeight',
+  Pacing: 'pacingWeight',
+};
 
 // DualEngine singleton
 let dualEngineInstance: DualEngine | null = null;
@@ -505,6 +567,7 @@ export async function rsAIFlavorEndpoint(request: HttpRequest): Promise<HttpResp
 export function clearReaderStores(): void {
   customPersonaStore.clear();
   analysisResultCache.clear();
+  feedbackAggregateStore.clear();
 }
 
 export function getCustomPersonaStore(): Map<string, ReaderPersona> {
@@ -513,6 +576,186 @@ export function getCustomPersonaStore(): Map<string, ReaderPersona> {
 
 export function getAnalysisResultCache(): Map<string, DualEngineResult> {
   return analysisResultCache;
+}
+
+export function getFeedbackAggregateStore(): Map<string, Map<string, FeedbackAggregate>> {
+  return feedbackAggregateStore;
+}
+
+export function clearFeedbackAggregateStore(): void {
+  feedbackAggregateStore.clear();
+}
+
+/**
+ * POST /reader/feedback — submit feedback on a reader simulation result
+ *
+ * Accepts user feedback on a specific analysis result (helpful / not_helpful / ignore).
+ * Aggregates feedback per persona per dimension, and when the threshold is reached,
+ * adjusts the persona's dimension weights accordingly.
+ *
+ * Request: { novelId, personaId, feedbackId, action: 'helpful'|'not_helpful'|'ignore', dimension? }
+ * Response: { novelId, personaId, feedbackId, action, dimension?, updatedWeights?, weightsChanged }
+ */
+export async function rsFeedbackEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+
+  const novelId = body.novelId as string | undefined;
+  const personaId = body.personaId as string | undefined;
+  const feedbackId = body.feedbackId as string | undefined;
+  const action = body.action as FeedbackAction | undefined;
+  const dimension = body.dimension as string | undefined;
+
+  // Validate required fields
+  if (!novelId || typeof novelId !== 'string') {
+    return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
+  }
+  if (!personaId || typeof personaId !== 'string') {
+    return jsonResponse({ error: 'personaId is required and must be a string' }, 400);
+  }
+  if (!feedbackId || typeof feedbackId !== 'string') {
+    return jsonResponse({ error: 'feedbackId is required and must be a string' }, 400);
+  }
+  if (!action || !['helpful', 'not_helpful', 'ignore'].includes(action)) {
+    return jsonResponse({ error: "action must be 'helpful', 'not_helpful', or 'ignore'" }, 400);
+  }
+
+  _log.info('Reader feedback received', { novelId, personaId, feedbackId, action, dimension });
+
+  try {
+    // Resolve the persona (preset or custom)
+    let persona: ReaderPersona;
+    try {
+      persona = resolvePersonas([personaId])[0]!;
+    } catch {
+      return jsonResponse({ error: `Persona not found: ${personaId}` }, 400);
+    }
+
+    // Determine effective dimension (fallback to 'general' if not provided)
+    const effectiveDimension = dimension && typeof dimension === 'string' ? dimension : 'general';
+
+    // Get or create aggregate for this persona + dimension
+    let personaAggregates = feedbackAggregateStore.get(personaId);
+    if (!personaAggregates) {
+      personaAggregates = new Map<string, FeedbackAggregate>();
+      feedbackAggregateStore.set(personaId, personaAggregates);
+    }
+
+    let aggregate = personaAggregates.get(effectiveDimension);
+    if (!aggregate) {
+      aggregate = { accept: 0, reject: 0, modify: 0, lastUpdated: new Date().toISOString() };
+      personaAggregates.set(effectiveDimension, aggregate);
+    }
+
+    // Update aggregate based on action
+    if (action === 'helpful') {
+      aggregate.accept += 1;
+    } else if (action === 'not_helpful') {
+      aggregate.reject += 1;
+    } else if (action === 'ignore') {
+      aggregate.modify += 1;
+    }
+    aggregate.lastUpdated = new Date().toISOString();
+
+    // Check if we should write back weights
+    const totalFeedback = aggregate.accept + aggregate.reject + aggregate.modify;
+    let weightsChanged = false;
+    let updatedWeights: Record<string, number> | undefined;
+
+    if (totalFeedback >= FEEDBACK_THRESHOLD) {
+      const result = adjustPersonaWeights(persona, effectiveDimension, aggregate);
+      weightsChanged = result.changed;
+      updatedWeights = result.weights;
+
+      if (weightsChanged) {
+        // Update the persona in store if it's a custom persona
+        if (persona.type === 'custom' && customPersonaStore.has(personaId)) {
+          const updatedPersona = customPersonaStore.get(personaId)!;
+          updatedPersona.parameters = { ...updatedPersona.parameters, ...result.paramUpdates };
+          customPersonaStore.set(personaId, updatedPersona);
+        }
+        // Note: preset personas cannot be modified in-place; their weights are returned
+        // but not persisted. For custom personas, the store is updated.
+      }
+
+      _log.info('Feedback triggered weight adjustment', {
+        novelId,
+        personaId,
+        dimension: effectiveDimension,
+        totalFeedback,
+        weightsChanged,
+      });
+    }
+
+    return jsonResponse({
+      novelId,
+      personaId,
+      feedbackId,
+      action,
+      dimension: effectiveDimension,
+      updatedWeights,
+      weightsChanged,
+    });
+  } catch (exc) {
+    const message = exc instanceof Error ? exc.message : String(exc);
+    _log.error('Feedback processing failed', { error: message, novelId, personaId });
+    return jsonResponse({ error: message }, 500);
+  }
+}
+
+/**
+ * Adjust persona weights based on feedback aggregate.
+ *
+ * Logic:
+ * - If accept > reject: increase weight for that dimension (+0.05)
+ * - If reject > accept: decrease weight for that dimension (-0.05)
+ * - If equal or modify-heavy: no change
+ *
+ * Weights are clamped to [0, 1].
+ */
+function adjustPersonaWeights(
+  persona: ReaderPersona,
+  dimension: string,
+  aggregate: FeedbackAggregate,
+): { changed: boolean; weights: Record<string, number>; paramUpdates: Record<string, number> } {
+  const paramKey = DIMENSION_TO_PARAM[dimension];
+  if (!paramKey) {
+    // Unknown dimension — return current weights without modification
+    return {
+      changed: false,
+      weights: extractCurrentWeights(persona),
+      paramUpdates: {},
+    };
+  }
+
+  const currentWeight = persona.parameters[paramKey] ?? 0.5;
+  let newWeight = currentWeight;
+
+  // Decision logic: accept vs reject
+  if (aggregate.accept > aggregate.reject) {
+    newWeight = Math.min(MAX_WEIGHT, currentWeight + WEIGHT_STEP);
+  } else if (aggregate.reject > aggregate.accept) {
+    newWeight = Math.max(MIN_WEIGHT, currentWeight - WEIGHT_STEP);
+  }
+  // If equal or modify-heavy, no change
+
+  const changed = newWeight !== currentWeight;
+  const paramUpdates: Record<string, number> = changed ? { [paramKey]: newWeight } : {};
+
+  return {
+    changed,
+    weights: { ...extractCurrentWeights(persona), ...(changed ? { [paramKey]: newWeight } : {}) },
+    paramUpdates,
+  };
+}
+
+function extractCurrentWeights(persona: ReaderPersona): Record<string, number> {
+  return {
+    plotWeight: persona.parameters.plotWeight,
+    characterWeight: persona.parameters.characterWeight,
+    styleWeight: persona.parameters.styleWeight,
+    pacingWeight: persona.parameters.pacingWeight,
+    toleranceThreshold: persona.parameters.toleranceThreshold,
+  };
 }
 
 /**

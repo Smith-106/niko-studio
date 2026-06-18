@@ -1,3 +1,4 @@
+import React from 'react'
 import type { OverlayMarker } from '../../../../src-ts/reader/OverlayBridge'
 import type { ConsensusReport } from '../../../../src-ts/reader/ConsensusEngine'
 
@@ -5,6 +6,7 @@ export interface DetailPanelProps {
   selectedItem: OverlayMarker | null
   consensusReport: ConsensusReport | null
   onClose: () => void
+  onFeedback?: (feedbackId: string, action: 'helpful' | 'not_helpful') => void
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -102,9 +104,11 @@ function DimensionSummaryCard({
 function SelectedItemView({
   item,
   report,
+  onFeedback,
 }: {
   item: OverlayMarker
   report: ConsensusReport | null
+  onFeedback?: (feedbackId: string, action: 'helpful' | 'not_helpful') => void
 }) {
   // Find matching consensus item for persona details
   const matchingConsensus = report?.items.find(
@@ -116,6 +120,14 @@ function SelectedItemView({
   const dimensionLabel = DIMENSION_LABELS[item.dimension] ?? item.dimension
   const agreeingPersonas = matchingConsensus?.agreeingPersonas ?? []
   const disagreeingPersonas = matchingConsensus?.disagreeingPersonas ?? []
+  const feedbackId = item.id ?? `${item.personaIds[0] ?? 'unknown'}-${item.dimension}-${item.position.chapterId ?? 'unknown'}`
+
+  const [feedbackState, setFeedbackState] = React.useState<'none' | 'helpful' | 'not_helpful'>('none')
+
+  const handleFeedback = (action: 'helpful' | 'not_helpful') => {
+    setFeedbackState(action)
+    onFeedback?.(feedbackId, action)
+  }
 
   return (
     <div className="space-y-4">
@@ -144,6 +156,47 @@ function SelectedItemView({
 
       {/* Consensus strength bar */}
       <ConsensusStrengthBar strength={item.consensusStrength} />
+
+      {/* Feedback buttons */}
+      {onFeedback && (
+        <div className="pt-1">
+          <p className="text-xs text-zinc-500 mb-1.5">这个反馈对你有用吗？</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleFeedback('helpful')}
+              disabled={feedbackState !== 'none'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors ${
+                feedbackState === 'helpful'
+                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                  : feedbackState === 'none'
+                    ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 border border-zinc-700'
+                    : 'bg-zinc-800/50 text-zinc-600 border border-zinc-800 cursor-not-allowed'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/>
+              </svg>
+              有用
+            </button>
+            <button
+              onClick={() => handleFeedback('not_helpful')}
+              disabled={feedbackState !== 'none'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors ${
+                feedbackState === 'not_helpful'
+                  ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                  : feedbackState === 'none'
+                    ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 border border-zinc-700'
+                    : 'bg-zinc-800/50 text-zinc-600 border border-zinc-800 cursor-not-allowed'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z"/>
+              </svg>
+              无用
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Persona lists */}
       <div className="space-y-3">
@@ -297,7 +350,7 @@ function OverviewView({ report }: { report: ConsensusReport }) {
   )
 }
 
-export function DetailPanel({ selectedItem, consensusReport, onClose }: DetailPanelProps) {
+export function DetailPanel({ selectedItem, consensusReport, onClose, onFeedback }: DetailPanelProps) {
   const hasContent = selectedItem !== null || consensusReport !== null
 
   return (
@@ -361,9 +414,9 @@ export function DetailPanel({ selectedItem, consensusReport, onClose }: DetailPa
             <p className="text-xs text-zinc-600 mt-1">点击标记查看详情</p>
           </div>
         ) : selectedItem && consensusReport ? (
-          <SelectedItemView item={selectedItem} report={consensusReport} />
+          <SelectedItemView item={selectedItem} report={consensusReport} onFeedback={onFeedback} />
         ) : selectedItem ? (
-          <SelectedItemView item={selectedItem} report={null} />
+          <SelectedItemView item={selectedItem} report={null} onFeedback={onFeedback} />
         ) : consensusReport ? (
           <OverviewView report={consensusReport} />
         ) : null}
