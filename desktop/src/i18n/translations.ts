@@ -12,6 +12,7 @@ import type { Translations as OptimizerTranslations } from './modules/optimizer'
 import type { Translations as McpTranslations } from './modules/mcp'
 import type { Translations as WelcomeTranslations } from './modules/welcome'
 import type { Translations as WorkflowTranslations } from './modules/workflow'
+import type { Translations as ReaderTranslations } from './modules/reader'
 
 export type Translations = AppTranslations &
   SidebarTranslations &
@@ -24,7 +25,8 @@ export type Translations = AppTranslations &
   OptimizerTranslations &
   McpTranslations &
   WelcomeTranslations &
-  WorkflowTranslations
+  WorkflowTranslations &
+  ReaderTranslations
 
 import {
   zhApp, enApp,
@@ -32,6 +34,7 @@ import {
   zhEditor, enEditor,
   zhEvaluation, enEvaluation,
   zhKnowledge, enKnowledge,
+  zhReader, enReader,
   zhSidebar, enSidebar,
   zhSettings, enSettings,
   zhStyle, enStyle,
@@ -48,6 +51,7 @@ export const translations: Record<Language, Translations> = {
     ...zhEditor,
     ...zhEvaluation,
     ...zhKnowledge,
+    ...zhReader,
     ...zhSidebar,
     ...zhSettings,
     ...zhStyle,
@@ -62,6 +66,7 @@ export const translations: Record<Language, Translations> = {
     ...enEditor,
     ...enEvaluation,
     ...enKnowledge,
+    ...enReader,
     ...enSidebar,
     ...enSettings,
     ...enStyle,

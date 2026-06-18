@@ -168,8 +168,9 @@ interface WritingCraftEnvelope<T> {
 async function unwrapWritingCraftResponse<T>(
   endpoint: string,
   body: Record<string, unknown>,
+  extraHeaders?: Record<string, string>,
 ): Promise<ApiResponse<T>> {
-  const response = await callApi<WritingCraftEnvelope<T>>(endpoint, 'POST', body)
+  const response = await callApi<WritingCraftEnvelope<T>>(endpoint, 'POST', body, extraHeaders)
 
   if (!response.success || !response.data) {
     return response as ApiResponse<T>
@@ -222,11 +223,21 @@ export async function analyzeWritingCraftLLM(
   llmConfig: LLMConfig,
   dimensions?: WritingCraftDimension[],
 ): Promise<ApiResponse<LLMAnalysisResult>> {
+  // Extract api_key/base_url from llmConfig to send via headers (not body)
+  const { api_key, base_url, model } = llmConfig
+  const headers: Record<string, string> = {}
+  if (api_key) {
+    headers['X-LLM-API-Key'] = api_key
+  }
+  if (base_url) {
+    headers['X-LLM-Base-Url'] = base_url
+  }
+
   return unwrapWritingCraftResponse<LLMAnalysisResult>('/writing-craft/llm-analyze', {
     text,
     dimensions,
-    ...llmConfig,
-  })
+    model,
+  }, headers)
 }
 
 export async function analyzeShowTell(
@@ -281,6 +292,99 @@ export async function navigatePacing(
   })
 }
 
+// ============================================================
+// Webnovel Dimensions (TASK-008)
+// ============================================================
+
+export interface WebnovelHookResult {
+  hooks: Array<{
+    position: number
+    text: string
+    strength: number
+    type: 'opening' | 'mid_chapter' | 'chapter_end'
+  }>
+  overallHookScore: number
+  suggestions: string[]
+}
+
+export interface WebnovelCliffhangerResult {
+  cliffhangers: Array<{
+    position: number
+    text: string
+    intensity: number
+    type: 'suspense' | 'reveal' | 'emotional'
+  }>
+  overallCliffhangerScore: number
+  suggestions: string[]
+}
+
+export interface WebnovelPacingResult {
+  chapterFlow: number
+  retentionScore: number
+  pacingPattern: 'steady' | 'accelerating' | 'uneven' | 'strong'
+  suggestions: string[]
+}
+
+export async function analyzeWebnovelHooks(
+  text: string,
+): Promise<ApiResponse<WebnovelHookResult>> {
+  return unwrapWritingCraftResponse<WritingCraftResult>('/writing-craft/analyze', {
+    text,
+    dimensions: ['hook'],
+  }).then((res) => {
+    if (!res.success || !res.data) {
+      return res as unknown as ApiResponse<WebnovelHookResult>
+    }
+
+    const dim = res.data.dimensions.find((d) => d.dimension === 'hook')
+    if (!dim || typeof dim.details !== 'object' || dim.details === null) {
+      return { success: false, error: 'Missing hook result.' }
+    }
+
+    return { success: true, data: dim.details as unknown as WebnovelHookResult }
+  })
+}
+
+export async function analyzeWebnovelCliffhangers(
+  text: string,
+): Promise<ApiResponse<WebnovelCliffhangerResult>> {
+  return unwrapWritingCraftResponse<WritingCraftResult>('/writing-craft/analyze', {
+    text,
+    dimensions: ['cliffhanger'],
+  }).then((res) => {
+    if (!res.success || !res.data) {
+      return res as unknown as ApiResponse<WebnovelCliffhangerResult>
+    }
+
+    const dim = res.data.dimensions.find((d) => d.dimension === 'cliffhanger')
+    if (!dim || typeof dim.details !== 'object' || dim.details === null) {
+      return { success: false, error: 'Missing cliffhanger result.' }
+    }
+
+    return { success: true, data: dim.details as unknown as WebnovelCliffhangerResult }
+  })
+}
+
+export async function analyzeWebnovelPacing(
+  chapters: Array<{ content: string; chapterIndex: number }>,
+): Promise<ApiResponse<WebnovelPacingResult>> {
+  return unwrapWritingCraftResponse<WritingCraftResult>('/writing-craft/analyze', {
+    text: chapters.map((c) => c.content).join('\n'),
+    dimensions: ['webnovel'],
+  }).then((res) => {
+    if (!res.success || !res.data) {
+      return res as unknown as ApiResponse<WebnovelPacingResult>
+    }
+
+    const dim = res.data.dimensions.find((d) => d.dimension === 'webnovel')
+    if (!dim || typeof dim.details !== 'object' || dim.details === null) {
+      return { success: false, error: 'Missing webnovel result.' }
+    }
+
+    return { success: true, data: dim.details as unknown as WebnovelPacingResult }
+  })
+}
+
 export const writingCraftApi = {
   analyzeWritingCraft,
   analyzeWritingCraftLLM,
@@ -289,4 +393,7 @@ export const writingCraftApi = {
   analyzeVoiceConsistency,
   analyzeReaderImmersion,
   navigatePacing,
+  analyzeWebnovelHooks,
+  analyzeWebnovelCliffhangers,
+  analyzeWebnovelPacing,
 }
