@@ -28,6 +28,103 @@ import { RevisionServiceImpl } from '../../services/revision-service';
 
 const _log = createLogger('reader-endpoint');
 
+// ============================================================
+// File Persistence for Custom Personas
+// ============================================================
+
+const PERSONAS_FILE = 'reader-personas.json';
+const NIKO_STUDIO_DIR = '.niko-studio';
+
+function getWorkspaceRoot(): string {
+  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+}
+
+function getPersonasFilePath(): string {
+  const { join } = require('node:path');
+  return join(getWorkspaceRoot(), NIKO_STUDIO_DIR, PERSONAS_FILE);
+}
+
+/**
+ * Load custom personas from .niko-studio/reader-personas.json
+ * Returns empty Map if file doesn't exist or is malformed.
+ */
+async function loadCustomPersonas(): Promise<Map<string, ReaderPersona>> {
+  const store = new Map<string, ReaderPersona>();
+  try {
+    const { readFile } = await import('node:fs/promises');
+    const { existsSync } = await import('node:fs');
+    const path = getPersonasFilePath();
+
+    if (!existsSync(path)) {
+      return store;
+    }
+
+    const content = await readFile(path, 'utf-8');
+    const data = JSON.parse(content) as unknown;
+
+    if (!Array.isArray(data)) {
+      _log.warn('Personas file is not an array, using empty store', { path });
+      return store;
+    }
+
+    for (const item of data) {
+      if (item && typeof item === 'object' && 'id' in item && 'name' in item && 'type' in item) {
+        const persona = item as ReaderPersona;
+        store.set(persona.id, persona);
+      }
+    }
+
+    _log.info('Loaded custom personas from file', { count: store.size, path });
+  } catch (exc) {
+    const message = exc instanceof Error ? exc.message : String(exc);
+    _log.warn('Failed to load custom personas from file, using empty store', { error: message });
+  }
+  return store;
+}
+
+/**
+ * Save custom personas to .niko-studio/reader-personas.json
+ * Silently fails on I/O errors (memory store remains authoritative).
+ */
+async function saveCustomPersonas(store: Map<string, ReaderPersona>): Promise<void> {
+  try {
+    const { writeFile, mkdir } = await import('node:fs/promises');
+    const { dirname } = await import('node:path');
+    const path = getPersonasFilePath();
+
+    // Ensure directory exists
+    await mkdir(dirname(path), { recursive: true });
+
+    const data = Array.from(store.values());
+    await writeFile(path, JSON.stringify(data, null, 2), 'utf-8');
+
+    _log.info('Saved custom personas to file', { count: data.length, path });
+  } catch (exc) {
+    const message = exc instanceof Error ? exc.message : String(exc);
+    _log.warn('Failed to save custom personas to file', { error: message });
+  }
+}
+
+/**
+ * Delete the custom personas persistence file.
+ * Used by clearReaderStores for test cleanup.
+ */
+async function deletePersonasFile(): Promise<void> {
+  try {
+    const { unlink } = await import('node:fs/promises');
+    const { existsSync } = await import('node:fs');
+    const path = getPersonasFilePath();
+
+    if (existsSync(path)) {
+      await unlink(path);
+      _log.info('Deleted custom personas file', { path });
+    }
+  } catch (exc) {
+    const message = exc instanceof Error ? exc.message : String(exc);
+    _log.warn('Failed to delete custom personas file', { error: message });
+  }
+}
+
 // RevisionService singleton for de-AI endpoint
 let revisionServiceInstance: RevisionServiceImpl | null = null;
 
@@ -142,11 +239,21 @@ export interface CompareResult {
 }
 
 // ============================================================
-// In-memory storage
+// In-memory storage (with file persistence)
 // ============================================================
 
 const customPersonaStore = new Map<string, ReaderPersona>();
 const analysisResultCache = new Map<string, DualEngineResult>();
+
+// Load persisted personas on module initialization
+loadCustomPersonas().then((loaded) => {
+  for (const [id, persona] of loaded) {
+    customPersonaStore.set(id, persona);
+  }
+}).catch((exc: unknown) => {
+  const message = exc instanceof Error ? exc.message : String(exc);
+  _log.warn('Failed to initialize custom persona store from file', { error: message });
+});
 
 // Feedback aggregate store: personaId -> dimension -> FeedbackAggregate
 const feedbackAggregateStore = new Map<string, Map<string, FeedbackAggregate>>();
@@ -470,6 +577,9 @@ export async function rsCreateCustomPersonaEndpoint(request: HttpRequest): Promi
 
     customPersonaStore.set(persona.id, persona);
 
+    // Persist to file
+    await saveCustomPersonas(customPersonaStore);
+
     _log.info('Created custom reader persona', { personaId: persona.id, name });
 
     return jsonResponse({ persona }, 201);
@@ -564,10 +674,11 @@ export async function rsAIFlavorEndpoint(request: HttpRequest): Promise<HttpResp
   }
 }
 
-export function clearReaderStores(): void {
+export async function clearReaderStores(): Promise<void> {
   customPersonaStore.clear();
   analysisResultCache.clear();
   feedbackAggregateStore.clear();
+  await deletePersonasFile();
 }
 
 export function getCustomPersonaStore(): Map<string, ReaderPersona> {
@@ -672,9 +783,11 @@ export async function rsFeedbackEndpoint(request: HttpRequest): Promise<HttpResp
           const updatedPersona = customPersonaStore.get(personaId)!;
           updatedPersona.parameters = { ...updatedPersona.parameters, ...result.paramUpdates };
           customPersonaStore.set(personaId, updatedPersona);
+          // Persist updated weights to file
+          await saveCustomPersonas(customPersonaStore);
         }
         // Note: preset personas cannot be modified in-place; their weights are returned
-        // but not persisted. For custom personas, the store is updated.
+        // but not persisted. For custom personas, the store is updated and saved.
       }
 
       _log.info('Feedback triggered weight adjustment', {
