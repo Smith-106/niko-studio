@@ -11,6 +11,7 @@ import {
   getReaderOverlay,
   getReaderPersonas,
   createCustomPersona,
+  submitFeedback,
   readerApi,
 } from './reader'
 
@@ -260,5 +261,40 @@ describe('reader api bridge', () => {
     expect(readerApi.getReaderOverlay).toBe(getReaderOverlay)
     expect(readerApi.getReaderPersonas).toBe(getReaderPersonas)
     expect(readerApi.createCustomPersona).toBe(createCustomPersona)
+    expect(readerApi.submitFeedback).toBe(submitFeedback)
+  })
+
+  it('routes feedback submission through the desktop bridge', async () => {
+    await submitFeedback({
+      novelId: 'novel-1',
+      personaId: 'general-reader',
+      feedbackId: 'fb-1',
+      action: 'helpful',
+      dimension: 'plotCoherence',
+    })
+
+    expect(callApiMock).toHaveBeenCalledWith('/reader/feedback', 'POST', {
+      novelId: 'novel-1',
+      personaId: 'general-reader',
+      feedbackId: 'fb-1',
+      action: 'helpful',
+      dimension: 'plotCoherence',
+    })
+  })
+
+  it('routes feedback submission without optional dimension', async () => {
+    await submitFeedback({
+      novelId: 'novel-1',
+      personaId: 'general-reader',
+      feedbackId: 'fb-2',
+      action: 'not_helpful',
+    })
+
+    expect(callApiMock).toHaveBeenCalledWith('/reader/feedback', 'POST', {
+      novelId: 'novel-1',
+      personaId: 'general-reader',
+      feedbackId: 'fb-2',
+      action: 'not_helpful',
+    })
   })
 })

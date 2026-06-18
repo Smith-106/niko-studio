@@ -72,61 +72,32 @@ describe('reader/mcp/reader-endpoints branch-gap coverage', () => {
     expect(response.statusCode).toBe(200);
   });
 
-  it('serializes create persona failures when the persona factory throws a non-Error value', async () => {
-    vi.doMock('../../reader/PersonaDefinition', async () => {
-      const actual = await vi.importActual<typeof import('../../reader/PersonaDefinition')>(
-        '../../reader/PersonaDefinition',
-      );
-      return {
-        ...actual,
-        createCustomPersona: () => {
-          throw 'persona factory failed';
-        },
-      };
-    });
-
+  it('validates numeric fields in persona parameters', async () => {
     const module = await import('../../reader/mcp/reader-endpoints.js');
+
+    // String value for numeric field
     const response = await module.rsCreateCustomPersonaEndpoint(makeRequest({
-      name: 'Broken Persona',
+      name: 'Bad Params',
       parameters: {
-        plotWeight: 0.5,
-        characterWeight: 0.5,
-        styleWeight: 0.5,
-        pacingWeight: 0.5,
-        toleranceThreshold: 0.5,
+        plotWeight: 'not-a-number',
       },
     }));
 
     expect(response.statusCode).toBe(400);
-    expect(response.body).toEqual({ error: 'persona factory failed' });
+    expect((response.body as any).error).toBe('parameters.plotWeight must be a number');
   });
 
-  it('serializes create persona failures when the persona factory throws an Error instance', async () => {
-    vi.doMock('../../reader/PersonaDefinition', async () => {
-      const actual = await vi.importActual<typeof import('../../reader/PersonaDefinition')>(
-        '../../reader/PersonaDefinition',
-      );
-      return {
-        ...actual,
-        createCustomPersona: () => {
-          throw new Error('persona error object');
-        },
-      };
-    });
-
+  it('validates array fields in persona parameters', async () => {
     const module = await import('../../reader/mcp/reader-endpoints.js');
+
     const response = await module.rsCreateCustomPersonaEndpoint(makeRequest({
-      name: 'Broken Persona Error',
+      name: 'Bad Arrays',
       parameters: {
-        plotWeight: 0.5,
-        characterWeight: 0.5,
-        styleWeight: 0.5,
-        pacingWeight: 0.5,
-        toleranceThreshold: 0.5,
+        focusAreas: 'not-an-array',
       },
     }));
 
     expect(response.statusCode).toBe(400);
-    expect(response.body).toEqual({ error: 'persona error object' });
+    expect((response.body as any).error).toBe('parameters.focusAreas must be an array');
   });
 });
