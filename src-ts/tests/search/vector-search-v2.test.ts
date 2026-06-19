@@ -1,10 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const mockLogWarn = vi.hoisted(() => vi.fn())
+vi.mock('../../logger/index.js', () => ({
+  createLogger: () => ({
+    error: vi.fn(),
+    warn: mockLogWarn,
+    info: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(),
+  }),
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(),
+  },
+}))
+
 describe('search/VectorSearchV2', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
     vi.doUnmock('better-sqlite3')
+    mockLogWarn.mockClear()
   })
 
   afterEach(() => {
@@ -13,7 +32,6 @@ describe('search/VectorSearchV2', () => {
   })
 
   it('falls back to brute-force search, supports FTS and hybrid fusion, and deletes indexed items', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const { VectorSearchV2 } = await import('../../search/vector-search-v2.js')
     const search = new VectorSearchV2(':memory:')
 
@@ -37,8 +55,8 @@ describe('search/VectorSearchV2', () => {
         [0, 1, 0],
       )
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        '[vector-search] sqlite-vec not available, falling back to brute-force cosine search',
+      expect(mockLogWarn).toHaveBeenCalledWith(
+        'sqlite-vec not available, falling back to brute-force cosine search',
       )
 
       const vectorResults = search.vectorSearch([1, 0, 0], 2)
@@ -72,7 +90,6 @@ describe('search/VectorSearchV2', () => {
   })
 
   it('round-trips vector buffers and keeps helper methods stable on edge cases', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const { VectorSearchV2 } = await import('../../search/vector-search-v2.js')
     const search = new VectorSearchV2(':memory:')
 
@@ -94,7 +111,7 @@ describe('search/VectorSearchV2', () => {
       expect((search as any).idToRowId('stable-id')).toBe(rowId)
       expect((search as any).idToRowId('other-id')).not.toBe(rowId)
 
-      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(mockLogWarn).toHaveBeenCalledTimes(1)
     } finally {
       search.close()
     }
@@ -168,7 +185,7 @@ describe('search/VectorSearchV2', () => {
       expect(mockDb.exec).toHaveBeenCalledWith(
         expect.stringContaining('CREATE VIRTUAL TABLE IF NOT EXISTS vec_items USING vec0'),
       )
-      expect(warnSpy).not.toHaveBeenCalled()
+      expect(mockLogWarn).not.toHaveBeenCalled()
 
       search.upsert('vec-doc', 'vector content', { source: 'vec.md', content: 'vector content' }, [0.5, 0.25])
 

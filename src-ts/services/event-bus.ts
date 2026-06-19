@@ -18,6 +18,7 @@ import type { IWebSocketRelayService } from '../container/types';
 import type { IEventLog, StoredEvent } from './event-log';
 import type { IDeadLetterQueue, DeadLetterEntry } from './dead-letter-queue';
 import { createDeadLetterEntry } from './dead-letter-queue';
+import { createLogger } from '../logger/index.js';
 
 // ---------------------------------------------------------------------------
 // Interface
@@ -79,6 +80,7 @@ export class TypedEventBus implements IEventBus {
   private readonly backpressure: EventBusConfig['backpressure'] | null;
   private readonly handlerTrackers = new Map<Handler, HandlerTracker>();
   private handlerIndexCounter = 0;
+  private readonly log = createLogger('event-bus');
 
   constructor(relay?: IWebSocketRelayService, config?: EventBusConfig) {
     this.relay = relay ?? null;
@@ -257,10 +259,7 @@ export class TypedEventBus implements IEventBus {
           this.deadLetterQueue.record(entry);
         } else {
           // Subscriber errors are logged but never block other subscribers
-          console.error(
-            `[EventBus] Error in subscriber for channel "${channel}":`,
-            err instanceof Error ? err.message : err,
-          );
+          this.log.error('Error in subscriber', { channel, error: err instanceof Error ? err.message : String(err) })
         }
       }
       handlerIdx++;
@@ -281,10 +280,7 @@ export class TypedEventBus implements IEventBus {
           const entry = createDeadLetterEntry(channel, payload, err, handlerIdx);
           this.deadLetterQueue.record(entry);
         } else {
-          console.error(
-            `[EventBus] Error in subscriber for channel "${channel}" during replay:`,
-            err instanceof Error ? err.message : err,
-          );
+          this.log.error('Error in subscriber during replay', { channel, error: err instanceof Error ? err.message : String(err) })
         }
       }
       handlerIdx++;
@@ -340,10 +336,7 @@ export class TypedEventBus implements IEventBus {
           const entry = createDeadLetterEntry(item.channel, item.payload, err, 0);
           this.deadLetterQueue.record(entry);
         } else {
-          console.error(
-            `[EventBus] Error in subscriber for channel "${item.channel}" during backpressure flush:`,
-            err instanceof Error ? err.message : err,
-          );
+          this.log.error('Error in subscriber during backpressure flush', { channel: item.channel, error: err instanceof Error ? err.message : String(err) })
         }
       }
     }

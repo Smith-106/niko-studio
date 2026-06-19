@@ -4,6 +4,24 @@ import type { IWebSocketRelayService } from '../../container/types.js';
 import { EventLogImpl } from '../../services/event-log.js';
 import { TypedEventBus } from '../../services/event-bus.js';
 
+const mockLogError = vi.hoisted(() => vi.fn());
+vi.mock('../../logger/index.js', () => ({
+  createLogger: () => ({
+    error: mockLogError,
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(),
+  }),
+  logger: {
+    error: mockLogError,
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(),
+  },
+}));
+
 function createRelay(overrides: Partial<IWebSocketRelayService> = {}): IWebSocketRelayService {
   return {
     broadcast: vi.fn(),
@@ -32,10 +50,8 @@ function getTracker(
 }
 
 describe('services/event-bus', () => {
-  const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
   afterEach(() => {
-    consoleErrorSpy.mockClear();
+    mockLogError.mockClear();
   });
 
   it('supports exact subscriptions and returned unsubscribe callbacks', () => {
@@ -195,9 +211,9 @@ describe('services/event-bus', () => {
 
     bus.publish('error:test', { id: 1 });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[EventBus] Error in subscriber for channel "error:test":',
-      'boom',
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Error in subscriber',
+      expect.objectContaining({ channel: 'error:test', error: 'boom' }),
     );
   });
 
@@ -212,9 +228,9 @@ describe('services/event-bus', () => {
 
     bus.replayFrom({ fromSeq: 1, channel: 'replay:test' });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[EventBus] Error in subscriber for channel "replay:test" during replay:',
-      'replay boom',
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Error in subscriber during replay',
+      expect.objectContaining({ channel: 'replay:test', error: 'replay boom' }),
     );
   });
 
@@ -362,9 +378,9 @@ describe('services/event-bus', () => {
 
     bus.publish('flush:console', { id: 1 });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[EventBus] Error in subscriber for channel "flush:console" during backpressure flush:',
-      'flush console boom',
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Error in subscriber during backpressure flush',
+      expect.objectContaining({ channel: 'flush:console', error: 'flush console boom' }),
     );
   });
 });

@@ -71,7 +71,7 @@ function getGuidedMode(): GuidedMode {
 /**
  * Build a minimal AutoModeInput from request parameters.
  * Real implementation will fetch manuscript text and story bible from storage.
- * TODO: Wire to persistent storage once available.
+ * See ISS-20260620-016: Wire to persistent storage once available.
  */
 function buildAutoModeInput(
   _novelId: string,
@@ -113,7 +113,7 @@ function buildAutoModeInput(
 
 /**
  * Build a minimal GuidedModeInput from request parameters.
- * TODO: Wire to persistent storage once available.
+ * See ISS-20260620-016: Wire to persistent storage once available.
  */
 function buildGuidedModeInput(
   _novelId: string,

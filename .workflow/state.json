@@ -225,7 +225,7 @@
       "created_at": "2026-06-18T08:15:00+08:00",
       "completed_at": "2026-06-18T08:15:00+08:00",
       "description": "Roadmap: single-phase M26 — Reader Simulation 2.0 + Anti-AI-Flavor Suite, deepening competitive differentiation.",
-      "harvested": false
+      "harvested": true
     },
     {
       "id": "ANL-20260618-m26-p1-reader-simulation-anti-ai-flavor",
@@ -239,7 +239,7 @@
       "created_at": "2026-06-18T21:00:00+08:00",
       "completed_at": "2026-06-18T21:00:00+08:00",
       "description": "Analyze: M26 Phase 1 — Reader Simulation 2.0 + Anti-AI-Flavor Suite. GO (78% confidence), 10 implementation scope items, 3 locked decisions.",
-      "harvested": false,
+      "harvested": true,
       "context_package": ".workflow/scratch/20260618-analyze-P1-reader-simulation-anti-ai-flavor/context-package.json"
     },
     {
@@ -254,7 +254,7 @@
       "created_at": "2026-06-18T22:15:00+08:00",
       "completed_at": "2026-06-18T22:15:00+08:00",
       "description": "Plan: 10 tasks in 5 waves — reader simulation 2.0 + anti-AI-flavor suite. Conflict detection applied.",
-      "harvested": false,
+      "harvested": true,
       "context_package": ".workflow/scratch/20260618-plan-P1-reader-simulation-anti-ai-flavor/context-package.json"
     },
     {
@@ -269,7 +269,7 @@
       "created_at": "2026-06-19T00:58:00+08:00",
       "completed_at": "2026-06-19T00:58:00+08:00",
       "description": "Execute: 10/10 tasks completed — reader simulation 2.0 + anti-AI-flavor suite. Reader tests 77 passed, desktop reader tests 55 passed.",
-      "harvested": false,
+      "harvested": true,
       "context_package": ".workflow/scratch/20260618-plan-P1-reader-simulation-anti-ai-flavor/context-package.json"
     },
     {
@@ -284,7 +284,7 @@
       "created_at": "2026-06-19T01:10:00+08:00",
       "completed_at": "2026-06-19T01:10:00+08:00",
       "description": "Review: WARN — 0 critical, 2 high, 12 medium, 7 low findings. Verdict allows proceeding to test with caveats.",
-      "harvested": false
+      "harvested": true
     {
       "id": "TST-20260619-m26-p1-reader-simulation-anti-ai-flavor",
       "type": "test",
@@ -297,7 +297,7 @@
       "created_at": "2026-06-19T01:25:00+08:00",
       "completed_at": "2026-06-19T01:45:00+08:00",
       "description": "UAT: 11/13 passed, 2 accepted risks from review (CORR-003 division-by-zero, SEC-003 LLM HTTPS/timeout). Backend 776/5795 passed, desktop 407/3273 passed (e2e excluded due to environment path encoding). Reader module coverage ≥80%.",
-      "harvested": false
+      "harvested": true
     },
     {
       "id": "ANL-20260619-fix-remaining-risks",
@@ -311,7 +311,7 @@
       "created_at": "2026-06-19T10:40:51Z",
       "completed_at": "2026-06-19T10:40:51Z",
       "description": "Quick analysis: fix remaining pre-delivery risks — dependency vulnerabilities, TODO/console cleanup, git tree organization, deployment/rollback/monitoring docs.",
-      "harvested": false,
+      "harvested": true,
       "context_package": ".workflow/scratch/20260619-analyze-fix-remaining-risks/context-package.json"
     },
     {
@@ -326,7 +326,7 @@
       "created_at": "2026-06-19T10:58:30Z",
       "completed_at": "2026-06-19T10:58:30Z",
       "description": "Plan: fix remaining pre-delivery risks — 4 tasks in 2 waves (deps cleanup, TODO/console cleanup, monitoring docs, semantic chunk commits).",
-      "harvested": false
+      "harvested": true
     },
     {
       "id": "EXC-20260619-fix-remaining-risks",
@@ -340,7 +340,7 @@
       "created_at": "2026-06-19T11:40:00Z",
       "completed_at": "2026-06-19T11:40:00Z",
       "description": "Execute: 4/4 tasks completed — dependency fixes, TODO/console cleanup, monitoring docs, semantic chunk commits.",
-      "harvested": false
+      "harvested": true
     }
   ],
   "current_milestone": "M26",

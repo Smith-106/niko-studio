@@ -53,6 +53,8 @@ vi.mock('../components/story-bible', () => ({
   StoryBiblePanel: ({ novelId }: { novelId: string }) => <div>story-bible:{novelId}</div>,
 }))
 
+import { logger } from '../utils/logger'
+
 import WritingWorkspace from './WritingWorkspace'
 
 const HEALTHY_STATUS = {
@@ -169,7 +171,7 @@ describe('WritingWorkspace', () => {
   })
 
   it('handles analysis and sync failures without crashing', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
 
     invokeMock.mockImplementation(async (command: string) => {
       if (command === 'get_nowledge_status') {

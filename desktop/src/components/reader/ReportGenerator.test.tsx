@@ -7,6 +7,8 @@ vi.mock('../../api/reader', () => ({
   analyzeReader: analyzeReaderMock,
 }))
 
+import { logger } from '../../utils/logger'
+
 import type { ConsensusItem, ConsensusReport } from '../../../../src-ts/reader/ConsensusEngine'
 import {
   ConsensusBar,
@@ -97,7 +99,7 @@ describe('ReportGenerator', () => {
   it('generates a report, notifies the caller, and exports markdown to clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     const onReportGenerated = vi.fn()
-    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const consoleLogSpy = vi.spyOn(logger, 'debug').mockImplementation(() => {})
 
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
@@ -329,8 +331,8 @@ describe('ReportGenerator', () => {
     expect(screen.queryByText(/共识问题 \(/)).not.toBeInTheDocument()
   })
 
-  it('reports clipboard export failures to the console', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  it('reports clipboard export failures to the logger', async () => {
+    const consoleErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
     const writeText = vi.fn().mockRejectedValue(new Error('copy failed'))
 
     Object.defineProperty(navigator, 'clipboard', {

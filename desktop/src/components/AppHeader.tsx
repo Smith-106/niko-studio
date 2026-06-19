@@ -3,6 +3,7 @@ import { PanelRightClose, PanelRightOpen, History, Clock, RefreshCw } from 'luci
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { useI18n } from '../i18n'
 import { AiToolbar } from './AiToolbar'
+import { logger } from '../utils/logger'
 
 interface CheckpointItem {
   id: string
@@ -112,7 +113,7 @@ export function AppHeader({
       try {
         await onReconnectGateway()
       } catch (err) {
-        console.error('Reconnect failed:', err)
+        logger.error('Reconnect failed:', err)
       }
     }
     setTimeout(() => {

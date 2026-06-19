@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { logger } from '../utils/logger'
+
 import {
   PromptAssembler,
   createPromptAssembler,
@@ -244,7 +246,7 @@ describe('PromptAssembler branch coverage', () => {
   })
 
   it('warns and falls back when directed mode has no user instruction', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
     const assembler = new PromptAssembler()
 
     const prompt = assembler.assemblePrompt({

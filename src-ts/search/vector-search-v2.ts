@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import path from 'path'
+import { createLogger } from '../logger/index.js'
 
 const EMBEDDING_DIM = 384
 
@@ -12,6 +13,7 @@ export interface VectorSearchResult {
 export class VectorSearchV2 {
   private db: Database.Database
   private useVecExtension = false
+  private readonly log = createLogger('vector-search')
 
   constructor(dbPath: string) {
     this.db = new Database(dbPath)
@@ -25,7 +27,7 @@ export class VectorSearchV2 {
       this.db.loadExtension(path.join(__dirname, 'vec0'))
       this.useVecExtension = true
     } catch {
-      console.warn('[vector-search] sqlite-vec not available, falling back to brute-force cosine search')
+      this.log.warn('sqlite-vec not available, falling back to brute-force cosine search')
     }
 
     if (this.useVecExtension) {

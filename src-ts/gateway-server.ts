@@ -12,6 +12,7 @@
 import 'reflect-metadata';
 import { pathToFileURL } from 'node:url';
 
+import { logger } from './logger/index.js';
 import { main } from './mcp/gateway-bootstrap.js';
 
 export { buildConfigAccess, buildGatewayDeps } from './mcp/gateway-state.js';
@@ -29,7 +30,7 @@ const runningAsMain = (() => {
 /* v8 ignore next -- @preserve */
 if (runningAsMain) {
   main().catch((error) => {
-    console.error('Gateway failed to start:', error);
+    logger.error('Gateway failed to start', { error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined });
     process.exit(1);
   });
 }

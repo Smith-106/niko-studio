@@ -214,3 +214,27 @@ DataContract<TReq,TRes> 带 $contract_id 和 $contract_version。后端支持当
 ### 写作工具新能力开放决策
 三个关键开放决策：Model Router 默认 Claude API；SB 实体版本策略默认 Mutable + audit log；Reader Simulation 默认 Async with progress。
 </spec-entry>
+
+<spec-entry category="arch" keywords="Anti-AI-flavor,独立检测器,QualityDimension,架构约束" date="2026-06-20" title="Anti-AI-flavor 采用独立 detector 层" description="不扩展 QualityDimension 枚举，保持独立 detector 避免破坏现有 9 维度分析契约">
+### Anti-AI-flavor 采用独立 detector 层
+M26 决定将 anti-AI-flavor 检测作为独立 detector 实现，而非扩展现有 QualityDimension 枚举。理由：最小侵入，避免扩散改动到既有分析管道。独立 detector 通过 DualEngine Promise.all 与 9 维度分析并行运行，结果合并到 ConsensusReport。
+参考：src-ts/reader/ai-flavor-detector.ts, 决策来源 ANL-20260618
+</spec-entry>
+
+<spec-entry category="arch" keywords="De-AI,RevisionService,复用,注入" date="2026-06-20" title="De-AI rewrite 复用 IRevisionService.revise" description="通过 IRevisionService.revise 注入 anti-ai/style-shift qualityGoals，保持 reader 模块只读分析职责">
+### De-AI rewrite 复用 IRevisionService.revise
+M26 的 De-AI / 风格变换重写通过 IRevisionService.revise() 注入 qualityGoals（anti-ai, style-shift），复用 M25 建立的 revision 循环与 session tracking。reader 模块保持只读分析职责，/reader/de-ai endpoint 调用 RevisionService。
+参考：src-ts/services/revision-service.ts, src-ts/protocols/revision.ts, 决策来源 ANL-20260618
+</spec-entry>
+
+<spec-entry category="arch" keywords="ConsensusReport,前后端契约,OverlayMarker,统一" date="2026-06-20" title="前后端 ConsensusReport 统一" description="前端删除本地聚合逻辑，统一消费后端 ConsensusReport">
+### 前后端 ConsensusReport 统一
+M26 统一了前后端 ConsensusReport / OverlayMarker 数据契约。前端 ReportGenerator 删除本地聚合逻辑，直接消费后端返回的 ConsensusReport。前端新建 desktop/src/api/reader.ts 统一 API 层。
+参考：desktop/src/components/reader/ReportGenerator.tsx, desktop/src/api/reader.ts, 决策来源 PLN-20260618
+</spec-entry>
+
+<spec-entry category="arch" keywords="画像持久化,JSON,reader-personas" date="2026-06-20" title="自定义画像持久化 .niko-studio/reader-personas.json" description="自定义画像持久化到 JSON 文件，进程重启不丢失">
+### 自定义画像持久化 .niko-studio/reader-personas.json
+M26 实现自定义画像持久化：使用 .niko-studio/reader-personas.json 存储用户自定义 persona，/reader/personas/custom 保存，重启后可读取。
+参考：src-ts/reader/mcp/reader-endpoints.ts, 决策来源 PLN-20260618
+</spec-entry>

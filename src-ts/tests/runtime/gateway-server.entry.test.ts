@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mainGatewayMock = vi.hoisted(() => vi.fn());
+const mockLoggerError = vi.hoisted(() => vi.fn());
 
 vi.mock('../../mcp/gateway-bootstrap.js', () => ({
   main: mainGatewayMock,
@@ -12,6 +13,19 @@ vi.mock('../../mcp/gateway-bootstrap.js', () => ({
 vi.mock('../../mcp/gateway-state.js', () => ({
   buildConfigAccess: vi.fn(),
   buildGatewayDeps: vi.fn(),
+}));
+
+vi.mock('../../logger/index.js', () => ({
+  logger: {
+    error: mockLoggerError,
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(),
+  },
+  createLogger: vi.fn(),
+  StructuredLogger: class {},
+  LogLevel: {},
 }));
 
 describe('gateway-server runtime entry', () => {
@@ -42,7 +56,6 @@ describe('gateway-server runtime entry', () => {
   });
 
   it('logs and exits when startup fails', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const exitSpy = vi
       .spyOn(process, 'exit')
       .mockImplementation(((code?: number) => code as never) as never);
@@ -53,10 +66,12 @@ describe('gateway-server runtime entry', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(errorSpy).toHaveBeenCalledWith('Gateway failed to start:', expect.any(Error));
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      'Gateway failed to start',
+      expect.objectContaining({ error: 'startup failed' }),
+    );
     expect(exitSpy).toHaveBeenCalledWith(1);
 
-    errorSpy.mockRestore();
     exitSpy.mockRestore();
   });
 });

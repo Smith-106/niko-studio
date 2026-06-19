@@ -7,6 +7,8 @@ vi.mock('../../api/reader', () => ({
   analyzeReader: analyzeReaderMock,
 }))
 
+import { logger } from '../../utils/logger'
+
 import {
   ConsensusBar,
   DimensionCard,
@@ -365,7 +367,7 @@ describe('ReportGenerator branch coverage additional', () => {
   })
 
   it('handles clipboard write failure gracefully', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
     const writeText = vi.fn().mockRejectedValue(new Error('clipboard denied'))
 
     Object.defineProperty(navigator, 'clipboard', {

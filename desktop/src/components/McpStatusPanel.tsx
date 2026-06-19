@@ -20,6 +20,7 @@ import {
 
 import { useI18n } from '../i18n'
 import { buildRuntimeDiagnosticSummary } from '../utils/failurePresentation'
+import { logger } from '../utils/logger'
 
 interface McpStatusPanelProps {
   onClose: () => void
@@ -79,7 +80,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
         })
         unlisten = unsub
       } catch (err) {
-        console.warn('[gateway-doctor] Not in Tauri environment or failed to listen:', err)
+        logger.warn('[gateway-doctor] Not in Tauri environment or failed to listen:', err)
       }
     }
 

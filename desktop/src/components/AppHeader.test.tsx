@@ -43,6 +43,8 @@ vi.mock('./AiToolbar', () => ({
   ),
 }))
 
+import { logger } from '../utils/logger'
+
 import { AppHeader } from './AppHeader'
 
 describe('AppHeader checkpoint disclosure', () => {
@@ -419,7 +421,7 @@ describe('AppHeader checkpoint disclosure', () => {
     const onReconnectGateway = vi.fn(async () => {
       throw reconnectError
     })
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
 
     renderHeader({
       headerConnectionState: 'disconnected',

@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import { createLogger } from '../../logger/index.js'
 
 const EMBEDDING_DIM = 384
 
@@ -13,6 +14,7 @@ export class LocalEmbeddingProvider {
   private tokenizer: any = null
   private modelPath: string
   private initialized = false
+  private readonly log = createLogger('local-embedding')
 
   constructor(modelDir: string) {
     this.modelPath = path.join(modelDir, 'model.onnx')
@@ -24,7 +26,7 @@ export class LocalEmbeddingProvider {
     try {
       const ort = await import('onnxruntime-node')
       if (!fs.existsSync(this.modelPath)) {
-        console.warn('[local-embedding] Model file not found:', this.modelPath)
+        this.log.warn('Model file not found', { path: this.modelPath })
         return false
       }
 
@@ -35,7 +37,7 @@ export class LocalEmbeddingProvider {
       this.initialized = true
       return true
     } catch (err) {
-      console.warn('[local-embedding] Failed to initialize ONNX session:', err)
+      this.log.warn('Failed to initialize ONNX session', { error: err instanceof Error ? err.message : String(err) })
       return false
     }
   }
@@ -67,7 +69,7 @@ export class LocalEmbeddingProvider {
       const embedding = this.meanPool(lastHidden, attentionMask)
       return { embedding: this.normalize(embedding), tokenCount: tokens.length }
     } catch (err) {
-      console.warn('[local-embedding] Inference failed:', err)
+      this.log.warn('Inference failed', { error: err instanceof Error ? err.message : String(err) })
       return { embedding: this.dummyEmbedding(), tokenCount: 0 }
     }
   }

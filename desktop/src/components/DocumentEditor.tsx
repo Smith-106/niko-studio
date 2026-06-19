@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useI18n } from '../i18n'
 import { countWords, countChars, readingTimeMinutes } from '../utils/wordCount'
+import { logger } from '../utils/logger'
 const StoryBiblePanel = React.lazy(() => import('./StoryBiblePanel').then(m => ({ default: m.StoryBiblePanel })))
 import { NikoEditor } from './NikoEditor'
 import { HistoryPanel } from './HistoryPanel'
@@ -187,8 +188,8 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
       setEditorIsDirty(false)
       // Use refs for project/chapter IDs to avoid stale closure in auto-save timer
       if (currentProjectIdRef.current && currentChapterIdRef.current) {
-        writeChapterContent(currentProjectIdRef.current, currentChapterIdRef.current, JSON.stringify(json)).catch((e) => { console.error('[auto-save] write failed:', e); setSaveStatus('error') })
-        autoSaveSnapshot(currentProjectIdRef.current, currentChapterIdRef.current).catch((e) => { console.error('[auto-save] snapshot failed:', e) })
+        writeChapterContent(currentProjectIdRef.current, currentChapterIdRef.current, JSON.stringify(json)).catch((e) => { logger.error('[auto-save] write failed:', e); setSaveStatus('error') })
+        autoSaveSnapshot(currentProjectIdRef.current, currentChapterIdRef.current).catch((e) => { logger.error('[auto-save] snapshot failed:', e) })
       }
       updateSessionTelemetry({ type: 'save' })
       setTimeout(() => setSaveStatus('idle'), 4000)
@@ -198,8 +199,8 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
   const handleSave = useCallback(() => {
     if (currentProjectId && currentChapterId && editorJson) {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(editorJson)).catch((e) => { console.error('[manual-save] write failed:', e); setSaveStatus('error') })
-      autoSaveSnapshot(currentProjectId, currentChapterId).catch((e) => { console.error('[manual-save] snapshot failed:', e) })
+      writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(editorJson)).catch((e) => { logger.error('[manual-save] write failed:', e); setSaveStatus('error') })
+      autoSaveSnapshot(currentProjectId, currentChapterId).catch((e) => { logger.error('[manual-save] snapshot failed:', e) })
       const now = new Date()
       const h = now.getHours().toString().padStart(2, '0')
       const m = now.getMinutes().toString().padStart(2, '0')

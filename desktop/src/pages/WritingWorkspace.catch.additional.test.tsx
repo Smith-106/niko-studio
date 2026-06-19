@@ -39,6 +39,8 @@ vi.mock('../components/story-bible', () => ({
   StoryBiblePanel: ({ novelId }: { novelId: string }) => <div>story-bible:{novelId}</div>,
 }))
 
+import { logger } from '../utils/logger'
+
 import WritingWorkspace from './WritingWorkspace'
 
 const FORESHADOW_ALERTS = [
@@ -63,7 +65,7 @@ describe('WritingWorkspace catch block coverage', () => {
   })
 
   it('handles refreshForeshadows catch when get_foreshadow_alerts throws', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
 
     // add_foreshadow succeeds, but get_foreshadow_alerts throws in refreshForeshadows
     invokeMock.mockImplementation(async (command: string) => {
@@ -97,7 +99,7 @@ describe('WritingWorkspace catch block coverage', () => {
   })
 
   it('handles resolveForeshadow catch when resolve_foreshadow throws', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
 
     // get_foreshadow_alerts succeeds (to populate state), but resolve_foreshadow throws
     invokeMock.mockImplementation(async (command: string) => {

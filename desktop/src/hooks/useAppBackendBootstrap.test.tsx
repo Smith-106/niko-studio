@@ -14,6 +14,8 @@ vi.mock('../stores/settingsStore', () => ({
   },
 }))
 
+import { logger } from '../utils/logger'
+
 import {
   getRuntimeGatewayBase,
   isTauriRuntime,
@@ -24,18 +26,18 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useAppBackendBootstrap } from './useAppBackendBootstrap'
 
 describe('useAppBackendBootstrap', () => {
-  const originalConsoleError = console.error
+  const originalLoggerError = logger.error
 
   beforeEach(() => {
     vi.clearAllMocks()
-    console.error = vi.fn()
+    logger.error = vi.fn()
     vi.mocked(getRuntimeGatewayBase).mockResolvedValue('http://127.0.0.1:8000')
     vi.mocked(syncGatewayBaseOverride).mockResolvedValue(undefined)
     vi.mocked(startTauriBackend).mockResolvedValue('Gateway ready')
   })
 
   afterEach(() => {
-    console.error = originalConsoleError
+    logger.error = originalLoggerError
   })
 
   it('does not call startTauriBackend or syncGatewayBaseOverride in non-Tauri runtime', () => {
@@ -131,7 +133,7 @@ describe('useAppBackendBootstrap', () => {
     })
   })
 
-  it('reports bootstrap failures through console.error and the optional callback', async () => {
+  it('reports bootstrap failures through the logger and the optional callback', async () => {
     const onError = vi.fn()
     vi.mocked(isTauriRuntime).mockReturnValue(true)
     vi.mocked(useSettingsStore.getState).mockReturnValue({
@@ -143,7 +145,7 @@ describe('useAppBackendBootstrap', () => {
     renderHook(() => useAppBackendBootstrap(onError))
 
     await waitFor(() => {
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         '[useAppBackendBootstrap] Backend bootstrap failed:',
         expect.any(Error),
       )

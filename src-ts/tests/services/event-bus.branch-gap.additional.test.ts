@@ -3,6 +3,24 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EventLogImpl } from '../../services/event-log.js';
 import { TypedEventBus } from '../../services/event-bus.js';
 
+const mockLogError = vi.hoisted(() => vi.fn());
+vi.mock('../../logger/index.js', () => ({
+  createLogger: () => ({
+    error: mockLogError,
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(),
+  }),
+  logger: {
+    error: mockLogError,
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(),
+  },
+}));
+
 function getTracker(
   bus: TypedEventBus,
   handler: (payload: unknown) => void,
@@ -11,7 +29,7 @@ function getTracker(
     handlerTrackers: Map<
       (payload: unknown) => void,
       { queueDepth: number; queue: Array<{ channel: string; payload: unknown }> }
-    >;
+      >;
   }).handlerTrackers;
 
   const tracker = trackers.get(handler);
@@ -22,10 +40,8 @@ function getTracker(
 }
 
 describe('services/event-bus branch-gap coverage', () => {
-  const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
   afterEach(() => {
-    consoleErrorSpy.mockClear();
+    mockLogError.mockClear();
   });
 
   it('logs non-Error subscriber failures during normal dispatch', () => {
@@ -36,9 +52,9 @@ describe('services/event-bus branch-gap coverage', () => {
 
     bus.publish('string:error', { id: 1 });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[EventBus] Error in subscriber for channel "string:error":',
-      'plain-string-error',
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Error in subscriber',
+      expect.objectContaining({ channel: 'string:error', error: 'plain-string-error' }),
     );
   });
 
@@ -53,9 +69,9 @@ describe('services/event-bus branch-gap coverage', () => {
 
     bus.replayFrom({ fromSeq: 1, channel: 'replay:string' });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[EventBus] Error in subscriber for channel "replay:string" during replay:',
-      'replay-string-error',
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Error in subscriber during replay',
+      expect.objectContaining({ channel: 'replay:string', error: 'replay-string-error' }),
     );
   });
 
@@ -76,9 +92,9 @@ describe('services/event-bus branch-gap coverage', () => {
 
     bus.publish('flush:string', { id: 1 });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[EventBus] Error in subscriber for channel "flush:string" during backpressure flush:',
-      'flush-string-error',
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Error in subscriber during backpressure flush',
+      expect.objectContaining({ channel: 'flush:string', error: 'flush-string-error' }),
     );
   });
 });

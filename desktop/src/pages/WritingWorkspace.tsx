@@ -4,6 +4,7 @@ import { ForeshadowPanel } from '../components/narrative/ForeshadowPanel'
 import { QualityScorePanel } from '../components/narrative/QualityScorePanel'
 import { BrainstormPanel } from '../components/narrative/BrainstormPanel'
 import { StoryBiblePanel } from '../components/story-bible'
+import { logger } from '../utils/logger'
 
 interface QualityData {
   overall: number
@@ -50,7 +51,7 @@ export default function WritingWorkspace() {
       const report = await invoke<QualityData>('analyze_quality', { text })
       setQuality(report)
     } catch (e) {
-      console.error('Quality analysis failed:', e)
+      logger.error('Quality analysis failed:', e)
     } finally {
       setAnalyzing(false)
     }
@@ -62,7 +63,7 @@ export default function WritingWorkspace() {
       const alerts = await invoke<ForeshadowAlert[]>('get_foreshadow_alerts', { chapter })
       setForeshadows(alerts)
     } catch (e) {
-      console.error('Foreshadow refresh failed:', e)
+      logger.error('Foreshadow refresh failed:', e)
     }
   }, [chapter])
 
@@ -72,7 +73,7 @@ export default function WritingWorkspace() {
       await invoke('add_foreshadow', { hint, plantedChapter: chapter, maxDistance: 50 })
       refreshForeshadows()
     } catch (e) {
-      console.error('Add foreshadow failed:', e)
+      logger.error('Add foreshadow failed:', e)
     }
   }, [chapter, refreshForeshadows])
 
@@ -82,7 +83,7 @@ export default function WritingWorkspace() {
       await invoke('resolve_foreshadow', { id })
       refreshForeshadows()
     } catch (e) {
-      console.error('Resolve foreshadow failed:', e)
+      logger.error('Resolve foreshadow failed:', e)
     }
   }, [refreshForeshadows])
 
@@ -93,7 +94,7 @@ export default function WritingWorkspace() {
       const status = await invoke<NowledgeStatus>('get_nowledge_status')
       setNowledgeStatus(status)
     } catch (e) {
-      console.error('Sync knowledge failed:', e)
+      logger.error('Sync knowledge failed:', e)
     }
   }, [])
 

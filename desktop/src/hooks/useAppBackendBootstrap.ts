@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 
 import { getRuntimeGatewayBase, isTauriRuntime, startTauriBackend, syncGatewayBaseOverride } from '../api/transport'
 import { useSettingsStore } from '../stores/settingsStore'
+import { logger } from '../utils/logger'
 
 const STALE_LOCAL_GATEWAY_BASE = 'http://127.0.0.1:8000'
 
@@ -35,7 +36,7 @@ export function useAppBackendBootstrap(onError?: (error: string) => void) {
           updateSettings({ apiBaseUrl: resolvedBase })
         }
       } catch (e) {
-        console.error('[useAppBackendBootstrap] Backend bootstrap failed:', e)
+        logger.error('[useAppBackendBootstrap] Backend bootstrap failed:', e)
         // Notify user of bootstrap failure instead of silent console.error
         if (onError) {
           const message = e instanceof Error ? e.message : String(e)

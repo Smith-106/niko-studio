@@ -60,3 +60,9 @@ related:
 ### UAT 覆盖策略：自动化覆盖构建/单测，UI 目视需人工补测
 自动化 UAT 仅覆盖 build/unit-test 和部分 editor 行为。
 </spec-entry>
+
+<spec-entry category="quality" keywords="console.log,logger,替换,清理" date="2026-06-20" title="console.log 统一替换为 logger 或删除" description="遵循 Fix Don't Hide 原则，console.log 必须替换为 logger 或删除">
+### console.log 统一替换为 logger 或删除
+M26 交付前清理：console.log 统一替换为 logger 或删除，遵循 Coding Philosophy 的 Fix Don't Hide 原则。TODO 不在当前发布路径上的转为 issue 记录，不阻塞发布。
+参考：ANL-20260619-fix-remaining-risks, EXC-20260619-fix-remaining-risks
+</spec-entry>

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { FileText, Download, RefreshCw, AlertTriangle, CheckCircle, XCircle, Users } from 'lucide-react'
 import type { ConsensusReport, ConsensusItem } from '../../../../src-ts/reader/ConsensusEngine'
 import { analyzeReader } from '../../api/reader'
+import { logger } from '../../utils/logger'
 
 // ============================================================
 // Types
@@ -359,10 +360,10 @@ export function ReportGenerator({ novelId, onReportGenerated }: ReportGeneratorP
     navigator.clipboard.writeText(markdown).then(
       () => {
         // Could show a toast notification here
-        console.log('Report exported to clipboard')
+        logger.debug('Report exported to clipboard')
       },
       (err) => {
-        console.error('Failed to copy report:', err)
+        logger.error('Failed to copy report:', err)
       }
     )
   }, [state.report, novelId])

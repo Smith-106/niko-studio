@@ -25,6 +25,7 @@ import type {
   CreativitySpectrumConfig,
   CreativityPreset,
 } from '../api/story-bible'
+import { logger } from '../utils/logger'
 
 // ============================================================
 // Token Estimation
@@ -405,7 +406,7 @@ export class PromptAssembler {
       if (userInstruction) {
         userParts.push(`\nUser Instruction: ${userInstruction}`)
       } else {
-        console.warn(
+        logger.warn(
           'Directed mode without user instruction — falling back to auto behavior',
         )
         userParts.push(

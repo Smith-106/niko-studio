@@ -140,3 +140,9 @@ localStorage flag 'niko-onboarding-done'，Zustand slice pattern。
 ### callApi 外层封装模式：禁止内层信封
 callApi 已在 2xx 响应时将原始 body 封装为 {success: true, data: rawBody}。前端类型必须使用 ApiResponse<T> 其中 T 是原始后端 body 形状，禁止再添加内层 {success, data: T} 封装。
 </spec-entry>
+
+<spec-entry category="coding" keywords="API层,reader,callApi,ApiResponse,前端封装" date="2026-06-20" title="前端新建 reader.ts API 层复用 callApi/ApiResponse 模式" description="消除裸 fetch，统一前端 reader API 调用">
+### 前端新建 reader.ts API 层复用 callApi/ApiResponse 模式
+M26 新建 desktop/src/api/reader.ts 统一前端 reader API 调用，暴露 analyzeReader/compareReaderVersions/submitReaderFeedback/detectAIFlavor/deAiRewrite，均复用 callApi/ApiResponse 模式。消除组件内裸 fetch 调用，降低 API 签名漂移风险。
+参考：desktop/src/api/reader.ts, desktop/src/api/reader.test.ts
+</spec-entry>

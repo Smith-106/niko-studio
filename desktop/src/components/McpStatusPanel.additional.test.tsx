@@ -41,6 +41,8 @@ vi.mock('../api/client', async () => {
   }
 })
 
+import { logger } from '../utils/logger'
+
 import {
   checkBackendHealth,
   createGatewayServiceConfig,
@@ -426,7 +428,7 @@ describe('McpStatusPanel additional coverage', () => {
 
   it('shows action errors, auto-heal failures, and tauri listen warnings', async () => {
     const user = userEvent.setup()
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
 
     setupBaseMocks([buildServiceConfig()])
     mockedProbeGatewayServiceHealth.mockResolvedValueOnce({
