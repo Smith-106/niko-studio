@@ -1,0 +1,155 @@
+{
+  "session_id": "maestro-20260618-034959",
+  "source": "maestro",
+  "intent": "深入分析 https://github.com/Mochocyang/QMAI、https://github.com/raestrada/storycraftr、https://github.com/NousResearch/autonovel、https://github.com/story-apps/starc、https://github.com/RhythmicWave/NovelForge、https://github.com/PixeroJan/obsidian-storyline、https://github.com/kevboh/longform、https://github.com/olivierkes/manuskript、https://github.com/vkbo/novelWriter、https://github.com/ExplosiveCoderflome/AI-Novel-Writing-Assistant、https://github.com/Tencent/WeKnora、https://github.com/shenmintao/marginalia 这些项目，和 niko-studio 对比分析，并给出全面分析报告",
+  "task_type": "research-comparison",
+  "chain_name": "analyze-macro",
+  "ralph_protocol_version": "1",
+  "active_step_index": null,
+  "phase": null,
+  "phase_is_new": false,
+  "milestone": "",
+  "scope_verdict": null,
+  "analyze_macro_id": null,
+  "blueprint_id": null,
+  "auto_mode": false,
+  "cli_tool": "claude",
+  "context": {
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null,
+    "blueprint_dir": null,
+    "issue_id": null
+  },
+  "steps": [
+    {
+      "index": 0,
+      "skill": "maestro-analyze",
+      "args": "competitive landscape of AI writing tools and novel authoring software versus niko-studio",
+      "stage": "analyze",
+      "scope": "macro",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-analyze.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/.maestro/maestro-20260618-034959/comprehensive-analysis-report.md",
+      "completed_at": "2026-06-17T21:11:55.682Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\state.json",
+        "C:\\Users\\niko\\.maestro\\workflows\\issue-gaps-analyze.md"
+      ],
+      "load": {
+        "loaded_at": "2026-06-17T19:52:03.884Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\analyze.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\state.json",
+          "C:\\Users\\niko\\.maestro\\workflows\\issue-gaps-analyze.md"
+        ],
+        "resolve_version": "1"
+      },
+      "concerns": null
+    },
+    {
+      "index": 1,
+      "skill": null,
+      "args": null,
+      "stage": "decision",
+      "scope": null,
+      "decision": "post-analyze-scope",
+      "command_scope": "null",
+      "command_path": null,
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/.maestro/maestro-20260618-034959/comprehensive-analysis-report.md",
+      "completed_at": "2026-06-17T21:11:55.682Z",
+      "deferred_reads": [],
+      "load": null
+    }
+  ],
+  "waves": [],
+  "current_step": 1,
+  "status": "completed",
+  "boundary_contract": {
+    "in_scope": "分析 12 个指定 GitHub 项目的核心写作/创作功能、AI/LLM 辅助能力、技术架构与实现、市场定位与商业特征；将每个项目与 niko-studio 进行对比；产出一份带引用的全面分析报告。",
+    "out_of_scope": "niko-studio 的功能实现或代码修改、实时用户调研、财务尽职调查、对 12 个项目进行穷尽的源码审计、法律/许可证专业建议。"
+  },
+  "execution_criteria": [
+    "12 个项目均有基于公开仓库和文档的可验证事实档案。",
+    "对比维度在所有项目与 niko-studio 之间一致应用。",
+    "报告包含功能矩阵、架构摘要、定位地图和战略建议。",
+    "所有来源均标注 URL 与访问日期。",
+    "关键发现在可能情况下经过交叉验证。"
+  ],
+  "task_decomposition": [
+    {
+      "id": "T1",
+      "title": "抓取并建档 12 个外部项目",
+      "description": "收集每个项目的 README、功能特性、技术栈、开源协议、社区指标。",
+      "done_when": "每个项目都有一份带来源引用的结构化档案卡片。",
+      "evidence": "{session_dir}/project-profiles.json 或等效文件",
+      "lifecycle": "analyze",
+      "completion_confirmed": true,
+      "status": "done",
+      "completed_at": "2026-06-17T21:11:55.682Z"
+    },
+    {
+      "id": "T2",
+      "title": "建立 niko-studio 基线",
+      "description": "基于代码库与 state.json 总结 niko-studio 当前能力、架构与路线图。",
+      "done_when": "niko-studio 基线文档存在且准确。",
+      "evidence": "{session_dir}/niko-studio-baseline.md",
+      "lifecycle": "analyze",
+      "completion_confirmed": true,
+      "status": "done",
+      "completed_at": "2026-06-17T21:11:55.682Z"
+    },
+    {
+      "id": "T3",
+      "title": "构建对比矩阵",
+      "description": "创建功能、架构、AI 能力、市场定位四个对比矩阵。",
+      "done_when": "矩阵覆盖所有项目与 niko-studio，并基于一致维度。",
+      "evidence": "{session_dir}/comparison-matrices.md",
+      "lifecycle": "analyze",
+      "completion_confirmed": true,
+      "status": "done",
+      "completed_at": "2026-06-17T21:11:55.682Z"
+    },
+    {
+      "id": "T4",
+      "title": "综合战略分析报告",
+      "description": "产出执行摘要、竞争格局地图、差异化机会和可执行建议。",
+      "done_when": "全面分析报告撰写完成并经过校验。",
+      "evidence": "{session_dir}/comprehensive-analysis-report.md",
+      "lifecycle": "analyze",
+      "completion_confirmed": true,
+      "status": "done",
+      "completed_at": "2026-06-17T21:11:55.682Z"
+    }
+  ],
+  "task_decomposition_all_done": true,
+  "classification_rationale": {
+    "matched_pattern": "broad research + comparison + comprehensive report",
+    "chain": "analyze-macro",
+    "excluded_chains": [
+      "blueprint",
+      "grill",
+      "execute",
+      "roadmap",
+      "brainstorm"
+    ],
+    "confidence": "high",
+    "reason": "用户要求对多个外部项目进行深度分析与对比，产出报告；未要求实现、规格生成、头脑风暴或路线图创建，因此匹配 analyze-macro 链路。"
+  }
+}

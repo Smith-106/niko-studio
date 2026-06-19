@@ -1,0 +1,227 @@
+{
+  "session_id": "maestro-20260619-184051",
+  "source": "maestro",
+  "intent": "修复四、剩余风险与建议：1) 修复 desktop/src-ts 低/中危依赖漏洞；2) 清理源码 TODO/控制台输出；3) 整理工作树并分块提交；4) 补充部署/回滚/监控文档或确认 CI 覆盖。",
+  "task_type": "analyze-plan-execute",
+  "chain_name": "analyze-plan-execute",
+  "classification_rationale": {
+    "matched_pattern": "broad lifecycle intent without phase reference → analyze-plan-execute",
+    "excluded": [
+      "quality-loop-partial (requires phase)",
+      "refactor (single-step, does not cover docs/audit)",
+      "team_tech_debt (no team context requested)"
+    ],
+    "confidence": "high"
+  },
+  "ralph_protocol_version": "1",
+  "active_step_index": 2,
+  "phase": null,
+  "phase_is_new": false,
+  "milestone": "M26",
+  "scope_verdict": null,
+  "analyze_macro_id": null,
+  "blueprint_id": null,
+  "auto_mode": false,
+  "cli_tool": "claude",
+  "context": {
+    "scratch_dir": ".workflow/scratch/20260619-analyze-fix-remaining-risks",
+    "plan_dir": ".workflow/scratch/20260619-plan-fix-remaining-risks",
+    "analysis_dir": ".workflow/scratch/20260619-analyze-fix-remaining-risks",
+    "brainstorm_dir": null,
+    "blueprint_dir": null,
+    "issue_id": null,
+    "milestone_num": "M26"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "skill": "maestro-analyze",
+      "args": "\"修复剩余风险：低中危漏洞、TODO/控制台输出、工作树整理、部署回滚监控文档\" -q",
+      "stage": "analyze",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-analyze.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": "G0-scoping",
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/scratch/20260619-analyze-fix-remaining-risks",
+      "completed_at": "2026-06-19T10:58:22.593Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\state.json",
+        "C:\\Users\\niko\\.maestro\\workflows\\issue-gaps-analyze.md"
+      ],
+      "load": {
+        "loaded_at": "2026-06-19T10:51:32.225Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\analyze.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\state.json",
+          "C:\\Users\\niko\\.maestro\\workflows\\issue-gaps-analyze.md"
+        ],
+        "resolve_version": "1"
+      },
+      "concerns": null
+    },
+    {
+      "index": 1,
+      "skill": "maestro-plan",
+      "args": "--dir {scratch_dir}",
+      "stage": "plan",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-plan.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/scratch/20260619-plan-fix-remaining-risks/plan.json",
+      "completed_at": "2026-06-19T11:15:56.278Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\plan.json",
+        "C:\\Users\\niko\\.maestro\\templates\\task.json",
+        "C:\\Users\\niko\\.maestro\\templates\\state.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-19T11:01:11.274Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\plan.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\plan.json",
+          "C:\\Users\\niko\\.maestro\\templates\\task.json",
+          "C:\\Users\\niko\\.maestro\\templates\\state.json"
+        ],
+        "resolve_version": "1"
+      },
+      "concerns": null
+    },
+    {
+      "index": 2,
+      "skill": "maestro-execute",
+      "args": "--dir {scratch_dir}",
+      "stage": "execute",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-execute.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "running",
+      "goal_ref": null,
+      "completion_confirmed": false,
+      "completion_status": null,
+      "completion_evidence": null,
+      "completed_at": null,
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\task.json",
+        "C:\\Users\\niko\\.maestro\\templates\\state.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-19T11:16:36.757Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\execute.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\task.json",
+          "C:\\Users\\niko\\.maestro\\templates\\state.json"
+        ],
+        "resolve_version": "1"
+      }
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "running",
+  "boundary_contract": {
+    "in_scope": [
+      "desktop/package.json 与 src-ts/package.json 中的低/中危依赖修复",
+      "desktop/src/components/cowriting/CoWritingPanel.tsx 的 TODO 与 console.log 清理",
+      "src-ts/reader/mcp/reader-endpoints.ts、src-ts/knowledge/mcp/story-bible-endpoints.ts、src-ts/knowledge/mcp/qc-endpoints.ts 的 TODO 注释处理",
+      "当前工作树分类整理与分块提交",
+      "docs/ 下部署/回滚/监控运行手册补充，或确认由 CI/发布脚本覆盖"
+    ],
+    "out_of_scope": [
+      "新增业务功能或 M26 后续 phase 实现",
+      "大规模代码重构",
+      "生产环境真实部署执行",
+      "100% 分支覆盖率等更高覆盖目标"
+    ],
+    "constraints": [
+      "不得破坏现有 lint/typecheck/test/build 通过状态",
+      "desktop 与 src-ts 语句覆盖率保持 100%",
+      "不引入新的构建/测试工具",
+      "向后兼容，不修改公共 API 行为",
+      "优先使用 npm audit fix 可自动修复的依赖升级"
+    ],
+    "definition_of_done": "四个子目标全部完成，audit 无 critical/high，desktop/src-ts 的 lint/typecheck/test/build 仍全绿，工作树分为清晰提交，文档缺口已补齐或已明确由现有脚本覆盖。"
+  },
+  "execution_criteria": [
+    "依赖升级后必须通过 `npm audit --audit-level=high` 且相关测试/构建全绿",
+    "TODO/控制台输出必须被删除、转换为用户可见日志或记录为 issue，不能仅 suppressed",
+    "工作树整理后，代码改动、依赖更新、治理文件清理必须分属不同 commit",
+    "文档必须可直接从 docs/ 或 README 中检索到，或明确引用 CI/发布脚本路径"
+  ],
+  "task_decomposition": [
+    {
+      "id": "G1",
+      "goal": "修复 desktop 与 src-ts 剩余低/中危依赖漏洞",
+      "boundary": "只处理 npm audit 报出的 low/moderate；不处理需要 --force 且破坏性升级的风险（如 @xenova/transformers 大版本）",
+      "done_when": "desktop 与 src-ts 的 `npm audit --audit-level=high` 均无 high/critical，且 `npm run test:serial`、`npm run build` / `npm run test:phase4`、`npm run build` 全部通过",
+      "evidence": "audit report + test/build exit code 0",
+      "lifecycle": [
+        "analyze",
+        "execute"
+      ],
+      "status": "pending",
+      "completion_confirmed": false
+    },
+    {
+      "id": "G2",
+      "goal": "清理源码中的 TODO 与控制台输出",
+      "boundary": "仅处理已识别的 4 个文件；保留合理的错误日志和测试中的 console 捕获",
+      "done_when": "上述 4 个文件的 TODO 被实现/删除/转 issue，console.log 被移除或替换为 logger，相关测试仍通过",
+      "evidence": "git diff + grep TODO/console.log 无残留 + test pass",
+      "lifecycle": [
+        "execute"
+      ],
+      "status": "pending",
+      "completion_confirmed": false
+    },
+    {
+      "id": "G3",
+      "goal": "整理工作树并分块提交",
+      "boundary": "不删除仍需要的源码或测试文件；仅分类 .workflow/ 治理文件、本次代码改动、依赖更新",
+      "done_when": "工作树被拆分为 <=5 个语义清晰的 commit（如 deps、tests、components、cleanup、governance），无未跟踪的临时文件",
+      "evidence": "git status --short 干净或仅剩已知未提交意图 + git log",
+      "lifecycle": [
+        "execute"
+      ],
+      "status": "pending",
+      "completion_confirmed": false
+    },
+    {
+      "id": "G4",
+      "goal": "补充部署/回滚/监控文档或确认现有覆盖",
+      "boundary": "不编写完整运维手册，至少提供可操作的检查清单与回滚命令入口",
+      "done_when": "docs/ 新增或更新部署运行手册/回滚方案/监控检查清单，或在 README/scripts 中明确引用现有 CI/发布脚本",
+      "evidence": "docs/ 文件存在且被 git 跟踪 + README 引用",
+      "lifecycle": [
+        "plan",
+        "execute"
+      ],
+      "status": "pending",
+      "completion_confirmed": false
+    }
+  ],
+  "task_decomposition_all_done": false,
+  "created_at": "2026-06-19T10:40:51Z",
+  "updated_at": "2026-06-19T10:40:51Z"
+}

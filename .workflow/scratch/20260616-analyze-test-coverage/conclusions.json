@@ -1,0 +1,233 @@
+{
+  "analysis_id": "ANL-test-coverage-2026-06-16",
+  "created_at": "2026-06-16T13:45:00+08:00",
+  "scope": "standalone",
+  "topic": "全仓测试覆盖率深度分析",
+  "verdict": "CONDITIONAL_GO",
+  "overall_score": 72,
+  "risk_level": "MEDIUM-HIGH",
+  "confidence": 0.80,
+
+  "key_conclusions": [
+    {
+      "id": "C-001",
+      "conclusion": "Store 层是最大测试风险点 — 5 个 slice 零覆盖 + 9 个浅层测试",
+      "confidence": "high",
+      "evidence_refs": ["F-001", "F-004"],
+      "priority": "critical"
+    },
+    {
+      "id": "C-002",
+      "conclusion": "后端 30% MCP endpoints 无测试，包含 M25 核心功能",
+      "confidence": "high",
+      "evidence_refs": ["F-002"],
+      "priority": "critical"
+    },
+    {
+      "id": "C-003",
+      "conclusion": "E2E 和集成测试严重不足 — 分别仅 6 和 13 个",
+      "confidence": "high",
+      "evidence_refs": ["F-005", "F-006"],
+      "priority": "high"
+    },
+    {
+      "id": "C-004",
+      "conclusion": "当前 ~68% 行覆盖率未达生产标准（80%）和上线标准（75%）",
+      "confidence": "medium",
+      "evidence_refs": ["F-007"],
+      "priority": "high"
+    },
+    {
+      "id": "C-005",
+      "conclusion": "Companion test pattern (.additional.test.*) 是最有效的覆盖率提升策略",
+      "confidence": "high",
+      "evidence_refs": ["F-008"],
+      "priority": "medium"
+    }
+  ],
+
+  "decision_trail": [
+    {
+      "decision": "全仓覆盖率优先级划分",
+      "context": "需确定补测试的优先顺序",
+      "options": ["按模块分", "按风险分", "按层级分"],
+      "chosen": "按风险分（P0/P1/P2）",
+      "reason": "回归保护需求最紧迫（近期一致性 bug），先保核心再扩面",
+      "impact": "Phase 1 聚焦 P0 回归保护，Phase 2-3 扩展覆盖面"
+    },
+    {
+      "decision": "补测试策略选择",
+      "context": "Store/endpoint 测试采用何种模式",
+      "options": ["companion pattern", "重写测试结构", "独立目录"],
+      "chosen": "companion pattern expansion",
+      "reason": "workflow/narrative 模块验证有效，与现有代码风格一致",
+      "impact": "降低学习成本，加快编写速度"
+    }
+  ],
+
+  "intent_coverage": {
+    "total_intents": 17,
+    "addressed": 17,
+    "in_progress": 0,
+    "missed": 0,
+    "transformed": 0
+  },
+
+  "recommendations": [
+    {
+      "id": "R-001",
+      "title": "Phase 1: 补 P0 回归保护",
+      "priority": "critical",
+      "action": "添加 skillsSlice.test.ts、conversationSlice.test.ts、learning endpoint test、workspace endpoint test",
+      "rationale": "5 个核心 slice 无测试 = 一致性 bug 修复无回归保护；learning/workspace 是跨切面数据流",
+      "steps": [
+        { "target": "desktop/src/stores/app/skillsSlice.ts", "description": "创建 skillsSlice.test.ts 覆盖状态转换、加载态、错误处理", "verification": "vitest run --reporter=verbose skillsSlice" },
+        { "target": "desktop/src/stores/app/conversationSlice.ts", "description": "创建 conversationSlice.test.ts 覆盖消息流、streaming 状态、错误恢复", "verification": "vitest run --reporter=verbose conversationSlice" },
+        { "target": "src-ts/mcp/endpoints/learning.ts", "description": "创建 learning endpoint test 覆盖请求解析、scope 解析、错误场景", "verification": "vitest run --reporter=verbose learning" },
+        { "target": "src-ts/mcp/endpoints/workspace.ts", "description": "创建 workspace endpoint test 覆盖 CRUD、scope 解析、缺失 workspace", "verification": "vitest run --reporter=verbose workspace" }
+      ],
+      "review_status": "accepted",
+      "evidence_refs": ["F-001", "F-002"]
+    },
+    {
+      "id": "R-002",
+      "title": "Phase 2: 后端 endpoint 覆盖",
+      "priority": "high",
+      "action": "添加 m10-revision/style/worldview + plugins + writing API 测试",
+      "rationale": "M25 核心功能无测试；writing API 是核心用户工作流桥接",
+      "steps": [
+        { "target": "src-ts/mcp/endpoints/m10-revision.ts", "description": "创建 m10-revision endpoint test 覆盖修订 session 生命周期", "verification": "vitest run --reporter=verbose m10-revision" },
+        { "target": "src-ts/mcp/endpoints/m10-style.ts", "description": "创建 m10-style endpoint test 覆盖风格分析流程", "verification": "vitest run --reporter=verbose m10-style" },
+        { "target": "src-ts/mcp/endpoints/m11-worldview.ts", "description": "创建 m11-worldview endpoint test 覆盖世界观提取", "verification": "vitest run --reporter=verbose m11-worldview" },
+        { "target": "desktop/src/api/writing.ts", "description": "创建 writing API bridge test 覆盖 callApi 包装和类型映射", "verification": "vitest run --reporter=verbose writing" }
+      ],
+      "review_status": "accepted",
+      "evidence_refs": ["F-002"]
+    },
+    {
+      "id": "R-003",
+      "title": "Phase 3: 前端深度覆盖",
+      "priority": "medium",
+      "action": "补充 backendSlice/workspaceSlice/loadingSlice + 深化浅层测试 + top 10 hooks",
+      "rationale": "Store 层整体覆盖从 68% 提升；hooks 27% 覆盖率需改善",
+      "steps": [
+        { "target": "desktop/src/stores/app/backendSlice.ts", "description": "创建 backendSlice.test.ts", "verification": "vitest run --reporter=verbose backendSlice" },
+        { "target": "desktop/src/stores/app/workspaceSlice.ts", "description": "创建 workspaceSlice.test.ts", "verification": "vitest run --reporter=verbose workspaceSlice" },
+        { "target": "desktop/src/stores/", "description": "为 top 5 浅层 store 测试添加 .branches.additional.test.* 错误/边界覆盖", "verification": "vitest run --reporter=verbose stores" },
+        { "target": "desktop/src/hooks/", "description": "为 top 10 高频 hooks 添加测试文件", "verification": "vitest run --reporter=verbose hooks" }
+      ],
+      "review_status": "accepted",
+      "evidence_refs": ["F-001", "F-003", "F-004"]
+    },
+    {
+      "id": "R-004",
+      "title": "Phase 4: E2E 和集成测试",
+      "priority": "medium",
+      "action": "添加核心业务流程 E2E + API bridge 集成 + 评估 Playwright",
+      "rationale": "7 个核心业务流程无端到端验证；contract 测试仅验证形状非运行时兼容",
+      "steps": [
+        { "target": "foreshadow lifecycle", "description": "添加 foreshadow E2E: plant→stats→list→hint→harvest", "verification": "vitest run --reporter=verbose e2e/foreshadow" },
+        { "target": "character analysis", "description": "添加 character E2E: create→depth→evaluate→profile", "verification": "vitest run --reporter=verbose e2e/character" },
+        { "target": "quality evaluation", "description": "添加 quality E2E: content→score→decision→revision", "verification": "vitest run --reporter=verbose e2e/quality" },
+        { "target": "API bridge integration", "description": "添加 API bridge 集成测试验证前端调用匹配后端 endpoint 形状", "verification": "vitest run --reporter=verbose integration/api-bridge" }
+      ],
+      "review_status": "accepted",
+      "evidence_refs": ["F-005", "F-006"]
+    },
+    {
+      "id": "R-005",
+      "title": "运行 vitest --coverage 获取实际行覆盖率",
+      "priority": "high",
+      "action": "执行 vitest run --coverage 获取精确行/函数/分支覆盖率数据",
+      "rationale": "当前 68% 为估算值；需实际数据验证标准评估并追踪补测试效果",
+      "steps": [
+        { "target": "frontend", "description": "cd desktop && npx vitest run --coverage", "verification": "coverage/ 目录生成" },
+        { "target": "backend", "description": "npx vitest run --coverage", "verification": "coverage/ 目录生成" }
+      ],
+      "review_status": "accepted",
+      "evidence_refs": ["F-007"]
+    }
+  ],
+
+  "priority_gaps": {
+    "P0_critical": [
+      { "area": "desktop/src/stores/app/skillsSlice.ts", "reason": "Zero test coverage; recently fixed CORR-001/007 consistency bugs, no regression guard" },
+      { "area": "desktop/src/stores/app/conversationSlice.ts", "reason": "Core conversation state untested — user's primary interaction flow" },
+      { "area": "src-ts/mcp/endpoints/learning.ts", "reason": "Learning endpoint completely untested — self-learning data flow" },
+      { "area": "src-ts/mcp/endpoints/workspace.ts", "reason": "Workspace endpoint untested — cross-cutting context carrier" }
+    ],
+    "P1_high": [
+      { "area": "desktop/src/stores/app/backendSlice.ts", "reason": "Backend connection state untested" },
+      { "area": "desktop/src/stores/app/workspaceSlice.ts", "reason": "Workspace state management untested" },
+      { "area": "src-ts/mcp/endpoints/m10-revision.ts", "reason": "M25 core feature untested" },
+      { "area": "src-ts/mcp/endpoints/m10-style.ts", "reason": "M25 core feature untested" },
+      { "area": "src-ts/mcp/endpoints/m11-worldview.ts", "reason": "Worldview endpoint untested" },
+      { "area": "desktop/src/api/writing.ts", "reason": "Writing API bridge untested — core user workflow" },
+      { "area": "desktop/src/hooks/", "reason": "27% coverage; 27 hooks lack dedicated tests" }
+    ],
+    "P2_medium": [
+      { "area": "E2E test coverage", "reason": "Only 6 E2E tests; business flows not end-to-end validated" },
+      { "area": "Shallow store tests", "reason": "9/20 store tests happy-path only" },
+      { "area": "src-ts/workflow/team/phase-gate-evaluator.ts", "reason": "Gate evaluator untested" },
+      { "area": "desktop/src/api/gateway.ts", "reason": "Gateway API bridge untested" },
+      { "area": "src-ts/narrative/fictional_dream/identification.ts", "reason": "Identification sub-module untested" }
+    ]
+  },
+
+  "test_roadmap": {
+    "phase_1_critical_regression_guards": {
+      "priority": "P0",
+      "effort": "2-3 days",
+      "items": [
+        "Add skillsSlice.test.ts",
+        "Add conversationSlice.test.ts",
+        "Add learning endpoint test",
+        "Add workspace endpoint test"
+      ]
+    },
+    "phase_2_backend_endpoint_coverage": {
+      "priority": "P1",
+      "effort": "3-4 days",
+      "items": [
+        "Add m10-revision endpoint test",
+        "Add m10-style endpoint test",
+        "Add m11-worldview endpoint test",
+        "Add plugins endpoint test",
+        "Add writing API bridge test"
+      ]
+    },
+    "phase_3_frontend_depth": {
+      "priority": "P1-P2",
+      "effort": "3-4 days",
+      "items": [
+        "Add backendSlice/workspaceSlice/loadingSlice tests",
+        "Deepen shallow store tests with error/edge cases",
+        "Add hook tests for top 10 most-used hooks"
+      ]
+    },
+    "phase_4_e2e_and_integration": {
+      "priority": "P2",
+      "effort": "5-7 days",
+      "items": [
+        "Add foreshadow lifecycle E2E",
+        "Add character analysis E2E",
+        "Add quality evaluation E2E",
+        "Add API bridge integration tests",
+        "Evaluate Playwright/Cypress for desktop E2E"
+      ]
+    }
+  },
+
+  "standards_assessment": {
+    "mvp": { "required_lines": 60, "current_estimated": 68, "verdict": "PASS" },
+    "release": { "required_lines": 75, "current_estimated": 68, "verdict": "FAIL", "gap": "7%" },
+    "production": { "required_lines": 80, "current_estimated": 68, "verdict": "FAIL", "gap": "12%" }
+  },
+
+  "residual_risks": [
+    "E2E coverage blank until Phase 4",
+    "Single-model analysis (W001) — may have missed implicit issues",
+    "Shallow test deepening not urgent but should be tracked",
+    "Estimated ~68% line coverage needs vitest --coverage verification"
+  ]
+}

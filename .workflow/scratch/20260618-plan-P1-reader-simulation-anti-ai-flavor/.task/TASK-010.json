@@ -1,0 +1,140 @@
+{
+  "id": "TASK-010",
+  "title": "测试覆盖 >=80% 与回归验证",
+  "description": "M26 Phase 1 success criteria 要求新增功能测试覆盖率 >=80% 且现有测试无回归。汇总所有新增模块（ai-flavor-detector、reader API 层、A/B compare、weight feedback、De-AI rewrite）的测试，运行全仓测试并修复回归。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "新增并完善测试文件：src-ts/tests/reader/ai-flavor-detector.test.ts、src-ts/tests/reader/reader-compare-endpoint.test.ts、src-ts/tests/reader/reader-feedback-endpoint.test.ts、desktop/src/api/reader.test.ts、desktop/src/components/reader/PersonaSelector.additional.test.tsx。运行 desktop 与 src-ts 全仓测试，确保新增功能覆盖率 >=80% 且无回归。",
+  "scope": "src-ts/tests/reader/, desktop/src/api/reader.test.ts, desktop/src/components/reader/*.test.tsx",
+  "focus_paths": [
+    "src-ts/tests/reader/",
+    "desktop/src/api/",
+    "desktop/src/components/reader/"
+  ],
+  "read_first": [
+    "src-ts/reader/ai-flavor-detector.ts",
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "desktop/src/api/writing-craft.test.ts",
+    "src-ts/tests/reader/reader-endpoints.test.ts"
+  ],
+  "depends_on": [
+    "TASK-004",
+    "TASK-005",
+    "TASK-006",
+    "TASK-007",
+    "TASK-008",
+    "TASK-009"
+  ],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "src-ts/tests/reader/ai-flavor-detector.test.ts 存在且通过",
+      "src-ts/tests/reader/reader-compare-endpoint.test.ts 存在且通过",
+      "src-ts/tests/reader/reader-feedback-endpoint.test.ts 存在且通过",
+      "desktop/src/api/reader.test.ts 存在且通过",
+      "新增功能测试覆盖率 >=80%（以覆盖率报告为准）",
+      "现有测试无回归（npm test 在 desktop 和 src-ts 均 exit 0）"
+    ],
+    "verification": "运行 npm run test:coverage 或等价命令；检查覆盖率报告；运行 npm test 确认无回归",
+    "definition_of_done": "新增功能覆盖率 >=80%，现有测试全部通过"
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/reader/ai-flavor-detector.test.ts",
+      "action": "create",
+      "target": "AIFlavorDetector tests",
+      "change": "覆盖规则层检测 >=3 种子类型、confidence/evidence/suggestions 输出"
+    },
+    {
+      "path": "src-ts/tests/reader/reader-compare-endpoint.test.ts",
+      "action": "create",
+      "target": "/reader/compare endpoint tests",
+      "change": "验证 A/B 文本对比返回差异共识"
+    },
+    {
+      "path": "src-ts/tests/reader/reader-feedback-endpoint.test.ts",
+      "action": "create",
+      "target": "/reader/feedback endpoint tests",
+      "change": "验证反馈回写 persona weight"
+    },
+    {
+      "path": "desktop/src/api/reader.test.ts",
+      "action": "create",
+      "target": "reader API layer tests",
+      "change": "复用 writing-craft.test.ts 的 callApi mock 断言模式"
+    },
+    {
+      "path": "desktop/src/components/reader/PersonaSelector.additional.test.tsx",
+      "action": "modify",
+      "target": "PersonaSelector tests",
+      "change": "补充新增 preset 与持久化同步的测试"
+    }
+  ],
+  "implementation": [
+    "创建 ai-flavor-detector.test.ts：对模板化、风格漂移、感官覆盖不足文本分别断言 score 与 indicators",
+    "创建 reader-compare-endpoint.test.ts：使用 makeRequest 调用 /reader/compare，验证返回差异共识",
+    "创建 reader-feedback-endpoint.test.ts：验证 /reader/feedback 接收 helpful/adjustedWeight 并回写",
+    "创建 desktop/src/api/reader.test.ts：mock callApi，断言 analyzeReader/compareReaderVersions/submitReaderFeedback/detectAIFlavor/deAiRewrite 的请求体/响应",
+    "更新 PersonaSelector.additional.test.tsx：验证新增 presets 渲染、自定义画像同步调用 /reader/personas/custom",
+    "运行 desktop 全仓测试并修复回归",
+    "运行 src-ts 全仓测试并修复回归",
+    "生成覆盖率报告，确认新增功能 >=80%"
+  ],
+  "test": {
+    "commands": [
+      "npm test",
+      "npm run test:coverage"
+    ],
+    "unit": [
+      "src-ts/tests/reader/ai-flavor-detector.test.ts",
+      "src-ts/tests/reader/reader-compare-endpoint.test.ts",
+      "src-ts/tests/reader/reader-feedback-endpoint.test.ts",
+      "desktop/src/api/reader.test.ts",
+      "desktop/src/components/reader/PersonaSelector.additional.test.tsx"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "新增功能测试覆盖率 >=80%",
+      "desktop npm test exit 0",
+      "src-ts npm test exit 0"
+    ]
+  },
+  "reference": {
+    "pattern": "writing-craft.test.ts callApi mock 断言模式",
+    "files": [
+      "desktop/src/api/writing-craft.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "集中测试补齐，确保 Phase 1 success criteria 达成",
+    "decision_factors": [
+      "M26 success criteria 明确要求覆盖率 >=80%",
+      "现有测试无回归"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "title": "旧测试因 API 签名变更失败",
+      "severity": "medium",
+      "mitigation": "遵循 api-evolution-test-drift spec，API 签名变更时同步更新相关测试 mock 断言"
+    },
+    {
+      "title": "覆盖率未达 80%",
+      "severity": "medium",
+      "mitigation": "优先补充核心 detector 和 endpoint 的单元测试，再补充 UI 分支测试"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "2h",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": true,
+    "wave": 4,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}

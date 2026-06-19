@@ -1,0 +1,135 @@
+{
+  "id": "TASK-001",
+  "title": "P0 Store slice 回归保护测试 (skillsSlice + conversationSlice)",
+  "description": "为 P0 关键 store slices 补全 companion pattern 回归保护测试：skillsSlice 缺少任何测试文件，conversationSlice 同样缺少测试。需覆盖状态转换、loading 状态、错误处理、边界条件等核心回归场景。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "critical",
+  "effort": "medium",
+  "action": "Create skillsSlice.test.ts, skillsSlice.additional.test.ts, conversationSlice.test.ts, conversationSlice.additional.test.ts under desktop/src/stores/app/ using Zustand createHarness() pattern from projectSlice.additional.test.ts",
+  "status": "completed",
+  "completed_at": "2026-06-16T17:05:00+08:00",
+  "actual_duration": null,
+  "scope": "desktop/src/stores/app/",
+  "focus_paths": [
+    "desktop/src/stores/app/skillsSlice.ts",
+    "desktop/src/stores/app/conversationSlice.ts",
+    "desktop/src/stores/app/shared.ts"
+  ],
+  "read_first": [
+    "desktop/src/stores/app/skillsSlice.ts",
+    "desktop/src/stores/app/conversationSlice.ts",
+    "desktop/src/stores/app/shared.ts",
+    "desktop/src/stores/app/projectSlice.additional.test.ts",
+    "desktop/src/stores/app/projectSlice.branches.additional.test.ts",
+    "desktop/src/stores/app/shared.test.ts",
+    "desktop/vite.config.ts"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "desktop/src/stores/app/skillsSlice.test.ts contains \"describe('skillsSlice'\"",
+      "desktop/src/stores/app/skillsSlice.additional.test.ts contains \"describe('skillsSlice additional coverage'\"",
+      "desktop/src/stores/app/conversationSlice.test.ts contains \"describe('conversationSlice'\"",
+      "desktop/src/stores/app/conversationSlice.additional.test.ts contains \"describe('conversationSlice additional coverage'\"",
+      "cd desktop && npx vitest run src/stores/app/skillsSlice.test.ts --reporter=verbose exits 0",
+      "cd desktop && npx vitest run src/stores/app/conversationSlice.test.ts --reporter=verbose exits 0"
+    ],
+    "verification": "Run vitest for each new test file in desktop/ and confirm all pass with 0 failures",
+    "definition_of_done": "skillsSlice 和 conversationSlice 均有基础测试和 additional companion 测试，覆盖状态转换、错误处理、边界条件，所有测试通过"
+  },
+  "files": [
+    {
+      "path": "desktop/src/stores/app/skillsSlice.test.ts",
+      "action": "create",
+      "target": "skillsSlice基础测试",
+      "change": "Create基础describe block覆盖toggleSkill添加/移除、默认availableSkills、selectedSkills初始为空、refreshAvailableSkills成功路径"
+    },
+    {
+      "path": "desktop/src/stores/app/skillsSlice.additional.test.ts",
+      "action": "create",
+      "target": "skillsSlice additional coverage",
+      "change": "Create companion test覆盖refreshAvailableSkills失败路径（!response.success、空skills、空nextSkills、catch吞错）、toggleSkill边界（空字符串、重复toggle）、selectedSkills过滤逻辑"
+    },
+    {
+      "path": "desktop/src/stores/app/conversationSlice.test.ts",
+      "action": "create",
+      "target": "conversationSlice基础测试",
+      "change": "Create基础describe block覆盖createConversation、selectConversation、addMessage（user+assistant）、deleteMessage、editMessage、getConversationById"
+    },
+    {
+      "path": "desktop/src/stores/app/conversationSlice.additional.test.ts",
+      "action": "create",
+      "target": "conversationSlice additional coverage",
+      "change": "Create companion test覆盖selectConversation对不存在ID的no-op、updateConversationTitle边界（不存在conversation、title未变）、addMessage在null currentConversationId时自动创建、deleteMessage/editMessage在无当前对话时的early return、workspace seed创建和resolve逻辑"
+    }
+  ],
+  "implementation": [
+    "Read skillsSlice.ts to understand toggleSkill (add/remove filter) and refreshAvailableSkills (listSkills API call, guard clauses for !response.success, empty skills, empty nextSkills, try/catch silent swallow)",
+    "Create skillsSlice.test.ts: import createSkillsSlice + type SkillsSlice, define type SetFn, create createHarness() with stub defaults, test: toggleSkill adds skill to selectedSkills, toggleSkill removes existing skill, default availableSkills equals DEFAULT_AVAILABLE_SKILLS, selectedSkills starts empty, refreshAvailableSkills with mocked listSkills success populates availableSkills and filters selectedSkills",
+    "Create skillsSlice.additional.test.ts: describe('skillsSlice additional coverage'), test refreshAvailableSkills with listSkills returning {success: false} (keeps fallback), listSkills returning empty skills array (keeps fallback), listSkills returning skills with non-string id or whitespace-only id (filters out), listSkills throwing (catch swallows, keeps fallback), toggleSkill with empty string, double toggle (add then remove)",
+    "Read conversationSlice.ts + shared.ts to understand createConversation (Date.now ID, workspace seed), addMessage (auto-create when null currentConversationId), selectConversation (no-op on missing), updateConversationTitle (no-op on missing/unchanged), deleteMessage/editMessage (early return when no current conversation)",
+    "Create conversationSlice.test.ts: import createConversationSlice + shared helpers, create harness with mock set/get, test: createConversation creates entry in conversationsById, adds ID to allConversationIds, sets currentConversationId; selectConversation switches active; addMessage adds message to current conversation; deleteMessage removes by messageId; editMessage updates content and timestamp; getConversationById returns correct conversation",
+    "Create conversationSlice.additional.test.ts: describe('conversationSlice additional coverage'), test: selectConversation with non-existent ID (no state change); updateConversationTitle with missing conversationId (no-op); updateConversationTitle with same title (no-op); addMessage when currentConversationId is null (auto-creates then adds); deleteMessage with no currentConversationId (early return, no crash); editMessage with no currentConversationId (early return); workspace seed from createConversationWorkspaceSeed"
+  ],
+  "test": {
+    "commands": [
+      "cd desktop && npx vitest run src/stores/app/skillsSlice.test.ts src/stores/app/skillsSlice.additional.test.ts --reporter=verbose",
+      "cd desktop && npx vitest run src/stores/app/conversationSlice.test.ts src/stores/app/conversationSlice.additional.test.ts --reporter=verbose"
+    ],
+    "unit": [
+      "desktop/src/stores/app/skillsSlice.test.ts",
+      "desktop/src/stores/app/skillsSlice.additional.test.ts",
+      "desktop/src/stores/app/conversationSlice.test.ts",
+      "desktop/src/stores/app/conversationSlice.additional.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "all skillsSlice tests pass",
+      "all conversationSlice tests pass",
+      "no TypeScript compilation errors"
+    ]
+  },
+  "reference": {
+    "pattern": "Zustand slice companion test pattern (createHarness with SetFn type alias, patchState helper)",
+    "files": [
+      "desktop/src/stores/app/projectSlice.additional.test.ts",
+      "desktop/src/stores/app/projectSlice.branches.additional.test.ts",
+      "desktop/src/stores/app/shared.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Follow existing companion test pattern (projectSlice.additional.test.ts) exactly — createHarness with mutable set/get, patchState helper — to maintain consistency and avoid test structure rewrites per Locked constraint #1",
+    "decision_factors": [
+      "skillsSlice has zero test coverage — P0 regression risk",
+      "conversationSlice has zero test coverage — P0 regression risk",
+      "Both are pure synchronous + async slices following same Zustand AppSlice pattern",
+      "Shared helpers (shared.ts) already have partial test coverage"
+    ],
+    "tradeoffs": "Creating 4 test files per slice pair (base + additional) increases file count but follows established convention and makes coverage gaps visible"
+  },
+  "risks": [
+    "refreshAvailableSkills depends on listSkills from @/api/client — need vi.mock('@/api/client') for async tests",
+    "conversationSlice depends on shared.ts helpers (createConversationRecord, createConversationWorkspaceSeed, etc.) — may need to mock or import directly",
+    "Date.now().toString() in createConversation produces non-deterministic IDs — tests should verify structure, not exact ID values"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["skills management", "conversation management"],
+    "affected_components": ["skillsSlice", "conversationSlice", "shared conversation helpers"],
+    "affected_requirements": ["R-001 P0 regression guard tests"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45-60min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

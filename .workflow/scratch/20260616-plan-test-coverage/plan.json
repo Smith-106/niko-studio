@@ -1,0 +1,90 @@
+{
+  "summary": "全仓测试覆盖率补救计划 — P0 回归保护 + P1 endpoint/API 覆盖 + P2 深度+基线",
+  "approach": "按风险优先级分 3 wave 补测试：Wave 1 补 P0 回归保护（store slices + MCP endpoints），Wave 2 补 P1 backend endpoints + frontend API/stores，Wave 3 补 P1-P2 浅层深化 + hooks + 覆盖率基线。遵循 companion pattern 扩展现有测试，使用 vitest 3.2.4 + @vitest/coverage-v8。",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+  "task_count": 6,
+  "complexity": "large",
+  "estimated_time": "4-6 hours",
+  "recommended_execution": "Agent",
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002"]
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-003", "TASK-004"]
+    },
+    {
+      "wave": 3,
+      "tasks": ["TASK-005", "TASK-006"]
+    }
+  ],
+  "data_flow": {
+    "diagram": "Wave1[P0 regression guards] → Wave2[P1 backend+frontend coverage] → Wave3[P1-P2 depth+baseline]",
+    "stages": [
+      "P0 regression guard tests for critical slices and endpoints",
+      "P1 backend endpoint tests and frontend API/store coverage",
+      "P1-P2 shallow test deepening, hooks coverage, and coverage baseline measurement"
+    ]
+  },
+  "design_decisions": [
+    "Companion pattern for all new tests: .additional.test.ts and .branches.additional.test.ts (per Locked constraint #1)",
+    "P0 priority fixed: skillsSlice + conversationSlice + learning endpoint + workspace endpoint first (per Locked constraint #2)",
+    "vitest 3.2.4 + @vitest/coverage-v8 framework unchanged (per Locked constraint #3)",
+    "Tests verify meaningful scenarios, not coverage numbers (per Locked constraint #4)",
+    "E2E tests (R-004) deferred to separate plan — out of scope",
+    "Zustand slice test harness follows createHarness()/getLiveStore() pattern from projectSlice.additional.test.ts",
+    "MCP endpoint tests follow makeRequest() + direct import pattern from memory-endpoints.test.ts",
+    "Frontend API bridge tests follow vi.hoisted + vi.mock('./core') pattern from knowledge.test.ts",
+    "Wave ordering reflects genuine dependencies: Wave 2 coverage baseline reasoning benefits from Wave 1 test files existing"
+  ],
+  "shared_context": {
+    "patterns": [
+      "companion test pattern (.additional.test.ts, .branches.additional.test.ts)",
+      "Zustand slice harness pattern (createStore/getLiveStore/createHarness with SetFn type alias)",
+      "MCP endpoint test pattern (makeRequest helper + direct dynamic import)",
+      "callApi bridge test pattern (vi.hoisted mock + vi.mock('./core') + beforeEach reset)"
+    ],
+    "conventions": [
+      "vitest describe/it blocks with descriptive names",
+      "companion file naming: sliceName.additional.test.ts, sliceName.branches.additional.test.ts",
+      "beforeEach: vi.clearAllMocks() or mockReset() per test file",
+      "Type alias: type SetFn = Parameters<typeof createXxxSlice>[0]",
+      "MCP tests: makeRequest(body) helper returning HttpRequest shape"
+    ],
+    "dependencies": [
+      "vitest@3.2.4",
+      "@vitest/coverage-v8",
+      "@reduxjs/toolkit",
+      "zustand"
+    ]
+  },
+  "confidence": {
+    "overall": 0.85,
+    "dimensions": {
+      "requirements_coverage": 0.95,
+      "task_quality": 0.80,
+      "dependency_correctness": 0.95,
+      "estimation_accuracy": 0.90,
+      "collision_safety": 1.0
+    },
+    "pressure_pass": {
+      "task": "TASK-003",
+      "reason": "Highest complexity — M25 endpoint tests with service mocking (RevisionServiceImpl, WorldviewExtractor)",
+      "result": "PASS — read_first covers source + protocol + extractor; convergence has 9 grep-verifiable criteria; implementation steps specify mock patterns and exact endpoint handler names"
+    },
+    "residual_risks": [
+      "TASK-005 hook discovery may reveal different files than expected",
+      "TASK-006 coverage-v8 may OOM on large codebase"
+    ]
+  },
+  "_metadata": {
+    "timestamp": "2026-06-16T14:00:00+08:00",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "test-coverage",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

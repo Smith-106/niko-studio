@@ -1,0 +1,151 @@
+{
+  "id": "TASK-005",
+  "title": "P1-P2 Frontend 测试深化 (浅层 store 测试加深 + hooks 覆盖)",
+  "description": "为 P1-P2 frontend 层深化现有浅层测试：(1) 识别并加深 top 5 浅层 store 测试（仅覆盖 happy path 的测试），补充错误路径和边界条件；(2) 为 top 10 最常用 hooks 补全测试。遵循 companion pattern 扩展而非重写。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "high",
+  "action": "Create .additional.test.ts and/or .branches.additional.test.ts companion files for top 5 shallow store tests; create hook test files for top 10 most-used hooks under desktop/src/stores/app/ or desktop/src/hooks/",
+  "status": "completed",
+  "completed_at": "2026-06-16T19:10:00+08:00",
+  "actual_duration": null,
+  "scope": "desktop/src/stores/app/, desktop/src/hooks/",
+  "focus_paths": [
+    "desktop/src/stores/app/",
+    "desktop/src/hooks/",
+    "desktop/src/stores/"
+  ],
+  "read_first": [
+    "desktop/src/stores/app/intelligenceSlice.test.ts",
+    "desktop/src/stores/app/workflowSlice.test.ts",
+    "desktop/src/stores/app/templateSlice.test.ts",
+    "desktop/src/stores/app/templateSlice.additional.test.ts",
+    "desktop/src/stores/app/projectSlice.test.ts",
+    "desktop/src/stores/app/shared.test.ts",
+    "desktop/src/stores/app/intelligenceSlice.ts",
+    "desktop/src/stores/app/workflowSlice.ts",
+    "desktop/src/stores/app/templateSlice.ts",
+    "desktop/vite.config.ts"
+  ],
+  "depends_on": ["TASK-001"],
+  "wave": 3,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "At least 3 new .additional.test.ts or .branches.additional.test.ts files exist under desktop/src/stores/app/",
+      "Each new companion test file contains \"describe('\" with 'additional' or 'branch' in describe name",
+      "At least 3 new hook test files exist under desktop/src/",
+      "cd desktop && npx vitest run src/stores/app/ --reporter=verbose exits 0",
+      "cd desktop && npx vitest run src/hooks/ --reporter=verbose 2>&1 does not contain 'SKIP' or 'TODO'"
+    ],
+    "verification": "Run vitest for all store tests in desktop/ and confirm all pass. Grep for new companion test files and hook test files to verify creation.",
+    "definition_of_done": "Top 5 浅层 store 测试已通过 companion 文件加深（错误路径+边界条件），top 10 常用 hooks 有基础测试覆盖，所有测试通过"
+  },
+  "files": [
+    {
+      "path": "desktop/src/stores/app/intelligenceSlice.branches.additional.test.ts",
+      "action": "create",
+      "target": "intelligenceSlice branch coverage",
+      "change": "Create companion test covering: error paths in async intelligence actions, edge cases for intelligence state transitions, boundary conditions for empty/null intelligence data"
+    },
+    {
+      "path": "desktop/src/stores/app/workflowSlice.branches.additional.test.ts",
+      "action": "create",
+      "target": "workflowSlice branch coverage",
+      "change": "Create companion test covering: workflow execution error paths, edge cases for workflow state (pending/running/completed/failed), concurrent workflow scenarios"
+    },
+    {
+      "path": "desktop/src/stores/app/templateSlice.branches.additional.test.ts",
+      "action": "create",
+      "target": "templateSlice branch coverage",
+      "change": "Create companion test covering: template loading error paths, empty template list handling, duplicate template scenarios, invalid template data"
+    },
+    {
+      "path": "desktop/src/hooks/useConversationHooks.test.ts",
+      "action": "create",
+      "target": "conversation hooks测试",
+      "change": "Create test for conversation-related hooks: hook rendering, state selection, action dispatch verification"
+    },
+    {
+      "path": "desktop/src/hooks/useWorkspaceHooks.test.ts",
+      "action": "create",
+      "target": "workspace hooks测试",
+      "change": "Create test for workspace-related hooks: workspace context access, workspace mutation hooks"
+    },
+    {
+      "path": "desktop/src/hooks/useLoadingHooks.test.ts",
+      "action": "create",
+      "target": "loading hooks测试",
+      "change": "Create test for loading state hooks: loading state subscription, start/finish lifecycle"
+    }
+  ],
+  "implementation": [
+    "Read existing store test files to identify top 5 shallow tests: intelligenceSlice.test.ts, workflowSlice.test.ts, templateSlice.test.ts, projectSlice.test.ts, shared.test.ts — assess which have error/edge case gaps",
+    "For each shallow store test: read the source slice file, identify uncovered branches (error paths, null/undefined inputs, concurrent mutations), create .branches.additional.test.ts companion with targeted coverage",
+    "Identify top 10 most-used hooks by reading desktop/src/hooks/ directory and checking import frequency across components",
+    "For hook tests: use @testing-library/react-hooks or vitest's renderHook pattern, test hook state selection, action dispatch, and cleanup behavior",
+    "Verify all new test files pass with vitest run"
+  ],
+  "test": {
+    "commands": [
+      "cd desktop && npx vitest run src/stores/app/ --reporter=verbose",
+      "cd desktop && npx vitest run src/hooks/ --reporter=verbose"
+    ],
+    "unit": [
+      "desktop/src/stores/app/intelligenceSlice.branches.additional.test.ts",
+      "desktop/src/stores/app/workflowSlice.branches.additional.test.ts",
+      "desktop/src/stores/app/templateSlice.branches.additional.test.ts",
+      "desktop/src/hooks/useConversationHooks.test.ts",
+      "desktop/src/hooks/useWorkspaceHooks.test.ts",
+      "desktop/src/hooks/useLoadingHooks.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "all store companion tests pass",
+      "all hook tests pass",
+      "no TypeScript compilation errors",
+      "no skipped or todo tests"
+    ]
+  },
+  "reference": {
+    "pattern": "Companion test pattern (.branches.additional.test.ts) + React hook testing with renderHook",
+    "files": [
+      "desktop/src/stores/app/projectSlice.branches.additional.test.ts",
+      "desktop/src/stores/app/templateSlice.additional.test.ts",
+      "desktop/src/stores/app/workflowSlice.additional.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Deepen existing shallow tests via companion pattern (per Locked constraint #1) rather than rewriting test structure. Hook tests are grouped by domain to minimize file count.",
+    "decision_factors": [
+      "Existing store tests cover happy paths but miss error paths and edge cases",
+      "Hook tests are a known coverage gap (top 10 most-used hooks have zero direct test coverage)",
+      "Companion pattern preserves existing test structure while adding depth",
+      "Free constraint: hook test priority order is at implementer discretion"
+    ],
+    "tradeoffs": "Deepening 5 shallow tests and adding 10 hook tests is substantial work — grouped into one task to reduce agent spawn overhead, but may need 50-60 minutes of focused implementation"
+  },
+  "risks": [
+    "Hook tests may require React testing library setup — check if @testing-library/react-hooks or similar is installed",
+    "Some hooks may depend on complex Zustand store state — harness setup may be non-trivial",
+    "Identifying 'top 5 shallow' and 'top 10 most-used' requires codebase analysis that may reveal different files than expected"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["store depth coverage", "React hooks testing"],
+    "affected_components": ["intelligenceSlice", "workflowSlice", "templateSlice", "conversation hooks", "workspace hooks", "loading hooks"],
+    "affected_requirements": ["R-003 P1-P2 frontend depth"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "50-60min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

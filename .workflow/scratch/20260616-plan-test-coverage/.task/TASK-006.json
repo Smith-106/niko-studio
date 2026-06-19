@@ -1,0 +1,106 @@
+{
+  "id": "TASK-006",
+  "title": "覆盖率基线验证 (vitest --coverage frontend + backend)",
+  "description": "运行 vitest --coverage 获取 frontend (desktop/) 和 backend (src-ts/) 的实际行/函数/分支覆盖率数据，建立基线。当前覆盖率仅为估算值 (~68%)，需要精确数据驱动后续覆盖率改进优先级决策。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "low",
+  "action": "Run `npx vitest run --coverage` in both desktop/ and src-ts/ directories, capture line/function/branch/statement coverage numbers, write baseline report to .workflow/scratch/20260616-plan-test-coverage/coverage-baseline.json",
+  "status": "completed",
+  "completed_at": "2026-06-16T20:35:00+08:00",
+  "actual_duration": null,
+  "scope": "desktop/, src-ts/",
+  "focus_paths": [
+    "desktop/",
+    "src-ts/"
+  ],
+  "read_first": [
+    "desktop/vite.config.ts",
+    "src-ts/vitest.config.ts",
+    ".workflow/scratch/20260616-plan-test-coverage/plan.json"
+  ],
+  "depends_on": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"],
+  "wave": 3,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "File .workflow/scratch/20260616-plan-test-coverage/coverage-baseline.json exists",
+      "coverage-baseline.json contains key \"frontend\" with numeric line, function, branch values",
+      "coverage-baseline.json contains key \"backend\" with numeric line, function, branch values",
+      "cd desktop && npx vitest run --coverage exits 0",
+      "cd src-ts && npx vitest run --coverage exits 0"
+    ],
+    "verification": "Run vitest --coverage in both directories, verify JSON baseline file exists with complete numeric coverage data for both frontend and backend",
+    "definition_of_done": "Frontend 和 backend 均有精确覆盖率基线数据（line/function/branch/statement），数据已持久化到 coverage-baseline.json"
+  },
+  "files": [
+    {
+      "path": ".workflow/scratch/20260616-plan-test-coverage/coverage-baseline.json",
+      "action": "create",
+      "target": "coverage baseline数据文件",
+      "change": "Create JSON file with frontend and backend coverage metrics extracted from vitest --coverage output"
+    }
+  ],
+  "implementation": [
+    "Ensure @vitest/coverage-v8 is installed in both desktop/ and src-ts/ (check package.json)",
+    "Run `cd desktop && npx vitest run --coverage 2>&1` and capture output — extract coverage summary numbers (lines, functions, branches, statements)",
+    "Run `cd src-ts && npx vitest run --coverage 2>&1` and capture output — extract coverage summary numbers",
+    "Parse coverage output to extract numeric values per directory",
+    "Write coverage-baseline.json with structure: { \"timestamp\": \"2026-06-16T...\", \"frontend\": { \"lines\": N, \"functions\": N, \"branches\": N, \"statements\": N }, \"backend\": { \"lines\": N, \"functions\": N, \"branches\": N, \"statements\": N } }",
+    "If coverage run fails due to missing @vitest/coverage-v8, install it and re-run",
+    "Compare baseline against configured thresholds (desktop: lines 75, functions 70, branches 70; src-ts: lines 80, branches 70, functions 80) and note gaps"
+  ],
+  "test": {
+    "commands": [
+      "cd desktop && npx vitest run --coverage",
+      "cd src-ts && npx vitest run --coverage"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": [
+      "coverage-baseline.json has valid numeric coverage data",
+      "both vitest --coverage runs exit 0",
+      "coverage numbers differ from estimated 68% (verify with actual data)"
+    ]
+  },
+  "reference": {
+    "pattern": "vitest coverage-v8 provider with JSON/text reporters",
+    "files": [
+      "desktop/vite.config.ts",
+      "src-ts/vitest.config.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Run actual coverage measurement as the final task after all tests are added, so baseline reflects post-remediation coverage. This drives future prioritization.",
+    "decision_factors": [
+      "Current ~68% coverage is estimated, not measured — need exact numbers",
+      "Coverage thresholds are configured (desktop: 75/70/70/75, src-ts: 80/70/80/80) but may not be met",
+      "Post-remediation baseline enables gap analysis for future iterations",
+      "Coverage data enables evidence-based prioritization of R-004 (E2E) scope"
+    ],
+    "tradeoffs": "Running coverage as a separate task adds overhead, but ensures baseline is measured after Wave 1+2 tests are in place — measuring before remediation would give misleading numbers"
+  },
+  "risks": [
+    "vitest --coverage may time out or OOM on large codebase — may need --pool=forks or increased timeout",
+    "Coverage output format may vary between vitest versions — need to parse text summary carefully",
+    "Some test files may fail under coverage mode (different timing/async behavior) — fix failures before capturing baseline"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["coverage measurement", "quality metrics baseline"],
+    "affected_components": ["entire frontend test suite", "entire backend test suite"],
+    "affected_requirements": ["R-005 coverage baseline"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "15-25min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

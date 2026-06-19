@@ -1,0 +1,72 @@
+{
+  "session_id": "maestro-20260616-131128",
+  "created_at": "2026-06-16T13:11:28+08:00",
+  "source": "maestro",
+  "intent": "检查当前仓库的全仓测试覆盖率，分别统计前端/后端/单元/接口/集成/E2E/核心业务模块覆盖率，识别未覆盖文件和高风险模块，评估浅层测试和缺失业务流程验证，输出总体评分/风险等级/P0-P2缺口/补测试路线图",
+  "task_type": "analyze",
+  "chain_name": "analyze",
+  "ralph_protocol_version": "1",
+  "active_step_index": null,
+  "phase": null,
+  "phase_is_new": false,
+  "milestone": null,
+  "scope_verdict": null,
+  "analyze_macro_id": null,
+  "blueprint_id": null,
+  "auto_mode": false,
+  "cli_tool": "claude",
+  "context": {
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": ".workflow/scratch/20260616-analyze-test-coverage",
+    "brainstorm_dir": null,
+    "blueprint_dir": null,
+    "issue_id": null,
+    "milestone_num": null,
+    "prior_session_ref": null
+  },
+  "classification_rationale": "意图=检查全仓测试覆盖率，action=check/inspect，object=test coverage。匹配 analyze 链（maestro-analyze）— 结构化多维度调查。排除 test（用户意图是调查覆盖率状态，不是运行测试）；排除 test_gen（不是生成测试）；排除 quality-loop（过于重量级，用户明确是检查而非修复循环）；排除 quick（8 维度 + 风险评估 + 路线图 = deep analysis）。confidence=high，clarity=2/3。",
+  "steps": [
+    {
+      "index": 0,
+      "skill": "maestro-analyze",
+      "args": "全仓测试覆盖率分析 --dimensions coverage,unit,integration,e2e,business,risk --level deep",
+      "stage": "analyze",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-analyze.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": ".workflow/scratch/20260616-analyze-test-coverage",
+      "completed_at": "2026-06-16T05:54:46.598Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\state.json",
+        "C:\\Users\\niko\\.maestro\\workflows\\issue-gaps-analyze.md"
+      ],
+      "load": {
+        "loaded_at": "2026-06-16T05:13:01.932Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\analyze.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\state.json",
+          "C:\\Users\\niko\\.maestro\\workflows\\issue-gaps-analyze.md"
+        ],
+        "resolve_version": "1"
+      },
+      "concerns": "maestro delegate blocked by data exfiltration security rule (W001) - no external CLI cross-validation; estimated 68% line coverage needs vitest --coverage verification; E2E coverage blank until Phase 4"
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "running",
+  "boundary_contract": {},
+  "execution_criteria": [],
+  "task_decomposition": [],
+  "task_decomposition_all_done": false
+}

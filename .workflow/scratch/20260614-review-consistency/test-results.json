@@ -1,0 +1,44 @@
+{
+  "phase": "quality-loop",
+  "source_route": "review_finding",
+  "completed_at": "2026-06-14T18:00:00+08:00",
+  "convergence": {
+    "status": "single_pass",
+    "iterations": 1,
+    "final_pass_rate": 100.0,
+    "threshold": 95
+  },
+  "infrastructure": {
+    "framework": "vitest",
+    "run_command": "npx vitest run desktop/src/api/__contract__/ --reporter=verbose"
+  },
+  "layers": {
+    "L1": { "total": 20, "passed": 20, "failed": 0, "blocked": 0, "pass_rate": 100.0 }
+  },
+  "scenarios": [
+    { "id": "AT-001", "ref": "CF-001", "name": "plantForeshadow double-envelope", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-002", "ref": "CF-001", "name": "analyzeCharacterDepth double-envelope", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-003", "ref": "CF-001", "name": "getCharacterProfile double-envelope", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-004", "ref": "CF-001", "name": "getCharacterRelationships double-envelope", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-005", "ref": "CF-002", "name": "getForeshadowStats double-envelope + workspace ignored", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-006", "ref": "CF-003", "name": "writing/quality decision field missing", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-007", "ref": "CF-004", "name": "analysis bare array vs envelope", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-008", "ref": "CF-005", "name": "getStyleProfile null vs Record", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-009", "ref": "CF-006", "name": "skills/list wrapper mismatch", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-010", "ref": "CF-007", "name": "plugins/execute PluginResult type mismatch", "status": "passed", "classification": "code_defect" },
+    { "id": "AT-011", "ref": "CF-008", "name": "plugins/register {id,status} vs {id,name}", "status": "passed", "classification": "code_defect" }
+  ],
+  "failures": [],
+  "bugs_confirmed": 8,
+  "test_defects_fixed": 0,
+  "summary": {
+    "source_route": "review_finding",
+    "total_scenarios": 20,
+    "total_passed": 20,
+    "total_failed": 0,
+    "total_blocked": 0,
+    "bugs_discovered": 8,
+    "bugs_confirmed": 8,
+    "note": "All 8 critical findings from review.json confirmed via contract tests. Tests pass by design - they verify the mismatches exist (not that they're fixed)."
+  }
+}

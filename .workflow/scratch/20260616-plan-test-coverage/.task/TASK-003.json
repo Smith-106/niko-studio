@@ -1,0 +1,134 @@
+{
+  "id": "TASK-003",
+  "title": "P1 M25 backend endpoint 测试 (m10-revision + m10-style + m11-worldview)",
+  "description": "为 P1 M25 系列 MCP endpoints 补全测试：m10-revision.ts 含 reviseMultiPassEndpoint（调用 RevisionServiceImpl），m10-style.ts 含 styleExtractEndpoint/styleProfileEndpoint/styleApplyEndpoint（含 extractStyle 分析函数），m11-worldview.ts 含 worldviewExtractEndpoint/worldviewGetEndpoint（调用 WorldviewExtractor）。当前零测试覆盖。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create m10-revision-endpoint.test.ts, m10-style-endpoint.test.ts, m11-worldview-endpoint.test.ts under src-ts/tests/mcp/ using makeRequest() helper + vi.mock pattern from memory-endpoints.test.ts",
+  "status": "completed",
+  "completed_at": "2026-06-16T17:35:00+08:00",
+  "actual_duration": null,
+  "scope": "src-ts/mcp/endpoints/",
+  "focus_paths": [
+    "src-ts/mcp/endpoints/m10-revision.ts",
+    "src-ts/mcp/endpoints/m10-style.ts",
+    "src-ts/mcp/endpoints/m11-worldview.ts"
+  ],
+  "read_first": [
+    "src-ts/mcp/endpoints/m10-revision.ts",
+    "src-ts/mcp/endpoints/m10-style.ts",
+    "src-ts/mcp/endpoints/m11-worldview.ts",
+    "src-ts/mcp/http-types.ts",
+    "src-ts/tests/mcp/memory-endpoints.test.ts",
+    "src-ts/protocols/revision.ts",
+    "src-ts/narrative/worldview-extractor.ts",
+    "src-ts/vitest.config.ts"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src-ts/tests/mcp/m10-revision-endpoint.test.ts contains \"describe('m10-revision endpoint'\"",
+      "src-ts/tests/mcp/m10-revision-endpoint.test.ts contains \"reviseMultiPassEndpoint\"",
+      "src-ts/tests/mcp/m10-style-endpoint.test.ts contains \"describe('m10-style endpoint'\"",
+      "src-ts/tests/mcp/m10-style-endpoint.test.ts contains \"styleExtractEndpoint\"",
+      "src-ts/tests/mcp/m10-style-endpoint.test.ts contains \"styleApplyEndpoint\"",
+      "src-ts/tests/mcp/m11-worldview-endpoint.test.ts contains \"describe('m11-worldview endpoint'\"",
+      "src-ts/tests/mcp/m11-worldview-endpoint.test.ts contains \"worldviewExtractEndpoint\"",
+      "cd src-ts && npx vitest run tests/mcp/m10-revision-endpoint.test.ts --reporter=verbose exits 0",
+      "cd src-ts && npx vitest run tests/mcp/m10-style-endpoint.test.ts --reporter=verbose exits 0",
+      "cd src-ts && npx vitest run tests/mcp/m11-worldview-endpoint.test.ts --reporter=verbose exits 0"
+    ],
+    "verification": "Run vitest for each new test file in src-ts/ and confirm all pass with 0 failures",
+    "definition_of_done": "m10-revision、m10-style、m11-worldview 三个 M25 endpoint 模块均有回归测试，覆盖请求验证、服务调用、错误路径，所有测试通过"
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/mcp/m10-revision-endpoint.test.ts",
+      "action": "create",
+      "target": "m10-revision endpoint测试",
+      "change": "Create test suite: reviseMultiPassEndpoint with empty text → 400, valid text with mocked RevisionServiceImpl.revise → 200 (verify completed/iterations/finalScore/reason mapping), RevisionServiceImpl.revise throws → 500 error response, default target_score=8.0 and max_iterations=5"
+    },
+    {
+      "path": "src-ts/tests/mcp/m10-style-endpoint.test.ts",
+      "action": "create",
+      "target": "m10-style endpoint测试",
+      "change": "Create test suite: styleExtractEndpoint with empty text → 400, valid English text → 200 with profile (avgSentenceLength, vocabRichness, dialogueRatio, tensePreference, dominantPOV), valid Chinese text → 200 with CJK word count; styleProfileEndpoint with missing projectId → 400, valid projectId → 200; styleApplyEndpoint with empty text → 400, valid text + style_profile → 200 with context guidance string"
+    },
+    {
+      "path": "src-ts/tests/mcp/m11-worldview-endpoint.test.ts",
+      "action": "create",
+      "target": "m11-worldview endpoint测试",
+      "change": "Create test suite: worldviewExtractEndpoint with empty chapters → 400, valid chapters with mocked WorldviewExtractor.quickExtract → 200 (settings + count), WorldviewExtractor.quickExtract throws → 500 error; worldviewGetEndpoint with missing projectId → 400, valid projectId → 200 with settings array"
+    }
+  ],
+  "implementation": [
+    "Read m10-revision.ts: reviseMultiPassEndpoint uses lazy RevisionServiceImpl singleton, calls service.revise(text, options, chapterId), maps RevisionCycleResult to response shape (completed, revisedContent, iterations, initialScore, finalScore, finalDecision, learningInsights, comparison, reason), catch → 500",
+    "Create m10-revision-endpoint.test.ts: vi.mock('../../services/revision-service.js') with mock revolve function, makeRequest helper, test empty text → 400, test valid text with mocked revise returning APPROVED → verify completed=true and reason='quality_threshold_met', test HUMAN_REVIEW → completed=true reason='human_review_required', test max_iterations_reached → completed=false, test service.revise throws → 500",
+    "Read m10-style.ts: styleExtractEndpoint validates text, calls extractStyle() (pure function computing avgSentenceLength, vocabRichness, dialogueRatio, tensePreference, avgParagraphLength, sentenceLengthDistribution, dominantPOV, sampleHash); styleProfileEndpoint reads projectId from params; styleApplyEndpoint validates text + builds guidance string from style_profile",
+    "Create m10-style-endpoint.test.ts: makeRequest helper, test styleExtractEndpoint empty text → 400, test with English prose → 200 with profile fields (verify avgSentenceLength is number, vocabRichness 0-1, tensePreference in ['past','present','mixed'], dominantPOV in ['first','third','mixed']), test with Chinese text → verify CJK character counting works; test styleProfileEndpoint missing projectId → 400; test styleApplyEndpoint empty text → 400, valid → 200 with context string containing style parameters",
+    "Read m11-worldview.ts: worldviewExtractEndpoint validates chapters array, calls extractor.quickExtract(chapters), returns settings+count; worldviewGetEndpoint validates projectId from params",
+    "Create m11-worldview-endpoint.test.ts: vi.mock('../../narrative/worldview-extractor.js'), makeRequest helper, test empty chapters → 400, test valid chapters → 200, test WorldviewExtractor throws → 500; test worldviewGetEndpoint missing projectId → 400, valid → 200"
+  ],
+  "test": {
+    "commands": [
+      "cd src-ts && npx vitest run tests/mcp/m10-revision-endpoint.test.ts --reporter=verbose",
+      "cd src-ts && npx vitest run tests/mcp/m10-style-endpoint.test.ts --reporter=verbose",
+      "cd src-ts && npx vitest run tests/mcp/m11-worldview-endpoint.test.ts --reporter=verbose"
+    ],
+    "unit": [
+      "src-ts/tests/mcp/m10-revision-endpoint.test.ts",
+      "src-ts/tests/mcp/m10-style-endpoint.test.ts",
+      "src-ts/tests/mcp/m11-worldview-endpoint.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "all m10-revision endpoint tests pass",
+      "all m10-style endpoint tests pass",
+      "all m11-worldview endpoint tests pass",
+      "no TypeScript compilation errors"
+    ]
+  },
+  "reference": {
+    "pattern": "MCP endpoint test pattern with service mocking (makeRequest + vi.mock for service dependencies)",
+    "files": [
+      "src-ts/tests/mcp/memory-endpoints.test.ts",
+      "src-ts/mcp/http-types.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Group all 3 M25 endpoint modules into one task because they share the same test pattern (makeRequest + service mock) and represent a coherent M25 subsystem scope",
+    "decision_factors": [
+      "All 3 modules are M25 MCP endpoints with zero test coverage",
+      "m10-revision needs RevisionServiceImpl mock, m11-worldview needs WorldviewExtractor mock",
+      "m10-style is pure computation (no service mock needed) — simpler",
+      "Grouping reduces agent spawn overhead (one task vs three)"
+    ],
+    "tradeoffs": "Single task covers 3 modules in 3 test files — each file is independent so parallel test execution is possible, but one agent writes all 3"
+  },
+  "risks": [
+    "m10-revision uses lazy singleton (let revisionService: IRevisionService | null = null) — vi.mock + vi.resetModules needed to reset between tests",
+    "WorldviewExtractor is module-level const (const extractor = new WorldviewExtractor()) — need vi.mock to replace",
+    "m10-style extractStyle is a module-level pure function — may need to test it directly for branch coverage or test via endpoint only"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["multi-pass revision (M10)", "style extraction/analysis (M10)", "worldview extraction (M11)"],
+    "affected_components": ["m10-revision endpoint", "m10-style endpoint", "m11-worldview endpoint", "RevisionServiceImpl", "WorldviewExtractor"],
+    "affected_requirements": ["R-002 P1 backend endpoint coverage"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45-60min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

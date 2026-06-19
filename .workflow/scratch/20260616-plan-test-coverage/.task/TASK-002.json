@@ -1,0 +1,125 @@
+{
+  "id": "TASK-002",
+  "title": "P0 MCP endpoint 回归保护测试 (learning + workspace)",
+  "description": "为 P0 关键 MCP endpoints 补全回归保护测试：learning.ts 含 6 个 endpoint handler（import/style-feedback/style-drift/rules/reading-session/reading-extract/status），workspace.ts 含 workspaceContextEndpoint。当前零测试覆盖。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "critical",
+  "effort": "medium",
+  "action": "Create learning-endpoints.test.ts and workspace-endpoints.test.ts under src-ts/tests/mcp/ using makeRequest() helper + direct import pattern from memory-endpoints.test.ts",
+  "status": "completed",
+  "completed_at": "2026-06-16T17:00:00+08:00",
+  "actual_duration": null,
+  "scope": "src-ts/mcp/endpoints/",
+  "focus_paths": [
+    "src-ts/mcp/endpoints/learning.ts",
+    "src-ts/mcp/endpoints/workspace.ts"
+  ],
+  "read_first": [
+    "src-ts/mcp/endpoints/learning.ts",
+    "src-ts/mcp/endpoints/workspace.ts",
+    "src-ts/mcp/http-types.ts",
+    "src-ts/tests/mcp/memory-endpoints.test.ts",
+    "src-ts/tests/mcp/chat-endpoints.test.ts",
+    "src-ts/vitest.config.ts"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src-ts/tests/mcp/learning-endpoints.test.ts contains \"describe('learning endpoints'\"",
+      "src-ts/tests/mcp/learning-endpoints.test.ts contains \"learningImportEndpoint\"",
+      "src-ts/tests/mcp/learning-endpoints.test.ts contains \"learningStyleFeedbackEndpoint\"",
+      "src-ts/tests/mcp/learning-endpoints.test.ts contains \"learningReadingSessionEndpoint\"",
+      "src-ts/tests/mcp/workspace-endpoints.test.ts contains \"describe('workspace endpoints'\"",
+      "src-ts/tests/mcp/workspace-endpoints.test.ts contains \"workspaceContextEndpoint\"",
+      "cd src-ts && npx vitest run tests/mcp/learning-endpoints.test.ts --reporter=verbose exits 0",
+      "cd src-ts && npx vitest run tests/mcp/workspace-endpoints.test.ts --reporter=verbose exits 0"
+    ],
+    "verification": "Run vitest for each new test file in src-ts/ and confirm all pass with 0 failures",
+    "definition_of_done": "learning 和 workspace MCP endpoint 均有回归测试，覆盖请求解析、scope 解析、错误返回（400）、边界条件，所有测试通过"
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/mcp/learning-endpoints.test.ts",
+      "action": "create",
+      "target": "learning endpoints回归测试",
+      "change": "Create makeRequest helper + test suite covering: learningImportEndpoint (empty content → 400, valid content → 200, default sourceType/sourceName), learningStyleFeedbackEndpoint (missing dimension → 400, invalid action → 400, valid accept/reject/modify), learningStyleDriftEndpoint (empty dimensions → 400, valid dimensions → 200), learningRulesEndpoint (returns 200 with rules array), learningReadingSessionEndpoint (missing bookId → 400, totalChapters<=0 → 400, valid session), learningReadingExtractEndpoint (empty content → 400, valid content → 200), learningStatusEndpoint (returns capabilities array)"
+    },
+    {
+      "path": "src-ts/tests/mcp/workspace-endpoints.test.ts",
+      "action": "create",
+      "target": "workspace endpoint回归测试",
+      "change": "Create makeRequest helper + test suite covering: workspaceContextEndpoint with empty body (normalizes to default), with valid workspace object (returns normalized + summary + compatibility), missing body/null (falls back to empty), NIKO_WORKFLOW_WORKSPACE env var resolution"
+    }
+  ],
+  "implementation": [
+    "Read learning.ts to catalog all 7 endpoint handlers: learningImportEndpoint, learningStyleFeedbackEndpoint, learningStyleDriftEndpoint, learningRulesEndpoint, learningReadingSessionEndpoint, learningReadingExtractEndpoint, learningStatusEndpoint",
+    "Create src-ts/tests/mcp/learning-endpoints.test.ts: import { describe, expect, it, vi, beforeEach } from 'vitest', define makeRequest(body): HttpRequest helper, import each endpoint from ../../mcp/endpoints/learning.js",
+    "For learningImportEndpoint: test empty content returns 400 with error 'content is required', test valid content returns 200 with message/input/sourceName/sourceType/contentLength, test default sourceType='document' and sourceName='unknown'",
+    "For learningStyleFeedbackEndpoint: test missing dimension returns 400, test invalid action returns 400, test valid accept/reject/modify actions return 200 with evidence object",
+    "For learningStyleDriftEndpoint: test empty dimensions returns 400, test valid dimensions returns 200 with dimensionCount",
+    "For learningRulesEndpoint: test returns 200 with rules array (even if empty)",
+    "For learningReadingSessionEndpoint: test missing bookId returns 400, test totalChapters<=0 returns 400, test valid session returns 200 with session object",
+    "For learningReadingExtractEndpoint: test empty content returns 400, test valid content returns 200 with input/bookId/contentLength",
+    "For learningStatusEndpoint: test returns 200 with capabilities array containing IMPORT, SELF_EVOLVING, READING",
+    "Read workspace.ts to understand workspaceContextEndpoint: parseBody → normalizeProjectWorkspaceContext → jsonResponse with workspace + summary + compatibility",
+    "Create src-ts/tests/mcp/workspace-endpoints.test.ts: define makeRequest helper, test workspaceContextEndpoint with empty body returns normalized default workspace, test with populated workspace object returns normalized + summary fields, test null body falls back gracefully, test NIKO_WORKFLOW_WORKSPACE env var affects resolveWorkspaceRoot()"
+  ],
+  "test": {
+    "commands": [
+      "cd src-ts && npx vitest run tests/mcp/learning-endpoints.test.ts --reporter=verbose",
+      "cd src-ts && npx vitest run tests/mcp/workspace-endpoints.test.ts --reporter=verbose"
+    ],
+    "unit": [
+      "src-ts/tests/mcp/learning-endpoints.test.ts",
+      "src-ts/tests/mcp/workspace-endpoints.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "all learning endpoint tests pass",
+      "all workspace endpoint tests pass",
+      "no TypeScript compilation errors"
+    ]
+  },
+  "reference": {
+    "pattern": "MCP endpoint test pattern (makeRequest helper + direct import, afterEach vi.clearAllMocks + vi.resetModules)",
+    "files": [
+      "src-ts/tests/mcp/memory-endpoints.test.ts",
+      "src-ts/tests/mcp/chat-endpoints.test.ts",
+      "src-ts/mcp/http-types.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Follow existing MCP endpoint test pattern exactly (makeRequest helper, direct import after vi.mock, afterEach cleanup) to maintain consistency with src-ts/tests/mcp/ directory conventions",
+    "decision_factors": [
+      "learning.ts has 7 endpoint handlers with zero test coverage — P0 regression risk",
+      "workspace.ts has 1 endpoint handler with zero test coverage — P0 regression risk",
+      "Both are pure HTTP handlers using shared http-types.ts (parseBody, jsonResponse)",
+      "No service-level mocking needed — these endpoints parse, validate, and return structured responses"
+    ],
+    "tradeoffs": "Learning endpoints have no external service dependencies (they parse and return directly), so tests are simpler than memory/chat endpoints that need vi.mock for services"
+  },
+  "risks": [
+    "workspaceContextEndpoint calls resolveWorkspaceRoot() which reads process.env — may need to set NIKO_WORKFLOW_WORKSPACE in beforeEach/afterEach similar to chat-endpoints.test.ts pattern",
+    "learningStatusEndpoint returns capabilities with LearningCapability enum values — verify enum imports work in test context"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["learning pipeline (CAP-001/002/003)", "workspace context resolution"],
+    "affected_components": ["learning endpoint handlers", "workspaceContextEndpoint", "http-types (parseBody, jsonResponse)"],
+    "affected_requirements": ["R-001 P0 regression guard tests"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "35-50min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

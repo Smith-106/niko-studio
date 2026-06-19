@@ -1,0 +1,180 @@
+{
+  "analysis_id": "ANL-test-coverage-2026-06-16",
+  "created_at": "2026-06-16T13:15:00+08:00",
+  "scope": "standalone",
+  "topic": "全仓测试覆盖率深度分析",
+  "dimensions": ["coverage", "unit", "integration", "e2e", "business", "risk"],
+
+  "test_framework": {
+    "frontend": { "runner": "vitest 3.2.4", "environment": "jsdom", "coverage_provider": "@vitest/coverage-v8" },
+    "backend": { "runner": "vitest 3.2.4", "environment": "node", "coverage_provider": "@vitest/coverage-v8", "configs": 5 }
+  },
+
+  "coverage_thresholds": {
+    "frontend": { "lines": 75, "functions": 70, "branches": 70, "statements": 75 }
+  },
+
+  "file_counts": {
+    "frontend": { "source_files": 304, "test_files": 334, "ratio": "1.10:1" },
+    "backend": { "source_files": 862, "test_files": 722, "ratio": "0.84:1" },
+    "total": { "source_files": 1166, "test_files": 1056, "ratio": "0.90:1" }
+  },
+
+  "by_directory": {
+    "desktop/src/api/": {
+      "source_files": 34, "test_files": 48, "uncovered": ["gateway.ts", "gateway/services.ts", "tauri-contract.ts", "workflow/endpoints.ts", "writing.ts"],
+      "coverage_pct": 85, "risk": "medium",
+      "note": "6 contract tests in __contract__/ verify API bridge shape"
+    },
+    "desktop/src/stores/": {
+      "source_files": 19, "test_files": 20, "uncovered": ["app/backendSlice.ts", "app/conversationSlice.ts", "app/loadingSlice.ts", "app/skillsSlice.ts", "app/workspaceSlice.ts", "settings/state.ts"],
+      "coverage_pct": 68, "risk": "high",
+      "note": "5 app slices untested; 9 of 20 existing tests are shallow (happy-path only)"
+    },
+    "desktop/src/components/": {
+      "source_files": 155, "test_files": 185,
+      "uncovered": ["PanelResizeHandle.tsx", "editor/EmptyEditorGuide.tsx", "evaluation/EvaluationCompactReviewSection.tsx", "evaluation/EvaluationDetailedReviewSection.tsx", "intelligence/index.ts", "knowledge-graph/index.ts", "narrative-visualization/CharacterGraphView.tsx", "narrative-visualization/TensionCurveView.tsx", "narrative-visualization/TimelineView.tsx", "quality/index.ts", "reader/index.ts", "story-bible/index.ts", "cowriting/index.ts"],
+      "coverage_pct": 89, "risk": "low",
+      "note": "Most uncovered are barrel exports or presentation-only shells"
+    },
+    "desktop/src/hooks/": {
+      "source_files": 37, "test_files": 10, "uncovered": [],
+      "coverage_pct": 27, "risk": "high",
+      "note": "Hooks under-tested relative to source count; many hooks lack dedicated test files"
+    },
+    "src-ts/mcp/endpoints/": {
+      "source_files": 23, "test_files": 31, "uncovered": ["learning.ts", "m10-revision.ts", "m10-style.ts", "m11-worldview.ts", "plugins.ts", "workspace.ts", "analysis.ts"],
+      "coverage_pct": 70, "risk": "high",
+      "note": "7 endpoints completely untested; these handle real HTTP request/response"
+    },
+    "src-ts/mcp/services/": {
+      "source_files": 9, "test_files": 30, "uncovered": [],
+      "coverage_pct": 100, "risk": "low"
+    },
+    "src-ts/graph/": {
+      "source_files": 3, "test_files": 4, "uncovered": [],
+      "coverage_pct": 100, "risk": "low"
+    },
+    "src-ts/workflow/": {
+      "source_files": 54, "test_files": 109, "uncovered": ["iworkflow-state-store.ts (interface)", "team/phase-gate-evaluator.ts"],
+      "coverage_pct": 96, "risk": "low",
+      "note": "Companion test pattern heavily used (.additional/.branch-gap/.tail)"
+    },
+    "src-ts/narrative/": {
+      "source_files": 54, "test_files": 118, "uncovered": ["writing-craft/catalog-loader.ts", "writing-craft/genre-templates.ts", "fictional_dream/identification.ts", "types/visualization-types.ts (type defs)"],
+      "coverage_pct": 93, "risk": "low"
+    },
+    "src-ts/memory/": {
+      "source_files": 17, "test_files": 18, "uncovered": [],
+      "coverage_pct": 100, "risk": "low"
+    },
+    "src-ts/container/": {
+      "source_files": 8, "test_files": 9, "uncovered": [],
+      "coverage_pct": 100, "risk": "low"
+    }
+  },
+
+  "test_type_distribution": {
+    "unit": { "frontend": 324, "backend": 656, "total": 980 },
+    "integration": { "frontend": 4, "backend": 9, "total": 13 },
+    "e2e": { "frontend": 1, "backend": 5, "total": 6 },
+    "contract": { "frontend": 6, "backend": 0, "total": 6 },
+    "stress": { "frontend": 0, "backend": 2, "total": 2 },
+    "companion_additional": { "frontend": 66, "backend": 355, "total": 421 }
+  },
+
+  "business_flow_coverage": {
+    "foreshadow_crud": { "test_refs": 44, "has_e2e": false, "has_integration": true, "gap": "No end-to-end foreshadow plant→stats→list→harvest flow test" },
+    "character_analysis": { "test_refs": 43, "has_e2e": false, "has_integration": true, "gap": "No end-to-end character create→analyze depth→evaluate flow test" },
+    "writing_workflow": { "test_refs": 93, "has_e2e": true, "has_integration": true, "gap": "E2E exists but only covers authoring cycle, not revision loop" },
+    "graph_crud": { "test_refs": 49, "has_e2e": false, "has_integration": true, "gap": "No end-to-end graph entity lifecycle test" },
+    "memory_search": { "test_refs": 37, "has_e2e": false, "has_integration": true, "gap": "No end-to-end add→search→retrieve flow test" },
+    "novel_quality_eval": { "test_refs": 57, "has_e2e": false, "has_integration": true, "gap": "No end-to-end content→score→decision→fix cycle test" },
+    "api_bridge": { "test_refs": 37, "has_e2e": false, "has_integration": true, "gap": "6 contract tests verify shape but not runtime API compatibility" }
+  },
+
+  "shallow_tests": {
+    "stores": ["projectSlice.test.ts", "projectSlice.additional.test.ts", "projectSlice.branches.additional.test.ts", "shared.test.ts", "selectors.test.ts", "settings/state.branches.additional.test.ts", "settingsStore.additional.test.ts", "uiSlice.test.ts", "writingContextStore.test.ts"],
+    "endpoints": ["chat-endpoints.test.ts", "config-endpoints.test.ts"],
+    "pattern": "Happy-path only: no error handling, no edge cases, no boundary conditions"
+  },
+
+  "risk_assessment": {
+    "overall_score": 72,
+    "risk_level": "MEDIUM-HIGH",
+    "standards": {
+      "mvp": { "required_lines": 60, "current_estimated": 68, "verdict": "PASS", "caveat": "Lines threshold met but critical modules below 70%" },
+      "production": { "required_lines": 80, "current_estimated": 68, "verdict": "FAIL", "gap": "12% gap; stores 68%, endpoints 70%, hooks 27%" },
+      "release": { "required_lines": 75, "current_estimated": 68, "verdict": "FAIL", "gap": "7% gap; integration and E2E coverage insufficient" }
+    }
+  },
+
+  "priority_gaps": {
+    "P0_critical": [
+      { "area": "desktop/src/stores/app/skillsSlice.ts", "reason": "Zero test coverage for skills state management — recently fixed CORR-001/007 consistency bugs, no regression guard" },
+      { "area": "desktop/src/stores/app/conversationSlice.ts", "reason": "Core conversation state untested — user's primary interaction flow" },
+      { "area": "src-ts/mcp/endpoints/learning.ts", "reason": "Learning endpoint completely untested — handles self-learning data flow" },
+      { "area": "src-ts/mcp/endpoints/workspace.ts", "reason": "Workspace endpoint untested — workspace is cross-cutting context carrier" }
+    ],
+    "P1_high": [
+      { "area": "desktop/src/stores/app/backendSlice.ts", "reason": "Backend connection state untested — affects all API calls" },
+      { "area": "desktop/src/stores/app/workspaceSlice.ts", "reason": "Workspace state management untested — recently affected by consistency fixes" },
+      { "area": "src-ts/mcp/endpoints/m10-revision.ts", "reason": "Revision endpoint untested — M25 core feature" },
+      { "area": "src-ts/mcp/endpoints/m10-style.ts", "reason": "Style endpoint untested — M25 core feature" },
+      { "area": "src-ts/mcp/endpoints/m11-worldview.ts", "reason": "Worldview endpoint untested" },
+      { "area": "desktop/src/api/writing.ts", "reason": "Writing API bridge untested — core user workflow" },
+      { "area": "desktop/src/hooks/", "reason": "27% coverage; 27 hooks lack dedicated tests" }
+    ],
+    "P2_medium": [
+      { "area": "E2E test coverage", "reason": "Only 6 E2E tests total; no real Playwright/Cypress setup; business flows not end-to-end validated" },
+      { "area": "Shallow store tests", "reason": "9 of 20 store tests are happy-path only; no error/edge coverage" },
+      { "area": "src-ts/workflow/team/phase-gate-evaluator.ts", "reason": "Gate evaluator untested — quality gate decisions depend on it" },
+      { "area": "desktop/src/api/gateway.ts", "reason": "Gateway API bridge untested" },
+      { "area": "src-ts/narrative/fictional_dream/identification.ts", "reason": "Identification sub-module untested" }
+    ]
+  },
+
+  "test_roadmap": {
+    "phase_1_critical_regression_guards": {
+      "priority": "P0",
+      "effort": "2-3 days",
+      "items": [
+        "Add skillsSlice.test.ts — cover state transitions, loading states, error handling",
+        "Add conversationSlice.test.ts — cover message flow, streaming state, error recovery",
+        "Add learning endpoint test — cover request parsing, scope resolution, error cases",
+        "Add workspace endpoint test — cover CRUD, scope resolution, missing workspace"
+      ]
+    },
+    "phase_2_backend_endpoint_coverage": {
+      "priority": "P1",
+      "effort": "3-4 days",
+      "items": [
+        "Add m10-revision endpoint test — cover revision session lifecycle",
+        "Add m10-style endpoint test — cover style analysis flow",
+        "Add m11-worldview endpoint test — cover worldview extraction",
+        "Add plugins endpoint test — cover plugin listing and execution",
+        "Add writing API bridge test — cover callApi wrapping and type mapping"
+      ]
+    },
+    "phase_3_frontend_depth": {
+      "priority": "P1-P2",
+      "effort": "3-4 days",
+      "items": [
+        "Add backendSlice.test.ts, workspaceSlice.test.ts, loadingSlice.test.ts",
+        "Deepen existing shallow store tests with error and edge cases",
+        "Add hook tests for top 10 most-used hooks"
+      ]
+    },
+    "phase_4_e2e_and_integration": {
+      "priority": "P2",
+      "effort": "5-7 days",
+      "items": [
+        "Add foreshadow lifecycle E2E: plant→stats→list→hint→harvest",
+        "Add character analysis E2E: create→depth→evaluate→profile",
+        "Add quality evaluation E2E: content→score→decision→revision",
+        "Add API bridge integration: verify frontend API calls match backend endpoint shapes",
+        "Consider Playwright/Cypress setup for desktop app E2E"
+      ]
+    }
+  }
+}

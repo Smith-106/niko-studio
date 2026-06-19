@@ -1,0 +1,83 @@
+{
+  "id": "TASK-006",
+  "title": "实现 A/B 测试 compare endpoint",
+  "description": "R-M26-005 核心交付。新增 /reader/compare endpoint，接受 A/B 文本 + personas，分别用 DualEngine.analyze 分析两个版本，再用 ConsensusEngine 做差异共识，返回对比报告。",
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "在 reader-endpoints.ts 新增 rsCompareEndpoint 处理 POST /reader/compare。请求体 { novelId, versionA: { text, label? }, versionB: { text, label? }, personaIds? }。分别调用 DualEngine.analyze 分析 A/B，使用 ConsensusEngine.buildConsensus 分别构建共识，然后计算差异共识（新增对比维度）。",
+  "scope": "src-ts/reader/mcp/reader-endpoints.ts, src-ts/reader/ConsensusEngine.ts",
+  "focus_paths": ["src-ts/reader/mcp/", "src-ts/reader/"],
+  "read_first": [
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/reader/ConsensusEngine.ts",
+    "src-ts/reader/DualEngine.ts"
+  ],
+  "depends_on": ["TASK-001", "TASK-003"],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "reader-endpoints.ts 中新增 rsCompareEndpoint 函数，处理 POST /reader/compare",
+      "返回结果包含 versionAConsensus, versionBConsensus, comparison（差异项列表）三个字段",
+      "comparison 中每个差异项包含 dimension, versionAScore, versionBScore, delta, winner: 'A'|'B'|'tie'"
+    ],
+    "verification": "grep 确认 rsCompareEndpoint 存在；grep 确认返回结构含 versionAConsensus, versionBConsensus, comparison；运行新增测试",
+    "definition_of_done": "/reader/compare 可接受 A/B 文本和 personas，返回结构化对比报告"
+  },
+  "files": [
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.ts",
+      "action": "modify",
+      "target": "Endpoints",
+      "change": "新增 rsCompareEndpoint 处理 POST /reader/compare"
+    },
+    {
+      "path": "src-ts/reader/ConsensusEngine.ts",
+      "action": "modify",
+      "target": "ConsensusEngine",
+      "change": "新增 compareConsensus 方法，计算两个 ConsensusReport 的差异"
+    }
+  ],
+  "implementation": [
+    "定义 CompareRequest 接口：{ novelId: string; versionA: { text: string; label?: string }; versionB: { text: string; label?: string }; personaIds?: string[] }",
+    "定义 CompareResult 接口：{ versionAConsensus: ConsensusReport; versionBConsensus: ConsensusReport; comparison: ConsensusComparisonItem[]; overallWinner: 'A'|'B'|'tie' }",
+    "定义 ConsensusComparisonItem：{ dimension: string; versionAScore: number; versionBScore: number; delta: number; winner: 'A'|'B'|'tie'; notes: string }",
+    "在 ConsensusEngine 新增 compareConsensus(reportA, reportB): ConsensusComparisonItem[] 方法",
+    "compareConsensus 逐维度对比 avgScore，计算 delta，标记 winner",
+    "在 reader-endpoints.ts 实现 rsCompareEndpoint：解析请求 -> resolvePersonas -> analyze A -> analyze B -> buildConsensus A -> buildConsensus B -> compareConsensus -> 返回",
+    "导出 rsCompareEndpoint 到 index.ts"
+  ],
+  "test": {
+    "commands": ["npm test -- --grep 'compare'", "npm test -- --grep 'ConsensusEngine'"],
+    "unit": ["src-ts/tests/reader/consensus-engine.test.ts"],
+    "integration": [],
+    "success_metrics": ["compare endpoint 测试通过", "ConsensusEngine.compareConsensus 测试覆盖", "A/B 差异计算正确"]
+  },
+  "reference": {
+    "pattern": "复用 DualEngine.analyze + ConsensusEngine.buildConsensus",
+    "files": ["src-ts/reader/DualEngine.ts", "src-ts/reader/ConsensusEngine.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "复用现有 engine，新增对比层",
+    "decision_factors": ["最小侵入", "复用已验证的 consensus 逻辑"],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "title": "对比维度与前端期望不匹配",
+      "severity": "low",
+      "mitigation": "与 TASK-002 统一的数据契约保持一致"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "1.5h",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 3,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}

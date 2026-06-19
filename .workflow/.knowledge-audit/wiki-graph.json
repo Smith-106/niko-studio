@@ -1,0 +1,270 @@
+{
+  "forwardLinks": {
+    "spec:project:architecture-constraints-001": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-002": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-003": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-004": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-005": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-006": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-007": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-008": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-009": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-010": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-011": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-012": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-013": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-014": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-015": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-016": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-017": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-018": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-019": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-020": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-021": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-022": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-023": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-024": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-025": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-026": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-027": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-028": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-029": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-030": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-031": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-032": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-033": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:architecture-constraints-034": [
+      "spec:project:architecture-constraints"
+    ],
+    "spec:project:coding-conventions-001": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-002": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-003": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-004": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-005": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-006": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-007": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-008": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-009": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-010": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-011": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-012": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-013": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-014": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-015": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-016": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-017": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-018": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-019": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-020": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:coding-conventions-021": [
+      "spec:project:coding-conventions"
+    ],
+    "spec:project:debug-notes-001": [
+      "spec:project:debug-notes"
+    ],
+    "spec:project:debug-notes-002": [
+      "spec:project:debug-notes"
+    ],
+    "spec:project:debug-notes-003": [
+      "spec:project:debug-notes"
+    ],
+    "spec:project:learnings-001": [
+      "spec:project:learnings"
+    ],
+    "spec:project:learnings-002": [
+      "spec:project:learnings"
+    ],
+    "spec:project:learnings-003": [
+      "spec:project:learnings"
+    ],
+    "spec:project:learnings-004": [
+      "spec:project:learnings"
+    ],
+    "spec:project:learnings-005": [
+      "spec:project:learnings"
+    ],
+    "spec:project:learnings-006": [
+      "spec:project:learnings"
+    ],
+    "spec:project:learnings-007": [
+      "spec:project:learnings"
+    ],
+    "spec:project:quality-rules-001": [
+      "spec:project:quality-rules"
+    ],
+    "spec:project:quality-rules-002": [
+      "spec:project:quality-rules"
+    ],
+    "spec:project:quality-rules-003": [
+      "spec:project:quality-rules"
+    ],
+    "spec:project:quality-rules-004": [
+      "spec:project:quality-rules"
+    ],
+    "spec:project:quality-rules-005": [
+      "spec:project:quality-rules"
+    ],
+    "spec:project:quality-rules-006": [
+      "spec:project:quality-rules"
+    ],
+    "spec:project:quality-rules-007": [
+      "spec:project:quality-rules"
+    ],
+    "spec:project:quality-rules-008": [
+      "spec:project:quality-rules"
+    ],
+    "spec:project:review-standards-001": [
+      "spec:project:review-standards"
+    ],
+    "spec:project:review-standards-002": [
+      "spec:project:review-standards"
+    ],
+    "spec:project:test-conventions-001": [
+      "spec:project:test-conventions"
+    ],
+    "spec:project:test-conventions-002": [
+      "spec:project:test-conventions"
+    ],
+    "spec:project:test-conventions-003": [
+      "spec:project:test-conventions"
+    ],
+    "spec:project:test-conventions-004": [
+      "spec:project:test-conventions"
+    ],
+    "spec:project:test-conventions-005": [
+      "spec:project:test-conventions"
+    ],
+    "spec:project:ui-conventions-001": [
+      "spec:project:ui-conventions"
+    ],
+    "spec:project:ui-conventions-002": [
+      "spec:project:ui-conventions"
+    ],
+    "spec:project:ui-conventions-003": [
+      "spec:project:ui-conventions"
+    ],
+    "spec:project:ui-conventions-004": [
+      "spec:project:ui-conventions"
+    ],
+    "spec:project:ui-conventions-005": [
+      "spec:project:ui-conventions"
+    ],
+    "spec:project:ui-conventions-006": [
+      "spec:project:ui-conventions"
+    ],
+    "spec:project:ui-conventions-007": [
+      "spec:project:ui-conventions"
+    ],
+    "spec:project:ui-conventions-008": [
+      "spec:project:ui-conventions"
+    ]
+  },
+  "backlinks": {},
+  "brokenLinks": []
+}

@@ -1,5 +1,5 @@
 ---
-title: "UI Conventions"
+title: UI Conventions
 readMode: optional
 priority: medium
 category: ui
@@ -9,7 +9,14 @@ keywords:
   - tailwind
   - component
   - shadcn
+related:
+  - "spec:project:ui-conventions-005"
+  - "spec:project:ui-conventions-006"
+  - "spec:project:ui-conventions-007"
+  - "spec:project:ui-conventions-008"
 ---
+
+
 
 # UI Conventions
 
@@ -47,3 +54,13 @@ Auto-generated from project analysis. Update manually as patterns evolve.
 - TipTap extensions for editor features
 
 ## Entries
+
+<spec-entry category="ui" keywords="docs-site,page-template,progressive-disclosure" date="2026-06-13" title="Docs page template: 7-section progressive disclosure pattern" description="Concept→Mental model→When to use→How it works→Example→Status→Troubleshooting">
+### Docs page template: 7-section progressive disclosure pattern
+Concept→Mental model→When to use→How it works→Example→Status→Troubleshooting。
+</spec-entry>
+
+<spec-entry category="ui" keywords="docs-site,writing-problem-first,user-centric" date="2026-06-13" title="Concept before mechanics: explain writing problem first then implementation" description="不在 writer-facing docs 中直接使用 Maestro CLI 术语">
+### Concept before mechanics: explain writing problem first then implementation
+不在 writer-facing docs 中直接使用 Maestro CLI 术语。
+</spec-entry>

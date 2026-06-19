@@ -1,0 +1,332 @@
+{
+  "session_id": "maestro-20260614-173000",
+  "source": "maestro",
+  "intent": "验证前后端接口一致性和前后端响应，以及前后端功能一致性",
+  "task_type": "quality-loop",
+  "chain_name": "quality-loop",
+  "ralph_protocol_version": "1",
+  "active_step_index": null,
+  "phase": null,
+  "phase_is_new": false,
+  "milestone": null,
+  "scope_verdict": null,
+  "analyze_macro_id": null,
+  "blueprint_id": null,
+  "auto_mode": false,
+  "cli_tool": "claude",
+  "created_at": "2026-06-14T17:30:00+08:00",
+  "updated_at": "2026-06-14T17:30:00+08:00",
+  "classification_rationale": {
+    "matched_pattern": "一致性验证 + E2E → quality-loop (multi-dimensional verification needs review→test→debug→plan→execute cycle)",
+    "rejected_alternatives": [
+      {
+        "chain": "review",
+        "reason": "single-step, insufficient for E2E consistency verification including error handling coverage"
+      },
+      {
+        "chain": "analyze-plan-execute",
+        "reason": "focused on build, not verification/validation"
+      },
+      {
+        "chain": "test",
+        "reason": "needs review phase to identify contract gaps before testing"
+      }
+    ],
+    "confidence": "high",
+    "action": "验证",
+    "object": "前后端接口一致性 + 响应一致性 + 功能一致性",
+    "scope": "全量 E2E",
+    "clarity_score": 3
+  },
+  "context": {
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null,
+    "blueprint_dir": null,
+    "issue_id": null,
+    "milestone_num": null,
+    "spec_session_id": null,
+    "prior_session": "maestro-20260614-143000"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "skill": "quality-review",
+      "args": "",
+      "stage": "review",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-review.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": ".workflow/scratch/20260614-review-consistency/review.json",
+      "completed_at": "2026-06-14T09:50:43.747Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\index.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-14T09:44:56.975Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\review.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\index.json"
+        ],
+        "resolve_version": "1"
+      },
+      "concerns": "8 critical response shape mismatches found (CF-001 to CF-008): knowledge double-envelope, writing/quality missing decision, analysis bare array vs envelope, style/profile null vs Record, skills/list wrapper, plugins/execute and register type mismatches. 20 warnings including workspace dropped by 12 endpoints, semantic defaults mismatch, error swallowed as 200."
+    },
+    {
+      "index": 1,
+      "skill": "quality-auto-test",
+      "args": "",
+      "stage": "auto-test",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-auto-test.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": ".workflow/scratch/20260614-review-consistency/test-results.json",
+      "completed_at": "2026-06-14T09:55:19.925Z",
+      "deferred_reads": [],
+      "load": {
+        "loaded_at": "2026-06-14T09:50:57.560Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\auto-test.md"
+        ],
+        "deferred_files": [],
+        "resolve_version": "1"
+      },
+      "concerns": "8 critical contract mismatches confirmed via 20 passing contract tests (AT-001 to AT-011). All 8 CF findings verified as real code_defects: knowledge double-envelope (5 endpoints), writing/quality missing decision, analysis bare array, m10 null-vs-Record, skills/list wrapper, plugins execute+register type mismatches."
+    },
+    {
+      "index": 2,
+      "skill": "quality-test",
+      "args": "",
+      "stage": "test",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-test.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": ".workflow/scratch/20260614-review-consistency/e2e-flow-results.json",
+      "completed_at": "2026-06-14T09:58:11.223Z",
+      "deferred_reads": [],
+      "load": {
+        "loaded_at": "2026-06-14T09:55:33.547Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\test.md"
+        ],
+        "deferred_files": [],
+        "resolve_version": "1"
+      },
+      "concerns": "9/17 E2E flows have mismatches: story-bible workspace leaks into entity data (CREATE/UPDATE), foreshadow stats ignores workspace header, character/depth hardcoded values, writing/quality decision field missing + 3 frontend fields ignored + error swallowed as 200, workflow/rollback missing uiBridge mode. 8/17 flows fully PASS."
+    },
+    {
+      "index": 3,
+      "skill": "quality-debug",
+      "args": "--from-uat",
+      "stage": "debug",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-debug.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": ".workflow/scratch/20260614-debug-consistency-gaps/understanding.md",
+      "completed_at": "2026-06-14T09:59:36.730Z",
+      "deferred_reads": [],
+      "load": {
+        "loaded_at": "2026-06-14T09:58:28.517Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\debug.md"
+        ],
+        "deferred_files": [],
+        "resolve_version": "1"
+      },
+      "concerns": "9 root causes confirmed (RC-1 to RC-9). P0: knowledge/analysis double-envelope (5+2 endpoints), writing/quality missing decision, story-bible workspace leakage. P1: getStyleProfile null, skills/list wrapper, PluginResult type mismatch, registerPlugin shape, foreshadowStats workspace ignored. P2: M10/writing workspace dropped (6 endpoints)."
+    },
+    {
+      "index": 4,
+      "skill": "maestro-plan",
+      "args": "--gaps",
+      "stage": "plan",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-plan.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/scratch/20260614-plan-consistency-fix/plan.json",
+      "completed_at": "2026-06-14T10:00:45.317Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\plan.json",
+        "C:\\Users\\niko\\.maestro\\templates\\task.json",
+        "C:\\Users\\niko\\.maestro\\templates\\state.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-14T09:59:57.030Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\plan.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\plan.json",
+          "C:\\Users\\niko\\.maestro\\templates\\task.json",
+          "C:\\Users\\niko\\.maestro\\templates\\state.json"
+        ],
+        "resolve_version": "1"
+      },
+      "concerns": null
+    },
+    {
+      "index": 5,
+      "skill": "maestro-execute",
+      "args": "",
+      "stage": "execute",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-execute.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/scratch/20260614-plan-consistency-fix/plan.json",
+      "completed_at": "2026-06-14T10:09:59.332Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\task.json",
+        "C:\\Users\\niko\\.maestro\\templates\\state.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-14T10:00:56.633Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\execute.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\task.json",
+          "C:\\Users\\niko\\.maestro\\templates\\state.json"
+        ],
+        "resolve_version": "1"
+      },
+      "concerns": null
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "running",
+  "boundary_contract": {
+    "in_scope": [
+      "Frontend API call request bodies vs backend endpoint parseBody fields",
+      "Frontend type definitions vs backend response shapes",
+      "Frontend error handling coverage vs backend error responses",
+      "Frontend functional flows (create→query→delete) vs backend endpoint completeness",
+      "Frontend workspace context passing vs backend scope resolution"
+    ],
+    "out_of_scope": [
+      "Security vulnerability review (already done in prior session)",
+      "UI rendering correctness",
+      "Performance optimization",
+      "Database schema changes"
+    ]
+  },
+  "execution_criteria": [
+    {
+      "id": "EC-001",
+      "criterion": "Every frontend callApi POST body field is parsed by its backend endpoint",
+      "done_when": "Zero unmatched request fields across all API modules",
+      "evidence": "Field-by-field mapping in review.json"
+    },
+    {
+      "id": "EC-002",
+      "criterion": "Every backend response shape matches frontend TypeScript type definition",
+      "done_when": "Zero type/response mismatches across all API modules",
+      "evidence": "Type alignment table in review.json"
+    },
+    {
+      "id": "EC-003",
+      "criterion": "Frontend error handling covers all backend error response patterns",
+      "done_when": "Every jsonResponse({...error...}, statusCode) has matching frontend catch/handling",
+      "evidence": "Error coverage mapping in review.json"
+    },
+    {
+      "id": "EC-004",
+      "criterion": "Every frontend functional flow completes end-to-end on backend",
+      "done_when": "All CRUD cycles validated (create→read→update→delete where applicable)",
+      "evidence": "Flow validation in test-results.json"
+    }
+  ],
+  "task_decomposition": [
+    {
+      "id": "TD-001",
+      "goal": "Interface contract audit: request/response field mapping",
+      "done_when": "All frontend→backend field mappings documented with ✅/⚠️/❌ status",
+      "evidence": "review.json with field_alignment section",
+      "lifecycle": "review",
+      "completion_confirmed": false,
+      "status": "pending"
+    },
+    {
+      "id": "TD-002",
+      "goal": "Error handling coverage audit",
+      "done_when": "All backend error responses mapped to frontend handling paths",
+      "evidence": "review.json with error_coverage section",
+      "lifecycle": "review",
+      "completion_confirmed": false,
+      "status": "pending"
+    },
+    {
+      "id": "TD-003",
+      "goal": "Functional flow E2E verification",
+      "done_when": "Key flows verified through code trace (create→query→delete)",
+      "evidence": "test-results.json with flow validations",
+      "lifecycle": "test",
+      "completion_confirmed": false,
+      "status": "pending"
+    },
+    {
+      "id": "TD-004",
+      "goal": "Diagnose consistency gaps and produce fix plan",
+      "done_when": "Root causes identified for all gaps, fix plan in plan.json",
+      "evidence": "understanding.md + plan.json",
+      "lifecycle": "debug+plan",
+      "completion_confirmed": false,
+      "status": "pending"
+    },
+    {
+      "id": "TD-005",
+      "goal": "Execute priority consistency fixes",
+      "done_when": "All P0/P1 fixes applied and verified",
+      "evidence": "TASK summaries in .summaries/",
+      "lifecycle": "execute",
+      "completion_confirmed": false,
+      "status": "pending"
+    }
+  ],
+  "task_decomposition_all_done": false
+}

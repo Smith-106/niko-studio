@@ -1,0 +1,21 @@
+{
+  "harvest_date": "2026-06-13",
+  "total_fragments": 174,
+  "by_source_type": {
+    "brainstorm": 40,
+    "analysis": 54,
+    "lite-plan": 48,
+    "debug": 9,
+    "session": 8,
+    "other": 15
+  },
+  "dedup": {
+    "duplicate_groups": 12,
+    "fragments_after_dedup": 148
+  },
+  "routing": {
+    "wiki": 42,
+    "spec": 46,
+    "issue": 60
+  }
+}

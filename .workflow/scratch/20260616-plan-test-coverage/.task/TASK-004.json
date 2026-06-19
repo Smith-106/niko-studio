@@ -1,0 +1,146 @@
+{
+  "id": "TASK-004",
+  "title": "P1 Frontend API bridge + store 补全测试 (writing callApi bridge + backendSlice + workspaceSlice + loadingSlice)",
+  "description": "为 P1 frontend 层补全测试：(1) writing API bridge callApi 包装和类型映射需回归测试（现有 writing.test.ts 和 writing.additional.test.ts 主要覆盖 stream 和 polishContentCompat，基础 callApi 路径覆盖不足）；(2) backendSlice/workspaceSlice/loadingSlice 三个 Zustand slice 零测试覆盖。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create backendSlice.test.ts, workspaceSlice.test.ts, loadingSlice.test.ts under desktop/src/stores/app/ using createHarness pattern; create writing.branches.additional.test.ts under desktop/src/api/ using vi.hoisted + vi.mock('./core') pattern",
+  "status": "completed",
+  "completed_at": "2026-06-16T17:45:00+08:00",
+  "actual_duration": null,
+  "scope": "desktop/src/stores/app/, desktop/src/api/",
+  "focus_paths": [
+    "desktop/src/stores/app/backendSlice.ts",
+    "desktop/src/stores/app/workspaceSlice.ts",
+    "desktop/src/stores/app/loadingSlice.ts",
+    "desktop/src/api/writing.ts"
+  ],
+  "read_first": [
+    "desktop/src/stores/app/backendSlice.ts",
+    "desktop/src/stores/app/workspaceSlice.ts",
+    "desktop/src/stores/app/loadingSlice.ts",
+    "desktop/src/api/writing.ts",
+    "desktop/src/api/writing.additional.test.ts",
+    "desktop/src/api/knowledge.test.ts",
+    "desktop/src/stores/app/projectSlice.additional.test.ts",
+    "desktop/src/types/workspace.ts",
+    "desktop/vite.config.ts"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "desktop/src/stores/app/backendSlice.test.ts contains \"describe('backendSlice'\"",
+      "desktop/src/stores/app/workspaceSlice.test.ts contains \"describe('workspaceSlice'\"",
+      "desktop/src/stores/app/loadingSlice.test.ts contains \"describe('loadingSlice'\"",
+      "desktop/src/api/writing.branches.additional.test.ts contains \"describe('writing api bridge branch coverage'\"",
+      "cd desktop && npx vitest run src/stores/app/backendSlice.test.ts --reporter=verbose exits 0",
+      "cd desktop && npx vitest run src/stores/app/workspaceSlice.test.ts --reporter=verbose exits 0",
+      "cd desktop && npx vitest run src/stores/app/loadingSlice.test.ts --reporter=verbose exits 0",
+      "cd desktop && npx vitest run src/api/writing.branches.additional.test.ts --reporter=verbose exits 0"
+    ],
+    "verification": "Run vitest for each new test file in desktop/ and confirm all pass with 0 failures",
+    "definition_of_done": "backendSlice、workspaceSlice、loadingSlice 均有基础测试覆盖状态转换和错误路径，writing API bridge 有 branch coverage 补充测试，所有测试通过"
+  },
+  "files": [
+    {
+      "path": "desktop/src/stores/app/backendSlice.test.ts",
+      "action": "create",
+      "target": "backendSlice基础测试",
+      "change": "Create test: backendStatus defaults false, checkBackend with mocked checkBackendHealth healthy=true sets true, healthy=false sets false, checkBackendHealth throws sets false"
+    },
+    {
+      "path": "desktop/src/stores/app/workspaceSlice.test.ts",
+      "action": "create",
+      "target": "workspaceSlice基础测试",
+      "change": "Create test: currentWorkspace defaults from createDefaultProjectWorkspaceContext, setCurrentWorkspace merges partial workspace, syncConversationWorkspace with active conversation merges both current and conversation workspace, syncConversationWorkspace with missing conversation returns state unchanged"
+    },
+    {
+      "path": "desktop/src/stores/app/loadingSlice.test.ts",
+      "action": "create",
+      "target": "loadingSlice基础测试",
+      "change": "Create test: loadingMap defaults {}, startLoading sets id=true, finishLoading sets id=false, isLoading returns true for active, false for missing, multiple concurrent loading states"
+    },
+    {
+      "path": "desktop/src/api/writing.branches.additional.test.ts",
+      "action": "create",
+      "target": "writing API bridge branch coverage",
+      "change": "Create companion test covering: processWritingHelper error response propagation (success:false with error message), callApi payload shape verification for all writing helper modes, edge cases in polishContentCompat (mode mapping: business/creative/academic/standard → instruction strings), error envelope unwrapping"
+    }
+  ],
+  "implementation": [
+    "Read backendSlice.ts: simple async slice with checkBackend() that calls checkBackendHealth() and sets backendStatus, catch → sets false",
+    "Create backendSlice.test.ts: import createBackendSlice + type BackendSlice, createHarness with stub defaults, vi.mock('@/api/client') for checkBackendHealth, test: backendStatus initial false, checkBackend with mock resolving true → backendStatus true, resolving false → false, throwing → false",
+    "Read workspaceSlice.ts: setCurrentWorkspace uses mergeProjectWorkspaceContext, syncConversationWorkspace uses resolveConversationWorkspaceForSync from shared.ts",
+    "Create workspaceSlice.test.ts: createHarness with currentWorkspace + conversationsById, test: currentWorkspace starts as createDefaultProjectWorkspaceContext(), setCurrentWorkspace merges partial, syncConversationWorkspace for active conversation updates both workspaces, syncConversationWorkspace for missing conversation returns state unchanged",
+    "Read loadingSlice.ts: startLoading/finishLoading set loadingMap[id], isLoading reads with ?? false fallback",
+    "Create loadingSlice.test.ts: createHarness, test: loadingMap starts {}, startLoading('x') → {x: true}, finishLoading('x') → {x: false}, isLoading('x') returns true/false correctly, isLoading('missing') returns false (?? fallback), multiple concurrent loading states coexist",
+    "Read writing.ts to identify uncovered callApi paths: processWritingHelper, streamWritingHelper, polishContentCompat — check which branches existing tests miss (writing.additional.test.ts covers streaming extensively but may miss basic processWritingHelper error branches and polishContentCompat mode→instruction mapping edge cases)",
+    "Create writing.branches.additional.test.ts: vi.hoisted + vi.mock('./core'), test processWritingHelper with callApi returning {success: false, error: 'msg'} → propagates error, test polishContentCompat with all polishType values (business, creative, academic, standard) verifying instruction mapping, test polishContentCompat with callApi error envelope"
+  ],
+  "test": {
+    "commands": [
+      "cd desktop && npx vitest run src/stores/app/backendSlice.test.ts --reporter=verbose",
+      "cd desktop && npx vitest run src/stores/app/workspaceSlice.test.ts --reporter=verbose",
+      "cd desktop && npx vitest run src/stores/app/loadingSlice.test.ts --reporter=verbose",
+      "cd desktop && npx vitest run src/api/writing.branches.additional.test.ts --reporter=verbose"
+    ],
+    "unit": [
+      "desktop/src/stores/app/backendSlice.test.ts",
+      "desktop/src/stores/app/workspaceSlice.test.ts",
+      "desktop/src/stores/app/loadingSlice.test.ts",
+      "desktop/src/api/writing.branches.additional.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "all backendSlice tests pass",
+      "all workspaceSlice tests pass",
+      "all loadingSlice tests pass",
+      "all writing branch coverage tests pass",
+      "no TypeScript compilation errors"
+    ]
+  },
+  "reference": {
+    "pattern": "Zustand slice companion test pattern (createHarness) + API bridge test pattern (vi.hoisted + vi.mock('./core'))",
+    "files": [
+      "desktop/src/stores/app/projectSlice.additional.test.ts",
+      "desktop/src/api/writing.additional.test.ts",
+      "desktop/src/api/knowledge.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Group frontend layer additions into one task — all 4 files are small, independent, and follow established patterns. backendSlice/workspaceSlice/loadingSlice are very small slices (10-40 lines each) that need simple harness tests. writing.branches.additional.test.ts adds targeted branch coverage.",
+    "decision_factors": [
+      "backendSlice is 20 lines (very simple, but zero tests — P1 risk)",
+      "workspaceSlice is 43 lines (depends on shared.ts helpers — P1 risk)",
+      "loadingSlice is 20 lines (trivial but zero tests)",
+      "writing.ts already has 2 test files but branch coverage gaps remain"
+    ],
+    "tradeoffs": "Combining 4 small files into one task reduces agent spawn overhead. Each file is <60 lines of test code, so total implementation time stays reasonable"
+  },
+  "risks": [
+    "workspaceSlice.syncConversationWorkspace depends on conversationsById state (cross-slice) — harness needs to include conversation state",
+    "workspaceSlice uses resolveConversationWorkspaceForSync from shared.ts which is already tested in shared.test.ts — may have subtle interaction differences",
+    "writing.ts mode→instruction mapping may have changed since existing tests were written — read writing.ts first"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["backend health check", "workspace context management", "loading state management", "writing API bridge"],
+    "affected_components": ["backendSlice", "workspaceSlice", "loadingSlice", "writing API module"],
+    "affected_requirements": ["R-002 P1 backend endpoint coverage", "R-003 P1-P2 frontend depth"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "35-50min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

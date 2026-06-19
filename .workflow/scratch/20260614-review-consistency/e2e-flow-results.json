@@ -1,0 +1,39 @@
+{
+  "session_id": "maestro-20260614-173000",
+  "test_type": "e2e-flow-verification",
+  "completed_at": "2026-06-14T18:30:00+08:00",
+  "flows": {
+    "story-bible": {
+      "create": { "verdict": "MISMATCH", "issues": ["workspace data leaks into entity via appendWorkspacePayload", "no runtime enum validation for archetype/arcStage/etc"] },
+      "read-list": { "verdict": "MISMATCH", "issues": ["workspace sent but ignored by backend (harmless on read)"] },
+      "read-one": { "verdict": "PASS", "issues": [] },
+      "update": { "verdict": "MISMATCH", "issues": ["workspace data leaks into entity via appendWorkspacePayload", "no try/catch on handler"] },
+      "delete": { "verdict": "PASS", "issues": [] }
+    },
+    "knowledge-foreshadow": {
+      "plant": { "verdict": "MISMATCH", "issues": ["double-envelope mismatch", "backend returns raw graphAddEntity result, missing ForeshadowItem fields (planted_time, harvested_at, hints)", "redundant planted_at vs planted_time"] },
+      "query": { "verdict": "PASS", "issues": ["minor: status defaults to 'pending' on backend when frontend omits it"] },
+      "stats": { "verdict": "MISMATCH", "issues": ["workspace header X-Workspace-Id ignored by backend (_request param)", "double-envelope mismatch in frontend type"] },
+      "character-profile": { "verdict": "PASS", "issues": [] },
+      "character-depth": { "verdict": "MISMATCH", "issues": ["depth_level hardcoded to 'moderate'", "suggestions always empty []", "scores default to 50 masking unassessed state"] },
+      "relationships": { "verdict": "PASS", "issues": ["backend supports optional name filter but frontend doesn't expose it"] }
+    },
+    "writing-workflow": {
+      "writing-helper": { "verdict": "PASS", "issues": ["stats field in frontend type never populated", "status field in backend not in frontend type"] },
+      "writing-stream": { "verdict": "PASS", "issues": ["workspace sent but unused by backend"] },
+      "writing-quality": { "verdict": "MISMATCH", "issues": ["frontend sends scene_card/dimensions/quality_goals but backend ignores all 3", "frontend expects 'decision' field but backend returns 'status' instead", "backend reads 6 fields frontend never sends", "error swallowed as 200 with zeroed scores"] },
+      "workflow-plan": { "verdict": "PASS", "issues": ["genre/traceContext are backend-only optional fields"] },
+      "workflow-execute": { "verdict": "PASS", "issues": [] },
+      "workflow-rollback": { "verdict": "MISMATCH", "issues": ["frontend hardcodes /workflow/rollback, no uiBridge mode support unlike all other workflow endpoints"] }
+    }
+  },
+  "summary": {
+    "total_flows": 17,
+    "pass": 8,
+    "mismatch": 9,
+    "ec_001_request_field_alignment": "PASS for most; workspace leakage in story-bible CREATE/UPDATE; writing/quality 3 frontend fields ignored",
+    "ec_002_response_type_alignment": "MISMATCH: knowledge double-envelope (5 endpoints), writing/quality missing decision, analysis bare array, m10 null, skills wrapper, plugins execute+register",
+    "ec_003_error_coverage": "MISMATCH: writing/quality swallows errors as 200, knowledge/character lacks name validation on /graph/character, story-bible update has no try/catch",
+    "ec_004_functional_flow_closure": "Most CRUD flows work; workspace context leaks in story-bible writes; stats endpoint ignores workspace; rollback missing uiBridge mode"
+  }
+}

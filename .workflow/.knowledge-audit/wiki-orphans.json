@@ -1,0 +1,1081 @@
+{
+  "orphans": [
+    {
+      "id": "roadmap-roadmap",
+      "type": "roadmap",
+      "title": "Roadmap: Niko Studio M24 — Tech Debt Cleanup + Narrative Visualization",
+      "summary": "# Roadmap: Niko Studio M24 — Tech Debt Cleanup + Narrative Visualization",
+      "tags": [],
+      "status": "active",
+      "created": "2026-05-26T14:49:41.414Z",
+      "updated": "2026-05-26T14:49:41.423Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "roadmap.md"
+      },
+      "body": "# Roadmap: Niko Studio M24 — Tech Debt Cleanup + Narrative Visualization\r\n\r\n## Overview\r\n\r\nM24 聚焦两大目标：(1) 清理 M10-M23 积累的 6 项技术债（console 收口、巨型组件拆分、类型安全加固、翻译模块化、catalog 外置、workflow-engine 重构），(2) 在稳定代码基础上交付叙事结构可视化 MVP。技术债采用\"接口冻结\"策略——所有重构保持公共 API 不变；workflow-engine 采用 Strategy 模式分层；craft-catalog 外置为 JSON 热加载。Phase 1 通过 wave DAG 内部分 3 批次执行（P1 基础设施 → P2 独立重构 → P2 深度重构），Phase 2 在稳定基础上构建新功能。\r\n\r\n## Phases\r\n\r\n**Minimum-phase principle:** Default 1 phase. Only add phases for hard dependencies (runtime + not parallelizable + full barrier). Wave DAG inside each phase handles task ordering.\r\n\r\n- [x] **Phase 1: Tech Debt Cleanup** — F-001~F-006 技术债清理，3 波次递进执行 ✅ completed\r\n- [x] **Phase 2: Narrative Visualization MVP** — F-007 叙事结构可视化核心功能 ✅ completed\r\n\r\n## Phase Details\r\n\r\n### Phase 1: Tech Debt Cleanup\r\n\r\n**Goal**: 完成 6 项技术债清理，提升代码健康度。Wave 1 建立基础设施模式（logger + 组件拆分），Wave 2 执行独立重构（as-any + translations），Wave 3 执行深度重构（catalog 外置 + workflow-engine Strategy 模式）。全程接口冻结，不破坏向后兼容。\r\n\r\n**Depends on**: Nothing (first phase)\r\n\r\n**Requirements**: F-001, F-002, F-003, F-004, F-005, F-006\r\n\r\n**Success Criteria** (what must be TRUE):\r\n1. 前端 17 个文件的 `console.*` 全部收口到结构化 logger，生产环境无信息泄露\r\n2. EvaluationPanel (1783行) 和 StoryBiblePanel (1788行) 各拆分为 ≤500 行的子组件，保持功能等价\r\n3. 4 个非测试文件的 `as any` 全部替换为正确类型，TypeScript strict 无报错\r\n4. translations.ts (2892行) 按模块拆分为独立文件，key 结构不变，i18n 流程无影响\r\n5. craft-catalog (1584行) 外置为 JSON 文件，支持热加载，现有引用透明迁移\r\n6. workflow-engine (1970行) 采用 Strategy 模式分层，编排逻辑与业务规则分离，公共 API 签名不变\r\n7. 所有现有测试通过，无回归\r\n\r\n### Phase 2: Narrative Visualization MVP\r\n\r\n**Goal**: 交付叙事结构可视化核心功能——故事线时间轴、角色关系图谱、情节张力曲线。基于 Phase 1 稳定的 workflow-engine 和 craft 数据层构建，集成到现有编辑器面板体系。\r\n\r\n**Depends on**: Phase 1 (workflow-engine refactored API + externalized craft-catalog)\r\n\r\n**Requirements**: F-007\r\n\r\n**Success Criteria** (what must be TRUE):\r\n1. 故事线时间轴组件渲染章节事件序列，支持缩放和筛选\r\n2. 角色关系图谱动态展示角色互动频率和关系类型变化\r\n3. 情节张力曲线基于 M23 reader-state 模型实时渲染，标注关键转折点\r\n4. 可视化面板集成到编辑器侧边栏，响应文档切换\r\n5. 新增测试覆盖率 ≥ 80%，现有测试无回归\r\n\r\n**Phase split justification (3-condition check):**\r\n1. Runtime dependency: F-007 可视化组件在运行时调用 workflow-engine 的分析编排 API 和 craft-catalog 数据\r\n2. Not parallelizable: workflow-engine 内部 Strategy 模式重构改变执行路径，F-007 集成测试需要稳定的重构后实现\r\n3. Full barrier: F-001~F-006 全部完成并验证后，F-007 才能可靠集成测试\r\n\r\n## Scope Decisions\r\n\r\n- **In scope**:\r\n  - F-001: 前端 console 收口（17 文件）\r\n  - F-002: EvaluationPanel + StoryBiblePanel 拆分\r\n  - F-003: MathView, ExportDialog, WritingHelperPanel, revisionOrchestrator 类型加固\r\n  - F-004: translations.ts 按模块拆分\r\n  - F-005: craft-catalog 外置为 JSON + 热加载 loader\r\n  - F-006: workflow-engine Strategy 模式分层重构\r\n  - F-007: 叙事可视化 MVP（时间轴 + 关系图 + 张力曲线）\r\n\r\n- **Deferred (M25)**:\r\n  - F-008: 智能修订工作流增强\r\n  - 写作会话智能（行为模式分析）\r\n  - 写作知识个性化（风格推荐）\r\n\r\n- **Out of scope**:\r\n  - 重写 workflow-engine 架构（仅重构）\r\n  - 引入新 UI 框架或状态管理库\r\n  - 破坏现有 API 接口向后兼容性\r\n  - 多人协作功能\r\n  - Electron 框架迁移\r\n\r\n## Implementation Strategies\r\n\r\n| Strategy | Applies To | Description |\r\n|----------|-----------|-------------|\r\n| 接口冻结 | F-001~F-006 | 所有重构保持公共 API 签名不变，内部实现自由调整 |\r\n| JSON 外置 | F-005 | craft-catalog 数据提取为 JSON，TypeScript 仅保留 loader + 类型定义 |\r\n| Strategy 模式 | F-006 | workflow-engine 按职责拆分为 Strategy 接口 + 具体策略实现 |\r\n| 逐步拆分 | F-002 | 巨型组件先提取子组件，再调整 props 传递，最后验证渲染等价 |\r\n\r\n## Progress\r\n\r\n| Phase | Status | Completed |\r\n|-------|--------|-----------|\r\n| 1. Tech Debt & Integration | ✅ Completed | F-001~F-006, 3-way data integration, mtime detection, sourceIndex persistence, Nowledge Mem library bridge |\r\n| 2. Narrative Visualization MVP | ✅ Completed | F-007: TimelineView, CharacterGraphView, TensionCurveView, ReaderState integration |\r\n",
+      "ext": {},
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:architecture-constraints",
+      "type": "spec",
+      "title": "Architecture Constraints",
+      "summary": "# Architecture Constraints",
+      "tags": [
+        "architecture",
+        "module",
+        "layer",
+        "boundary",
+        "dependency",
+        "nuxt"
+      ],
+      "status": "active",
+      "created": "2026-06-17T19:50:56.189Z",
+      "updated": "2026-06-17T19:50:56.191Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      },
+      "body": "\n\n# Architecture Constraints\n\nAuto-generated from project structure. Update manually as architecture evolves.\n\n## Module Structure\n- Type: Nuxt 3 monolith (full-stack)\n- Key directories:\n  - pages/ — 路由页面 (Nuxt 文件路由)\n  - components/ — Vue 组件\n  - composables/ — 共享组合式函数\n  - server/ — Nitro API 路由 + 中间件\n  - stores/ — Pinia 状态管理\n  - layouts/ — 页面布局\n  - plugins/ — Nuxt 插件\n  - middleware/ — 路由守卫\n  - assets/ + public/ — 静态资源\n  - utils/ — 工具函数\n  - types/ — TypeScript 类型定义\n  - i18n/ — 国际化\n\n## Layer Boundaries\n- UI 层: pages/ → components/ → composables/ → stores/\n- API 层: server/routes/ → server/utils/ → stores/\n- 禁止 server/ 导入前端组件\n- Composables 可导入 stores 和 utils\n- Components 通过 composables 访问数据，不直接调用 API\n\n## Dependency Rules\n- Nuxt auto-imports: ref, computed, navigateTo 等 (无需显式导入)\n- 优先用 composables 而非直接在组件中写逻辑\n- 服务端路由使用 defineEventHandler + H3\n\n## Technology Constraints\n- Runtime: Node.js >= 18\n- Framework: Nuxt 3 (Vue 3 + Nitro)\n- Module system: ESM\n- TypeScript: strict mode\n- CSS: Tailwind CSS v3\n\n## Entries\n\n<spec-entry category=\"arch\" keywords=\"m24,milestone-scope,tech-debt,priority\" date=\"2026-06-13\" title=\"M24 范围：技术债优先 F-001~F-006 + 仅一个新功能 F-007\" description=\"技术债是特性质量基础，限 1 个新功能避免范围膨胀\">\n### M24 范围：技术债优先 F-001~F-006 + 仅一个新功能 F-007\n三个角色一致：技术债是特性质量基础，限 1 个新功能避免范围膨胀。F-007 叙事可视化优先于 F-008 修订工作流（用户感知高、技术依赖少、MVP 可交付、市场差异化）。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"m24,execution-order,dependency-chain\" date=\"2026-06-13\" title=\"M24 执行顺序：5 阶段依赖链驱动\" description=\"依赖链驱动的 5 阶段执行顺序\">\n### M24 执行顺序：5 阶段依赖链驱动\nPhase 1: F-001+F-003(独立低风险); Phase 2: F-004+F-005 并行; Phase 3: F-002(依赖 F-001); Phase 4: F-006(最高风险); Phase 5: F-007(依赖 F-002+F-006)。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"version-authority,release,APP_VERSION\" date=\"2026-06-13\" title=\"版本权威已统一到 src-ts/config/index.ts APP_VERSION\" description=\"单一 release authority 在 APP_VERSION，所有版本源统一\">\n### 版本权威已统一到 src-ts/config/index.ts APP_VERSION\n单一 release authority 在 APP_VERSION，所有版本源统一。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"desktop,capability-contract,sidecar\" date=\"2026-06-13\" title=\"Desktop capability contract 收束为单一前端权限真相\" description=\"main-desktop 允许 core:default/process:default/updater:default + 显式 fs:* 权限\">\n### Desktop capability contract 收束为单一前端权限真相\nmain-desktop 允许 core:default/process:default/updater:default + 显式 fs:* 权限。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"triage,blocker-semantics,release\" date=\"2026-06-13\" title=\"Triage blocker 语义收窄：排除 legacy/stale noise\" description=\"只计 current/parseable/triage_state 不在 {resolved,rejected} 的\">\n### Triage blocker 语义收窄：排除 legacy/stale noise\n只计 current/parseable/triage_state 不在 {resolved,rejected} 的。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"architecture,revision-orchestrator,mcp,backend\" date=\"2026-06-13\" title=\"RevisionOrchestrator 作为独立服务而非 React Hook\" description=\"自主 agent 必须脱离 UI 工作，所有新 MCP endpoint 遵循现有 /agent/* 和 /analysis/* 模式\">\n### RevisionOrchestrator 作为独立服务而非 React Hook\n自主 agent 必须脱离 UI 工作，所有新 MCP endpoint 遵循现有 /agent/* 和 /analysis/* 模式。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"architecture,worldview,knowledge-service,separation\" date=\"2026-06-13\" title=\"Worldview extraction 独立于 knowledge-service\" description=\"关注点分离：knowledge-service 处理通用 embedding/retrieval，worldview extractor 处理域特定叙事设定提取\">\n### Worldview extraction 独立于 knowledge-service\n关注点分离：knowledge-service 处理通用 embedding/retrieval，worldview extractor 处理域特定叙事设定提取。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"architecture,lifecycle-hooks,backward-compatibility,opt-in\" date=\"2026-06-13\" title=\"Lifecycle hooks 作为可选中间件保证向后兼容\" description=\"BaseAgent 上可选 middleware，现有 agent 不变，lifecycle 参与是 opt-in\">\n### Lifecycle hooks 作为可选中间件保证向后兼容\nBaseAgent 上可选 middleware，现有 agent 不变，lifecycle 参与是 opt-in。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"architecture,memory,stm,ltm,reuse\" date=\"2026-06-13\" title=\"STM/LTM 复用现有六维记忆基础设施\" description=\"复用已验证的 memory 系统而非构建并行机制\">\n### STM/LTM 复用现有六维记忆基础设施\n复用已验证的 memory 系统而非构建并行机制。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"docs-site,architecture,navigation,guides\" date=\"2026-06-13\" title=\"Docs-site 添加 guides 分类而非重载 architecture\" description=\"Mermaid 保持 copyable code block，不引入新渲染依赖\">\n### Docs-site 添加 guides 分类而非重载 architecture\nMermaid 保持 copyable code block，不引入新渲染依赖。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"docs-site,constraints,runtime-safety\" date=\"2026-06-13\" title=\"Docs-site 关键约束：不改运行时行为\" description=\"不改 desktop 运行时、Gateway endpoint、sync 实现或 release pipeline\">\n### Docs-site 关键约束：不改运行时行为\n不改 desktop 运行时、Gateway endpoint、sync 实现或 release pipeline。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"tech-debt,debug-strategy,test-environment\" date=\"2026-06-13\" title=\"Tech debt 修复优先级：先恢复测试环境再修 API 契约\" description=\"避免把环境噪音误判为代码缺陷，优先最小修复\">\n### Tech debt 修复优先级：先恢复测试环境再修 API 契约\n避免把环境噪音误判为代码缺陷，优先最小修复。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"architecture,visualization,enhance-not-rebuild\" date=\"2026-06-13\" title=\"可视化 MVP 增强而非重建策略\" description=\"共享类型消除 desktop 与 src-ts 间重复\">\n### 可视化 MVP 增强而非重建策略\n共享类型消除 desktop 与 src-ts 间重复。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"writing-tool,story-bible,knowledge-engine\" date=\"2026-06-13\" title=\"Story Bible 扩展现有 KnowledgeEngine 无并行存储\" description=\"必须扩展现有引擎，避免数据同步问题。每个实体携带 confidence_score 和 source_chapters\">\n### Story Bible 扩展现有 KnowledgeEngine 无并行存储\n必须扩展现有引擎，避免数据同步问题。每个实体携带 confidence_score 和 source_chapters。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"writing-tool,co-writing,context-pipeline\" date=\"2026-06-13\" title=\"Co-Writing Engine 三模式共享上下文管线\" description=\"Auto/Guided/Directed 三模式共享 Context Scraper→Prompt Assembler→Model Router→Output Aggregator 管线\">\n### Co-Writing Engine 三模式共享上下文管线\nAuto/Guided/Directed 三模式共享 Context Scraper→Prompt Assembler→Model Router→Output Aggregator 管线。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"writing-tool,reader-simulation,dual-engine\" date=\"2026-06-13\" title=\"Reader Simulation 并行双引擎架构\" description=\"Persona Engine + Editorial Analysis Engine 并行运行，一个失败另一个继续\">\n### Reader Simulation 并行双引擎架构\nPersona Engine + Editorial Analysis Engine 并行运行，一个失败另一个继续。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"writing-tool,mcp-endpoints,integration-surface\" date=\"2026-06-13\" title=\"所有新能力必须通过 MCP endpoint 暴露\" description=\"无直接 service-to-frontend 调用\">\n### 所有新能力必须通过 MCP endpoint 暴露\n无直接 service-to-frontend 调用。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"m26,milestone-scope,performance,llm\" date=\"2026-06-13\" title=\"M26 范围：Performance Optimization + Deep LLM Integration\" description=\"F-013 是技术债优先(OOM/无缓存)，F-014 是功能核心(智能功能依赖 LLM)\">\n### M26 范围：Performance Optimization + Deep LLM Integration\nF-013 是技术债优先(OOM/无缓存)，F-014 是功能核心(智能功能依赖 LLM)。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"m26,llm-integration,adapter-pattern\" date=\"2026-06-13\" title=\"LLM adapter 按提供者粒度而非统一抽象层\" description=\"每个提供者 API 差异显著，统一抽象层成本过高。Ollama 因 OpenAI 兼容 API 纳入\">\n### LLM adapter 按提供者粒度而非统一抽象层\n每个提供者 API 差异显著，统一抽象层成本过高。Ollama 因 OpenAI 兼容 API 纳入。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"obsidian-integration,optional-module\" date=\"2026-06-13\" title=\"Obsidian 集成为可选模块：应用无 vault 也能运行\" description=\".niko-studio/ 元数据目录与 .obsidian/ 并行，不侵入 vault\">\n### Obsidian 集成为可选模块：应用无 vault 也能运行\n.niko-studio/ 元数据目录与 .obsidian/ 并行，不侵入 vault。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"convergence,narrative-authority,workspace-scoped\" date=\"2026-06-13\" title=\"收敛 graph/memory/wiki/retrieval/critic 到 workspace-scoped narrative authority\" description=\"统一权威模型替代碎片化服务访问\">\n### 收敛 graph/memory/wiki/retrieval/critic 到 workspace-scoped narrative authority\n统一权威模型替代碎片化服务访问。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"iterative-verification,re-planning,parallel-implementation\" date=\"2026-06-13\" title=\"支持 iterative verification + re-planning + parallel implementation\" description=\"叙事权威架构必须支持迭代验证、失败重规划、安全并行\">\n### 支持 iterative verification + re-planning + parallel implementation\n叙事权威架构必须支持迭代验证、失败重规划、安全并行。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"docs-site,state-authority,canon,wiki\" date=\"2026-06-13\" title=\"Wiki/canon authority 胜过 graph/memory projections\" description=\"冲突时 Wiki/canon 赢，graph/memory 是投影/检索面\">\n### Wiki/canon authority 胜过 graph/memory projections\n冲突时 Wiki/canon 赢，graph/memory 是投影/检索面。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"m24,schema-version,backward-compatibility\" date=\"2026-06-13\" title=\"统一 schema version header $schema_version 跨所有持久化 JSON\" description=\"格式 YYYY-MM，additive 变更 bump minor，structural 变更 bump major，major 版本内不可删除字段\">\n### 统一 schema version header $schema_version 跨所有持久化 JSON\n格式 YYYY-MM，additive 变更 bump minor，structural 变更 bump major，major 版本内不可删除字段。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"m24,data-contract,semver,typed-contracts\" date=\"2026-06-13\" title=\"Frontend-backend data contract registry with semver\" description=\"DataContract<TReq,TRes> 带 $contract_id 和 $contract_version。后端支持当前+前一 major 版本\">\n### Frontend-backend data contract registry with semver\nDataContract<TReq,TRes> 带 $contract_id 和 $contract_version。后端支持当前+前一 major 版本。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"m24,backward-compatibility,interface-contract\" date=\"2026-06-13\" title=\"5 接口签名 M24 不可变：WorkflowEngine/useI18n/EvaluationPanel-props/craft-catalog-types/API-endpoints\" description=\"内部实现可自由重构，消费者代码不需修改\">\n### 5 接口签名 M24 不可变：WorkflowEngine/useI18n/EvaluationPanel-props/craft-catalog-types/API-endpoints\n内部实现可自由重构，消费者代码不需修改。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"m24,error-handling,graceful-degradation\" date=\"2026-06-13\" title=\"Cross-feature error propagation: F-005 不阻启动, F-006 触发 checkpoint, F-007 隔离 ErrorBoundary, F-004 fallback to key\" description=\"瞬态→指数退避, 数据→bundled default, 逻辑→降级, 致命→crash report\">\n### Cross-feature error propagation: F-005 不阻启动, F-006 触发 checkpoint, F-007 隔离 ErrorBoundary, F-004 fallback to key\n瞬态→指数退避, 数据→bundled default, 逻辑→降级, 致命→crash report。\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"writing-craft,architecture,M14,extend-not-create\" date=\"2026-06-13\" title=\"M14 新增知识扩展现有模块而非新建独立文件\" description=\"避免 barrel export 膨胀和碎片化\">\n### M14 新增知识扩展现有模块而非新建独立文件\n避免 barrel export 膨胀和碎片化。\n</spec-entry>\n\n\n<spec-entry category=\"arch\" keywords=\"api-evolution,test-drift,mock-assertion,callapi,cypher\" date=\"2026-06-16\" title=\"api-evolution-test-drift\" description=\"API 演进导致测试 drift 的根因模式和预防措施\" source=\"main@caee8448\">\n\n### api-evolution-test-drift\n\n当 API 接口签名变更（新增参数、参数重命名、header 变化、Cypher 格式演进）时，对应的测试 mock 断言必须同步更新。典型症状：callApi 新增 extraHeaders 参数、buildGraphMergeMutation Cypher 格式从 JSON 风格改为属性风格、API key 从 query param 改为 header。预防措施：每次 API 签名变更后立即 grep 相关测试文件的 mock 断言。\n\n</spec-entry>\n\n<spec-entry category=\"arch\" keywords=\"open-decision,model-router,story-bible,reader-simulation\" date=\"2026-06-18\" title=\"写作工具新能力开放决策\" description=\"三个关键开放决策：Model Router 默认 Claude API；SB 实体版本策略默认 Mutable + audit log；Reader Simulation 默认 Async with progress\">\n### 写作工具新能力开放决策\n三个关键开放决策：Model Router 默认 Claude API；SB 实体版本策略默认 Mutable + audit log；Reader Simulation 默认 Async with progress。\n</spec-entry>",
+      "ext": {
+        "readMode": "required",
+        "priority": "high",
+        "keywords": [
+          "architecture",
+          "module",
+          "layer",
+          "boundary",
+          "dependency",
+          "nuxt"
+        ]
+      },
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:coding-conventions",
+      "type": "spec",
+      "title": "Coding Conventions",
+      "summary": "# Coding Conventions",
+      "tags": [
+        "coding",
+        "style",
+        "naming",
+        "import",
+        "formatting",
+        "pattern"
+      ],
+      "status": "active",
+      "created": "2026-06-17T19:50:48.113Z",
+      "updated": "2026-06-17T19:50:48.114Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      },
+      "body": "\n\n# Coding Conventions\n\nAuto-generated from project analysis. Update manually as patterns evolve.\n\n## Formatting\n- Indentation: 2 spaces\n- Line length: not enforced\n- Trailing commas: yes (ES5, multi-line)\n- Semicolons: no\n- Quotes: single (ESLint/Prettier)\n\n## Naming\n- Variables/functions: camelCase\n- Classes/types/interfaces: PascalCase\n- Constants: camelCase\n- Files: kebab-case (.ts/.tsx), PascalCase (.vue)\n- CSS classes: BEM or utility-first (Tailwind)\n\n## Imports\n- Style: named imports (ESM)\n- Path aliases: @ → src/\n- Order: vue → external → internal → relative\n\n## Patterns\n- Vue 3 Composition API with `<script setup lang=\"ts\">`\n- Nuxt 3 auto-imports (ref, computed, navigateTo, etc.)\n- Pinia stores for state (defineStore + composition style)\n- Server routes in server/ (Nitro)\n- Composables for shared logic (useAuth, useI18n, etc.)\n- Tailwind CSS for styling\n- Shadcn-vue + Radix Vue for UI components\n\n## Entries\n\n<spec-entry category=\"coding\" keywords=\"search,codegraph,代码搜索\" date=\"2026-06-01\">\n\n### mcp-semantic-search\n\n代码搜索优先使用 CodeGraph MCP（`mcp__codegraph__codegraph_context`），精确符号查找用 `codegraph_search`/`codegraph_callers`，简单文本匹配用 Grep\n\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"component-structure,re-export-anchor,backward-compat\" date=\"2026-06-13\" title=\"组件子目录 + 兼容性 re-export 锚模式\" description=\"子目录组织组件，旧路径保留兼容性 re-export 锚点\">\n### 组件子目录 + 兼容性 re-export 锚模式\n子目录组织组件，旧路径保留兼容性 re-export 锚点。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"i18n,module-split,aggregator-pattern\" date=\"2026-06-13\" title=\"i18n 模块拆分 + index 聚合器模式\" description=\"分模块拆分，translations.ts 聚合导出\">\n### i18n 模块拆分 + index 聚合器模式\n分模块拆分，translations.ts 聚合导出。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"craft-catalog,JSON-data,catalog-loader\" date=\"2026-06-13\" title=\"Craft catalog JSON data file 模式\" description=\"JSON 数据文件在 catalog-data/，catalog-loader 加载，craft-catalog re-export\">\n### Craft catalog JSON data file 模式\nJSON 数据文件在 catalog-data/，catalog-loader 加载，craft-catalog re-export。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"writing-craft,detector-pattern,keyword-first\" date=\"2026-06-13\" title=\"写作分析关键词检测为第一层、LLM 为增强层\" description=\"新检测函数必须返回结构化结果对象（带 confidence/evidence/suggestions），关键词检测优先，LLM 增强\">\n### 写作分析关键词检测为第一层、LLM 为增强层\n新检测函数必须返回结构化结果对象（带 confidence/evidence/suggestions），关键词检测优先，LLM 增强。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"writing-craft,enum-interface-record,four-layer\" date=\"2026-06-13\" title=\"写作知识引擎四层扩展模式：enum+interface+Record+检测函数\" description=\"M13 验证的四层模式：enum 定义维度→interface 定义结构→Record<Enum,Interface> 注册数据→检测函数实现分析\">\n### 写作知识引擎四层扩展模式：enum+interface+Record+检测函数\nM13 验证的四层模式：enum 定义维度→interface 定义结构→Record<Enum,Interface> 注册数据→检测函数实现分析。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"di,service-container,bindings,singleton\" date=\"2026-06-13\" title=\"DI 注册模式：bindSingleton + ServiceTypes Symbol\" description=\"bindSingleton<T>(ServiceTypes.Symbol, () => new Impl(config))\">\n### DI 注册模式：bindSingleton + ServiceTypes Symbol\nbindSingleton<T>(ServiceTypes.Symbol, () => new Impl(config))。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"voice-fingerprint,character-analysis,frontend-only\" date=\"2026-06-13\" title=\"Voice fingerprint 五维度特征提取\" description=\"sentence_length_preference/catchphrases/formality_level/emotional_expression_tendency/rhetorical_habits\">\n### Voice fingerprint 五维度特征提取\nsentence_length_preference/catchphrases/formality_level/emotional_expression_tendency/rhetorical_habits。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"architecture,three-layer-bridge,mcp,desktop-api\" date=\"2026-06-13\" title=\"三层桥接架构：MCP Endpoint → Desktop API → React Components\" description=\"复用现有 intelligence 组件模式\">\n### 三层桥接架构：MCP Endpoint → Desktop API → React Components\n复用现有 intelligence 组件模式。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"hot-reload,data-externalization,cache-invalidation\" date=\"2026-06-13\" title=\"热重载协议：file watcher → schema validate → atomic swap → event emit\" description=\"验证失败保留前版本，事件驱动非轮询，开发启用生产禁用\">\n### 热重载协议：file watcher → schema validate → atomic swap → event emit\n验证失败保留前版本，事件驱动非轮询，开发启用生产禁用。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"naming-convention,camelCase,public-API\" date=\"2026-06-13\" title=\"Workflow engine 公共 API 使用 camelCase\" description=\"runStream 非 run_stream，确认 camelCase 为公共 API 命名约定\">\n### Workflow engine 公共 API 使用 camelCase\nrunStream 非 run_stream，确认 camelCase 为公共 API 命名约定。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"editor-state,tiptap,caching,chapter-switching\" date=\"2026-06-13\" title=\"Editor state cache 解决 Tiptap 重挂载\" description=\"Map<chapterId, {json, text, selection, scrollY}> 避免 remount\">\n### Editor state cache 解决 Tiptap 重挂载\nMap<chapterId, {json, text, selection, scrollY}> 避免 remount。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"onboarding,welcome-wizard,localStorage,gating\" date=\"2026-06-13\" title=\"Onboarding localStorage 门控避免重复引导\" description=\"localStorage flag 'niko-onboarding-done'，Zustand slice pattern\">\n### Onboarding localStorage 门控避免重复引导\nlocalStorage flag 'niko-onboarding-done'，Zustand slice pattern。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"protocol-first,typescript,execution-pattern,interface\" date=\"2026-06-18\" title=\"Protocol-first 执行模式验证成功\" description=\"先定义 interface + type 再实现的模式在 M25 中验证有效\">\n### Protocol-first 执行模式验证成功\n先定义 interface + type 再实现的模式在 M25 中验证有效，7 个目标全部达成，零回归，新增代码覆盖率 >= 80%，TypeScript 编译零错误。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"companion-pattern,testing,zustand,mcp-endpoint,vitest\" date=\"2026-06-18\" title=\"Companion pattern 测试策略规范\" description=\"使用 .additional.test.ts 扩展测试，不重写现有测试结构\">\n### Companion pattern 测试策略规范\n使用 .additional.test.ts 和 .branches.additional.test.ts 扩展测试，不重写现有测试结构。Zustand slice 测试遵循 createHarness()/getLiveStore() 模式，MCP endpoint 测试遵循 makeRequest() + 直接导入模式。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"fix-pattern,synchronization,frontend,backend,test\" date=\"2026-06-18\" title=\"系统性修复模式：前端 + 后端 + 测试同步更新\" description=\"一致性修复的标准模式：前端类型修正 + 后端逻辑修复 + 测试 mock 更新\">\n### 系统性修复模式：前端 + 后端 + 测试同步更新\n一致性修复的标准模式：前端类型修正 + 后端逻辑修复 + 测试 mock 更新，三方必须同步。仅修复一方会导致新的不匹配。\n</spec-entry>\n\n<spec-entry category=\"coding\" keywords=\"callapi,api-pattern,envelope,frontend-type,anti-pattern\" date=\"2026-06-18\" title=\"callApi 外层封装模式：禁止内层信封\" description=\"callApi 已在 2xx 响应时将原始 body 封装为 ApiResponse，禁止再添加内层信封\">\n### callApi 外层封装模式：禁止内层信封\ncallApi 已在 2xx 响应时将原始 body 封装为 {success: true, data: rawBody}。前端类型必须使用 ApiResponse<T> 其中 T 是原始后端 body 形状，禁止再添加内层 {success, data: T} 封装。\n</spec-entry>\n",
+      "ext": {
+        "readMode": "required",
+        "priority": "high",
+        "keywords": [
+          "coding",
+          "style",
+          "naming",
+          "import",
+          "formatting",
+          "pattern"
+        ]
+      },
+      "scope": "project",
+      "category": "coding",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:debug-notes",
+      "type": "spec",
+      "title": "Debug Notes",
+      "summary": "# Debug Notes",
+      "tags": [
+        "debug",
+        "issue",
+        "workaround",
+        "root-cause",
+        "gotcha"
+      ],
+      "status": "active",
+      "created": "2026-06-13T15:46:42.942Z",
+      "updated": "2026-06-13T15:46:42.942Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/debug-notes.md"
+      },
+      "body": "\r\n\r\n# Debug Notes\r\n\r\n## Entries\r\n\r\n<spec-entry category=\"debug\" keywords=\"i18n,CJK,slug,normalizeAscii\" date=\"2026-06-13\" title=\"normalizeAscii 剥离 CJK 字符 — slug 生成断裂\" description=\"wiki-schema.ts:92-101 的 normalizeAscii 剥离所有非 ASCII，中文标题 slug 变为 '-'\">\r\n### normalizeAscii 剥离 CJK 字符 — slug 生成断裂\r\nwiki-schema.ts:92-101 的 normalizeAscii 剥离所有非 ASCII，中文标题 slug 变为 '-'。\r\n</spec-entry>\r\n\r\n<spec-entry category=\"debug\" keywords=\"SSE,parser,cross-chunk,chat\" date=\"2026-06-13\" title=\"SSE parser 跨 chunk 事件丢失根因\" description=\"currentEvent/currentData 在 while 循环内初始化，跨 chunk 事件被丢弃\">\r\n### SSE parser 跨 chunk 事件丢失根因\r\ncurrentEvent/currentData 在 while 循环内初始化，跨 chunk 事件被丢弃。\r\n</spec-entry>\r\n\r\n<spec-entry category=\"debug\" keywords=\"catalog-loader,lazy-loading-defeated,const-bindings\" date=\"2026-06-13\" title=\"craft-catalog 模块级 const 导出架空延迟缓存\" description=\"18 个模块级 const 立即调用 getter，reloadCatalog 因 const 绑定不可重赋值而 broken\">\r\n### craft-catalog 模块级 const 导出架空延迟缓存\r\n18 个模块级 const 立即调用 getter，reloadCatalog 因 const 绑定不可重赋值而 broken。\r\n</spec-entry>",
+      "ext": {
+        "readMode": "optional",
+        "priority": "medium",
+        "keywords": [
+          "debug",
+          "issue",
+          "workaround",
+          "root-cause",
+          "gotcha"
+        ]
+      },
+      "scope": "project",
+      "category": "debug",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:harvest-brainstorm-backward-compat",
+      "type": "spec",
+      "title": "M24 5 鎺ュ彛鍚戝悗鍏煎濂戠害",
+      "summary": "--- type: spec slug: harvest-brainstorm-backward-compat title: M24 5 接口向后兼容契约 tags: m24,backward-compatibility,interface-contract source: harvest source_id: 20260517-brainstorm-m24-milestone-direction fragment_id: HRV-f4a5b6c7 created: 2026",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-13T16:12:46.840Z",
+      "updated": "2026-06-13T16:12:46.841Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/harvest-brainstorm-backward-compat.md"
+      },
+      "body": "\n---\ntype: spec\nslug: harvest-brainstorm-backward-compat\ntitle: M24 5 接口向后兼容契约\ntags: m24,backward-compatibility,interface-contract\nsource: harvest\nsource_id: 20260517-brainstorm-m24-milestone-direction\nfragment_id: HRV-f4a5b6c7\ncreated: 2026-06-13\n---\n\n1. WorkflowEngine 所有公共方法 (route, plan, execute, run, stream)。2. useI18n() hook 返回类型 Translations。3. EvaluationPanel 和 StoryBiblePanel props 接口。4. craft-catalog.ts 所有导出类型 (SatisfactionPattern 等)。5. Backend API endpoints (/api/workflow/*, /api/narrative/*)。内部实现可自由重构，消费者代码不需修改。\n",
+      "ext": {},
+      "scope": "project",
+      "category": null,
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:harvest-brainstorm-cytoscape",
+      "type": "spec",
+      "title": "Cytoscape.js 鐭ヨ瘑鍥捐氨 4 绉嶈鍥炬ā寮?tags: obsidian-integration,knowledge-graph,cytoscape",
+      "summary": "--- type: spec slug: harvest-brainstorm-cytoscape title: Cytoscape.js 知识图谱 4 种视图模式 tags: obsidian-integration,knowledge-graph,cytoscape source: harvest source_id: 20260528-brainstorm-obsidian-knowledge-integration fragment_id: HRV-b0c1d2e3 ",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-13T16:12:46.941Z",
+      "updated": "2026-06-13T16:12:46.942Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/harvest-brainstorm-cytoscape.md"
+      },
+      "body": "\n---\ntype: spec\nslug: harvest-brainstorm-cytoscape\ntitle: Cytoscape.js 知识图谱 4 种视图模式\ntags: obsidian-integration,knowledge-graph,cytoscape\nsource: harvest\nsource_id: 20260528-brainstorm-obsidian-knowledge-integration\nfragment_id: HRV-b0c1d2e3\ncreated: 2026-06-13\n---\n\nCytoscape.js 选中（Canvas 渲染, 2000 节点流畅, 适合个人知识库规模）。4 视图模式：fullscreen (Ctrl+G), split (左编辑器右图谱), sidebar (当前笔记 1 度连接 mini radial), floating (wikilink hover 触发)。节点类型: note/concept/character/location/ai-suggestion/obsidian-note。边类型: wikilink/reference/semantic-similarity/shared-tags/ai-inferred。\n",
+      "ext": {},
+      "scope": "project",
+      "category": null,
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:harvest-brainstorm-embedding",
+      "type": "spec",
+      "title": "Embedding 鏂规锛歜ge-small-zh-v1.5 + sqlite-vec",
+      "summary": "--- type: spec slug: harvest-brainstorm-embedding title: Embedding 方案：bge-small-zh-v1.5 + sqlite-vec tags: obsidian-integration,embedding,vector-search source: harvest source_id: 20260528-brainstorm-obsidian-knowledge-integration fragment_i",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-13T16:12:47.059Z",
+      "updated": "2026-06-13T16:12:47.061Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/harvest-brainstorm-embedding.md"
+      },
+      "body": "\n---\ntype: spec\nslug: harvest-brainstorm-embedding\ntitle: Embedding 方案：bge-small-zh-v1.5 + sqlite-vec\ntags: obsidian-integration,embedding,vector-search\nsource: harvest\nsource_id: 20260528-brainstorm-obsidian-knowledge-integration\nfragment_id: HRV-d2e3f4a5\ncreated: 2026-06-13\n---\n\nEmbedding: onnxruntime-node + bge-small-zh-v1.5 (24MB, 384 维)。向量存储: sqlite-vec 扩展 (~5ms@10k, 与现有 SQLite 一致)。检索管线: Vector Search topK=20 + FTS5 topK=20 → RRF Fusion → MMR Rerank。增量索引: 监控 vault 变更 → hash 比较 → 仅对变更笔记 re-chunk+embed+upsert。\n",
+      "ext": {},
+      "scope": "project",
+      "category": null,
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:harvest-brainstorm-error-propagation",
+      "type": "spec",
+      "title": "M24 璺ㄧ壒鎬ч敊璇紶鎾鍒?tags: m24,error-handling,graceful-degradation",
+      "summary": "--- type: spec slug: harvest-brainstorm-error-propagation title: M24 跨特性错误传播规则 tags: m24,error-handling,graceful-degradation source: harvest source_id: 20260517-brainstorm-m24-milestone-direction fragment_id: HRV-e3f4a5b6 created: 2026-06-1",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-13T16:12:47.192Z",
+      "updated": "2026-06-13T16:12:47.192Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/harvest-brainstorm-error-propagation.md"
+      },
+      "body": "\n---\ntype: spec\nslug: harvest-brainstorm-error-propagation\ntitle: M24 跨特性错误传播规则\ntags: m24,error-handling,graceful-degradation\nsource: harvest\nsource_id: 20260517-brainstorm-m24-milestone-direction\nfragment_id: HRV-e3f4a5b6\ncreated: 2026-06-13\n---\n\nF-005 catalog 加载失败不得阻塞应用启动（回退空目录）。F-006 工作流步骤失败须触发检查点保存。F-007 可视化渲染错误须 ErrorBoundary 隔离，不影响编辑器。F-004 翻译模块加载失败回退到 key 显示。错误分类：瞬态（网络超时、LLM 限流）→指数退避最多 3 次重试；数据（模式验证失败）→回退捆绑默认+告警；逻辑（无效状态转换）→日志+优雅降级；致命（OOM、不可恢复损坏）→崩溃报告+重启提示。\n",
+      "ext": {},
+      "scope": "project",
+      "category": null,
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:harvest-brainstorm-m24-scope",
+      "type": "spec",
+      "title": "M24 鑼冨洿鍏辫瘑锛歵ech debt F-001~F-006 + F-007 鍙欎簨鍙鍖?tags: m24,milestone-scope,tech-debt,consensus",
+      "summary": "--- type: spec slug: harvest-brainstorm-m24-scope title: M24 范围共识：tech debt F-001~F-006 + F-007 叙事可视化 tags: m24,milestone-scope,tech-debt,consensus source: harvest source_id: 20260517-brainstorm-m24-milestone-direction fragment_id: HRV-e7f8",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-13T16:12:47.297Z",
+      "updated": "2026-06-13T16:12:47.297Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/harvest-brainstorm-m24-scope.md"
+      },
+      "body": "\n---\ntype: spec\nslug: harvest-brainstorm-m24-scope\ntitle: M24 范围共识：tech debt F-001~F-006 + F-007 叙事可视化\ntags: m24,milestone-scope,tech-debt,consensus\nsource: harvest\nsource_id: 20260517-brainstorm-m24-milestone-direction\nfragment_id: HRV-e7f8a9b0\ncreated: 2026-06-13\n---\n\n三个角色一致：F-001~F-006 (tech debt) 必须包含。F-007 (叙事可视化) 为唯一新功能。F-008 (修订工作流) 延期至 M25。理由：技术债是特性质量基础；限 1 个新功能避免范围膨胀。F-007 优于 F-008 因用户感知高、技术依赖少、MVP 可交付、市场差异化。\n",
+      "ext": {},
+      "scope": "project",
+      "category": null,
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:harvest-brainstorm-m26-scope",
+      "type": "spec",
+      "title": "M26 鑼冨洿锛歅erformance Optimization + Deep LLM Integration",
+      "summary": "--- type: spec slug: harvest-brainstorm-m26-scope title: M26 范围：Performance Optimization + Deep LLM Integration tags: m26,milestone-scope,performance,llm source: harvest source_id: 20260527-brainstorm-m26-direction fragment_id: HRV-f8a9b0c1",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-13T16:12:47.408Z",
+      "updated": "2026-06-13T16:12:47.408Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/harvest-brainstorm-m26-scope.md"
+      },
+      "body": "\n---\ntype: spec\nslug: harvest-brainstorm-m26-scope\ntitle: M26 范围：Performance Optimization + Deep LLM Integration\ntags: m26,milestone-scope,performance,llm\nsource: harvest\nsource_id: 20260527-brainstorm-m26-direction\nfragment_id: HRV-f8a9b0c1\ncreated: 2026-06-13\n---\n\nF-013 Performance Optimization 为技术债优先（OOM issues, 无缓存, 全量分析影响开发效率）。F-014 Deep LLM Integration 为功能核心（所有智能功能依赖 LLM 但未实际连接 — 系统价值关键路径）。F-011 Real-time 延期至 M27，F-012 Plugin 延期至 M28。\n",
+      "ext": {},
+      "scope": "project",
+      "category": null,
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:harvest-brainstorm-obsidian-architecture",
+      "type": "spec",
+      "title": "Obsidian Rust-Node-WebView 涓夊眰鏋舵瀯",
+      "summary": "--- type: spec slug: harvest-brainstorm-obsidian-architecture title: Obsidian Rust-Node-WebView 三层架构 tags: obsidian-integration,architecture,rust,tauri source: harvest source_id: 20260528-brainstorm-obsidian-knowledge-integration fragment_i",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-13T16:12:47.511Z",
+      "updated": "2026-06-13T16:12:47.511Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/harvest-brainstorm-obsidian-architecture.md"
+      },
+      "body": "\n---\ntype: spec\nslug: harvest-brainstorm-obsidian-architecture\ntitle: Obsidian Rust-Node-WebView 三层架构\ntags: obsidian-integration,architecture,rust,tauri\nsource: harvest\nsource_id: 20260528-brainstorm-obsidian-knowledge-integration\nfragment_id: HRV-a9b0c1d2\ncreated: 2026-06-13\n---\n\nRust 层 (notify crate + tauri-plugin-fs): 文件监控, vault 文件监测, 大文件流式读取。Node sidecar 层 (remark + onnxruntime-node + better-sqlite3): markdown 解析, embedding 生成, 同步引擎, 向量搜索。WebView 层 (React + Cytoscape.js): 知识图谱可视化, 编辑器交互, 同步状态 UI。Rust notify 监控变更 → Tauri event → Node handler。\n",
+      "ext": {},
+      "scope": "project",
+      "category": null,
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:harvest-brainstorm-sync-engine",
+      "type": "spec",
+      "title": "鍚屾寮曟搸锛氫簨浠堕┍鍔ㄦ贩鍚?+ 缁撴瀯鍖?diff + HUMAN_QUEUE",
+      "summary": "--- type: spec slug: harvest-brainstorm-sync-engine title: 同步引擎：事件驱动混合 + 结构化 diff + HUMAN_QUEUE tags: obsidian-integration,sync-engine,conflict-resolution source: harvest source_id: 20260528-brainstorm-obsidian-knowledge-integration fragmen",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-13T16:12:47.617Z",
+      "updated": "2026-06-13T16:12:47.618Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/harvest-brainstorm-sync-engine.md"
+      },
+      "body": "\n---\ntype: spec\nslug: harvest-brainstorm-sync-engine\ntitle: 同步引擎：事件驱动混合 + 结构化 diff + HUMAN_QUEUE\ntags: obsidian-integration,sync-engine,conflict-resolution\nsource: harvest\nsource_id: 20260528-brainstorm-obsidian-knowledge-integration\nfragment_id: HRV-c1d2e3f4\ncreated: 2026-06-13\n---\n\nRust notify 监控 vault 变更 → Tauri event → Node handler。Node 知识实体变更 → EventBus → 写入 vault。周期性全量验证 (5 min) 确保最终一致性。变更检测：mtime + content hash 双验证。冲突策略：结构化 diff (按标题分区) + HUMAN_QUEUE 回退处理不可解冲突。同步状态持久化在 SQLite (sync_state + sync_conflicts 表)。\n",
+      "ext": {},
+      "scope": "project",
+      "category": null,
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:learnings",
+      "type": "spec",
+      "title": "Learnings",
+      "summary": "# Learnings",
+      "tags": [
+        "bug",
+        "lesson",
+        "gotcha",
+        "learning"
+      ],
+      "status": "active",
+      "created": "2026-06-17T23:46:46.769Z",
+      "updated": "2026-06-17T23:46:46.770Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      },
+      "body": "\r\n\r\n# Learnings\r\n\r\n## Entries\r\n\r\n<spec-entry category=\"learning\" keywords=\"writing-craft,knowledge-integration,Record-pattern,enum-driven\" date=\"2026-05-07\" source=\"milestone-complete\">\r\n\r\n### 写作知识引擎的数据驱动架构模式\r\n\r\nM13 成功将 54 本写作书籍 + 4 条悬疑路径 + 5 卷网文研究的结构化知识整合到 niko-studio 分析引擎中。\r\n\r\n核心模式：每个知识模块使用 `enum + interface + Record<Enum, Interface> + 检测函数` 的四层结构。这确保了：\r\n- 类型安全（enum 驱动所有 key）\r\n- 可扩展（新增知识只需添加枚举值 + record entry）\r\n- 可测试（每个检测函数可独立验证）\r\n- 与 LLM 分析器解耦（关键词检测作为第一层，LLM 作为增强层）\r\n\r\n此模式已在 `plot-templates.ts`（20 种情节模式）、`archetype-catalog.ts`（45 种原型）、`craft-catalog.ts`（SUBGENRE_RULES + SATISFACTION_PATTERNS）中验证。\r\nMilestone: M13\r\n\r\n</spec-entry>\r\n\r\n<spec-entry category=\"learning\" keywords=\"Chinese-web-novel,reader-satisfaction,satisfaction-density,hook-detection\" date=\"2026-05-07\" source=\"milestone-complete\">\r\n\r\n### 中文网络文学的读者满意度量化分析\r\n\r\n基于《中国网络文学阅读潮流研究》（5 卷）实现的 `reader-satisfaction-analyzer.ts` 提供了：\r\n- 4 层爽点模型（生理/心理/社交/成就）\r\n- 章节钩子检测（5 种类型：悬念/问题/预告/威胁/承诺）\r\n- 期待-延迟-释放节奏分析\r\n- 爽点密度（每千字）量化\r\n\r\n关键发现：中文网文的读者留存与爽点密度高度相关（黄金三章法则），这与西方创意写作教学中强调的 \"tension curve\" 有本质差异。两种传统互补使用效果最佳。\r\nMilestone: M13\r\n\r\n</spec-entry>\r\n\r\n<spec-entry category=\"learning\" keywords=\"suspense-subgenre,本格推理,社会派,公平线索,detective-fiction\" date=\"2026-05-07\" source=\"milestone-complete\">\r\n\r\n### 悬疑流派的规则化检测\r\n\r\n4 种悬疑流派的规则检测（本格推理/社会派/硬汉派/惊悚悬疑）通过 `SuspenseSubgenre` + `SUBGENRE_RULES` 实现。\r\n\r\n每种流派定义：\r\n- `coreRules`（必须遵守的创作规则）\r\n- `requiredElements`（必须出现的元素）\r\n- `forbiddenElements`（禁止出现的内容）\r\n- `keywords`（典型/非典型信号词）\r\n\r\n检测通过 `typical keyword 命中率 + required elements 覆盖率 - atypical 惩罚分` 计算置信度。第一版使用关键词匹配，后续可接入 LLM 进行深度语义分析。\r\nMilestone: M13\r\n\r\n</spec-entry>\r\n\r\n<spec-entry category=\"learning\" keywords=\"release,evidence-refresh,dependency-order\" date=\"2026-06-13\" title=\"先修 gate 再刷 evidence — 否则产生无效 NO_GO 证据\" description=\"若先刷新 retained evidence 再修脚本，会产生更新但仍无效的 NO_GO 证据。不可 blanket disable triage blocker\">\r\n### 先修 gate 再刷 evidence — 否则产生无效 NO_GO 证据\r\n若先刷新 retained evidence 再修脚本，会产生更新但仍无效的 NO_GO 证据。不可 blanket disable triage blocker。\r\n</spec-entry>\r\n\r\n<spec-entry category=\"learning\" keywords=\"BookWorld,ablation,environment-response,scene-mode\" date=\"2026-06-13\" title=\"BookWorld ablation：移除环境响应损害沉浸感；移除场景模式损害所有维度\" description=\"验证 win rate 75.36%，环境响应和场景模式是核心贡献因子\">\r\n### BookWorld ablation：移除环境响应损害沉浸感；移除场景模式损害所有维度\r\n验证 win rate 75.36%，环境响应和场景模式是核心贡献因子。\r\n</spec-entry>\r\n\r\n<spec-entry category=\"learning\" keywords=\"decision-threshold,writing,critic,quality,alignment\" date=\"2026-06-18\" title=\"决策阈值不一致已修复\" description=\"writing.ts 与 critic.ts 的 totalScore 阈值统一为 APPROVED>=80, REVISE>=60, REWRITE<60\">\r\n### 决策阈值不一致已修复\r\nwriting.ts 使用 totalScore >= 40 判定 REWRITE 但 critic.ts 使用 >= 60。修复后统一为：APPROVED >= 80, REVISE >= 60, REWRITE < 60。移除了未文档化的 HUMAN_REVIEW 层级。\r\n</spec-entry>\r\n\r\n<spec-entry category=\"learning\" keywords=\"autonovel,competitor-analysis,AI-novel-pipeline,quality-control\" date=\"2026-06-18\" title=\"autonovel 竞品分析：端到端 AI 小说生成管道的关键洞察\" description=\"NousResearch/autonovel 展示了完整的 AI 小说生成管道，其双层质量控制系统和反 slop 机制值得借鉴\">\r\n\r\n### autonovel 竞品分析：端到端 AI 小说生成管道的关键洞察\r\n\r\n**项目**: https://github.com/NousResearch/autonovel (1.2k stars, 229 forks)\r\n\r\n**核心架构**:\r\n- 5 层协同演化文档：voice.md → world.md → characters.md → outline.md → chapters/\r\n- 4 阶段管道：Foundation → First Draft → Revision → Export\r\n- 双层质量控制系统：\r\n  - 机械层：regex 禁用词 + 结构反模式检测（OVER-EXPLAIN, TRIADIC LISTING 等）\r\n  - LLM 层：Claude Opus 双角色评审（文学评论家 + 小说教授）\r\n- 读者模拟：4 人格评审面板（编辑/类型读者/作家/初读者）\r\n\r\n**与 niko-studio 的差异与启示**:\r\n1. **autonovel 优势**: 完整的出版级输出（LaTeX PDF + ePub + 有声书 + 封面），niko-studio 目前缺少排版和导出能力\r\n2. **niko-studio 优势**: 更丰富的中文写作知识库（54 本书 + 网文研究），更精细的读者满意度分析（爽点密度/钩子检测）\r\n3. **可借鉴点**: 反 slop 检测机制（ANTI-SLOP.md + ANTI-PATTERNS.md）可补充到 writing-craft 分析器中；Elo 章节对比可用于 niko-studio 的章节质量排序\r\n4. **关键差距**: autonovel 已实现端到端自动化，niko-studio 的 AI 共创引擎仍需人工介入较多\r\n\r\n**Why**: 了解竞品技术路线有助于定位 niko-studio 的独特价值和改进方向。\r\n**How to apply**: 将 autonovel 的反 slop 检测和双层质量控制思想整合到 niko-studio 的写作分析引擎中，同时保持中文写作知识库的优势壁垒。\r\n\r\n</spec-entry>\r\n",
+      "ext": {
+        "readMode": "optional",
+        "priority": "medium",
+        "keywords": [
+          "bug",
+          "lesson",
+          "gotcha",
+          "learning"
+        ]
+      },
+      "scope": "project",
+      "category": "learning",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:quality-rules",
+      "type": "spec",
+      "title": "Quality Rules",
+      "summary": "# Quality Rules",
+      "tags": [
+        "quality",
+        "lint",
+        "eslint",
+        "prettier",
+        "ruff"
+      ],
+      "status": "active",
+      "created": "2026-06-13T15:46:45.688Z",
+      "updated": "2026-06-13T15:46:45.688Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      },
+      "body": "\n\n# Quality Rules\n\n## ESLint\n- Config: eslint.config.mjs (flat config, ESLint 9)\n- Plugin: @typescript-eslint\n- Focus: bug-prevention rules (no stylistic rules)\n- Command: `npm run lint` → `eslint --max-warnings 0`\n\n## Prettier\n- Config: prettier.config.mjs\n- printWidth: 100, semi: false, singleQuote: true, trailingComma: \"all\"\n- Command: `npm run format` (write), `npm run format:check` (verify)\n\n## Ruff (Python)\n- Config: pyproject.toml [tool.ruff]\n- line-length: 100, target: py311\n- Command: `ruff check --fix . && ruff format .`\n\n## Pre-commit\n- Config: .pre-commit-config.yaml\n- Runs: `python scripts/run_local_pre_commit.py`\n\n## Type Checking\n- Backend: `npm run typecheck` → `tsc --noEmit`\n- Desktop: `npm run typecheck` → `tsc --noEmit`\n- Python: `mypy` (if configured)\n\n## Quick Check\n- `npm run check:pre-commit` → lint + format:check\n- `npm run check:quick` → lint + format:check + typecheck + test\n\n## Entries\n\n<spec-entry category=\"quality\" keywords=\"scoring,rules-based,no-llm,hook,cliffhanger\" date=\"2026-06-13\" title=\"钩子悬念评分用规则评分而非 LLM\" description=\"提取前 200 字和后 200 字，关键词匹配+结构分析打分 0-100\">\n### 钩子悬念评分用规则评分而非 LLM\n提取前 200 字和后 200 字，关键词匹配+结构分析打分 0-100。\n</spec-entry>\n\n<spec-entry category=\"quality\" keywords=\"uat,ui-testing,manual-testing,gap\" date=\"2026-06-13\" title=\"UAT 覆盖策略：自动化覆盖构建/单测，UI 目视需人工补测\" description=\"自动化 UAT 仅覆盖 build/unit-test 和部分 editor 行为\">\n### UAT 覆盖策略：自动化覆盖构建/单测，UI 目视需人工补测\n自动化 UAT 仅覆盖 build/unit-test 和部分 editor 行为。\n</spec-entry>",
+      "ext": {
+        "readMode": "required",
+        "priority": "medium",
+        "keywords": [
+          "quality",
+          "lint",
+          "eslint",
+          "prettier",
+          "ruff"
+        ]
+      },
+      "scope": "project",
+      "category": "review",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:review-standards",
+      "type": "spec",
+      "title": "Review Standards",
+      "summary": "# Review Standards",
+      "tags": [
+        "review",
+        "checklist",
+        "gate",
+        "approval",
+        "standard"
+      ],
+      "status": "active",
+      "created": "2026-06-13T15:46:44.309Z",
+      "updated": "2026-06-13T15:46:44.309Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/review-standards.md"
+      },
+      "body": "\r\n\r\n# Review Standards\r\n\r\n## Entries\r\n\r\n<spec-entry category=\"review\" keywords=\"docs-site,api-reference,maintenance,drift\" date=\"2026-06-13\" title=\"API endpoint lists 必须对照 docs/API_REFERENCE.md 校验\" description=\"docs-lint 应验证 API endpoint 准确性，防止漂移\">\r\n### API endpoint lists 必须对照 docs/API_REFERENCE.md 校验\r\ndocs-lint 应验证 API endpoint 准确性，防止漂移。\r\n</spec-entry>\r\n\r\n<spec-entry category=\"review\" keywords=\"docs-site,capability-status,overclaiming\" date=\"2026-06-13\" title=\"Capability Status Matrix 防止 docs 过度宣称\" description=\"公共文档必须区分 shipped/partial/experimental/historical/roadmap 状态\">\r\n### Capability Status Matrix 防止 docs 过度宣称\r\n公共文档必须区分 shipped/partial/experimental/historical/roadmap 状态。\r\n</spec-entry>",
+      "ext": {
+        "readMode": "required",
+        "priority": "medium",
+        "keywords": [
+          "review",
+          "checklist",
+          "gate",
+          "approval",
+          "standard"
+        ]
+      },
+      "scope": "project",
+      "category": "review",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:test-conventions",
+      "type": "spec",
+      "title": "Test Conventions",
+      "summary": "# Test Conventions",
+      "tags": [
+        "test",
+        "coverage",
+        "vitest",
+        "playwright",
+        "pytest"
+      ],
+      "status": "active",
+      "created": "2026-05-24T19:25:47.535Z",
+      "updated": "2026-06-01T14:20:07.519Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/test-conventions.md"
+      },
+      "body": "\n\n# Test Conventions\n\nAuto-generated from project analysis. Update manually as patterns evolve.\n\n## Framework\n- TypeScript: Vitest (backend + desktop)\n- Python: pytest + pytest-asyncio\n- E2E: Playwright\n\n## Directory Structure\n- Backend: co-located `*.test.ts` + `src-ts/tests/`\n- Desktop: co-located `*.test.tsx` + `desktop/tests/`\n- Python: `tests/unit/`\n- E2E: `docs-site/e2e/`\n\n## Naming Conventions\n- Test files: `*.test.ts`, `*.test.tsx`, `*.integration.test.ts`, `*.e2e.test.ts`\n- Python: `test_*.py`\n\n## Coverage\n- Backend: lines 80%, branches 70%, functions 80%, statements 80%\n- Desktop: lines 75%, branches 70%, functions 70%, statements 75%\n- Provider: v8\n\n## Commands\n- `npm run test` — vitest run\n- `npm run test:watch` — vitest watch\n- `npm run test:coverage` — vitest with coverage\n- `pytest` — Python tests\n\n## Entries\n",
+      "ext": {
+        "readMode": "required",
+        "priority": "high",
+        "keywords": [
+          "test",
+          "coverage",
+          "vitest",
+          "playwright",
+          "pytest"
+        ]
+      },
+      "scope": "project",
+      "category": "test",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "spec:project:ui-conventions",
+      "type": "spec",
+      "title": "UI Conventions",
+      "summary": "# UI Conventions",
+      "tags": [
+        "ui",
+        "design",
+        "tailwind",
+        "component",
+        "shadcn"
+      ],
+      "status": "active",
+      "created": "2026-06-13T15:46:50.930Z",
+      "updated": "2026-06-13T15:46:50.931Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/ui-conventions.md"
+      },
+      "body": "\n\n# UI Conventions\n\nAuto-generated from project analysis. Update manually as patterns evolve.\n\n## Framework\n- React 18 + TipTap 3.22 (rich text editor)\n- Tauri 2 (desktop shell)\n- Zustand 4.5 (state management)\n- TailwindCSS 3.4\n\n## Component Library\n- shadcn-vue + Radix Vue (headless primitives)\n- lucide-react (icons)\n- All UI components are custom-built (no heavy UI lib)\n\n## Color & Theme\n- Dark mode via CSS classes (dark:bg-dark-bg, dark:text-dark-text)\n- Semantic color tokens (CSS variables: --surface-base, --primary-cta)\n- i18next for zh/en bilingual\n\n## Typography\n- Sans: Inter\n- Serif: Merriweather\n- Mono: Fira Code\n\n## Layout & Spacing\n- Tailwind utility-first\n- @tanstack/react-virtual for virtual lists\n- tippy.js for tooltips\n\n## Component Patterns\n- Zustand stores with persist middleware\n- React hooks for shared logic\n- TipTap extensions for editor features\n\n## Entries\n\n<spec-entry category=\"ui\" keywords=\"docs-site,page-template,progressive-disclosure\" date=\"2026-06-13\" title=\"Docs page template: 7-section progressive disclosure pattern\" description=\"Concept→Mental model→When to use→How it works→Example→Status→Troubleshooting\">\n### Docs page template: 7-section progressive disclosure pattern\nConcept→Mental model→When to use→How it works→Example→Status→Troubleshooting。\n</spec-entry>\n\n<spec-entry category=\"ui\" keywords=\"docs-site,writing-problem-first,user-centric\" date=\"2026-06-13\" title=\"Concept before mechanics: explain writing problem first then implementation\" description=\"不在 writer-facing docs 中直接使用 Maestro CLI 术语\">\n### Concept before mechanics: explain writing problem first then implementation\n不在 writer-facing docs 中直接使用 Maestro CLI 术语。\n</spec-entry>",
+      "ext": {
+        "readMode": "optional",
+        "priority": "medium",
+        "keywords": [
+          "ui",
+          "design",
+          "tailwind",
+          "component",
+          "shadcn"
+        ]
+      },
+      "scope": "project",
+      "category": "ui",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-debug-camelcase-api",
+      "type": "knowhow",
+      "title": "Workflow engine 鍏叡 API camelCase 鍛藉悕绾﹀畾",
+      "summary": "--- type: knowhow slug: harvest-debug-camelcase-api title: Workflow engine 公共 API camelCase 命名约定 tags: naming-convention,camelCase,public-API source: harvest source_id: 20260525-test-P1-tech-debt-cleanup fragment_id: HRV-b2c3d4e5 created: 2",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:47.717Z",
+      "updated": "2026-06-13T16:12:47.717Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-debug-camelcase-api.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-debug-camelcase-api\ntitle: Workflow engine 公共 API camelCase 命名约定\ntags: naming-convention,camelCase,public-API\nsource: harvest\nsource_id: 20260525-test-P1-tech-debt-cleanup\nfragment_id: HRV-b2c3d4e5\ncreated: 2026-06-13\n---\n\npublicEntryApi() 返回 ['route','plan','execute','run','runStream']。src-ts/ 中无 'run_stream' 出现于任何 .ts 文件。确认 camelCase 为公共 API 命名约定。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-debug-craft-catalog-json",
+      "type": "knowhow",
+      "title": "Craft catalog JSON data file 妯″紡",
+      "summary": "--- type: knowhow slug: harvest-debug-craft-catalog-json title: Craft catalog JSON data file 模式 tags: craft-catalog,JSON-data,catalog-loader source: harvest source_id: 20260525-test-P1-tech-debt-cleanup fragment_id: HRV-e5f6a7b8 created: 20",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:47.829Z",
+      "updated": "2026-06-13T16:12:47.830Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-debug-craft-catalog-json.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-debug-craft-catalog-json\ntitle: Craft catalog JSON data file 模式\ntags: craft-catalog,JSON-data,catalog-loader\nsource: harvest\nsource_id: 20260525-test-P1-tech-debt-cleanup\nfragment_id: HRV-e5f6a7b8\ncreated: 2026-06-13\n---\n\nCraft catalog 使用 JSON 数据文件在 catalog-data/：dialogue-techniques, narrative-tension, pacing-rhythms, pov-strategies, scene-types, sensory-details。catalog-loader 加载，craft-catalog 重新导出。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-debug-i18n-split",
+      "type": "knowhow",
+      "title": "i18n 妯″潡鎷嗗垎 + index 鑱氬悎鍣ㄦā寮?tags: i18n,module-split,aggregator-pattern",
+      "summary": "--- type: knowhow slug: harvest-debug-i18n-split title: i18n 模块拆分 + index 聚合器模式 tags: i18n,module-split,aggregator-pattern source: harvest source_id: 20260525-test-P1-tech-debt-cleanup fragment_id: HRV-d4e5f6a7 created: 2026-06-13 ---",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:47.937Z",
+      "updated": "2026-06-13T16:12:47.938Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-debug-i18n-split.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-debug-i18n-split\ntitle: i18n 模块拆分 + index 聚合器模式\ntags: i18n,module-split,aggregator-pattern\nsource: harvest\nsource_id: 20260525-test-P1-tech-debt-cleanup\nfragment_id: HRV-d4e5f6a7\ncreated: 2026-06-13\n---\n\ni18n 模块拆分：app/, chat/, evaluation/, mcp/, sidebar/, storybible/。translations.ts (或 index.ts) 聚合所有模块导出。共 11 个 .ts 文件在 i18n/modules/。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-debug-logger-noop",
+      "type": "knowhow",
+      "title": "Logger isDev-based noop 妯″紡",
+      "summary": "--- type: knowhow slug: harvest-debug-logger-noop title: Logger isDev-based noop 模式 tags: logger,production-silence,isDev-noop source: harvest source_id: 20260525-test-P1-tech-debt-cleanup fragment_id: HRV-a1b2c3d4 created: 2026-06-13 ---",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.049Z",
+      "updated": "2026-06-13T16:12:48.049Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-debug-logger-noop.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-debug-logger-noop\ntitle: Logger isDev-based noop 模式\ntags: logger,production-silence,isDev-noop\nsource: harvest\nsource_id: 20260525-test-P1-tech-debt-cleanup\nfragment_id: HRV-a1b2c3d4\ncreated: 2026-06-13\n---\n\nLogger 模块使用 isDev-based noop 模式：console.log/warn/debug/info 通过 logger 在生产无输出。logger.error 仍输出。已通过用户确认和 logger.ts 代码检查验证。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-debug-reexport-anchor",
+      "type": "knowhow",
+      "title": "缁勪欢瀛愮洰褰?+ 鍏煎鎬?re-export 閿氭ā寮?tags: component-structure,re-export-anchor,backward-compat",
+      "summary": "--- type: knowhow slug: harvest-debug-reexport-anchor title: 组件子目录 + 兼容性 re-export 锚模式 tags: component-structure,re-export-anchor,backward-compat source: harvest source_id: 20260525-test-P1-tech-debt-cleanup fragment_id: HRV-c3d4e5f6 create",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.166Z",
+      "updated": "2026-06-13T16:12:48.167Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-debug-reexport-anchor.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-debug-reexport-anchor\ntitle: 组件子目录 + 兼容性 re-export 锚模式\ntags: component-structure,re-export-anchor,backward-compat\nsource: harvest\nsource_id: 20260525-test-P1-tech-debt-cleanup\nfragment_id: HRV-c3d4e5f6\ncreated: 2026-06-13\n---\n\nEvaluation 组件 (10 files in evaluation/) 和 StoryBible 组件 (13 files in story-bible/) 在子目录组织。兼容性 re-export 锚点 (EvaluationPanel.tsx, StoryBiblePanel.tsx) 保留在旧导入路径。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-debug-test-design",
+      "type": "knowhow",
+      "title": "娴嬭瘯璁″垝璁捐锛歟2e + 闆嗘垚娣峰悎 + verification_truth/artifact",
+      "summary": "--- type: knowhow slug: harvest-debug-test-design title: 测试计划设计：e2e + 集成混合 + verification_truth/artifact tags: test-plan,test-design,e2e,integration source: harvest source_id: 20260525-test-P1-tech-debt-cleanup fragment_id: HRV-f6a7b8c9 cre",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.288Z",
+      "updated": "2026-06-13T16:12:48.288Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-debug-test-design.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-debug-test-design\ntitle: 测试计划设计：e2e + 集成混合 + verification_truth/artifact\ntags: test-plan,test-design,e2e,integration\nsource: harvest\nsource_id: 20260525-test-P1-tech-debt-cleanup\nfragment_id: HRV-f6a7b8c9\ncreated: 2026-06-13\n---\n\nP1-tech-debt-cleanup 测试计划用 5 e2e + 7 集成测试。测试源：verification_truth（行为/API 契约检查）和 verification_artifact（结构/文件系统检查）。需求覆盖率 100%，平均每需求 2.0 测试。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-bookworld-ablation",
+      "type": "knowhow",
+      "title": "BookWorld ablation锛氱幆澧冨搷搴斿拰鍦烘櫙妯″紡鏄牳蹇冭础鐚洜瀛?tags: BookWorld,ablation,immersion",
+      "summary": "--- type: knowhow slug: harvest-other-bookworld-ablation title: BookWorld ablation：环境响应和场景模式是核心贡献因子 tags: BookWorld,ablation,immersion source: harvest source_id: 20260507-analysis-P1 fragment_id: HRV-c9d0e1f2 created: 2026-06-13 ---",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.431Z",
+      "updated": "2026-06-13T16:12:48.432Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-bookworld-ablation.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-bookworld-ablation\ntitle: BookWorld ablation：环境响应和场景模式是核心贡献因子\ntags: BookWorld,ablation,immersion\nsource: harvest\nsource_id: 20260507-analysis-P1\nfragment_id: HRV-c9d0e1f2\ncreated: 2026-06-13\n---\n\nBookWorld 验证：win rate 75.36% vs baselines。消融关键发现：移除环境响应显著损害沉浸感；移除场景模式损害所有评估维度（拟人化、角色保真度、沉浸感与设定、写作质量、故事质量、创造力）。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-bookworld-scene",
+      "type": "knowhow",
+      "title": "BookWorld scene-based simulation 鏄犲皠鍒?workflow engine",
+      "summary": "--- type: knowhow slug: harvest-other-bookworld-scene title: BookWorld scene-based simulation 映射到 workflow engine tags: BookWorld,scene-simulation,workflow-engine source: harvest source_id: 20260507-analysis-P1 fragment_id: HRV-b8c9d0e1 cre",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.545Z",
+      "updated": "2026-06-13T16:12:48.545Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-bookworld-scene.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-bookworld-scene\ntitle: BookWorld scene-based simulation 映射到 workflow engine\ntags: BookWorld,scene-simulation,workflow-engine\nsource: harvest\nsource_id: 20260507-analysis-P1\nfragment_id: HRV-b8c9d0e1\ncreated: 2026-06-13\n---\n\nBookWorld scene_based_simulation 映射到 workflow engine (flow-control.ts, lifecycle.ts, novel-adapter.ts)。Scene = 最小叙事单元，多角色 agent 按 scene 行动。Dynamic initiator selection 基于角色状态。Effort: high, risk: medium。依赖 worldview_data_extraction。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-bookworld-worldview",
+      "type": "knowhow",
+      "title": "BookWorld worldview extraction 鏄犲皠鍒?knowledge-service",
+      "summary": "--- type: knowhow slug: harvest-other-bookworld-worldview title: BookWorld worldview extraction 映射到 knowledge-service tags: BookWorld,worldview-extraction,knowledge-service source: harvest source_id: 20260507-analysis-P1 fragment_id: HRV-a7",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.652Z",
+      "updated": "2026-06-13T16:12:48.653Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-bookworld-worldview.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-bookworld-worldview\ntitle: BookWorld worldview extraction 映射到 knowledge-service\ntags: BookWorld,worldview-extraction,knowledge-service\nsource: harvest\nsource_id: 20260507-analysis-P1\nfragment_id: HRV-a7b8c9d0\ncreated: 2026-06-13\n---\n\nBookWorld worldview_data_extraction 映射到 src-ts/knowledge/manager.ts, knowledge-service.ts, wiki MCP endpoint。流程：chunk → atomic facts → filter → cluster → terminology。提取 term/nature/detail/source 注入 Agent prompts。Effort: medium, risk: low。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-intelligence-cache",
+      "type": "knowhow",
+      "title": "IntelligenceService content-hash 缂撳瓨閬垮厤鍐椾綑 API 璋冪敤",
+      "summary": "--- type: knowhow slug: harvest-other-intelligence-cache title: IntelligenceService content-hash 缓存避免冗余 API 调用 tags: intelligenceService,caching,content-hash source: harvest source_id: m10-phase1 fragment_id: HRV-d6e7f8a9 created: 2026-06-1",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.758Z",
+      "updated": "2026-06-13T16:12:48.759Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-intelligence-cache.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-intelligence-cache\ntitle: IntelligenceService content-hash 缓存避免冗余 API 调用\ntags: intelligenceService,caching,content-hash\nsource: harvest\nsource_id: m10-phase1\nfragment_id: HRV-d6e7f8a9\ncreated: 2026-06-13\n---\n\nintelligenceService.ts 基于 content hashes (hashContent) 实现缓存。结果存储在 projects/{id}/analysis/{module}.json。analyzeProject 管理章节集的完整分析生命周期。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-lifecycle-hooks",
+      "type": "knowhow",
+      "title": "OpenStory agent lifecycle: perception鈫抪lanning鈫抏xecution鈫抮eflection",
+      "summary": "--- type: knowhow slug: harvest-other-lifecycle-hooks title: OpenStory agent lifecycle: perception→planning→execution→reflection tags: OpenStory,agent-lifecycle,perception,planning source: harvest source_id: 20260507-analysis-P1 fragment_id",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.868Z",
+      "updated": "2026-06-13T16:12:48.869Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-lifecycle-hooks.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-lifecycle-hooks\ntitle: OpenStory agent lifecycle: perception→planning→execution→reflection\ntags: OpenStory,agent-lifecycle,perception,planning\nsource: harvest\nsource_id: 20260507-analysis-P1\nfragment_id: HRV-d0e1f2a3\ncreated: 2026-06-13\n---\n\n重构 agent base 支持生命周期钩子：perception → planning → execution → reflection。现有能力（sequential-thinking.ts, critic.ts 等）变为可插拔生命周期阶段。映射到 agents/base.ts, factory.ts, skills/skill-loader.ts。Effort: medium, risk: medium。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-m10-consistency",
+      "type": "knowhow",
+      "title": "涓€鑷存€ф鏌ヤ笁绉嶈Е鍙戯細鎵嬪姩 UI + 缂栫▼ API + 宸ヤ綔娴佹楠?tags: consistency-checking,multi-trigger",
+      "summary": "--- type: knowhow slug: harvest-other-m10-consistency title: 一致性检查三种触发：手动 UI + 编程 API + 工作流步骤 tags: consistency-checking,multi-trigger source: harvest source_id: m10-phase1 fragment_id: HRV-b4c5d6e7 created: 2026-06-13 ---",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:48.976Z",
+      "updated": "2026-06-13T16:12:48.977Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-m10-consistency.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-m10-consistency\ntitle: 一致性检查三种触发：手动 UI + 编程 API + 工作流步骤\ntags: consistency-checking,multi-trigger\nsource: harvest\nsource_id: m10-phase1\nfragment_id: HRV-b4c5d6e7\ncreated: 2026-06-13\n---\n\n一致性检查可从三种方式触发：1) 手动 UI (AnalysisPanel.tsx 或 EvaluationPanel.tsx)；2) 编程 API (runWorkspaceConsistencyCheck 或 runConsistencyCheck)；3) 作为 builtin-revision-pass 工作流步骤。使用 meaningfulWorkspace 获取完整项目上下文。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-m10-multi-pass",
+      "type": "knowhow",
+      "title": "澶氶亶淇锛歟valuate 鈫?revise 鈫?verify 鑷富寰幆",
+      "summary": "--- type: knowhow slug: harvest-other-m10-multi-pass title: 多遍修订：evaluate → revise → verify 自主循环 tags: multi-pass-revision,evaluation,revision-loop source: harvest source_id: m10-phase1 fragment_id: HRV-f2a3b4c5 created: 2026-06-13 ---",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:49.088Z",
+      "updated": "2026-06-13T16:12:49.088Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-m10-multi-pass.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-m10-multi-pass\ntitle: 多遍修订：evaluate → revise → verify 自主循环\ntags: multi-pass-revision,evaluation,revision-loop\nsource: harvest\nsource_id: m10-phase1\nfragment_id: HRV-f2a3b4c5\ncreated: 2026-06-13\n---\n\n自主多遍修订循环通过编排现有组件构建：触发初始文本 → evaluate via useEvaluationData → 选关键建议 → generate revision via processWritingHelper API → verify quality score 改善 → 循环至目标或无改善 → 安全通过 useEvaluationCheckpoints save/restore。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-m10-style-learning",
+      "type": "knowhow",
+      "title": "Style learning锛氭彁鍙?via builtin-style-analysis锛屾敞鍏?via style_profile",
+      "summary": "--- type: knowhow slug: harvest-other-m10-style-learning title: Style learning：提取 via builtin-style-analysis，注入 via style_profile tags: style-learning,style-profile,style-analysis source: harvest source_id: m10-phase1 fragment_id: HRV-a3b4c",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:49.201Z",
+      "updated": "2026-06-13T16:12:49.202Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-m10-style-learning.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-m10-style-learning\ntitle: Style learning：提取 via builtin-style-analysis，注入 via style_profile\ntags: style-learning,style-profile,style-analysis\nsource: harvest\nsource_id: m10-phase1\nfragment_id: HRV-a3b4c5d6\ncreated: 2026-06-13\n---\n\nStyle learning 流程：1) 执行 builtin-style-analysis 工作流提取风格特征；2) 存储 JSON 输出为 Style Profile；3) 注入 Style Profile 到 LLM prompt 上下文用于生成/修订；4) 通过 evaluation 的 style_score 验证。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-mirofish-graphrag",
+      "type": "knowhow",
+      "title": "MiroFish GraphRAG 浠庡啓浣滆嚜鍔ㄦ瀯寤虹煡璇嗗浘璋?tags: MiroFish,GraphRAG,knowledge-graph",
+      "summary": "--- type: knowhow slug: harvest-other-mirofish-graphrag title: MiroFish GraphRAG 从写作自动构建知识图谱 tags: MiroFish,GraphRAG,knowledge-graph source: harvest source_id: 20260507-analysis-P1 fragment_id: HRV-e1f2a3b4 created: 2026-06-13 ---",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:49.315Z",
+      "updated": "2026-06-13T16:12:49.316Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-mirofish-graphrag.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-mirofish-graphrag\ntitle: MiroFish GraphRAG 从写作自动构建知识图谱\ntags: MiroFish,GraphRAG,knowledge-graph\nsource: harvest\nsource_id: 20260507-analysis-P1\nfragment_id: HRV-e1f2a3b4\ncreated: 2026-06-13\n---\n\nMiroFish graphrag_from_writing 映射到 knowledge/manager.ts, hybrid-search.ts, graph-engine.ts。从小说章节自动构建 GraphRAG：提取 seed entities/relationships，图增强检索用于 agent prompts。Effort: high, risk: medium。依赖 worldview_data_extraction。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "knowhow-doc-harvest-other-workflowservice",
+      "type": "knowhow",
+      "title": "WorkflowService pattern: 鍐呯疆宸ヤ綔娴佸父閲?+ checkpoint 璐ㄩ噺闂ㄦ帶",
+      "summary": "--- type: knowhow slug: harvest-other-workflowservice title: WorkflowService pattern: 内置工作流常量 + checkpoint 质量门控 tags: workflowService,builtin-workflow,checkpoint source: harvest source_id: m10-phase1 fragment_id: HRV-c5d6e7f8 created: 2026-",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-13T16:12:49.430Z",
+      "updated": "2026-06-13T16:12:49.432Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/DOC-harvest-other-workflowservice.md"
+      },
+      "body": "\n---\ntype: knowhow\nslug: harvest-other-workflowservice\ntitle: WorkflowService pattern: 内置工作流常量 + checkpoint 质量门控\ntags: workflowService,builtin-workflow,checkpoint\nsource: harvest\nsource_id: m10-phase1\nfragment_id: HRV-c5d6e7f8\ncreated: 2026-06-13\n---\n\nworkflowService.ts 定义 BUILTIN_WORKFLOWS 常量数组。executeWorkflow 初始化运行。runNextStep 递归处理 enabledSteps。step 的 checkpoint 属性 ('review' 或 'approve') 暂停执行，通过 approveStep 实现质量门控。\n",
+      "ext": {},
+      "scope": null,
+      "category": "document",
+      "specCategory": null,
+      "createdBy": "harvest",
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "scratch-20260614-debug-consistency-gaps-understanding",
+      "type": "note",
+      "title": "Debug: interface-consistency-gaps",
+      "summary": "## Status resolved",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-14T09:59:10.872Z",
+      "updated": "2026-06-14T09:59:10.872Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260614-debug-consistency-gaps/understanding.md"
+      },
+      "body": "# Debug: interface-consistency-gaps\n\n## Status\nresolved\n\n## Issue\n前后端接口一致性问题：8 个 critical 响应形状不匹配 + 12 个 workspace context 丢弃 + 多个语义默认值不匹配\n\n## Symptoms\n- 前端 knowledge.ts 5 个函数返回类型含内层 `{ success, data: T }` 封装，但 `callApi` 已提供外层封装 → `result.data.data` 为 undefined\n- `novelQualityCheck` 期望 `decision` 字段但后端从不返回\n- `detectPatterns`/`clusterSessions` 前端期望 `{ success, data }` 封装但后端返回裸数组\n- `getStyleProfile` 返回 null 但前端类型为 `Record<string, unknown>`\n- `listSkills` 前端期望扁平数组但后端返回 `{ skills: [] }`\n- `PluginResult` 前后端类型完全不同\n- `registerPlugin` 期望 `{ id, status }` 但后端返回 `{ id, name }`\n- story-bible CREATE/UPDATE 的 workspace 数据泄漏到实体存储\n- foreshadowStats 后端完全忽略 workspace header\n- 多个 M10 端点前端发送 workspace 但后端不读取\n\n## Hypotheses\n\n### H1: 前端类型系统存在两层 { success, data } 封装不一致 [CONFIRMED]\n**证据**: `callApi` (core.ts) 在 2xx 响应时将原始 body 封装为 `{ success: true, data: rawBody }`。knowledge.ts 的 5 个函数额外在泛型参数中嵌套了 `{ success: boolean; data: T }`，导致运行时出现双层封装。而同模块的 `queryGraph`、`getCharacter`、`getForeshadows` 正确使用 `ApiResponse<T>` 其中 T 是原始 body 形状。\n\n**根因**: knowledge.ts 的 foreshadow/character 端点函数在定义时错误地在泛型参数中添加了 `{ success, data: T }` 封装。正确模式参考同文件 `queryGraph: ApiResponse<unknown[]>` — T 是裸数据，封装由 callApi 提供。\n\n**影响函数**: plantForeshadow, getForeshadowStats, analyzeCharacterDepth, getCharacterProfile, getCharacterRelationships\n\n**修复方向**: 将 `ApiResponse<{ success: boolean; data: T }>` 改为 `ApiResponse<T>`，T 保持原类型但去除内层封装。\n\n### H2: writing/quality 后端从未实现 decision 推导逻辑 [CONFIRMED]\n**证据**: `novelQualityCheckEndpoint` 调用 `evaluateNovelQuality()` 返回 `{ status, total_score, lock_score, style_score, logic_score, actionable_feedback, suggestions }`。前端 `NovelQualityCheckResult` 要求 `decision: 'APPROVED'|'REVISE'|'REWRITE'|'HUMAN_REVIEW'`。后端无任何代码从 score 推导 decision。\n\n**根因**: 后端 endpoint 缺少 score→decision 映射逻辑。同文件的 `evaluateWithModules` 使用 `/critic/evaluate` 端点（正确返回 decision），但 `novelQualityCheck` 使用不同端点 `/writing/quality`（从未实现 decision）。\n\n**修复方向**: 后端在 `novelQualityCheckEndpoint` 中添加 score→decision 映射（如 total_score>=80→APPROVED, >=60→REVISE, >=40→REWRITE, else→HUMAN_REVIEW），或前端从 score 自行推导。\n\n### H3: analysis 端点返回裸数组但前端期望封装 [CONFIRMED]\n**证据**: `analysisPatternsEndpoint` 返回 `jsonResponse(patterns)` 其中 patterns 是 `DetectedPattern[]`。`analysisSessionsEndpoint` 返回 `jsonResponse([])`（stub）。前端类型 `ApiResponse<{ success: boolean; data: T[] }>` 期望内层封装。\n\n**根因**: 与 H1 同源 — 前端错误地添加了内层 `{ success, data }` 封装。后端返回裸数组，callApi 封装后 `data` = 裸数组，而非 `{ success, data: [] }`。\n\n**修复方向**: 将 `ApiResponse<{ success: boolean; data: T[] }>` 改为 `ApiResponse<T[]>`。\n\n### H4: getStyleProfile 后端未实现 [CONFIRMED]\n**证据**: `styleProfileEndpoint` (m10-style.ts) 直接 `return jsonResponse(null)` 无论 projectId。前端类型 `ApiResponse<Record<string, unknown>>` 不允许 null。\n\n**根因**: 功能未实现。端点存在但返回占位符 null。\n\n**修复方向**: 前端类型改为 `ApiResponse<Record<string, unknown> | null>` 并在消费端添加 null guard；或后端实现实际逻辑。\n\n### H5: skills/list 后端封装与前端类型不一致 [CONFIRMED]\n**证据**: `skillsListEndpoint` 返回 `jsonResponse({ skills: skillEngine.list() })`。前端 `listSkills` 返回类型 `ApiResponse<Array<{ id: string; name: string }>>`。\n\n**根因**: 后端在 `{ skills: [...] }` 对象中封装了数组，但前端类型期望裸数组作为 data。\n\n**修复方向**: 前端类型改为 `ApiResponse<{ skills: Array<{ id: string; name: string }> }>`。\n\n### H6: PluginResult 前后端类型不匹配源于接口定义时未参照后端实现 [CONFIRMED]\n**证据**: 前端 `PluginResult = { success: boolean; output: string; error?: string }`，后端 plugin-engine `PluginResult = { pluginId, pluginName, score, maxScore, evidence, suggestions, details }`。完全不同的字段集。\n\n**根因**: 前端 PluginResult 接口是基于预期行为（成功/失败/输出）的推测性定义，而非基于后端 plugin-engine 实际输出。\n\n**修复方向**: 重定义前端 `PluginResult` 匹配后端形状。\n\n### H7: registerPlugin 后端返回 { id, name } 但前端期望 { id, status } [CONFIRMED]\n**证据**: `pluginRegisterEndpoint` 返回 `jsonResponse({ id: plugin.id, name: plugin.name })`。前端类型 `ApiResponse<{ id: string; status: string }>`。\n\n**根因**: 后端未在注册响应中包含 status 字段。\n\n**修复方向**: 前端类型改为 `{ id: string; name: string }` 或后端添加 status。\n\n### H8: story-bible workspace 数据泄漏到实体存储 [CONFIRMED]\n**证据**: `sbCreateEntity` 和 `sbUpdateEntity` 前端通过 `appendWorkspacePayload` 将 workspace 注入 POST body。后端 `sbCreateEntityEndpoint` 将整个 body spread 进 `{ ...base, ...partial }` 工厂函数，`sbUpdateEntityEndpoint` 做同样 `{ ...existing, ...body }`。workspace 键未被剥离。\n\n**根因**: 后端仅剥离 id/novelId/type/createdAt 等不可变字段，但未剥离 `workspace` 键。\n\n**修复方向**: 后端在 spread 前添加 `delete body.workspace`（与 delete body.id 同模式）。\n\n### H9: foreshadowStats 后端完全忽略 workspace context [CONFIRMED]\n**证据**: `foreshadowStatsEndpoint(_request: HttpRequest)` — 参数名 `_request` 表示未使用。内部调用 `graphGetForeshadows('planted')` 等时未传入 scope。前端通过 `X-Workspace-Id` header 发送 workspace 但后端不读 header。\n\n**根因**: 端点实现为全局统计，不支持 workspace 范围过滤。\n\n**修复方向**: 后端从 request 中提取 workspace（参考其他端点的 resolveGraphScope 模式），并将 scope 传入 graphGetForeshadows 调用。\n\n### H10: 多个 M10/writing 端点前端发送 workspace 但后端不消费 [CONFIRMED]\n**证据**: `/style/apply`、`/consistency/cross-chapter`、`/suggestions/context-aware`、`/agent/revise-multi-pass`、`/writing/helper`、`/writing/stream` 的后端端点处理函数均不读取 body.workspace。\n\n**根因**: workspace 支持是后加的架构特性，前端已系统性接入但后端端点尚未逐步跟进消费。\n\n**修复方向**: 优先级 P2 — 逐步在后端端点中添加 workspace 消费逻辑。\n\n## Root Cause Summary\n\n| ID | Root Cause | Priority | Affected Modules | Fix Direction |\n|---|---|---|---|---|\n| RC-1 | 前端类型错误嵌套 { success, data } 内层封装 | P0 | knowledge, analysis | 移除内层封装，T 改为裸数据形状 |\n| RC-2 | writing/quality 后端未实现 decision 推导 | P0 | writing/evaluation | 后端添加 score→decision 映射 |\n| RC-3 | getStyleProfile 未实现 | P1 | m10 | 前端类型改为 nullable 或后端实现 |\n| RC-4 | skills/list 后端封装与前端类型不匹配 | P1 | skills | 前端类型加 { skills: } 包装 |\n| RC-5 | PluginResult 前后端类型完全不同 | P1 | plugins | 重定义前端 PluginResult |\n| RC-6 | registerPlugin 后端返回 { id, name } 而非 { id, status } | P1 | plugins | 修正前端类型 |\n| RC-7 | story-bible workspace 数据泄漏 | P0 | story-bible | 后端 delete body.workspace |\n| RC-8 | foreshadowStats 忽略 workspace | P1 | knowledge | 后端添加 workspace 解析 |\n| RC-9 | M10/writing workspace context 丢弃 | P2 | m10, writing | 逐步添加后端 workspace 消费 |\n\n## Fix\nSee maestro-plan --gaps for prioritized fix plan.\n",
+      "ext": {
+        "virtualKind": "scratch-doc",
+        "sessionDir": "20260614-debug-consistency-gaps"
+      },
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "scratch-20260614-debug-interface-gaps-understanding",
+      "type": "note",
+      "title": "Debug: interface-gaps",
+      "summary": "## Status resolved",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-14T09:25:57.184Z",
+      "updated": "2026-06-14T09:25:57.185Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260614-debug-interface-gaps/understanding.md"
+      },
+      "body": "# Debug: interface-gaps\n\n## Status\nresolved\n\n## Issue\nSecurity + architecture gaps in frontend-backend interface layer identified during quality-review + security regression verification\n\n## Symptoms\n- SEC-001: writing-craft.ts sends api_key/base_url in POST body (not headers)\n- SEC-002: graphAddEntity() passes entityType without validateEntityType()\n- SEC-003: /graph/query endpoint accepts raw Cypher without guard\n- ARCH-004: foreshadow/character frontend APIs don't pass workspace context\n- ARCH-005: story-bible _workspace parameter declared but never wired\n\n## Hypotheses\n\n### H1: writing-craft.ts was not updated when header pattern was introduced [CONFIRMED]\nEvidence:\n- writing.ts processWritingHelper (line 59-80) extracts api_key/base_url to X-LLM-API-Key/X-LLM-Base-Url headers\n- writing-craft.ts analyzeWritingCraftLLM (line 220-230) still spreads `...llmConfig` into POST body\n- callApi() supports extraHeaders (4th param) at core.ts:109-114\n- Backend writing-craft-llm.ts:50-54 reads headers with body fallback — so backend is ready, frontend is not\nRoot cause: writing-craft.ts was missed during the ISS-002 fix pass\n\n### H2: graphAddEntity service layer was not included in validateEntityType rollout [CONFIRMED]\nEvidence:\n- validateEntityType() added to cypher-safety.ts (line 26-32) with 6 allowed types\n- PersistedEntityTab.tsx:113 calls validateEntityType before queryGraph\n- graphAddEntity() at services/graph.ts:119-127 passes entityType directly to engine.createEntity()\n- foreshadowPlantEndpoint at endpoints/graph.ts:117 hardcodes 'foreshadow' (safe) but service layer is defenseless\nRoot cause: validateEntityType was only applied at the frontend/component level, not at the service layer (defense-in-depth gap)\n\n### H3: /graph/query was designed as raw pass-through without safety consideration [CONFIRMED]\nEvidence:\n- graphQueryEndpoint at endpoints/graph.ts:68-73 forwards body.cypher directly\n- graphQuery() at services/graph.ts:74-81 passes cypher directly to engine.executeCypher()\n- Frontend PersistedEntityTab constructs safe Cypher via knowledgeUtils.ts builders\n- No DETACH DELETE / DROP / CREATE pattern blocking anywhere in the chain\nRoot cause: endpoint designed for flexibility, no guardrails added for safety. Defense-in-depth principle not applied at boundary layer.\n\n### H4: foreshadow/character APIs missing workspace context — incomplete migration [CONFIRMED]\nEvidence:\n- plantForeshadow() at knowledge.ts:161-177 sends no workspace field\n- getForeshadowStats() at knowledge.ts:179-181 sends no workspace field\n- analyzeCharacterDepth(), getCharacterProfile(), getCharacterRelationships() — same pattern\n- Backend graph endpoints support resolveGraphScope() (endpoints/graph.ts:39-66)\n- queryGraph() and getCharacter() in knowledge.ts DO pass workspace via appendWorkspacePayload\nRoot cause: These 5 API functions were added after the workspace context pattern was established, but the pattern wasn't applied to them\n\n### H5: story-bible _workspace unused — same incomplete migration [CONFIRMED]\nEvidence:\n- sbGetEntities() at story-bible.ts:136-144 declares _workspace but never uses it\n- sbGetEntity(), sbCreateEntity(), sbUpdateEntity(), sbDeleteEntity(), sbExtractFromManuscript() — same\n- All 6 functions call callApi without appendWorkspacePayload\n- Backend story-bible-endpoints.ts supports workspace scoping (has validateEntityType)\nRoot cause: _workspace parameter was stubbed for future use but never wired. Same migration gap as H4.\n\n## Root Cause Summary\n\nAll gaps share a common pattern: **safety/context features were applied to some call sites but not all**. The root cause is incomplete rollout rather than design omission — the infrastructure (validateEntityType, header transmission, workspace context) exists, it just wasn't applied uniformly.\n\n## Fix Directions\n\n| ID | Fix | Affected Files |\n|----|-----|----------------|\n| SEC-001 | Extract api_key/base_url from llmConfig → X-LLM-API-Key/X-LLM-Base-Url headers via callApi extraHeaders param | desktop/src/api/writing-craft.ts |\n| SEC-002 | Add validateEntityType(entityType) at start of graphAddEntity() | src-ts/mcp/services/graph.ts |\n| SEC-003 | Add Cypher safety check in graphQueryEndpoint: block destructive patterns (DETACH DELETE, DROP, CREATE constraint) or restrict to READ-only | src-ts/mcp/endpoints/graph.ts |\n| ARCH-004 | Add workspace param + appendWorkspacePayload to plantForeshadow, getForeshadowStats, analyzeCharacterDepth, getCharacterProfile, getCharacterRelationships | desktop/src/api/knowledge.ts |\n| ARCH-005 | Wire _workspace via appendWorkspacePayload in all sb* functions | desktop/src/api/story-bible.ts |\n",
+      "ext": {
+        "virtualKind": "scratch-doc",
+        "sessionDir": "20260614-debug-interface-gaps"
+      },
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "scratch-20260614-plan-interface-gaps-status-matrix",
+      "type": "note",
+      "title": "前后端接口状态矩阵 + 修复建议",
+      "summary": "## 安全回归状态",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-14T09:26:48.227Z",
+      "updated": "2026-06-14T09:26:48.227Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260614-plan-interface-gaps/status-matrix.md"
+      },
+      "body": "# 前后端接口状态矩阵 + 修复建议\n\n## 安全回归状态\n\n| 原始 Issue | 修复状态 | 验证结果 | 残留缺口 |\n|-----------|---------|---------|---------|\n| ISS-001 Cypher 注入 | **部分修复** | ✅ 核心安全工具 + 前端已防护 | ⚠️ SEC-002: graphAddEntity 无验证, SEC-003: raw Cypher 端点 |\n| ISS-002 API Key 传输 | **部分修复** | ✅ writing.ts/gateway 已用 headers | ⚠️ SEC-001: writing-craft.ts 仍发 body |\n\n## 接口端点状态矩阵\n\n### 前端 → 后端: Writing API\n\n| 端点 | 前端调用 | 后端处理 | 状态 | 备注 |\n|------|---------|---------|------|------|\n| POST /writing/helper | processWritingHelper → X-LLM-API-Key header | resolveProviderConfig (header priority) | ✅ 健康 | ISS-002 修复生效 |\n| POST /writing/stream | streamWritingHelper → X-LLM-API-Key header | resolveProviderConfig (header priority) | ✅ 健康 | 同上 |\n| POST /writing-craft/llm-analyze | analyzeWritingCraftLLM → ...llmConfig in body | resolveProviderConfig (header + body fallback) | ⚠️ **需修复** | SEC-001: 前端不发 header |\n| POST /writing-craft/analyze | analyzeWritingCraft | N/A (无 LLM) | ✅ 健康 | — |\n\n### 前端 → 后端: Graph API\n\n| 端点 | 前端调用 | 后端处理 | 状态 | 备注 |\n|------|---------|---------|------|------|\n| POST /graph/query | queryGraph (safe builder) | graphQueryEndpoint → raw Cypher | ⚠️ **需防护** | SEC-003: 无 Cypher 安全校验 |\n| POST /graph/add-entity | graphAddEntity | engine.createEntity (no validation) | ⚠️ **需修复** | SEC-002: 无 validateEntityType |\n| POST /graph/character | getCharacter | graphGetCharacter | ✅ 健康 | — |\n| POST /graph/foreshadows | getForeshadows | graphGetForeshadows | ✅ 健康 | — |\n| POST /foreshadow/plant | plantForeshadow | foreshadowPlantEndpoint | ⚠️ 无 workspace | CORR-002: 未 scoped |\n| GET /foreshadow/stats | getForeshadowStats | foreshadowStatsEndpoint | ⚠️ 无 workspace | 同上 |\n\n### 前端 → 后端: Character/Foreshadow API\n\n| 端点 | 前端调用 | Workspace 上下文 | 状态 | 备注 |\n|------|---------|-----------------|------|------|\n| POST /character/depth | analyzeCharacterDepth | ❌ 未传递 | ⚠️ **需修复** | ARCH-004 |\n| POST /character/profile | getCharacterProfile | ❌ 未传递 | ⚠️ **需修复** | ARCH-004 |\n| POST /character/relationships | getCharacterRelationships | ❌ 未传递 | ⚠️ **需修复** | ARCH-004 |\n\n### 前端 → 后端: Story Bible API\n\n| 端点 | 前端调用 | Workspace 上下文 | 状态 | 备注 |\n|------|---------|-----------------|------|------|\n| POST /story-bible/entities/list | sbGetEntities | ❌ _workspace 未接线 | ⚠️ **需修复** | ARCH-005 |\n| GET /story-bible/entity/{id} | sbGetEntity | ❌ _workspace 未接线 | ⚠️ **需修复** | ARCH-005 |\n| POST /story-bible/entities | sbCreateEntity | ❌ _workspace 未接线 | ⚠️ **需修复** | ARCH-005 |\n| PUT /story-bible/entity/{id} | sbUpdateEntity | ❌ _workspace 未接线 | ⚠️ **需修复** | ARCH-005 |\n| DELETE /story-bible/entity/{id} | sbDeleteEntity | ❌ _workspace 未接线 | ⚠️ **需修复** | ARCH-005 |\n| POST /story-bible/extract | sbExtractFromManuscript | ❌ _workspace 未接线 | ⚠️ **需修复** | ARCH-005 |\n\n### 前端 → 后端: Gateway (LLM Provider)\n\n| 端点 | 前端调用 | API Key 传输 | 状态 | 备注 |\n|------|---------|-------------|------|------|\n| GET /v1beta/models | requestJson | X-Goog-Api-Key header | ✅ 健康 | ISS-002 修复生效 |\n| POST /chat/completions | requestJson | Authorization: Bearer header | ✅ 健康 | — |\n\n## 优先修复建议\n\n### P0 — 安全（必须修复）\n\n| # | ID | 问题 | 修复方案 | 文件 | 工作量 |\n|---|-----|------|---------|------|--------|\n| 1 | SEC-001 | writing-craft.ts API key 在 body 中传输 | 提取 api_key/base_url → X-LLM-API-Key/X-LLM-Base-Url headers（复用 callApi extraHeaders） | desktop/src/api/writing-craft.ts | S |\n| 2 | SEC-002 | graphAddEntity 无 entityType 验证 | 在 graphAddEntity 开头调用 validateEntityType(entityType) | src-ts/mcp/services/graph.ts | S |\n| 3 | SEC-003 | /graph/query 接受原始 Cypher 无防护 | 添加 Cypher 安全校验：阻止 DETACH DELETE / DROP / CREATE constraint | src-ts/mcp/endpoints/graph.ts | M |\n\n### P1 — 架构一致性（推荐修复）\n\n| # | ID | 问题 | 修复方案 | 文件 | 工作量 |\n|---|-----|------|---------|------|--------|\n| 4 | ARCH-004 | 5 个前端 API 不传 workspace 上下文 | 给 plantForeshadow, getForeshadowStats, analyzeCharacterDepth, getCharacterProfile, getCharacterRelationships 添加 workspace 参数 + appendWorkspacePayload | desktop/src/api/knowledge.ts | M |\n| 5 | ARCH-005 | story-bible 6 个函数 _workspace 未接线 | 将 _workspace 通过 appendWorkspacePayload 接入 callApi | desktop/src/api/story-bible.ts | M |\n| 6 | CORR-002 | foreshadowPlant 不传 workspace scope | 在 foreshadowPlantEndpoint 中 resolveGraphScope 并传入 graphAddEntity | src-ts/mcp/endpoints/graph.ts | S |\n\n### P2 — 低优先级\n\n| # | ID | 问题 | 修复方案 | 工作量 |\n|---|-----|------|---------|--------|\n| 7 | CORR-003 | story-bible entityId 未 URL 编码 | 使用 encodeURIComponent | S |\n| 8 | CORR-004 | SSE 解析器不处理多行 data | 累积 data 行直到空行 | M |\n| 9 | ARCH-001 | 旧 /writing-helper/process 路由重复 | 添加 deprecation 警告 | S |\n| 10 | ARCH-002 | knowledge.ts 混合关注点 | 拆分为 memory.ts, graph.ts, foreshadow.ts, character-analysis.ts | L |\n\n## 统计\n\n- ✅ 健康: 9 端点\n- ⚠️ 需修复: 12 端点/调用点\n- 总计: 21 端点\n- P0 安全: 3 项 (工作量 S+S+M)\n- P1 架构: 3 项 (工作量 M+M+S)\n- P2 低优先: 4 项 (工作量 S+M+S+L)\n",
+      "ext": {
+        "virtualKind": "scratch-doc",
+        "sessionDir": "20260614-plan-interface-gaps"
+      },
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "scratch-20260614-test-security-regression-uat",
+      "type": "note",
+      "title": "uat",
+      "summary": "## Current Test",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-14T09:24:33.863Z",
+      "updated": "2026-06-14T09:24:33.863Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260614-test-security-regression/uat.md"
+      },
+      "body": "\n\n## Current Test\n\nnumber: 6\nname: SEC-003 raw Cypher endpoint guard\nexpected: |\n  graphQueryEndpoint should validate or sanitize incoming Cypher before execution\nawaiting: completed\n\n## Tests\n\n### 1. ISS-001 Cypher injection — validateEntityType allowlist\nexpected: validateEntityType() in cypher-safety.ts blocks disallowed entity types\nresult: pass\nevidence: src-ts/utils/cypher-safety.ts:26-32 — ALLOWED_ENTITY_TYPES Set with 6 types, throws on mismatch\n\n### 2. ISS-001 Cypher injection — escapeCypherString escaping\nexpected: escapeCypherString() doubles single-quotes and escapes backslashes\nresult: pass\nevidence: src-ts/utils/cypher-safety.ts:38-40 — .replace(/\\\\/g, '\\\\\\\\').replace(/'/g, \"\\\\'\")\n\n### 3. ISS-001 Cypher injection — PersistedEntityTab uses validateEntityType\nexpected: Frontend calls validateEntityType before graph queries\nresult: pass\nevidence: desktop/src/components/knowledge/PersistedEntityTab.tsx:113 — validateEntityType(entityType) called before queryGraph\n\n### 4. ISS-001 Cypher injection — PersistedEntityTab uses escapeCypherString\nexpected: Frontend escapes user input in rename queries\nresult: pass\nevidence: desktop/src/components/knowledge/PersistedEntityTab.tsx:190 — escapeCypherString(matchName), escapeCypherString(wid)\n\n### 5. ISS-001 Cypher injection — SEC-002 gap: graphAddEntity no validation\nexpected: graphAddEntity should call validateEntityType before createEntity\nresult: issue\nreported: \"graphAddEntity in src-ts/mcp/services/graph.ts:119-127 passes entityType directly to engine.createEntity() without calling validateEntityType()\"\nseverity: major\n\n### 6. ISS-001 Cypher injection — SEC-003 gap: raw Cypher endpoint no guard\nexpected: graphQueryEndpoint should validate/sanitize incoming Cypher before execution\nresult: issue\nreported: \"graphQueryEndpoint in src-ts/mcp/endpoints/graph.ts:68-73 passes raw client-supplied Cypher to graphQuery() with no validation or sanitization guard\"\nseverity: major\n\n### 7. ISS-002 API key — processWritingHelper uses X-LLM-API-Key header\nexpected: Frontend extracts api_key from payload and sends via X-LLM-API-Key header\nresult: pass\nevidence: desktop/src/api/writing.ts:62-78 — extracts apiKey, sets headers['X-LLM-API-Key'], removes from body\n\n### 8. ISS-002 API key — streamWritingHelper uses headers\nexpected: Streaming endpoint also sends API key via headers\nresult: pass\nevidence: desktop/src/api/writing.ts:265-320 — same header pattern for stream\n\n### 9. ISS-002 API key — gateway/models uses X-Goog-Api-Key header\nexpected: Google API key sent via header not URL param\nresult: pass\nevidence: desktop/src/api/gateway/models.ts:120-123 — headers: { 'X-Goog-Api-Key': trimmedApiKey }\n\n### 10. ISS-002 API key — backend writing.ts reads X-LLM-API-Key with priority\nexpected: Backend prefers header over body for API key\nresult: pass\nevidence: src-ts/mcp/endpoints/writing.ts:72-76 — headers?.['X-LLM-API-Key']?.trim() ?? (body.api_key as string)\n\n### 11. ISS-002 API key — backend writing-craft-llm.ts reads X-LLM-API-Key with priority\nexpected: Backend craft endpoint prefers header over body for API key\nresult: pass\nevidence: src-ts/mcp/endpoints/writing-craft-llm.ts:50-54 — headers?.['x-llm-api-key']?.trim() ?? headers?.['X-LLM-API-Key']?.trim() ?? (body.api_key as string)\n\n### 12. ISS-002 API key — SEC-001 gap: writing-craft.ts spreads into body\nexpected: Frontend writing-craft.ts should extract api_key/base_url to headers like writing.ts\nresult: issue\nreported: \"analyzeWritingCraftLLM in desktop/src/api/writing-craft.ts:220-230 spreads ...llmConfig (api_key, base_url) into POST body. Backend reads headers as priority but frontend never sends via headers, so key always arrives in body.\"\nseverity: major\n\n## Summary\n\ntotal: 12\npassed: 9\nissues: 3\npending: 0\nskipped: 0\n\n## Gaps\n\n- test: 5\n  truth: \"graphAddEntity should call validateEntityType before createEntity\"\n  status: failed\n  reason: \"graphAddEntity in src-ts/mcp/services/graph.ts:119-127 passes entityType directly to engine.createEntity() without calling validateEntityType()\"\n  severity: major\n  root_cause: \"graphAddEntity service function was not updated when validateEntityType was introduced for the frontend\"\n  fix_direction: \"Add validateEntityType(entityType) call at the start of graphAddEntity before engine.createEntity()\"\n  affected_files: [\"src-ts/mcp/services/graph.ts\"]\n\n- test: 6\n  truth: \"graphQueryEndpoint should validate/sanitize incoming Cypher before execution\"\n  status: failed\n  reason: \"graphQueryEndpoint passes raw client-supplied Cypher to graphQuery() with no guard\"\n  severity: major\n  root_cause: \"The /graph/query endpoint is a raw Cypher pass-through — intended for power users but lacking any safety rail\"\n  fix_direction: \"Add a Cypher safety check: either restrict to READ-only queries (no CREATE/MERGE/DELETE/SET/REMOVE) or require allowlisted query patterns\"\n  affected_files: [\"src-ts/mcp/endpoints/graph.ts\"]\n\n- test: 12\n  truth: \"Frontend writing-craft.ts should extract api_key/base_url to headers\"\n  status: failed\n  reason: \"analyzeWritingCraftLLM spreads ...llmConfig into POST body instead of extracting to headers\"\n  severity: major\n  root_cause: \"writing-craft.ts was not updated when the header-based API key transmission pattern was introduced in writing.ts\"\n  fix_direction: \"Refactor analyzeWritingCraftLLM to extract api_key/base_url from llmConfig and send via X-LLM-API-Key/X-LLM-Base-Url headers, matching the pattern in writing.ts processWritingHelper\"\n  affected_files: [\"desktop/src/api/writing-craft.ts\"]\n",
+      "ext": {
+        "target": "security-regression-ISS-001-ISS-002",
+        "source": [
+          ".workflow/scratch/20260614-review-frontend-backend-interface/review.json"
+        ],
+        "started": "2026-06-14T15:00:00Z",
+        "updated": "2026-06-14T15:30:00Z",
+        "virtualKind": "scratch-doc",
+        "sessionDir": "20260614-test-security-regression"
+      },
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "scratch-20260616-analyze-test-coverage-analysis",
+      "type": "note",
+      "title": "Analysis: 全仓测试覆盖率深度分析",
+      "summary": "**Session ID**: ANL-test-coverage-2026-06-16 **Date**: 2026-06-16 **Scope**: standalone (macro) **Mode**: full",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-16T05:51:57.681Z",
+      "updated": "2026-06-16T05:51:57.681Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260616-analyze-test-coverage/analysis.md"
+      },
+      "body": "# Analysis: 全仓测试覆盖率深度分析\n\n**Session ID**: ANL-test-coverage-2026-06-16\n**Date**: 2026-06-16\n**Scope**: standalone (macro)\n**Mode**: full\n\n---\n\n## Executive Summary\n\n全仓测试覆盖率评分 **72/100**，风险等级 **MEDIUM-HIGH**。前端测试文件比 1.10:1 表面充分，但后端仅 0.84:1。关键风险集中在 3 个层面：Store 层 5 个核心 slice 零覆盖 + 9 个浅层测试、7 个 MCP endpoints 无测试、E2E/集成测试严重不足。当前 ~68% 行覆盖率勉强通过 MVP 标准，但距生产标准差 12 个百分点。建议按 P0→P1→P2 优先级分 4 阶段补充，预估 14-18 个工作日达标。\n\n**Recommendation**: **CONDITIONAL GO** — 当前测试覆盖不足以支撑生产部署，但核心业务模块的单元测试基本到位。需先完成 Phase 1-2（P0+P1 回归保护）再考虑上线。\n\n---\n\n## Six-Dimension Scoring\n\n### Dimension 1: Feasibility — Score: 4/5 (Confidence: 85%)\n\n| Factor | Score | Evidence |\n|--------|-------|----------|\n| Technical difficulty | 4/5 | Companion pattern 已在 workflow/narrative 验证有效；store/endpoint 测试编写难度低 |\n| Team capability | 4/5 | vitest 框架已熟悉；现有测试覆盖高模块证明团队能力 |\n| Time investment | 3/5 | Phase 1-2 需 5-7 天；Phase 3-4 需 8-11 天，总 13-18 天 |\n| Tooling | 5/5 | vitest 3.2.4 + V8 coverage provider 就绪；companion pattern 有脚手架 |\n\n**Evidence**: F-008（companion pattern 在 workflow/96% narrative/93% 验证有效）| F-001, F-002（store/endpoint 测试结构简单，无复杂 mock 需求）\n\n### Dimension 2: Impact — Score: 5/5 (Confidence: 90%)\n\n| Factor | Score | Evidence |\n|--------|-------|----------|\n| User value | 5/5 | 减少 bug 泄漏到用户；近期一致性 bug 无回归保护是实际痛点 |\n| Business value | 5/5 | 测试覆盖是上线/生产的必要条件；差 7% 到 release standard |\n| Tech debt reduction | 4/5 | 补测试是最有效的 tech debt 减少；消除 5 个零覆盖 slice |\n| DX improvement | 4/5 | 回归保护让开发者敢于重构；companion pattern 降低编写成本 |\n\n**Evidence**: F-001（skillsSlice 近期修过 CORR-001/007 一致性 bug，无回归保护）| F-007（距生产标准差 12%）\n\n### Dimension 3: Risk — Score: 4/5 (Confidence: 80%)\n\n| Risk | Probability | Impact | Mitigation |\n|------|------------|--------|------------|\n| Store 状态回归 | High | High | Phase 1 补 P0 slice 测试 |\n| Endpoint 请求解析错误 | High | Medium | Phase 2 补 endpoint 测试 |\n| E2E 流程断裂 | Medium | High | Phase 4 补 E2E |\n| 测试维护成本失控 | Low | Medium | 遵循 companion pattern 保持一致性 |\n| Mock 过度导致假阳性 | Medium | Medium | 优先集成测试而非纯 mock 单元测试 |\n\n**Evidence**: F-001, F-002（高风险文件列表）| F-005（E2E 空白 = 流程断裂无法自动发现）\n\n### Dimension 4: Complexity — Score: 3/5 (Confidence: 85%)\n\n| Factor | Score | Evidence |\n|--------|-------|----------|\n| Integration points | 3/5 | Store ↔ API ↔ Endpoint 3 层需协调；但各层可独立测试 |\n| Dependencies | 3/5 | Store 依赖 RTK；endpoint 依赖 graph-engine；hooks 依赖 store |\n| Learning curve | 2/5 | vitest + companion pattern 已熟悉；新成员上手成本低 |\n| Testing complexity | 3/5 | Store 测试简单；endpoint 需 mock HTTP；E2E 需环境搭建 |\n\n**Evidence**: F-008（companion pattern 降低学习成本）| F-006（集成测试少 = 跨层协调测试成本高）\n\n### Dimension 5: Dependencies — Score: 3/5 (Confidence: 75%)\n\n| Factor | Score | Evidence |\n|--------|-------|----------|\n| External services | 2/5 | vitest/V8 已在用；Playwright 可能需新增依赖 |\n| Internal modules | 3/5 | Store 测试依赖 RTK 依赖少；endpoint 依赖 graph-engine |\n| Data dependencies | 3/5 | 测试数据需要 mock graph entity 状态；已有 mock 模式 |\n| Infrastructure | 4/5 | CI 已有 vitest 配置；coverage report 已集成 |\n\n**Evidence**: exploration-codebase.json#test_framework（vitest 3.2.4 已就绪）| F-005（E2E 需 Playwright = 新依赖）\n\n### Dimension 6: Alternatives — N/A (Comparative Analysis)\n\n| Alternative | Pros | Cons | Verdict |\n|------------|------|------|---------|\n| **A: Companion pattern expansion** (推荐) | 遵循已有模式；低学习成本；workflow/narrative 验证有效 | 不适合 E2E/集成层 | **Accept** — P0/P1 首选 |\n| **B: 集成测试优先** | 更真实的测试；跨层验证 | 需更多基础设施；编写成本高 | **Defer to Phase 4** |\n| **C: Playwright E2E 全量** | 真实用户场景验证 | 搭建成本高；执行慢；桌面端限制 | **Evaluate in Phase 4** |\n| **D: 代码覆盖率硬门槛** | 量化达标 | 可能导致为覆盖率写测试 | **Not recommended** |\n\n---\n\n## Dimension Summary\n\n| Dimension | Score | Confidence | Key Evidence |\n|-----------|-------|-----------|--------------|\n| Feasibility | 4/5 | 85% | Companion pattern proven, tooling ready |\n| Impact | 5/5 | 90% | Regression protection gap is real pain |\n| Risk | 4/5 | 80% | 3 high-probability risks identified |\n| Complexity | 3/5 | 85% | Moderate; existing patterns reduce effort |\n| Dependencies | 3/5 | 75% | Minimal new deps; E2E tool undecided |\n| **Overall** | **3.8/5** | **83%** | |\n\n---\n\n## Risk Matrix\n\n```\nIMPACT →\nHigh  │ Store regression  │ E2E flow break    │\n      │ [PROB:High]       │ [PROB:Medium]      │\n──────┼───────────────────┼────────────────────┤\nMed   │ Endpoint error    │ Mock false-positive│\n      │ [PROB:High]      │ [PROB:Medium]      │\n──────┼───────────────────┼────────────────────┤\nLow   │ Test debt growth  │ Coverage gaming    │\n      │ [PROB:Low]        │ [PROB:Low]         │\n──────┴───────────────────┴────────────────────┘\n       Medium             High           → PROBABILITY\n```\n\n---\n\n## Go/No-Go Recommendation\n\n**CONDITIONAL GO** (Confidence: 80%)\n\n**Conditions for GO**:\n1. ✅ Phase 1 完成：skillsSlice + conversationSlice + learning + workspace endpoint 测试就绪\n2. ✅ Phase 2 完成：m10-revision/style + writing API 测试就绪\n3. ⏳ Phase 3-4 可与功能开发并行\n\n**Residual Risks**:\n- E2E 覆盖在 Phase 4 之前仍为空白（接受为已知风险）\n- 浅层测试深化非紧急但需追踪\n- 无独立 CLI 视角验证（W001），单模型分析可能遗漏隐含问题\n\n---\n\n## Confidence Summary\n\n| Factor | Weight | Score | Contribution |\n|--------|--------|-------|-------------|\n| Findings depth | 0.30 | 78% | 23.4% |\n| Evidence strength | 0.25 | 75% | 18.8% |\n| Coverage breadth | 0.20 | 88% | 17.6% |\n| User validation | 0.15 | 50% | 7.5% |\n| Consistency | 0.10 | 85% | 8.5% |\n| **Overall** | | | **75.8%** |\n\n**Pressure Pass Result**: 最高置信度发现 F-001/F-002（store + endpoint 零覆盖）经压力测试 — 证据来源为 cli-explore-agent 直接文件扫描，不受单模型偏差影响。最低置信度发现 F-004/F-007（浅层测试识别 + 标准差距估算）标记为 MEDIUM CONFIDENCE，需运行 `vitest run --coverage` 获取实际行覆盖率数据验证。\n",
+      "ext": {
+        "virtualKind": "scratch-doc",
+        "sessionDir": "20260616-analyze-test-coverage"
+      },
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "scratch-20260616-analyze-test-coverage-context",
+      "type": "note",
+      "title": "Context: 全仓测试覆盖率深度分析",
+      "summary": "**Date**: 2026-06-16 **Artifact ID**: ANL-test-coverage-2026-06-16 **Areas discussed**: Store 覆盖率, Endpoint 覆盖率, E2E/集成覆盖, 标准达标, 补测试策略",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-16T05:53:10.484Z",
+      "updated": "2026-06-16T05:53:10.484Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260616-analyze-test-coverage/context.md"
+      },
+      "body": "# Context: 全仓测试覆盖率深度分析\n\n**Date**: 2026-06-16\n**Artifact ID**: ANL-test-coverage-2026-06-16\n**Areas discussed**: Store 覆盖率, Endpoint 覆盖率, E2E/集成覆盖, 标准达标, 补测试策略\n\n---\n\n## Decisions\n\n### Decision 1: 补测试优先级按风险分层\n- **Context**: 全仓有多个测试缺口，需确定修复顺序\n- **Options**:\n  1. 按模块分（前端优先/后端优先）\n  2. 按风险分（P0/P1/P2 基于回归保护需求）\n  3. 按层级分（单元→集成→E2E）\n- **Chosen**: 按风险分（P0→P1→P2） — **Reason**: 近期一致性 bug 修复无回归保护是最紧迫的风险；先保核心再扩面\n- **Rejected**: 按模块分忽略了跨层风险；按层级分无法优先处理回归保护\n- **Evidence Source**: cli-explore-agent (F-001: skillsSlice 近期修过 CORR-001/007 无回归保护)\n- **Impact**: Phase 1 聚焦 P0 回归保护（4 项），Phase 2-3 逐步扩展\n\n### Decision 2: 采用 Companion Pattern 扩展测试\n- **Context**: Store 和 endpoint 需要补测试，选择何种模式\n- **Options**:\n  1. Companion pattern (.additional.test.*, .branches.additional.test.*)\n  2. 重写测试目录结构\n  3. 独立 __tests__/ 目录\n- **Chosen**: Companion pattern — **Reason**: workflow/ 和 narrative/ 模块（>90% 覆盖率）验证该模式有效；与现有代码风格一致\n- **Rejected**: 重写结构成本高且破坏一致性；独立目录不符合现有惯例\n- **Evidence Source**: cli-explore-agent (F-008: companion pattern 在 workflow 96% / narrative 93% 验证)\n- **Impact**: 降低新测试编写成本，保持代码风格统一\n\n### Decision 3: 行覆盖率估算值需实际数据验证\n- **Context**: 当前 68% 为基于文件比率的估算，非 vitest --coverage 实际数据\n- **Options**:\n  1. 直接使用估算值\n  2. 运行 vitest --coverage 获取实际数据\n- **Chosen**: 运行实际覆盖率 — **Reason**: 估算与实际可能偏差显著；实际数据是补测试效果追踪的基础\n- **Rejected**: 估算值不可用于标准达标判定\n- **Evidence Source**: orchestrator-inline (F-007: 当前为估算，需验证)\n- **Impact**: 优先执行 vitest --coverage 获取基线数据\n\n---\n\n## Constraints\n\n### Locked\n\n- **补测试策略**: 使用 companion pattern（.additional.test.*, .branches.additional.test.*）扩展，不重写测试结构\n- **P0 优先级**: skillsSlice + conversationSlice + learning endpoint + workspace endpoint 必须先于其他补测试\n- **测试框架**: 继续使用 vitest 3.2.4 + @vitest/coverage-v8，不引入新测试框架\n- **不追求覆盖率数字**: 不为达标而写测试，测试必须验证有意义的场景\n\n### Free\n\n- **Playwright/Cypress 选型**: Phase 4 评估时由实施者决定是否引入桌面端 E2E 框架\n- **hooks 测试优先顺序**: top 10 高频 hooks 由实施者根据实际使用频率排列\n- **集成测试 vs E2E 比例**: Phase 4 中 API bridge 验证方式由实施者决定（集成 or E2E）\n- **浅层测试深化顺序**: 由实施者根据模块变更频率决定优先级\n\n### Deferred\n\n- **Playwright/Cypress 全量 E2E 框架搭建**: 需评估桌面端限制和搭建成本，推迟到 Phase 4\n- **后端 Contract 测试**: 当前 6 个前端 contract 测试验证 API 形状，后端 contract 测试推迟\n- **压力测试扩展**: 当前仅 2 个压力测试（后端），扩展推迟到基础覆盖达标后\n- **测试覆盖率 CI 门槛**: 设置 CI 硬门槛推迟到实际覆盖率数据获取后\n\n---\n\n## Code Context\n\n### 高风险文件（P0 — 零覆盖）\n- `desktop/src/stores/app/skillsSlice.ts` — 技能状态管理\n- `desktop/src/stores/app/conversationSlice.ts` — 对话核心状态\n- `src-ts/mcp/endpoints/learning.ts` — 自学习数据流\n- `src-ts/mcp/endpoints/workspace.ts` — 工作区上下文\n\n### P1 需补充文件\n- `desktop/src/stores/app/backendSlice.ts`, `workspaceSlice.ts`\n- `src-ts/mcp/endpoints/m10-revision.ts`, `m10-style.ts`, `m11-worldview.ts`\n- `desktop/src/api/writing.ts`\n- `desktop/src/hooks/`（27 个缺测试 hooks）\n\n### 现有高覆盖参考模块（companion pattern 示例）\n- `src-ts/workflow/` — 96% 覆盖率，companion pattern 重度使用\n- `src-ts/narrative/` — 93% 覆盖率，companion pattern 重度使用\n- `src-ts/mcp/services/` — 100% 覆盖率\n\n### 浅层测试文件（需深化）\n- `desktop/src/stores/projectSlice.test.ts` + `.additional.test.ts` + `.branches.additional.test.ts`\n- `desktop/src/stores/shared.test.ts`, `selectors.test.ts`\n- `desktop/src/stores/settings/` — 2 个 branches 测试\n- `desktop/src/stores/uiSlice.test.ts`, `writingContextStore.test.ts`\n\n### 总体评分与风险\n- **评分**: 72/100\n- **风险等级**: MEDIUM-HIGH\n- **当前标准**: MVP ✅ | 上线 ❌ (差 7%) | 生产 ❌ (差 12%)\n",
+      "ext": {
+        "virtualKind": "scratch-doc",
+        "sessionDir": "20260616-analyze-test-coverage"
+      },
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    },
+    {
+      "id": "scratch-20260616-analyze-test-coverage-discussion",
+      "type": "note",
+      "title": "Discussion: 全仓测试覆盖率深度分析",
+      "summary": "**Session ID**: ANL-test-coverage-2026-06-16 **Topic**: 全仓测试覆盖率分析 — 8 维度覆盖率统计 + 风险评估 + 补测试路线图 **Date**: 2026-06-16 **Dimensions**: coverage, unit, integration, e2e, business, risk **Mode**: standalone (macro)",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-16T05:50:46.752Z",
+      "updated": "2026-06-16T05:50:46.752Z",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260616-analyze-test-coverage/discussion.md"
+      },
+      "body": "# Discussion: 全仓测试覆盖率深度分析\n\n**Session ID**: ANL-test-coverage-2026-06-16\n**Topic**: 全仓测试覆盖率分析 — 8 维度覆盖率统计 + 风险评估 + 补测试路线图\n**Date**: 2026-06-16\n**Dimensions**: coverage, unit, integration, e2e, business, risk\n**Mode**: standalone (macro)\n\n---\n\n## Table of Contents\n\n- [User Intent](#user-intent)\n- [Current Understanding](#current-understanding)\n- [Round 1: Codebase Exploration](#round-1-codebase-exploration)\n- [Intent Coverage Matrix](#intent-coverage-matrix)\n- [Confidence Scoring](#confidence-scoring)\n- [Conclusions](#conclusions)\n\n---\n\n## User Intent\n\n1. 前端测试覆盖率统计\n2. 后端测试覆盖率统计\n3. 单元测试覆盖率统计\n4. 接口测试覆盖率统计\n5. 集成测试覆盖率统计\n6. E2E 测试覆盖率统计\n7. 核心业务模块覆盖率统计\n8. 未覆盖文件和高风险模块识别\n9. 哪些核心模块没有测试\n10. 哪些测试只是浅层测试\n11. 哪些业务流程没有自动化验证\n12. 当前测试覆盖率是否达到 MVP / 上线 / 生产可用标准\n13. 应该优先补哪些测试\n14. 总体测试覆盖率评分\n15. 风险等级\n16. P0/P1/P2 测试缺口\n17. 建议补测试路线图\n\n---\n\n## Current Understanding\n\n全仓测试覆盖率为 **MEDIUM-HIGH 风险等级**（评分 72/100）。前端测试文件比 1.10:1 看似充分，但后端仅 0.84:1 且多个关键模块零覆盖。5 个 store slices 完全无测试、7 个 MCP endpoints 无测试、hooks 覆盖率仅 27%。集成测试和 E2E 测试严重不足（分别仅 13 和 6 个）。当前覆盖率勉强通过 MVP 标准（60%），但未达上线标准（75%）和生产标准（80%）。浅层测试问题集中在 store 层（9/20 happy-path only），核心业务流程均缺乏端到端验证。\n\n---\n\n## Round 1: Codebase Exploration\n\n**Sources**: cli-explore-agent (3-layer), Glob/Bash 文件统计, orchestrator inline analysis\n**Date**: 2026-06-16\n\n### Key Findings\n\n#### 1. 文件级覆盖率分布\n\n| 目录 | 源文件 | 测试文件 | 覆盖率% | 风险 |\n|------|--------|----------|---------|------|\n| desktop/src/api/ | 34 | 48 | 85% | medium |\n| desktop/src/stores/ | 19 | 20 | 68% | **high** |\n| desktop/src/components/ | 155 | 185 | 89% | low |\n| desktop/src/hooks/ | 37 | 10 | 27% | **high** |\n| src-ts/mcp/endpoints/ | 23 | 31 | 70% | **high** |\n| src-ts/mcp/services/ | 9 | 30 | 100% | low |\n| src-ts/graph/ | 3 | 4 | 100% | low |\n| src-ts/workflow/ | 54 | 109 | 96% | low |\n| src-ts/narrative/ | 54 | 118 | 93% | low |\n| src-ts/memory/ | 17 | 18 | 100% | low |\n| src-ts/container/ | 8 | 9 | 100% | low |\n\n#### 2. 未覆盖关键文件\n\n**前端（6 个未覆盖 store slices）**:\n- `app/backendSlice.ts` — 后端连接状态\n- `app/conversationSlice.ts` — 对话核心状态\n- `app/loadingSlice.ts` — 全局加载状态\n- `app/skillsSlice.ts` — 技能状态（近期修复过一致性 bug，无回归保护）\n- `app/workspaceSlice.ts` — 工作区状态\n- `settings/state.ts` — 设置状态\n\n**后端（7 个未覆盖 endpoints）**:\n- `learning.ts` — 自学习数据流\n- `workspace.ts` — 工作区上下文\n- `m10-revision.ts` — 修订核心功能\n- `m10-style.ts` — 风格分析\n- `m11-worldview.ts` — 世界观提取\n- `plugins.ts` — 插件管理\n- `analysis.ts` — 分析功能\n\n#### 3. 测试类型分布\n\n| 类型 | 前端 | 后端 | 总计 |\n|------|------|------|------|\n| 单元测试 | 324 | 656 | 980 |\n| 集成测试 | 4 | 9 | 13 |\n| E2E 测试 | 1 | 5 | 6 |\n| Contract 测试 | 6 | 0 | 6 |\n| 压力测试 | 0 | 2 | 2 |\n| Companion 附加 | 66 | 355 | 421 |\n\n#### 4. 浅层测试识别\n\n**9 个浅层 store 测试**（仅 happy-path，无错误/边界覆盖）:\n- `projectSlice.test.ts`, `projectSlice.additional.test.ts`, `projectSlice.branches.additional.test.ts`\n- `shared.test.ts`, `selectors.test.ts`\n- `settings/state.branches.additional.test.ts`, `settingsStore.additional.test.ts`\n- `uiSlice.test.ts`, `writingContextStore.test.ts`\n\n**2 个浅层 endpoint 测试**:\n- `chat-endpoints.test.ts`, `config-endpoints.test.ts`\n\n#### 5. 业务流程覆盖缺口\n\n| 业务流程 | 有集成测试 | 有 E2E | 缺口 |\n|----------|-----------|--------|------|\n| 伏笔 CRUD | ✅ | ❌ | 无 plant→stats→list→harvest 端到端流程 |\n| 角色分析 | ✅ | ❌ | 无 create→depth→evaluate 端到端流程 |\n| 写作工作流 | ✅ | ✅(部分) | E2E 仅覆盖创作周期，不覆盖修订循环 |\n| 图谱 CRUD | ✅ | ❌ | 无实体生命周期端到端测试 |\n| 记忆搜索 | ✅ | ❌ | 无 add→search→retrieve 端到端流程 |\n| 小说质量评估 | ✅ | ❌ | 无 content→score→decision→fix 端到端流程 |\n| API 桥接 | ✅(部分) | ❌ | 6 个 contract 测试验证形状但非运行时兼容 |\n\n#### 6. 标准达标评估\n\n| 标准 | 要求行覆盖率 | 当前估算 | 判定 | 差距 |\n|------|-------------|----------|------|------|\n| MVP | 60% | ~68% | ✅ PASS | 临界 — 关键模块 < 70% |\n| 上线 | 75% | ~68% | ❌ FAIL | 7% 差距 |\n| 生产可用 | 80% | ~68% | ❌ FAIL | 12% 差距 |\n\n### Discussion Points\n\n1. **Store 层是最薄弱环节** — 5 个 slice 完全无测试，近期一致性 bug 修复后无回归保护\n2. **MCP endpoints 30% 无测试** — 7/23 endpoints 完全无覆盖，包含 M25 核心功能\n3. **Hooks 严重不足** — 37 个源文件仅 10 个测试文件，27% 覆盖率\n4. **E2E 测试几乎空白** — 6 个 E2E 测试无法覆盖 7 个核心业务流程\n5. **Companion 测试模式有效** — `.additional.test.*` 模式使 workflow/narrative 达到 >90%\n\n### Open Questions\n\n- 是否需要引入 Playwright/Cypress 进行桌面端 E2E？\n- 优先补充 P0 回归保护还是 P2 E2E 覆盖？\n- Contract 测试是否需要扩展到后端？\n\n### Warnings\n\n- **W001**: maestro delegate CLI 分析被数据安全策略阻断（不可将私有仓库源码发送到外部 Gemini 服务），多视角验证降级为单模型内联分析。部分发现标记为 LOW CONFIDENCE。\n\n---\n\n## Intent Coverage Matrix\n\n| # | Original Intent | Status | Where Addressed | Notes |\n|---|----------------|--------|-----------------|-------|\n| 1 | 前端测试覆盖率 | ✅ | Round 1, exploration-codebase.json | 304 源文件 / 334 测试，1.10:1 |\n| 2 | 后端测试覆盖率 | ✅ | Round 1, exploration-codebase.json | 862 源文件 / 722 测试，0.84:1 |\n| 3 | 单元测试覆盖率 | ✅ | Round 1, exploration-codebase.json | 980 个单元测试（93% of total） |\n| 4 | 接口测试覆盖率 | ✅ | Round 1, exploration-codebase.json | 6 contract + 7 untested endpoints |\n| 5 | 集成测试覆盖率 | ✅ | Round 1, exploration-codebase.json | 13 个集成测试，严重不足 |\n| 6 | E2E 测试覆盖率 | ✅ | Round 1, exploration-codebase.json | 6 个 E2E 测试，几乎空白 |\n| 7 | 核心业务模块覆盖率 | ✅ | Round 1, exploration-codebase.json | 7 个核心流程均有缺口 |\n| 8 | 未覆盖文件和高风险模块 | ✅ | Round 1, exploration-codebase.json | 5 stores + 7 endpoints + 27 hooks |\n| 9 | 核心模块没有测试 | ✅ | Round 1, exploration-codebase.json | skillsSlice, conversationSlice, 7 endpoints |\n| 10 | 浅层测试 | ✅ | Round 1, exploration-codebase.json | 9 store + 2 endpoint tests |\n| 11 | 缺失业务流程验证 | ✅ | Round 1, exploration-codebase.json | 7 个核心流程缺 E2E |\n| 12 | 达标评估 | ✅ | Round 1, exploration-codebase.json | MVP PASS / 上线 FAIL / 生产 FAIL |\n| 13 | 优先补充 | ✅ | Round 1, exploration-codebase.json | P0: 4 items, P1: 7 items |\n| 14 | 总体评分 | ✅ | Round 1, exploration-codebase.json | 72/100, MEDIUM-HIGH |\n| 15 | 风险等级 | ✅ | Round 1, exploration-codebase.json | MEDIUM-HIGH |\n| 16 | P0/P1/P2 缺口 | ✅ | Round 1, exploration-codebase.json | P0×4, P1×7, P2×5 |\n| 17 | 路线图 | ✅ | Round 1, exploration-codebase.json | 4 阶段路线图 |\n\n---\n\n## Confidence Scoring\n\n### Baseline (Round 1)\n\n| Dimension | Findings Depth (.30) | Evidence Strength (.25) | Coverage Breadth (.20) | User Validation (.15) | Consistency (.10) | **Overall** |\n|-----------|---------------------|------------------------|----------------------|----------------------|-------------------|-------------|\n| Coverage | 80 | 85 | 90 | 50 | 85 | **78%** |\n| Unit | 85 | 90 | 95 | 50 | 90 | **83%** |\n| Integration | 70 | 75 | 80 | 50 | 75 | **70%** |\n| E2E | 65 | 70 | 70 | 50 | 70 | **65%** |\n| Business | 80 | 75 | 85 | 50 | 80 | **76%** |\n| Risk | 85 | 80 | 90 | 50 | 85 | **79%** |\n\n**Overall Confidence: 75%** — 需用户确认收敛\n\n> **Note**: CLI 多视角验证因安全策略被阻断（W001），User Validation 和 Evidence Strength 部分降权。关键发现基于 cli-explore-agent（独立证据源）+ orchestrator 内联分析。\n\n---\n\n## Conclusions\n\n### 总体评分: 72/100 — MEDIUM-HIGH 风险\n\n### 关键结论\n\n1. **Store 层是最大风险点** — 5 个 slice 无测试 + 9 个浅层测试，一致性 bug 修复后无回归保护\n2. **后端 endpoints 30% 空白** — 包含 M25 核心功能的 7 个 endpoints 无任何测试\n3. **E2E/集成测试严重不足** — 6 个 E2E + 13 个集成测试无法支撑生产标准\n4. **MVP 勉强通过，生产标准差 12%** — 当前 ~68% 行覆盖率，需达 80%\n5. **Companion 测试模式证明有效** — workflow/narrative 模块 >90% 得益于 `.additional.test.*` 模式\n\n### 优先补充路线图\n\n| Phase | Priority | 工期 | 内容 |\n|-------|----------|------|------|\n| Phase 1 | P0 | 2-3 天 | skillsSlice + conversationSlice + learning + workspace endpoint |\n| Phase 2 | P1 | 3-4 天 | m10-revision/style/worldview + plugins + writing API |\n| Phase 3 | P1-P2 | 3-4 天 | 剩余 store slices + 深化浅层测试 + top 10 hooks |\n| Phase 4 | P2 | 5-7 天 | 业务流程 E2E + API bridge 集成 + Playwright 评估 |\n",
+      "ext": {
+        "virtualKind": "scratch-doc",
+        "sessionDir": "20260616-analyze-test-coverage"
+      },
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null
+    }
+  ]
+}

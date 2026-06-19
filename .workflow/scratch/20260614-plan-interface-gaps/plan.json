@@ -1,0 +1,131 @@
+{
+  "plan_id": "PLN-interface-gaps",
+  "created_at": "2026-06-14T15:45:00+08:00",
+  "source": "quality-loop-gaps",
+  "diagnosis_refs": [
+    ".workflow/scratch/20260614-debug-interface-gaps/understanding.md",
+    ".workflow/scratch/20260614-review-frontend-backend-interface/review.json",
+    ".workflow/scratch/20260614-test-security-regression/.tests/test-results.json"
+  ],
+  "waves": [
+    {
+      "wave": 1,
+      "name": "P0 Security Fixes",
+      "parallel": true,
+      "task_ids": ["TASK-001", "TASK-002", "TASK-003"]
+    },
+    {
+      "wave": 2,
+      "name": "P1 Architecture Consistency",
+      "parallel": true,
+      "task_ids": ["TASK-004", "TASK-005", "TASK-006"]
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "TASK-001",
+      "title": "SEC-001: Fix writing-craft.ts API key header transmission",
+      "priority": "P0",
+      "severity": "high",
+      "finding_ref": "SEC-001",
+      "affected_files": ["desktop/src/api/writing-craft.ts"],
+      "description": "Refactor analyzeWritingCraftLLM to extract api_key/base_url from llmConfig and send via X-LLM-API-Key/X-LLM-Base-Url headers using callApi extraHeaders param, matching writing.ts pattern",
+      "acceptance_criteria": [
+        "analyzeWritingCraftLLM extracts api_key/base_url from llmConfig",
+        "api_key sent via X-LLM-API-Key header",
+        "base_url sent via X-LLM-Base-Url header",
+        "api_key/base_url removed from POST body",
+        "TypeScript compiles without errors"
+      ],
+      "estimated_effort": "S"
+    },
+    {
+      "task_id": "TASK-002",
+      "title": "SEC-002: Add validateEntityType to graphAddEntity service layer",
+      "priority": "P0",
+      "severity": "high",
+      "finding_ref": "SEC-002",
+      "affected_files": ["src-ts/mcp/services/graph.ts"],
+      "description": "Add validateEntityType(entityType) call at the start of graphAddEntity() before engine.createEntity(). Import from ../../utils/cypher-safety.js",
+      "acceptance_criteria": [
+        "validateEntityType imported from cypher-safety",
+        "validateEntityType(entityType) called before createEntity",
+        "Invalid entityType throws descriptive error",
+        "Existing tests still pass"
+      ],
+      "estimated_effort": "S"
+    },
+    {
+      "task_id": "TASK-003",
+      "title": "SEC-003: Add Cypher safety guard to graphQueryEndpoint",
+      "priority": "P0",
+      "severity": "high",
+      "finding_ref": "SEC-003",
+      "affected_files": ["src-ts/mcp/endpoints/graph.ts"],
+      "description": "Add a Cypher safety check in graphQueryEndpoint that blocks destructive patterns: DETACH DELETE, DROP, CREATE CONSTRAINT, SET/REMOVE on non-property positions. Allow MATCH, RETURN, WHERE, ORDER BY, LIMIT, WITH, UNWIND, CALL (for procedures). Return 403 with error message for blocked patterns.",
+      "acceptance_criteria": [
+        "Destructive Cypher patterns blocked (DETACH DELETE, DROP, CREATE CONSTRAINT)",
+        "Read-only patterns allowed (MATCH, RETURN, WHERE, ORDER BY, LIMIT)",
+        "403 response with descriptive error for blocked queries",
+        "Existing frontend queries (from PersistedEntityTab) still work",
+        "TypeScript compiles without errors"
+      ],
+      "estimated_effort": "M"
+    },
+    {
+      "task_id": "TASK-004",
+      "title": "ARCH-004: Add workspace context to foreshadow/character APIs",
+      "priority": "P1",
+      "severity": "medium",
+      "finding_ref": "ARCH-004",
+      "affected_files": ["desktop/src/api/knowledge.ts"],
+      "description": "Add workspace?: ProjectWorkspaceContext parameter to plantForeshadow, getForeshadowStats, analyzeCharacterDepth, getCharacterProfile, getCharacterRelationships. Use appendWorkspacePayload or appendLegacyMemoryWorkspacePayload to include workspace in callApi payloads.",
+      "acceptance_criteria": [
+        "All 5 functions accept workspace parameter",
+        "Workspace context passed via appropriate append function",
+        "Backward compatible (workspace param optional)",
+        "TypeScript compiles without errors"
+      ],
+      "estimated_effort": "M"
+    },
+    {
+      "task_id": "TASK-005",
+      "title": "ARCH-005: Wire story-bible _workspace parameter",
+      "priority": "P1",
+      "severity": "medium",
+      "finding_ref": "ARCH-005",
+      "affected_files": ["desktop/src/api/story-bible.ts"],
+      "description": "Replace _workspace with workspace parameter and wire it via appendWorkspacePayload in all sb* functions: sbGetEntities, sbGetEntity, sbCreateEntity, sbUpdateEntity, sbDeleteEntity, sbExtractFromManuscript.",
+      "acceptance_criteria": [
+        "All 6 sb* functions use workspace parameter (no underscore prefix)",
+        "Workspace passed via appendWorkspacePayload",
+        "Backward compatible (workspace param optional)",
+        "TypeScript compiles without errors"
+      ],
+      "estimated_effort": "M"
+    },
+    {
+      "task_id": "TASK-006",
+      "title": "CORR-002: Add workspace scope to foreshadowPlantEndpoint",
+      "priority": "P1",
+      "severity": "medium",
+      "finding_ref": "CORR-002",
+      "affected_files": ["src-ts/mcp/endpoints/graph.ts"],
+      "description": "In foreshadowPlantEndpoint, call resolveGraphScope(body) and pass the resulting scope context (workspaceId) into the entity properties, so created foreshadow entities are properly scoped.",
+      "acceptance_criteria": [
+        "foreshadowPlantEndpoint resolves workspace scope from request",
+        "Workspace ID included in created entity properties",
+        "Existing functionality preserved",
+        "TypeScript compiles without errors"
+      ],
+      "estimated_effort": "S"
+    }
+  ],
+  "out_of_scope": [
+    "CORR-003: story-bible entityId URL encoding (P2)",
+    "CORR-004: SSE multiline data parser (P2)",
+    "ARCH-001: Legacy route deprecation (P2)",
+    "ARCH-002: knowledge.ts module split (P2, L effort)",
+    "ARCH-003: Workspace append pattern unification (P2, requires design)"
+  ]
+}

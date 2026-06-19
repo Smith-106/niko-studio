@@ -1,0 +1,96 @@
+{
+  "id": "TASK-002",
+  "title": "清理源码 TODO 与 console.log 输出",
+  "description": "处理 3 个文件中的 TODO 注释和 console.log：CoWritingPanel.tsx（3 个 TODO + 1 个 console.log）、story-bible-endpoints.ts（1 个 TODO）、qc-endpoints.ts（1 个 TODO）。reader-endpoints.ts 经确认无 TODO。处理方式：实现、删除、或转为 issue；console.log 替换为 logger 或删除。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "对 CoWritingPanel.tsx 的 3 个 TODO 和 1 个 console.log 进行处理：TODO 注释删除或替换为 issue 链接；console.log 删除或替换为 logger。对 story-bible-endpoints.ts 的 extractEntities TODO 添加 _log.warn 并保留占位实现。对 qc-endpoints.ts 的 runQualityCheck TODO 添加 _log.info 说明当前为启发式检查。",
+  "scope": "desktop/src/components/cowriting/ + src-ts/knowledge/mcp/ + src-ts/reader/mcp/",
+  "focus_paths": [
+    "desktop/src/components/cowriting/CoWritingPanel.tsx",
+    "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+    "src-ts/knowledge/mcp/qc-endpoints.ts"
+  ],
+  "read_first": [
+    "desktop/src/components/cowriting/CoWritingPanel.tsx",
+    "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+    "src-ts/knowledge/mcp/qc-endpoints.ts",
+    "src-ts/logger/index.ts"
+  ],
+  "depends_on": [],
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "grep -n 'TODO' desktop/src/components/cowriting/CoWritingPanel.tsx 返回空",
+      "grep -n 'console.log' desktop/src/components/cowriting/CoWritingPanel.tsx 返回空",
+      "grep -n 'TODO' src-ts/knowledge/mcp/story-bible-endpoints.ts 返回空",
+      "grep -n 'TODO' src-ts/knowledge/mcp/qc-endpoints.ts 返回空",
+      "CoWritingPanel.tsx 的 handleUseOption 不再包含 console.log('Use option:', option.text)",
+      "desktop test 通过：npm --prefix desktop run test:serial -- --testPathPattern='CoWritingPanel' 返回 exit 0",
+      "src-ts test 通过：npm --prefix src-ts run test:phase4 返回 exit 0"
+    ],
+    "verification": "执行 grep 验证 TODO 和 console.log 已清理；运行 desktop 和 src-ts 相关测试确认无回归",
+    "definition_of_done": "所有已识别的 TODO 和 console.log 已被实现、删除、转 issue 或替换为 logger；测试无回归"
+  },
+  "files": [
+    {
+      "path": "desktop/src/components/cowriting/CoWritingPanel.tsx",
+      "action": "modify",
+      "target": "generateAuto、generateGuided、handleUseOption",
+      "change": "删除 3 个 TODO 注释（'Wire to actual MCP endpoint' x2、'Insert option text into manuscript'）和 1 个 console.log('Use option:', option.text)，将 handleUseOption 中的 console.log 替换为合适的 logger 调用或删除"
+    },
+    {
+      "path": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "action": "modify",
+      "target": "sbExtractFromManuscriptEndpoint",
+      "change": "将 TODO 'Implement actual extraction using LLM' 替换为 _log.warn('Entity extraction from manuscript not yet implemented — returning placeholder')，保留占位返回逻辑"
+    },
+    {
+      "path": "src-ts/knowledge/mcp/qc-endpoints.ts",
+      "action": "modify",
+      "target": "runQualityCheck 函数头部注释",
+      "change": "将 TODO 'Integrate with actual CAS' 替换为说明注释（当前为启发式检查，未来接入 CAS），并添加 _log.info('Running heuristic quality checks — CAS integration pending')"
+    }
+  ],
+  "implementation": [
+    "读取 CoWritingPanel.tsx，定位并删除 3 个 TODO 注释行",
+    "将 handleUseOption 中的 console.log 替换为 logger 或删除",
+    "读取 story-bible-endpoints.ts，将 extractEntities 的 TODO 替换为 _log.warn",
+    "读取 qc-endpoints.ts，将 runQualityCheck 的 TODO 替换为说明注释和 _log.info",
+    "运行相关测试验证无回归"
+  ],
+  "test": {
+    "commands": [
+      "npm --prefix desktop run test:serial -- --testPathPattern='CoWritingPanel'",
+      "npm --prefix src-ts run test:phase4"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["TODO 和 console.log grep 为空", "测试通过"]
+  },
+  "reference": {
+    "pattern": "logger 替换 console 的现有代码模式",
+    "files": ["src-ts/logger.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "TODO 不在当前发布路径上的不阻塞发布，转为 logger 记录；console.log 直接替换为 logger 或删除",
+    "decision_factors": ["约束要求 TODO 必须实现/删除/转 issue", "console.log 必须替换为 logger", "Fix, Don't Hide 原则"],
+    "tradeoffs": null
+  },
+  "risks": [
+    "删除 TODO 注释可能丢失未来实现线索，需确保已记录为 issue 或 logger 说明",
+    "替换 console.log 为 logger 可能引入新的 import 依赖，需验证构建"
+  ],
+  "meta": {
+    "estimated_time": "20m",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 1,
+    "execution_group": null
+  }
+}

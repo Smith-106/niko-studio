@@ -1,0 +1,197 @@
+{
+  "id": "PLN-consistency-fix",
+  "slug": "consistency-fix",
+  "mode": "gap-fix",
+  "created_at": "2026-06-14T19:00:00+08:00",
+  "source": "debug-understanding",
+  "source_ref": ".workflow/scratch/20260614-debug-consistency-gaps/understanding.md",
+  "review_ref": ".workflow/scratch/20260614-review-consistency/review.json",
+  "convergence": {
+    "criteria": [
+      "Zero frontend types with inner { success, data } double-envelope",
+      "novelQualityCheck returns decision field from backend",
+      "All story-bible POST endpoints strip workspace before entity merge",
+      "Frontend PluginResult matches backend shape",
+      "Frontend listSkills type matches backend { skills: [] } wrapper"
+    ]
+  },
+  "waves": [
+    {
+      "wave": 1,
+      "name": "P0 Critical Type Fixes",
+      "parallel": true,
+      "task_ids": ["TASK-001", "TASK-002", "TASK-003"]
+    },
+    {
+      "wave": 2,
+      "name": "P1 Module-Level Type Fixes",
+      "parallel": true,
+      "task_ids": ["TASK-004", "TASK-005", "TASK-006"]
+    },
+    {
+      "wave": 3,
+      "name": "P1 Backend Logic Fixes",
+      "parallel": true,
+      "task_ids": ["TASK-007", "TASK-008"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "RC-1: Remove double-envelope from knowledge.ts + analysis.ts",
+      "priority": "P0",
+      "root_cause_ref": "RC-1",
+      "description": "Fix 5 knowledge.ts functions (plantForeshadow, getForeshadowStats, analyzeCharacterDepth, getCharacterProfile, getCharacterRelationships) and 2 analysis.ts functions (detectPatterns, clusterSessions) that incorrectly wrap response type with inner { success, data: T } envelope. Change ApiResponse<{ success: boolean; data: T }> to ApiResponse<T> where T is the raw backend body shape.",
+      "files": [
+        "desktop/src/api/knowledge.ts",
+        "desktop/src/api/analysis.ts"
+      ],
+      "changes": [
+        "plantForeshadow: ApiResponse<{ success: boolean; data: ForeshadowItem }> → ApiResponse<ForeshadowItem>",
+        "getForeshadowStats: ApiResponse<{ success: boolean; data: ForeshadowStats }> → ApiResponse<ForeshadowStats>",
+        "analyzeCharacterDepth: ApiResponse<{ success: boolean; data: CharacterDepthAssessment }> → ApiResponse<CharacterDepthAssessment>",
+        "getCharacterProfile: ApiResponse<{ success: boolean; data: CharacterProfile }> → ApiResponse<CharacterProfile>",
+        "getCharacterRelationships: ApiResponse<{ success: boolean; data: CharacterRelationshipNetwork }> → ApiResponse<CharacterRelationshipNetwork>",
+        "detectPatterns: ApiResponse<{ success: boolean; data: DetectedPattern[] }> → ApiResponse<DetectedPattern[]>",
+        "clusterSessions: ApiResponse<{ success: boolean; data: SessionCluster[] }> → ApiResponse<SessionCluster[]>"
+      ],
+      "verification": "npx vitest run desktop/src/api/__contract__/knowledge-contract.test.ts desktop/src/api/__contract__/analysis-contract.test.ts --reporter=verbose",
+      "estimated_effort": "low"
+    },
+    {
+      "id": "TASK-002",
+      "title": "RC-2: Add decision field to novelQualityCheck backend response",
+      "priority": "P0",
+      "root_cause_ref": "RC-2",
+      "description": "Add score→decision mapping to novelQualityCheckEndpoint. Derive decision from total_score: >=80 APPROVED, >=60 REVISE, >=40 REWRITE, else HUMAN_REVIEW. Include in jsonResponse.",
+      "files": [
+        "src-ts/mcp/endpoints/writing.ts"
+      ],
+      "changes": [
+        "Add decision derivation logic after evaluateNovelQuality call",
+        "Add decision field to success response and qualityDefaultPayload"
+      ],
+      "verification": "npx vitest run desktop/src/api/__contract__/writing-contract.test.ts --reporter=verbose",
+      "estimated_effort": "low"
+    },
+    {
+      "id": "TASK-003",
+      "title": "RC-7: Strip workspace from story-bible entity body before merge",
+      "priority": "P0",
+      "root_cause_ref": "RC-7",
+      "description": "Add 'delete body.workspace' in sbCreateEntityEndpoint and sbUpdateEntityEndpoint alongside existing 'delete body.id' etc. Prevents workspace context data from leaking into entity storage.",
+      "files": [
+        "src-ts/knowledge/mcp/story-bible-endpoints.ts"
+      ],
+      "changes": [
+        "sbCreateEntityEndpoint: add 'delete body.workspace' after delete body.id/novelId/type/createdAt",
+        "sbUpdateEntityEndpoint: add 'delete body.workspace' after delete body.id/novelId/type/createdAt"
+      ],
+      "verification": "npx vitest run src-ts/ --reporter=verbose (relevant story-bible tests)",
+      "estimated_effort": "low"
+    },
+    {
+      "id": "TASK-004",
+      "title": "RC-3/4/5/6: Fix m10/skills/plugins frontend types",
+      "priority": "P1",
+      "root_cause_ref": "RC-3,RC-4,RC-5,RC-6",
+      "description": "Fix 4 frontend type mismatches: getStyleProfile nullable, listSkills wrapper, PluginResult shape, registerPlugin response shape.",
+      "files": [
+        "desktop/src/api/m10-apis.ts",
+        "desktop/src/api/skills.ts",
+        "desktop/src/api/plugins.ts"
+      ],
+      "changes": [
+        "getStyleProfile: ApiResponse<Record<string, unknown>> → ApiResponse<Record<string, unknown> | null>",
+        "listSkills: ApiResponse<Array<{ id: string; name: string }>> → ApiResponse<{ skills: Array<{ id: string; name: string }> }>",
+        "PluginResult: redefine as { pluginId: string; pluginName: string; score: number; maxScore: number; evidence: string; suggestions: string[]; details: Record<string, unknown> }",
+        "registerPlugin: ApiResponse<{ id: string; status: string }> → ApiResponse<{ id: string; name: string }>",
+        "PluginInfo: remove 'enabled: boolean' or make optional"
+      ],
+      "verification": "npx vitest run desktop/src/api/__contract__/ --reporter=verbose",
+      "estimated_effort": "medium"
+    },
+    {
+      "id": "TASK-005",
+      "title": "RC-8: Add workspace scope to foreshadowStatsEndpoint",
+      "priority": "P1",
+      "root_cause_ref": "RC-8",
+      "description": "Change foreshadowStatsEndpoint to accept request, read workspace from body/headers, and pass scope to graphGetForeshadows calls for workspace-scoped statistics.",
+      "files": [
+        "src-ts/mcp/endpoints/graph.ts"
+      ],
+      "changes": [
+        "Change signature: (_request: HttpRequest) → (request: HttpRequest)",
+        "Add resolveGraphScope(parseBody(request)) call",
+        "Pass scope to all 3 graphGetForeshadows calls"
+      ],
+      "verification": "npx vitest run src-ts/ --reporter=verbose (graph-endpoint tests)",
+      "estimated_effort": "low"
+    },
+    {
+      "id": "TASK-006",
+      "title": "RC-2b: Fix novelQualityCheck error swallowing",
+      "priority": "P1",
+      "root_cause_ref": "RC-2",
+      "description": "Change novelQualityCheckEndpoint error handling: instead of returning qualityDefaultPayload() with 200 on exception, return jsonResponse({ error: message }, 500) to properly signal failure.",
+      "files": [
+        "src-ts/mcp/endpoints/writing.ts"
+      ],
+      "changes": [
+        "Replace qualityDefaultPayload() fallback in catch block with jsonResponse({ error: 'Quality evaluation failed' }, 500)"
+      ],
+      "verification": "npx vitest run src-ts/ --reporter=verbose (writing-endpoint tests)",
+      "estimated_effort": "low"
+    },
+    {
+      "id": "TASK-007",
+      "title": "W-004: Fix getForeshadows status default semantic mismatch",
+      "priority": "P1",
+      "root_cause_ref": "W-004",
+      "description": "When frontend doesn't specify status, backend defaults to 'pending' instead of returning all statuses. Fix backend to use undefined/no-filter when status is not provided.",
+      "files": [
+        "src-ts/mcp/endpoints/graph.ts"
+      ],
+      "changes": [
+        "Change graphForeshadowsEndpoint: default body.status to undefined (no filter) instead of 'pending'"
+      ],
+      "verification": "npx vitest run src-ts/ --reporter=verbose (graph-endpoint tests)",
+      "estimated_effort": "low"
+    },
+    {
+      "id": "TASK-008",
+      "title": "W-020: Add consumer-side null guard for getStyleProfile",
+      "priority": "P1",
+      "root_cause_ref": "RC-3",
+      "description": "In frontend consumers of getStyleProfile, add null guard since backend returns null when unimplemented. This is a defensive measure alongside the type fix in TASK-004.",
+      "files": [
+        "desktop/src/services/styleProfile.ts"
+      ],
+      "changes": [
+        "Add null check: if result.data === null, handle gracefully (show 'no profile' state)"
+      ],
+      "verification": "TypeScript compiles, existing styleProfile tests pass",
+      "estimated_effort": "low"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "DEFER-001",
+      "title": "RC-9: M10/writing workspace context consumption",
+      "priority": "P2",
+      "description": "6 backend endpoints (style/apply, consistency/cross-chapter, suggestions/context-aware, writing/helper, writing/stream, agent/revise-multi-pass) receive workspace but don't consume it. Needs systematic backend workspace integration."
+    },
+    {
+      "id": "DEFER-002",
+      "title": "W-014: character/depth hardcoded values",
+      "priority": "P2",
+      "description": "depth_level always 'moderate', suggestions always []. Needs actual computation logic."
+    },
+    {
+      "id": "DEFER-003",
+      "title": "W-009/010/011: Workflow field asymmetries",
+      "priority": "P2",
+      "description": "level field ignored in /workflow/route, genre not sent in /workflow/plan, confirm_token not sent in /checkpoint/restore, rollback missing uiBridge mode."
+    }
+  ]
+}

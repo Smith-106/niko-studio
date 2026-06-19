@@ -1,0 +1,163 @@
+{
+  "$schema": "context-package/1.0",
+  "source": {
+    "type": "analyze",
+    "artifact_id": "ANL-test-coverage-2026-06-16",
+    "session_path": "scratch/20260616-analyze-test-coverage",
+    "generated_at": "2026-06-16T13:48:00+08:00"
+  },
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "title": "补 P0 回归保护测试",
+      "acceptance": "skillsSlice + conversationSlice + learning endpoint + workspace endpoint 均有测试覆盖且通过",
+      "ref": "conclusions.json#recommendations.R-001"
+    },
+    {
+      "id": "REQ-002",
+      "title": "补 P1 后端 endpoint 测试",
+      "acceptance": "m10-revision/style/worldview + plugins + writing API 均有测试覆盖且通过",
+      "ref": "conclusions.json#recommendations.R-002"
+    },
+    {
+      "id": "REQ-003",
+      "title": "运行 vitest --coverage 获取实际覆盖率基线",
+      "acceptance": "前后端 coverage/ 目录生成，行覆盖率数据可用",
+      "ref": "conclusions.json#recommendations.R-005"
+    }
+  ],
+  "constraints": [
+    {
+      "title": "Companion pattern 测试策略",
+      "description": "使用 .additional.test.* 和 .branches.additional.test.* 扩展测试，不重写测试结构",
+      "status": "locked",
+      "ref": "context.md#Locked"
+    },
+    {
+      "title": "P0 优先级固定",
+      "description": "skillsSlice + conversationSlice + learning + workspace 必须先于其他补测试",
+      "status": "locked",
+      "ref": "context.md#Locked"
+    },
+    {
+      "title": "vitest 框架不变",
+      "description": "继续使用 vitest 3.2.4 + @vitest/coverage-v8，不引入新测试框架",
+      "status": "locked",
+      "ref": "context.md#Locked"
+    },
+    {
+      "title": "不为覆盖率写测试",
+      "description": "测试必须验证有意义的场景，不为达标而凑数字",
+      "status": "locked",
+      "ref": "context.md#Locked"
+    },
+    {
+      "title": "Playwright/Cypress 选型",
+      "description": "Phase 4 评估时由实施者决定是否引入桌面端 E2E 框架",
+      "status": "open",
+      "ref": "context.md#Free"
+    },
+    {
+      "title": "hooks 测试优先顺序",
+      "description": "top 10 高频 hooks 由实施者根据实际使用频率排列",
+      "status": "open",
+      "ref": "context.md#Free"
+    },
+    {
+      "title": "集成测试 vs E2E 比例",
+      "description": "Phase 4 中 API bridge 验证方式由实施者决定",
+      "status": "open",
+      "ref": "context.md#Free"
+    },
+    {
+      "title": "浅层测试深化顺序",
+      "description": "由实施者根据模块变更频率决定优先级",
+      "status": "open",
+      "ref": "context.md#Free"
+    },
+    {
+      "title": "Playwright/Cypress 全量 E2E 框架搭建",
+      "description": "需评估桌面端限制和搭建成本，推迟到 Phase 4",
+      "status": "deferred",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "后端 Contract 测试",
+      "description": "当前前端有 6 个 contract 测试，后端 contract 测试推迟",
+      "status": "deferred",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "压力测试扩展",
+      "description": "当前仅 2 个压力测试，扩展推迟到基础覆盖达标后",
+      "status": "deferred",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "CI 覆盖率硬门槛",
+      "description": "设置 CI 硬门槛推迟到实际覆盖率数据获取后",
+      "status": "deferred",
+      "ref": "context.md#Deferred"
+    }
+  ],
+  "domain": {},
+  "non_goals": [
+    {
+      "title": "Playwright/Cypress 全量 E2E",
+      "rationale": "桌面端 E2E 框架搭建成本高，需评估，推迟到 Phase 4",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "后端 Contract 测试",
+      "rationale": "当前前端 contract 测试已验证 API 形状，后端 contract 测试优先级低",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "压力测试扩展",
+      "rationale": "基础覆盖未达标前不应扩展压力测试",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "CI 覆盖率硬门槛",
+      "rationale": "需先获取实际覆盖率数据再设置门槛",
+      "ref": "context.md#Deferred"
+    }
+  ],
+  "insights": [
+    {
+      "role": "analyzer",
+      "area": "test-coverage",
+      "summary": "全仓测试覆盖率 72/100, MEDIUM-HIGH 风险。Store 层 5 slice 零覆盖 + 9 浅层测试是最大风险点。7 MCP endpoints 无测试。E2E/集成严重不足。MVP 勉强通过，距生产标准差 12%。Companion pattern 是最有效覆盖率策略。"
+    },
+    {
+      "role": "analyzer",
+      "area": "priority-gaps",
+      "summary": "P0: skillsSlice/conversationSlice/learning endpoint/workspace endpoint — 回归保护缺失。P1: backendSlice/workspaceSlice/m10-revision/style/worldview/writing API/hooks。P2: E2E/浅层深化/phase-gate-evaluator/gateway/identification"
+    },
+    {
+      "role": "analyzer",
+      "area": "roadmap",
+      "summary": "4 阶段路线图: Phase 1 (2-3d) P0 回归保护 → Phase 2 (3-4d) P1 endpoint 覆盖 → Phase 3 (3-4d) P1-P2 前端深度 → Phase 4 (5-7d) P2 E2E/集成。总计 14-18 工作日达标"
+    }
+  ],
+  "open_questions": [
+    {
+      "area": "E2E framework",
+      "question": "是否引入 Playwright/Cypress 进行桌面端 E2E 测试？",
+      "options": ["Playwright", "Cypress", "延续 vitest 级 E2E", "不引入"]
+    },
+    {
+      "area": "coverage baseline",
+      "question": "vitest --coverage 实际行覆盖率是否与 68% 估算一致？",
+      "options": ["一致（±3%）", "偏高", "偏低"]
+    }
+  ],
+  "references": [
+    { "type": "analysis", "path": "context.md" },
+    { "type": "conclusions", "path": "conclusions.json" },
+    { "type": "discussion", "path": "discussion.md" },
+    { "type": "scoring", "path": "analysis.md" },
+    { "type": "exploration", "path": "exploration-codebase.json" },
+    { "type": "findings", "path": "explorations.json" }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "target": "security-regression-ISS-001-ISS-002",
+  "completed_at": "2026-06-14T15:30:00Z",
+  "results": [
+    { "id": "T-001", "name": "ISS-001 validateEntityType allowlist", "status": "pass", "details": "cypher-safety.ts:26-32" },
+    { "id": "T-002", "name": "ISS-001 escapeCypherString escaping", "status": "pass", "details": "cypher-safety.ts:38-40" },
+    { "id": "T-003", "name": "ISS-001 PersistedEntityTab uses validateEntityType", "status": "pass", "details": "PersistedEntityTab.tsx:113" },
+    { "id": "T-004", "name": "ISS-001 PersistedEntityTab uses escapeCypherString", "status": "pass", "details": "PersistedEntityTab.tsx:190" },
+    { "id": "T-005", "name": "ISS-001 SEC-002 graphAddEntity no validation", "status": "issue", "details": "graph.ts:119-127 — entityType passed directly to createEntity" },
+    { "id": "T-006", "name": "ISS-001 SEC-003 raw Cypher endpoint no guard", "status": "issue", "details": "graph.ts endpoint:68-73 — raw Cypher pass-through" },
+    { "id": "T-007", "name": "ISS-002 processWritingHelper X-LLM-API-Key header", "status": "pass", "details": "writing.ts:62-78" },
+    { "id": "T-008", "name": "ISS-002 streamWritingHelper uses headers", "status": "pass", "details": "writing.ts:265-320" },
+    { "id": "T-009", "name": "ISS-002 gateway/models X-Goog-Api-Key header", "status": "pass", "details": "gateway/models.ts:120-123" },
+    { "id": "T-010", "name": "ISS-002 backend writing.ts header priority", "status": "pass", "details": "writing.ts:72-76" },
+    { "id": "T-011", "name": "ISS-002 backend writing-craft-llm.ts header priority", "status": "pass", "details": "writing-craft-llm.ts:50-54" },
+    { "id": "T-012", "name": "ISS-002 SEC-001 writing-craft.ts spreads into body", "status": "issue", "details": "writing-craft.ts:220-230 — ...llmConfig in body, not headers" }
+  ],
+  "summary": { "total": 12, "passed": 9, "issues": 3, "skipped": 0 },
+  "regression_assessment": {
+    "ISS-001_cypher_injection": "PARTIALLY FIXED — core safety utils and frontend are protected, but 2 backend entry points remain exposed (SEC-002: graphAddEntity, SEC-003: /graph/query)",
+    "ISS-002_api_key_transmission": "PARTIALLY FIXED — writing.ts and gateway correctly use headers, backend correctly reads headers with priority, but writing-craft.ts frontend still sends API key in body (SEC-001)"
+  }
+}

@@ -1,0 +1,355 @@
+{
+  "session_id": "maestro-20260614-143000",
+  "source": "maestro",
+  "intent": "全面验证前后端接口/功能的状态",
+  "task_type": "quality-loop",
+  "chain_name": "quality-loop",
+  "ralph_protocol_version": "1",
+  "active_step_index": null,
+  "phase": null,
+  "phase_is_new": false,
+  "milestone": null,
+  "scope_verdict": null,
+  "analyze_macro_id": null,
+  "blueprint_id": null,
+  "auto_mode": false,
+  "cli_tool": "claude",
+  "created_at": "2026-06-14T14:30:00+08:00",
+  "updated_at": "2026-06-14T14:30:00+08:00",
+  "classification_rationale": {
+    "matched_pattern": "全面质量检查 → quality-loop (pipeline example exact match)",
+    "rejected_alternatives": [
+      {
+        "chain": "review",
+        "reason": "single-step, insufficient for comprehensive verification"
+      },
+      {
+        "chain": "test",
+        "reason": "no review/audit phase, would miss interface contract gaps"
+      },
+      {
+        "chain": "debug",
+        "reason": "no known broken behavior, proactive verification needed"
+      }
+    ],
+    "confidence": "high",
+    "action": "验证",
+    "object": "前后端接口/功能",
+    "scope": "全面",
+    "clarity_score": 3
+  },
+  "context": {
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null,
+    "blueprint_dir": null,
+    "issue_id": null,
+    "milestone_num": null,
+    "spec_session_id": null
+  },
+  "boundary_contract": {
+    "in_scope": [
+      "Frontend API call layer (desktop/src/api/) — contracts, transport, error handling",
+      "Backend MCP endpoints (src-ts/mcp/endpoints/) — request validation, response contracts",
+      "Frontend-backend interface alignment — request/response schema consistency",
+      "Security regression — Cypher injection fix + API Key header transmission",
+      "Existing test suites — coverage, pass/fail status"
+    ],
+    "out_of_scope": [
+      "UI component visual regression",
+      "Performance/load testing",
+      "New feature development",
+      "Documentation generation"
+    ],
+    "constraints": [
+      "Output: status matrix (healthy/broken) with prioritized fix recommendations",
+      "Include security regression verification for ISS-001 and ISS-002",
+      "No unsolicited refactoring — only report, recommend fixes"
+    ]
+  },
+  "execution_criteria": [
+    {
+      "id": "EC-1",
+      "criterion": "All frontend API endpoints reviewed and status marked",
+      "done_when": "Review findings exist for every endpoint in desktop/src/api/"
+    },
+    {
+      "id": "EC-2",
+      "criterion": "All backend MCP endpoints reviewed and status marked",
+      "done_when": "Review findings exist for every endpoint in src-ts/mcp/endpoints/"
+    },
+    {
+      "id": "EC-3",
+      "criterion": "Frontend-backend contract alignment verified",
+      "done_when": "Each frontend call has matching backend handler with compatible schema"
+    },
+    {
+      "id": "EC-4",
+      "criterion": "Security regression verified (Cypher escape + API Key headers)",
+      "done_when": "Test evidence confirms both fixes are effective"
+    },
+    {
+      "id": "EC-5",
+      "criterion": "Status matrix produced with fix recommendations",
+      "done_when": "Consolidated matrix with healthy/broken status per endpoint + priority-ranked fix suggestions"
+    }
+  ],
+  "task_decomposition": [
+    {
+      "id": "G1",
+      "goal": "前端接口审查 — review all frontend API calls for contract correctness and error handling",
+      "status": "pending",
+      "done_when": "Findings with file:line for every frontend API module",
+      "evidence": "quality-review output",
+      "lifecycle": "review",
+      "completion_confirmed": false
+    },
+    {
+      "id": "G2",
+      "goal": "后端端点审查 — review all backend MCP endpoints for request validation and response correctness",
+      "status": "pending",
+      "done_when": "Findings with file:line for every backend endpoint",
+      "evidence": "quality-review output",
+      "lifecycle": "review",
+      "completion_confirmed": false
+    },
+    {
+      "id": "G3",
+      "goal": "自动化测试覆盖 — run existing test suites, identify coverage gaps",
+      "status": "pending",
+      "done_when": "Test results reported with gap analysis",
+      "evidence": "quality-auto-test output",
+      "lifecycle": "auto-test",
+      "completion_confirmed": false
+    },
+    {
+      "id": "G4",
+      "goal": "安全回归验证 — verify Cypher injection fix and API Key header transmission",
+      "status": "pending",
+      "done_when": "Both Critical fixes confirmed working via test evidence",
+      "evidence": "quality-test output",
+      "lifecycle": "test",
+      "completion_confirmed": false
+    },
+    {
+      "id": "G5",
+      "goal": "状态矩阵 + 修复建议 — consolidate findings into status matrix with prioritized fix recommendations",
+      "status": "pending",
+      "done_when": "Status matrix document produced",
+      "evidence": "maestro-plan output",
+      "lifecycle": "plan",
+      "completion_confirmed": false
+    }
+  ],
+  "task_decomposition_all_done": false,
+  "steps": [
+    {
+      "index": 0,
+      "skill": "quality-review",
+      "args": "--dimensions security,architecture,correctness --scope frontend-api,backend-endpoints",
+      "type": "skill",
+      "stage": "review",
+      "scope": "comprehensive",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-review.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": "G1,G2",
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": ".workflow/scratch/20260614-review-frontend-backend-interface/review.json",
+      "completed_at": "2026-06-14T09:17:07.905Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\index.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-14T04:42:30.832Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\review.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\index.json"
+        ],
+        "resolve_version": "1"
+      },
+      "started_at": null,
+      "error": null,
+      "concerns": "3 HIGH (SEC-001: writing-craft LLM api_key in body, SEC-002: graphAddEntity no entity type validation, SEC-003: raw Cypher endpoint no guard); 5 MEDIUM; 4 LOW. ISS-001 Cypher injection FIXED but 2 gaps remain. ISS-002 API key transmission PARTIALLY FIXED (writing-craft.ts gap)."
+    },
+    {
+      "index": 1,
+      "skill": "quality-auto-test",
+      "args": "",
+      "type": "skill",
+      "stage": "auto-test",
+      "scope": "interface-coverage",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-auto-test.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": "G3",
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": null,
+      "completed_at": "2026-06-14T09:21:53.857Z",
+      "deferred_reads": [],
+      "load": {
+        "loaded_at": "2026-06-14T09:17:20.803Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\auto-test.md"
+        ],
+        "deferred_files": [],
+        "resolve_version": "1"
+      },
+      "started_at": null,
+      "error": null,
+      "concerns": "Desktop API tests: 43 fail / 218 pass (83% pass). Backend tests: 32 fail / 5156 pass (99.4% pass). Failures mostly pre-existing: sidecar native module version mismatch (better-sqlite3 NODE_MODULE_VERSION), workflow barrel export staleness, PDF parser constructor. API-specific failures: transport.test.ts chunk reassembly, writing.additional.test.ts helper call routing, gateway/models.test.ts google endpoint mock. Coverage gaps: no direct tests for writing-craft-llm.ts header reading, no tests for graphAddEntity entityType validation, no tests for /graph/query Cypher guard."
+    },
+    {
+      "index": 2,
+      "skill": "quality-test",
+      "args": "--smoke",
+      "type": "skill",
+      "stage": "test",
+      "scope": "security-regression",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-test.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": "G4",
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": ".workflow/scratch/20260614-test-security-regression/.tests/test-results.json",
+      "completed_at": "2026-06-14T09:24:51.016Z",
+      "deferred_reads": [],
+      "load": {
+        "loaded_at": "2026-06-14T09:22:43.747Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\test.md"
+        ],
+        "deferred_files": [],
+        "resolve_version": "1"
+      },
+      "started_at": null,
+      "error": null,
+      "concerns": "3 security gaps remain: SEC-001(writing-craft.ts body spread),SEC-002(graphAddEntity no validate),SEC-003(graphQuery raw Cypher)"
+    },
+    {
+      "index": 3,
+      "skill": "quality-debug",
+      "args": "--from-uat",
+      "type": "skill",
+      "stage": "debug",
+      "scope": "interface-issues",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-debug.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/scratch/20260614-debug-interface-gaps/understanding.md",
+      "completed_at": "2026-06-14T09:26:12.398Z",
+      "deferred_reads": [],
+      "load": {
+        "loaded_at": "2026-06-14T09:25:02.738Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\debug.md"
+        ],
+        "deferred_files": [],
+        "resolve_version": "1"
+      },
+      "started_at": null,
+      "error": null,
+      "concerns": null
+    },
+    {
+      "index": 4,
+      "skill": "maestro-plan",
+      "args": "--gaps",
+      "type": "cli",
+      "stage": "plan",
+      "scope": "gap-fixes",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-plan.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": "G5",
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/scratch/20260614-plan-interface-gaps/plan.json",
+      "completed_at": "2026-06-14T09:27:18.657Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\plan.json",
+        "C:\\Users\\niko\\.maestro\\templates\\task.json",
+        "C:\\Users\\niko\\.maestro\\templates\\state.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-14T09:26:26.050Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\plan.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\plan.json",
+          "C:\\Users\\niko\\.maestro\\templates\\task.json",
+          "C:\\Users\\niko\\.maestro\\templates\\state.json"
+        ],
+        "resolve_version": "1"
+      },
+      "started_at": null,
+      "error": null,
+      "concerns": null
+    },
+    {
+      "index": 5,
+      "skill": "maestro-execute",
+      "args": "",
+      "type": "cli",
+      "stage": "execute",
+      "scope": "priority-fixes",
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\maestro-execute.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE",
+      "completion_evidence": ".workflow/scratch/20260614-plan-interface-gaps/.summaries/TASK-all.md",
+      "completed_at": "2026-06-14T09:33:02.706Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\task.json",
+        "C:\\Users\\niko\\.maestro\\templates\\state.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-14T09:27:29.076Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\execute.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\task.json",
+          "C:\\Users\\niko\\.maestro\\templates\\state.json"
+        ],
+        "resolve_version": "1"
+      },
+      "started_at": null,
+      "error": null,
+      "concerns": null
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "running"
+}

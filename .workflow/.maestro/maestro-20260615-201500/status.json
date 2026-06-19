@@ -1,0 +1,70 @@
+{
+  "session_id": "maestro-20260615-201500",
+  "created_at": "2026-06-15T20:15:00+08:00",
+  "source": "maestro",
+  "intent": "做稳定性检查",
+  "task_type": "review",
+  "chain_name": "review",
+  "ralph_protocol_version": "1",
+  "active_step_index": null,
+  "phase": null,
+  "phase_is_new": false,
+  "milestone": null,
+  "scope_verdict": null,
+  "analyze_macro_id": null,
+  "blueprint_id": null,
+  "auto_mode": false,
+  "cli_tool": "claude",
+  "context": {
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null,
+    "blueprint_dir": null,
+    "issue_id": null,
+    "milestone_num": null,
+    "prior_session_ref": "maestro-20260614-181500"
+  },
+  "classification_rationale": "意图=做稳定性检查，action=verify/check，object=stability。匹配 review 链（quality-review）— 修复后验证稳定性。排除 quality-loop（过于重量级，用户明确是检查而非修复循环）；排除 test（检查包含但不限于测试）；排除 debug（无已知故障）。confidence=high，clarity=2/3。",
+  "steps": [
+    {
+      "index": 0,
+      "skill": "quality-review",
+      "args": " --dimensions correctness,consistency,stability --level deep",
+      "stage": "verify",
+      "scope": null,
+      "decision": null,
+      "command_scope": "global",
+      "command_path": "C:\\Users\\niko\\.claude\\commands\\quality-review.md",
+      "milestone_id": null,
+      "source_artifact_ref": null,
+      "status": "completed",
+      "goal_ref": null,
+      "completion_confirmed": true,
+      "completion_status": "DONE_WITH_CONCERNS",
+      "completion_evidence": ".workflow/scratch/20260615-review-stability/review.json",
+      "completed_at": "2026-06-14T19:31:47.604Z",
+      "deferred_reads": [
+        "C:\\Users\\niko\\.maestro\\templates\\index.json"
+      ],
+      "load": {
+        "loaded_at": "2026-06-14T19:14:11.845Z",
+        "required_files": [
+          "C:\\Users\\niko\\.maestro\\workflows\\review.md"
+        ],
+        "deferred_files": [
+          "C:\\Users\\niko\\.maestro\\templates\\index.json"
+        ],
+        "resolve_version": "1"
+      },
+      "concerns": "1 high: qualityKwargs dead code in writing.ts; 3 medium: decision threshold mismatch, inline types divergence, empty catch; 2 low"
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "completed",
+  "boundary_contract": {},
+  "execution_criteria": [],
+  "task_decomposition": [],
+  "task_decomposition_all_done": false
+}

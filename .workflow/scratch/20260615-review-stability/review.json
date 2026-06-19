@@ -1,0 +1,156 @@
+{
+  "review_id": "maestro-20260615-201500",
+  "created_at": "2026-06-15T20:30:00+08:00",
+  "source_session": "maestro-20260615-201500",
+  "prior_session_ref": "maestro-20260614-181500",
+  "scope": "post-fix stability review — second pass after CORR-001..011 fixes",
+  "dimensions": ["correctness", "consistency", "stability"],
+  "level": "deep",
+  "files_reviewed": [
+    "desktop/src/stores/app/skillsSlice.ts",
+    "desktop/src/components/knowledge/SkillTab.tsx",
+    "desktop/src/components/intelligence/PluginPanel.tsx",
+    "desktop/src/stores/appStore.test.ts",
+    "desktop/src/components/knowledge/SkillTab.test.tsx",
+    "desktop/src/api/knowledge.additional.test.ts",
+    "desktop/src/api/knowledge.ts",
+    "desktop/src/api/plugins.ts",
+    "desktop/src/api/skills.ts",
+    "desktop/src/api/analysis.ts",
+    "desktop/src/api/core.ts",
+    "src-ts/mcp/endpoints/writing.ts",
+    "src-ts/mcp/endpoints/graph.ts",
+    "src-ts/mcp/services/graph.ts",
+    "src-ts/mcp/services/critic.ts",
+    "src-ts/graph/graph-engine.ts",
+    "src-ts/container/adapters.ts",
+    "src-ts/workflow/novel-quality.ts"
+  ],
+  "findings": [
+    {
+      "id": "CORR-012",
+      "dimension": "correctness",
+      "severity": "high",
+      "title": "qualityKwargs built but never passed to evaluateNovelQuality",
+      "description": "novelQualityCheckEndpoint builds qualityKwargs from body fields (quality_level, quality_mode, etc.) but evaluateNovelQuality only accepts content — kwargs are dead code. Users setting these fields have no effect.",
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "line": 318,
+      "status": "fixed",
+      "fix": "Renamed qualityKwargs to qualityOptions with camelCase keys (qualityLevel, qualityMode, etc.) matching evaluateNovelQuality's options parameter. Passed as second argument."
+    },
+    {
+      "id": "CORR-013",
+      "dimension": "correctness",
+      "severity": "medium",
+      "title": "Decision threshold mismatch: writing.ts uses 40 for REWRITE but critic.ts uses 60",
+      "description": "writing.ts: totalScore >= 40 ? 'REWRITE' : 'HUMAN_REVIEW'. critic.ts: overallScore >= 60 ? 'REVISE' : 'REWRITE'. The 40 threshold creates a 'HUMAN_REVIEW' tier that doesn't exist in the critic engine, and REWRITE triggers earlier (40 vs 60).",
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "line": 333,
+      "status": "fixed",
+      "fix": "Aligned with critic.ts: APPROVED >= 80, REVISE >= 60, REWRITE < 60. Removed undocumented HUMAN_REVIEW tier."
+    },
+    {
+      "id": "CONS-001",
+      "dimension": "consistency",
+      "severity": "critical",
+      "title": "Foreshadow state vs status property key mismatch",
+      "description": "foreshadowPlantEndpoint stores foreshadow state under key 'state' (graph.ts:134) but GraphEngine.getForeshadows queries by json_extract(properties, '$.status') (graph-engine.ts:1201). This causes foreshadowStatsEndpoint to always return zero counts for all states because the query never matches stored data.",
+      "file": "src-ts/graph/graph-engine.ts",
+      "line": 1201,
+      "status": "fixed",
+      "fix": "Changed json_extract(properties, '$.status') to json_extract(properties, '$.state') to match the key used by foreshadowPlantEndpoint."
+    },
+    {
+      "id": "CONS-002",
+      "dimension": "consistency",
+      "severity": "critical",
+      "title": "characterProfileEndpoint reads nested properties as top-level",
+      "description": "characterProfileEndpoint reads role, personality, background, etc. directly from characterData but graphGetCharacter returns them nested inside properties sub-object. All profile fields would resolve to defaults (role='unknown', personality={}).",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 182,
+      "status": "fixed",
+      "fix": "Extracted properties sub-object first, then read role/personality/etc from properties instead of top-level data. Also fixed characterDepthEndpoint with same pattern."
+    },
+    {
+      "id": "CONS-003",
+      "dimension": "consistency",
+      "severity": "critical",
+      "title": "foreshadowPlantEndpoint returns incomplete shape",
+      "description": "graphAddEntity calls engine.createEntity() which returns {id, status:'created'} but frontend expects full ForeshadowItem with description, state, planted_at, hints, harvested_at, importance, tags, metadata.",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 143,
+      "status": "fixed",
+      "fix": "After graphAddEntity call, construct full ForeshadowItem return shape from stored properties and entityId."
+    },
+    {
+      "id": "CONS-004",
+      "dimension": "consistency",
+      "severity": "medium",
+      "title": "PluginPanel.tsx uses inline PluginInfo/PluginResult types diverging from api/plugins.ts",
+      "description": "PluginPanel.tsx declares its own PluginInfo and PluginResult interfaces instead of importing from api/plugins.ts. The types are now aligned (after fix) but future divergence risk exists since they are independently maintained.",
+      "file": "desktop/src/components/intelligence/PluginPanel.tsx",
+      "line": 5,
+      "status": "open",
+      "impact": "Maintenance burden — types may diverge again in future changes",
+      "suggestion": "Import PluginInfo and PluginResult from '../../api/plugins' instead of declaring inline duplicates"
+    },
+    {
+      "id": "CONS-005",
+      "dimension": "consistency",
+      "severity": "low",
+      "title": "graphGetForeshadows signature inconsistency: service vs endpoint parameter names",
+      "description": "graph.ts endpoint passes (status ?? undefined, chapter, scope) but graphGetForeshadows service function signature takes (status?: string | null, chapter?, scope?). The null vs undefined semantics differ.",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 117,
+      "status": "open",
+      "impact": "Low — function handles both null and undefined, but semantic confusion for future readers",
+      "suggestion": "Standardize: either the service accepts null explicitly and endpoint passes null, or service accepts undefined and endpoint converts"
+    },
+    {
+      "id": "STAB-001",
+      "dimension": "stability",
+      "severity": "medium",
+      "title": "PluginPanel.tsx silently swallows all API errors",
+      "description": "Both loadPlugins and executePlugin have empty catch blocks (catch {}). If the backend is down or returns unexpected shapes, the component silently shows empty state with no user feedback or retry mechanism.",
+      "file": "desktop/src/components/intelligence/PluginPanel.tsx",
+      "line": 41,
+      "status": "open",
+      "impact": "Users see empty UI with no indication of failure; no retry path",
+      "suggestion": "Add error state to UI (toast or inline error message) and optionally a retry button"
+    },
+    {
+      "id": "STAB-002",
+      "dimension": "stability",
+      "severity": "low",
+      "title": "writing.ts SSE buffer accumulates without backpressure",
+      "description": "writingStreamEndpoint accumulates all SSE chunks into a single array (sseEvents) with a 5MB cap. For long generations, this creates a memory spike before returning the full response.",
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "line": 466,
+      "status": "open",
+      "impact": "OOM risk for very long generations approaching 5MB; latency until first byte is the full generation time",
+      "suggestion": "Known architectural limitation (HTTP response model). Consider chunked transfer encoding or WebSocket for true streaming"
+    }
+  ],
+  "severity_distribution": {
+    "critical": 3,
+    "high": 1,
+    "medium": 3,
+    "low": 2,
+    "total": 9
+  },
+  "verdict": "FIXED",
+  "prior_fix_verification": {
+    "session_ref": "maestro-20260614-181500",
+    "prior_findings": 11,
+    "prior_fixed": 11,
+    "regressions_found": 0,
+    "new_findings": 9,
+    "new_findings_severity": "3 critical, 1 high, 3 medium, 2 low"
+  },
+  "fix_summary": {
+    "fixed_in_this_session": 5,
+    "fixed_findings": ["CORR-012", "CORR-013", "CONS-001", "CONS-002", "CONS-003"],
+    "remaining_open": ["CONS-004", "CONS-005", "STAB-001", "STAB-002"],
+    "remaining_severity": "1 medium, 3 low"
+  }
+}

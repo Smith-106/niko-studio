@@ -1,0 +1,97 @@
+{
+  "id": "TASK-005",
+  "title": "实现 De-AI rewrite 复用 RevisionService",
+  "description": "R-M26-004 核心交付。新增 /reader/de-ai endpoint，调用 anti-AI-flavor detector 生成 instructions，注入 IRevisionService.revise 作为 qualityGoals。RevisionServiceImpl 的 writerFn 当前为 identity 函数，需要实现真正的重写逻辑（复用 Model Router 或调用 LLM）。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "high",
+  "action": "在 reader-endpoints.ts 新增 rsDeAIEndpoint 处理 POST /reader/de-ai，接收 { novelId, text?, mode: 'de-ai'|'style-shift', targetStyle? }。调用 detectAIFlavor 生成 revision instructions，构造 RevisionConfig 并调用 IRevisionService.revise。修改 RevisionServiceImpl 实现 writerFn：从 identity 改为调用 Model Router 或 LLM 进行实际重写。",
+  "scope": "src-ts/reader/mcp/reader-endpoints.ts, src-ts/services/revision-service.ts, src-ts/protocols/revision.ts",
+  "focus_paths": ["src-ts/services/", "src-ts/reader/mcp/", "src-ts/protocols/"],
+  "read_first": [
+    "src-ts/services/revision-service.ts",
+    "src-ts/protocols/revision.ts",
+    "src-ts/reader/ai-flavor-detector.ts",
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/workflow/revision-loop.ts"
+  ],
+  "depends_on": ["TASK-004"],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "reader-endpoints.ts 中新增 rsDeAIEndpoint 函数，处理 POST /reader/de-ai",
+      "RevisionServiceImpl.writerFn 不再是 identity 函数（`return draft` 被替换为实际重写逻辑）",
+      "/reader/de-ai 对非空文本返回的 finalDraft 与输入文本不同（至少处理了模板化表达）"
+    ],
+    "verification": "grep 确认 rsDeAIEndpoint 存在；grep 确认 writerFn 中无 `return draft` 或 `return text` 的 identity 实现；运行 revision-service 和 reader-endpoints 测试",
+    "definition_of_done": "De-AI endpoint 可接收文本并返回重写后的文本，writerFn 实现真正的修订逻辑"
+  },
+  "files": [
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.ts",
+      "action": "modify",
+      "target": "Endpoints",
+      "change": "新增 rsDeAIEndpoint 处理 POST /reader/de-ai"
+    },
+    {
+      "path": "src-ts/services/revision-service.ts",
+      "action": "modify",
+      "target": "RevisionServiceImpl.writerFn",
+      "change": "将 identity writerFn 替换为实际重写逻辑（调用 Model Router 或 LLM）"
+    },
+    {
+      "path": "src-ts/protocols/revision.ts",
+      "action": "modify",
+      "target": "IRevisionService / RevisionConfig",
+      "change": "如有需要，扩展 RevisionConfig 以支持 de-ai 模式参数"
+    }
+  ],
+  "implementation": [
+    "分析现有 Model Router 或 LLM 调用接口（查找类似 callModel / generateText 的函数）",
+    "在 reader-endpoints.ts 新增 rsDeAIEndpoint：解析请求体，获取文本，调用 detectAIFlavor 获取 instructions",
+    "构造 RevisionConfig，将 de-ai instructions 作为 qualityGoals 注入",
+    "调用 IRevisionService.revise(text, config) 获取 RevisionCycleResult",
+    "返回 { originalText, revisedText: result.finalDraft, aiFlavorScore, improvements: result.comparison }",
+    "修改 RevisionServiceImpl.writerFn：从 `return draft` 改为调用 LLM/Model Router 进行实际重写",
+    "writerFn 的 prompt 应包含：原始文本 + critic feedback + revision instructions + 目标风格",
+    "确保 writerFn 有降级策略：LLM 不可用时返回原始文本 + 建议列表"
+  ],
+  "test": {
+    "commands": ["npm test -- --grep 'revision-service'", "npm test -- --grep 'reader-endpoints'"],
+    "unit": ["src-ts/tests/services/revision-service.test.ts"],
+    "integration": [],
+    "success_metrics": ["revision-service 测试通过", "writerFn 非 identity 的测试覆盖", "de-ai endpoint 返回 finalDraft 与输入不同"]
+  },
+  "reference": {
+    "pattern": "IRevisionService.revise 注入 qualityGoals",
+    "files": ["src-ts/services/revision-service.ts", "src-ts/protocols/revision.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "复用 RevisionService 保持 reader 模块只读职责，复用 revision 循环",
+    "decision_factors": ["M25 已建立 IRevisionService", "保持架构边界清晰"],
+    "tradeoffs": "writerFn 实现依赖 LLM 可用性，需设计降级策略"
+  },
+  "risks": [
+    {
+      "title": "Model Router / LLM 接口不存在或不稳定",
+      "severity": "high",
+      "mitigation": "若 LLM 接口不可用，writerFn 先实现基于规则的简单重写（替换模板词），并标记为降级模式"
+    },
+    {
+      "title": "writerFn 实现导致 revision 循环超时",
+      "severity": "medium",
+      "mitigation": "增加 timeout 配置，单轮重写限制最大 token/时间"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "2.5h",
+    "risk": "high",
+    "autonomous": true,
+    "checkpoint": true,
+    "wave": 2,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}

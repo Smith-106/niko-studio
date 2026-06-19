@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-06-16T18:15:00+08:00",
+  "frontend": {
+    "lines": 99.72,
+    "functions": 99.46,
+    "branches": 95.28,
+    "statements": 99.72
+  },
+  "backend": {
+    "lines": 99.97,
+    "functions": 99.98,
+    "branches": 99.91,
+    "statements": 99.97
+  },
+  "thresholds": {
+    "frontend": { "lines": 75, "functions": 70, "branches": 70, "statements": 75 },
+    "backend": { "lines": 80, "functions": 80, "branches": 70, "statements": 80 }
+  },
+  "gaps": {
+    "frontend": { "lines": -24.72, "functions": -29.46, "branches": -25.28, "statements": -24.72 },
+    "backend": { "lines": -19.97, "functions": -19.98, "branches": -29.91, "statements": -19.97 }
+  }
+}

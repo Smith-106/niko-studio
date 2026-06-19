@@ -1,0 +1,84 @@
+{
+  "id": "TASK-003",
+  "title": "扩展 PersonaDefinition 与 PersonaSelector",
+  "description": "R-M26-001 核心交付。在 PersonaDefinition.ts 新增 4+ presets（Pacing Hawk, Anti-AI Flavor Critic, Young Adult Reader, Web Novel Veteran），扩展 parameters 增加 ageGroup, culturalBackground, readingPreference, genrePreference, aiFlavorSensitivity 字段。前端 PersonaSelector 同步新增 preset 并支持调用 /reader/personas/custom 持久化。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "在 PersonaDefinition.ts 的 ReaderPersona.parameters 中新增 ageGroup, culturalBackground, readingPreference, genrePreference, aiFlavorSensitivity 字段（均为可选）。新增 createPacingHawk, createAntiAIFlavorCritic, createYoungAdultReader, createWebNovelVeteran 工厂函数并注册到 PRESET_PERSONAS。修改 PersonaSelector.tsx 新增对应 preset 卡片，并扩展 CustomPersonaModal 表单以支持新字段。",
+  "scope": "src-ts/reader/PersonaDefinition.ts, desktop/src/components/reader/PersonaSelector.tsx",
+  "focus_paths": ["src-ts/reader/PersonaDefinition.ts", "desktop/src/components/reader/PersonaSelector.tsx"],
+  "read_first": [
+    "src-ts/reader/PersonaDefinition.ts",
+    "desktop/src/components/reader/PersonaSelector.tsx",
+    "src-ts/reader/mcp/reader-endpoints.ts"
+  ],
+  "depends_on": [],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "PRESET_PERSONAS 中至少包含 7 个 preset（原有 3 个 + 新增 4 个）",
+      "ReaderPersona.parameters 包含 ageGroup, culturalBackground, readingPreference, genrePreference, aiFlavorSensitivity 字段",
+      "PersonaSelector.tsx 中 PRESET_PERSONAS 数组同步新增 4 个 preset 卡片，且 CustomPersonaModal 支持新字段配置"
+    ],
+    "verification": "grep 确认 PRESET_PERSONAS 包含 pacing-hawk, anti-ai-flavor-critic, young-adult-reader, web-novel-veteran；运行 PersonaSelector 和 PersonaDefinition 测试",
+    "definition_of_done": "新增 4 种 preset persona，前端可选，自定义画像支持新字段"
+  },
+  "files": [
+    {
+      "path": "src-ts/reader/PersonaDefinition.ts",
+      "action": "modify",
+      "target": "ReaderPersona interface + PRESET_PERSONAS",
+      "change": "扩展 parameters 字段，新增 4 个 preset 工厂函数"
+    },
+    {
+      "path": "desktop/src/components/reader/PersonaSelector.tsx",
+      "action": "modify",
+      "target": "PRESET_PERSONAS + CustomPersonaModal",
+      "change": "同步新增 preset 卡片，扩展自定义画像表单字段"
+    }
+  ],
+  "implementation": [
+    "修改 ReaderPersona.parameters 接口，新增可选字段",
+    "实现 createPacingHawk：高 pacingWeight，低 tolerance，关注节奏/张力/钩子",
+    "实现 createAntiAIFlavorCritic：高 styleWeight，高 aiFlavorSensitivity，关注自然度/原创性",
+    "实现 createYoungAdultReader：关注角色成长/情感共鸣/易读性",
+    "实现 createWebNovelVeteran：关注更新节奏/爽点/钩子/ cliffhanger",
+    "注册到 PRESET_PERSONAS 并更新 PresetPersonaId 类型",
+    "同步修改 PersonaSelector.tsx 的 PRESET_PERSONAS 数组",
+    "扩展 CustomPersonaModal 表单，添加新字段输入"
+  ],
+  "test": {
+    "commands": ["npm test -- --grep 'PersonaDefinition'", "npm test -- --grep 'PersonaSelector'"],
+    "unit": ["src-ts/tests/reader/persona-definition.test.ts", "desktop/src/components/reader/PersonaSelector.test.tsx"],
+    "integration": [],
+    "success_metrics": ["PersonaDefinition 测试通过", "PersonaSelector 测试通过", "新增 preset 工厂函数测试覆盖"]
+  },
+  "reference": {
+    "pattern": "现有工厂模式（createSuspenseEnthusiast, createLiteraryCritic, createGeneralReader）",
+    "files": ["src-ts/reader/PersonaDefinition.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "复用现有工厂模式，低成本扩展",
+    "decision_factors": ["现有 PRESET_PERSONAS 注册表易于扩展", "前端 PersonaSelector 结构清晰"],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "title": "前端 Persona 类型与后端 ReaderPersona 不完全对齐",
+      "severity": "low",
+      "mitigation": "保持前端 Persona 接口为 ReaderPersona 的子集，新增字段为可选"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "1.5h",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 1,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}

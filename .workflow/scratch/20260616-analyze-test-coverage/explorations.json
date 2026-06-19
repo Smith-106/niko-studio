@@ -1,0 +1,142 @@
+{
+  "analysis_id": "ANL-test-coverage-2026-06-16",
+  "round": 1,
+  "perspective": "technical",
+  "aggregated_at": "2026-06-16T13:42:00+08:00",
+  "sources": [
+    {
+      "type": "cli-explore-agent",
+      "id": "explore-test-coverage-3layer",
+      "status": "completed",
+      "evidence_quality": "high"
+    },
+    {
+      "type": "maestro-delegate-cli",
+      "id": "gemini-analysis",
+      "status": "blocked",
+      "reason": "Data exfiltration security rule — private repo source cannot be sent to external service",
+      "evidence_quality": "n/a",
+      "warning_ref": "W001"
+    },
+    {
+      "type": "orchestrator-inline",
+      "id": "inline-coverage-analysis",
+      "status": "completed",
+      "evidence_quality": "medium",
+      "caveat": "Single-model analysis; no cross-validation from independent perspective"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "area": "store-coverage",
+      "finding": "5 of 19 store source files have zero test coverage: backendSlice, conversationSlice, loadingSlice, skillsSlice, workspaceSlice. Additionally settings/state.ts uncovered.",
+      "evidence_ref": "exploration-codebase.json#by_directory.desktop/src/stores/",
+      "severity": "critical",
+      "confidence": "high",
+      "evidence_source": "cli-explore-agent"
+    },
+    {
+      "id": "F-002",
+      "area": "endpoint-coverage",
+      "finding": "7 of 23 MCP endpoints completely untested: learning, m10-revision, m10-style, m11-worldview, plugins, workspace, analysis",
+      "evidence_ref": "exploration-codebase.json#by_directory.src-ts/mcp/endpoints/",
+      "severity": "critical",
+      "confidence": "high",
+      "evidence_source": "cli-explore-agent"
+    },
+    {
+      "id": "F-003",
+      "area": "hooks-coverage",
+      "finding": "Hooks directory has 37 source files but only 10 test files — 27% coverage ratio, significantly below acceptable threshold",
+      "evidence_ref": "exploration-codebase.json#by_directory.desktop/src/hooks/",
+      "severity": "high",
+      "confidence": "high",
+      "evidence_source": "cli-explore-agent"
+    },
+    {
+      "id": "F-004",
+      "area": "shallow-tests",
+      "finding": "9 of 20 store tests are happy-path only (no error handling, edge cases, or boundary conditions). 2 endpoint tests also shallow.",
+      "evidence_ref": "exploration-codebase.json#shallow_tests",
+      "severity": "high",
+      "confidence": "medium",
+      "evidence_source": "orchestrator-inline"
+    },
+    {
+      "id": "F-005",
+      "area": "e2e-gap",
+      "finding": "Only 6 E2E tests across entire codebase. 7 core business flows lack end-to-end validation. No Playwright/Cypress setup.",
+      "evidence_ref": "exploration-codebase.json#business_flow_coverage",
+      "severity": "high",
+      "confidence": "high",
+      "evidence_source": "cli-explore-agent"
+    },
+    {
+      "id": "F-006",
+      "area": "integration-gap",
+      "finding": "Only 13 integration tests total (4 frontend, 9 backend). Frontend-backend API bridge validation limited to 6 contract tests checking shape only.",
+      "evidence_ref": "exploration-codebase.json#test_type_distribution",
+      "severity": "medium",
+      "confidence": "high",
+      "evidence_source": "cli-explore-agent"
+    },
+    {
+      "id": "F-007",
+      "area": "standards-gap",
+      "finding": "Estimated line coverage ~68%. Fails production standard (80%) and release standard (75%). Passes MVP (60%) marginally.",
+      "evidence_ref": "exploration-codebase.json#risk_assessment.standards",
+      "severity": "high",
+      "confidence": "medium",
+      "evidence_source": "orchestrator-inline"
+    },
+    {
+      "id": "F-008",
+      "area": "companion-pattern",
+      "finding": "Companion test pattern (.additional.test.*, .branches.additional.test.*, .tail-additional.test.*) effectively extends coverage. workflow/ at 96%, narrative/ at 93% — highest coverage directories both use companion pattern extensively.",
+      "evidence_ref": "exploration-codebase.json#test_type_distribution.companion_additional",
+      "severity": "low",
+      "confidence": "high",
+      "evidence_source": "cli-explore-agent"
+    }
+  ],
+  "technical_solutions": [
+    {
+      "round": 1,
+      "solution": "Apply companion test pattern (.additional.test.*) to uncovered store slices and endpoints",
+      "problem": "5 store slices and 7 endpoints have zero test coverage",
+      "rationale": "Companion pattern proven effective in workflow/ and narrative/ modules (>90% coverage); matches existing codebase conventions",
+      "alternatives": ["Full rewrite of test structure", "Separate test directory per module"],
+      "status": "proposed",
+      "evidence_refs": ["F-001", "F-002", "F-008"],
+      "next_action": "Implement for skillsSlice and conversationSlice as P0 priority"
+    },
+    {
+      "round": 1,
+      "solution": "Add E2E test suites for top 3 critical business flows (foreshadow lifecycle, character analysis, quality evaluation)",
+      "problem": "Core business flows have no end-to-end validation",
+      "rationale": "These 3 flows exercise the widest surface area and represent highest user impact if broken",
+      "alternatives": ["Playwright/Cypress full setup", "API-level integration tests"],
+      "status": "proposed",
+      "evidence_refs": ["F-005", "F-006"],
+      "next_action": "Design E2E test plan in Phase 4 roadmap"
+    },
+    {
+      "round": 1,
+      "solution": "Deepen shallow store tests with error and edge case coverage",
+      "problem": "9 of 20 store tests cover only happy-path",
+      "rationale": "Store layer is state management backbone — error handling gaps mean UI crashes on failure modes",
+      "alternatives": ["Rewrite from scratch", "Accept shallow coverage"],
+      "status": "proposed",
+      "evidence_refs": ["F-004"],
+      "next_action": "Add .branches.additional.test.* files for top 5 shallow store tests"
+    }
+  ],
+  "convergent_themes": [
+    "Store layer is the weakest coverage link",
+    "MCP endpoints have significant untested surface",
+    "E2E/integration tests need substantial investment",
+    "Companion test pattern is the most effective coverage strategy"
+  ],
+  "confidence_note": "Single-model analysis due to W001 (external CLI blocked). Key structural findings (file counts, coverage ratios) are high-confidence from cli-explore-agent. Qualitative assessments (shallow test identification, standards gap estimation) are medium-confidence."
+}

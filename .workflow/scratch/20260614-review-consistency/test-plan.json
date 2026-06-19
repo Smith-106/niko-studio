@@ -1,0 +1,115 @@
+{
+  "session_id": "maestro-20260614-173000",
+  "source_route": "review_finding",
+  "phase": "quality-loop",
+  "generated_at": "2026-06-14T18:00:00+08:00",
+  "infrastructure": {
+    "framework": "vitest",
+    "run_command": "npx vitest run desktop/src/api/__contract__/ --reporter=verbose",
+    "pattern": "mock callApi + type shape verification"
+  },
+  "layers": {
+    "L1": {
+      "scenario_count": 8,
+      "priority_distribution": { "critical": 8, "high": 0, "medium": 0 }
+    }
+  },
+  "scenarios": [
+    {
+      "id": "AT-001",
+      "source": "review_finding",
+      "ref": "CF-001",
+      "layer": "L1",
+      "priority": "critical",
+      "category": "api_contract",
+      "name": "knowledge double-envelope: plantForeshadow response shape",
+      "target_file": "desktop/src/api/knowledge.ts",
+      "test_file": "desktop/src/api/__contract__/knowledge-contract.test.ts",
+      "description": "Verify plantForeshadow does NOT expect inner {success, data} envelope since callApi already wraps raw response"
+    },
+    {
+      "id": "AT-002",
+      "source": "review_finding",
+      "ref": "CF-001",
+      "layer": "L1",
+      "priority": "critical",
+      "category": "api_contract",
+      "name": "knowledge double-envelope: getCharacterProfile response shape",
+      "target_file": "desktop/src/api/knowledge.ts",
+      "test_file": "desktop/src/api/__contract__/knowledge-contract.test.ts",
+      "description": "Verify getCharacterProfile response type does NOT have inner {success, data} envelope"
+    },
+    {
+      "id": "AT-003",
+      "source": "review_finding",
+      "ref": "CF-002",
+      "layer": "L1",
+      "priority": "critical",
+      "category": "api_contract",
+      "name": "knowledge: getForeshadowStats workspace header ignored by backend",
+      "target_file": "desktop/src/api/knowledge.ts",
+      "test_file": "desktop/src/api/__contract__/knowledge-contract.test.ts",
+      "description": "Verify getForeshadowStats passes X-Workspace-Id header but backend ignores it"
+    },
+    {
+      "id": "AT-004",
+      "source": "review_finding",
+      "ref": "CF-003",
+      "layer": "L1",
+      "priority": "critical",
+      "category": "api_contract",
+      "name": "writing/quality: decision field missing from backend response",
+      "target_file": "desktop/src/api/evaluation.ts",
+      "test_file": "desktop/src/api/__contract__/writing-contract.test.ts",
+      "description": "Verify NovelQualityCheckResult expects 'decision' field but backend never returns it"
+    },
+    {
+      "id": "AT-005",
+      "source": "review_finding",
+      "ref": "CF-004",
+      "layer": "L1",
+      "priority": "critical",
+      "category": "api_contract",
+      "name": "analysis: detectPatterns expects {success, data} envelope but backend returns bare array",
+      "target_file": "desktop/src/api/analysis.ts",
+      "test_file": "desktop/src/api/__contract__/analysis-contract.test.ts",
+      "description": "Verify detectPatterns response type incorrectly expects inner envelope"
+    },
+    {
+      "id": "AT-006",
+      "source": "review_finding",
+      "ref": "CF-005",
+      "layer": "L1",
+      "priority": "critical",
+      "category": "api_contract",
+      "name": "m10: getStyleProfile returns null but typed as Record",
+      "target_file": "desktop/src/api/m10-apis.ts",
+      "test_file": "desktop/src/api/__contract__/m10-contract.test.ts",
+      "description": "Verify getStyleProfile response type is Record<string,unknown> but backend returns null"
+    },
+    {
+      "id": "AT-007",
+      "source": "review_finding",
+      "ref": "CF-006",
+      "layer": "L1",
+      "priority": "critical",
+      "category": "api_contract",
+      "name": "skills/list: response shape mismatch (flat array vs {skills:[]})",
+      "target_file": "desktop/src/api/skills.ts",
+      "test_file": "desktop/src/api/__contract__/skills-contract.test.ts",
+      "description": "Verify listSkills response type expects flat array but backend wraps in {skills:[]}"
+    },
+    {
+      "id": "AT-008",
+      "source": "review_finding",
+      "ref": "CF-007,CF-008",
+      "layer": "L1",
+      "priority": "critical",
+      "category": "api_contract",
+      "name": "plugins: execute and register response shape mismatches",
+      "target_file": "desktop/src/api/plugins.ts",
+      "test_file": "desktop/src/api/__contract__/plugins-contract.test.ts",
+      "description": "Verify PluginResult type completely different from backend shape; register expects {id,status} but backend returns {id,name}"
+    }
+  ]
+}

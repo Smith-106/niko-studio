@@ -1,0 +1,149 @@
+{
+  "review_id": "maestro-20260614-181500",
+  "created_at": "2026-06-14T20:15:00+08:00",
+  "source_session": "maestro-20260614-181500",
+  "prior_session_ref": "maestro-20260614-173000",
+  "scope": "post-fix stability review after consistency changes",
+  "dimensions": ["correctness", "consistency", "stability"],
+  "level": "deep",
+  "findings": [
+    {
+      "id": "CORR-001",
+      "dimension": "correctness",
+      "severity": "critical",
+      "title": "skillsSlice.ts listSkills consumer uses stale flat-array shape",
+      "description": "skillsSlice.ts checked Array.isArray(response.data) after listSkills type changed to { skills: [...] }",
+      "file": "desktop/src/stores/app/skillsSlice.ts",
+      "status": "fixed",
+      "fix": "Changed to response.data?.skills?.length and response.data.skills.map(...)"
+    },
+    {
+      "id": "CORR-002",
+      "severity": "critical",
+      "dimension": "correctness",
+      "title": "SkillTab.tsx listSkills consumer uses stale flat-array shape",
+      "description": "SkillTab.tsx checked Array.isArray(skillsResult.data) instead of skillsResult.data?.skills",
+      "file": "desktop/src/components/knowledge/SkillTab.tsx",
+      "status": "fixed",
+      "fix": "Changed to Array.isArray(skillsResult.data?.skills) and skillsResult.data.skills.map(...)"
+    },
+    {
+      "id": "CORR-003",
+      "severity": "high",
+      "dimension": "consistency",
+      "title": "PluginPanel.tsx local PluginResult.evidence type mismatch (string[] vs string)",
+      "description": "PluginPanel local interface had evidence: string[] but backend returns string",
+      "file": "desktop/src/components/intelligence/PluginPanel.tsx",
+      "status": "fixed",
+      "fix": "Changed evidence: string, PluginInfo.dimension to optional, updated rendering to display string directly"
+    },
+    {
+      "id": "CORR-004",
+      "severity": "high",
+      "dimension": "correctness",
+      "title": "graphGetForeshadows default status parameter inconsistency",
+      "description": "graphGetForeshadows had status: string = 'pending' but endpoint expected no default filter",
+      "file": "src-ts/graph/graph-engine.ts",
+      "status": "fixed",
+      "fix": "Changed to status?: string across engine, service interface, and endpoint layers"
+    },
+    {
+      "id": "CORR-005",
+      "severity": "medium",
+      "dimension": "stability",
+      "title": "writing.ts decision derivation uses typeof instead of Number.isFinite",
+      "description": "typeof result.total_score === 'number' passes for NaN; decision would be HUMAN_REVIEW for NaN",
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "status": "fixed",
+      "fix": "Changed to Number.isFinite(result.total_score)"
+    },
+    {
+      "id": "CORR-006",
+      "severity": "medium",
+      "dimension": "consistency",
+      "title": "PluginPanel.tsx PluginInfo.dimension is required but backend makes it optional",
+      "description": "PluginInfo.dimension was string (required) but backend omits it for some plugins",
+      "file": "desktop/src/components/intelligence/PluginPanel.tsx",
+      "status": "fixed",
+      "fix": "Changed dimension?: string to match api/plugins.ts PluginInfo"
+    },
+    {
+      "id": "CORR-007",
+      "severity": "medium",
+      "dimension": "consistency",
+      "title": "appStore.test.ts listSkills mock uses stale flat-array shape",
+      "description": "Test mocks returned data: [...] but refreshAvailableSkills now expects data.skills",
+      "file": "desktop/src/stores/appStore.test.ts",
+      "status": "fixed",
+      "fix": "Updated all mock data to data: { skills: [...] } shape"
+    },
+    {
+      "id": "CORR-008",
+      "severity": "medium",
+      "dimension": "consistency",
+      "title": "SkillTab.test.tsx listSkills mock uses stale flat-array shape",
+      "description": "Test mocks returned data: [...] but SkillTab now expects data.skills",
+      "file": "desktop/src/components/knowledge/SkillTab.test.tsx",
+      "status": "fixed",
+      "fix": "Updated all mock data to data: { skills: [...] } shape"
+    },
+    {
+      "id": "CORR-009",
+      "severity": "high",
+      "dimension": "correctness",
+      "title": "knowledge.additional.test.ts still uses double-envelope mock shapes",
+      "description": "After removing double-envelope types, test mocks still had data: { success: true, data: {...} }",
+      "file": "desktop/src/api/knowledge.additional.test.ts",
+      "status": "fixed",
+      "fix": "Removed inner envelope from all mock data and assertions (data.total instead of data.data.total)"
+    },
+    {
+      "id": "CORR-010",
+      "severity": "high",
+      "dimension": "correctness",
+      "title": "adapters.ts getForeshadows signature still requires status: string",
+      "description": "Container adapter had status: string (required) while engine changed to status?: string",
+      "file": "src-ts/container/adapters.ts",
+      "status": "fixed",
+      "fix": "Changed to status?: string to match engine and service layers"
+    },
+    {
+      "id": "CORR-011",
+      "severity": "high",
+      "dimension": "correctness",
+      "title": "evaluateNovelQuality called with 2 args but only accepts 1",
+      "description": "writing.ts passed qualityKwargs as second argument to evaluateNovelQuality which only takes content",
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "status": "fixed",
+      "fix": "Removed qualityKwargs argument from evaluateNovelQuality call (was TS2554 error)"
+    }
+  ],
+  "summary": {
+    "total_findings": 11,
+    "by_severity": {
+      "critical": 2,
+      "high": 4,
+      "medium": 3,
+      "low": 2
+    },
+    "by_dimension": {
+      "correctness": 5,
+      "consistency": 4,
+      "stability": 2
+    },
+    "all_fixed": true
+  },
+  "files_changed": [
+    "desktop/src/stores/app/skillsSlice.ts",
+    "desktop/src/components/knowledge/SkillTab.tsx",
+    "desktop/src/components/intelligence/PluginPanel.tsx",
+    "desktop/src/stores/app/appStore.test.ts",
+    "desktop/src/components/knowledge/SkillTab.test.tsx",
+    "desktop/src/api/knowledge.additional.test.ts",
+    "src-ts/mcp/endpoints/writing.ts",
+    "src-ts/mcp/endpoints/graph.ts",
+    "src-ts/mcp/services/graph.ts",
+    "src-ts/graph/graph-engine.ts",
+    "src-ts/container/adapters.ts"
+  ]
+}

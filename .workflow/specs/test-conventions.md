@@ -1,5 +1,5 @@
 ---
-title: "Test Conventions"
+title: Test Conventions
 readMode: required
 priority: high
 category: test
@@ -9,7 +9,14 @@ keywords:
   - vitest
   - playwright
   - pytest
+related:
+  - "spec:project:test-conventions-002"
+  - "spec:project:test-conventions-004"
+  - "spec:project:test-conventions-005"
+  - "spec:project:test-conventions-003"
 ---
+
+
 
 # Test Conventions
 

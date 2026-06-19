@@ -1,0 +1,212 @@
+{
+  "level": "deep",
+  "verdict": "WARN",
+  "reviewed_at": "2026-06-14T14:45:00+08:00",
+  "reviewer": "inline-deep-review",
+  "dimensions_reviewed": ["security", "architecture", "correctness"],
+  "files_reviewed": [
+    "desktop/src/api/core.ts",
+    "desktop/src/api/writing.ts",
+    "desktop/src/api/knowledge.ts",
+    "desktop/src/api/story-bible.ts",
+    "desktop/src/api/writing-craft.ts",
+    "desktop/src/api/gateway/models.ts",
+    "desktop/src/api/analysis.ts",
+    "desktop/src/api/agents.ts",
+    "desktop/src/api/chat.ts",
+    "desktop/src/api/m10-apis.ts",
+    "desktop/src/api/workspace.ts",
+    "desktop/src/components/knowledge/knowledgeUtils.ts",
+    "desktop/src/components/knowledge/PersistedEntityTab.tsx",
+    "src-ts/mcp/endpoints/graph.ts",
+    "src-ts/mcp/endpoints/writing.ts",
+    "src-ts/mcp/endpoints/writing-craft-llm.ts",
+    "src-ts/mcp/endpoints/analysis.ts",
+    "src-ts/mcp/routes/content.ts",
+    "src-ts/mcp/services/graph.ts",
+    "src-ts/utils/cypher-safety.ts",
+    "src-ts/agents/character.ts",
+    "src-ts/agents/worldbuilding.ts",
+    "src-ts/agents/plot.ts"
+  ],
+  "severity_distribution": {
+    "critical": 0,
+    "high": 3,
+    "medium": 5,
+    "low": 4,
+    "total": 12
+  },
+  "findings": [
+    {
+      "id": "SEC-001",
+      "dimension": "security",
+      "severity": "high",
+      "title": "Frontend writing-craft LLM: api_key/base_url sent in POST body, not via headers",
+      "file": "desktop/src/api/writing-craft.ts",
+      "line": 225,
+      "description": "analyzeWritingCraftLLM() spreads llmConfig (api_key, base_url, model) directly into POST body via `...llmConfig`. Unlike writing.ts which was fixed to use X-LLM-API-Key/X-LLM-Base-Url headers, this endpoint still transmits credentials in the request body.",
+      "impact": "API keys visible in server logs, proxy caches, and browser DevTools. Same vulnerability class as ISS-002 (partially resolved).",
+      "suggestion": "Extract api_key/base_url from llmConfig and pass via X-LLM-API-Key/X-LLM-Base-Url headers, matching the writing.ts fix pattern. Also update writing-craft-llm.ts backend to read from headers."
+    },
+    {
+      "id": "SEC-002",
+      "dimension": "security",
+      "severity": "high",
+      "title": "graphAddEntity() accepts arbitrary entityType without validation",
+      "file": "src-ts/mcp/services/graph.ts",
+      "line": 119,
+      "description": "graphAddEntity(entityType, name, properties) passes entityType directly to engine.createEntity() without calling validateEntityType(). The foreshadowPlantEndpoint hardcodes 'foreshadow', but any future caller could inject arbitrary labels. The graph service layer is the last line of defense.",
+      "impact": "If any endpoint or agent calls graphAddEntity with user-supplied entityType, Cypher label injection is possible.",
+      "suggestion": "Add validateEntityType(entityType) call inside graphAddEntity() before delegating to engine.createEntity(). This provides defense-in-depth even if callers forget to validate."
+    },
+    {
+      "id": "SEC-003",
+      "dimension": "security",
+      "severity": "high",
+      "title": "graphQueryEndpoint passes raw Cypher from client to engine without validation",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 69,
+      "description": "graphQueryEndpoint directly forwards body.cypher to graphQuery(). While knowledgeUtils.ts validates entity types and escapes strings for merge/delete, the /graph/query endpoint accepts arbitrary Cypher. Frontend PersistedEntityTab constructs Cypher via buildGraphMergeMutation (safe), but the raw endpoint has no guard.",
+      "impact": "A compromised or misconfigured frontend could send destructive Cypher (DETACH DELETE, DROP, etc.) through /graph/query. Current frontend uses safe builders, but the endpoint itself has no defense.",
+      "suggestion": "Add a Cypher allowlist or at minimum block DETACH DELETE / DROP patterns at the graphQueryEndpoint level. This is a known design trade-off (flexibility vs safety) but should be documented and ideally guarded."
+    },
+    {
+      "id": "ARCH-001",
+      "dimension": "architecture",
+      "severity": "medium",
+      "title": "Legacy route /writing-helper/process still registered alongside /writing/helper",
+      "file": "src-ts/mcp/routes/content.ts",
+      "line": 81,
+      "description": "Both /writing-helper/process and /writing/helper map to writingHelperProcessEndpoint. The legacy route appears to be a backward-compat artifact from a route rename.",
+      "impact": "Two routes for the same handler increases maintenance surface. Client confusion about which to use.",
+      "suggestion": "Deprecate /writing-helper/process with a log warning, and schedule removal in next major version."
+    },
+    {
+      "id": "ARCH-002",
+      "dimension": "architecture",
+      "severity": "medium",
+      "title": "Knowledge API module has mixed concerns: memory + graph + foreshadow + character depth",
+      "file": "desktop/src/api/knowledge.ts",
+      "line": 1,
+      "description": "knowledge.ts exports searchMemory, addMemory, uploadMemoryFile (memory API), queryGraph, getCharacter, getForeshadows (graph API), plantForeshadow, getForeshadowStats (foreshadow API), analyzeCharacterDepth, getCharacterProfile, getCharacterRelationships (character API). These are 4 distinct subsystems in one module.",
+      "impact": "High cognitive load per import. Any change to one subsystem risks breaking others. Makes tree-shaking less effective.",
+      "suggestion": "Split into memory.ts, graph.ts, foreshadow.ts, character-analysis.ts. The barrel export in client.ts already re-exports from knowledge.ts — update it."
+    },
+    {
+      "id": "ARCH-003",
+      "dimension": "architecture",
+      "severity": "medium",
+      "title": "Frontend workspace parameter: 3 different append patterns across API modules",
+      "file": "desktop/src/api/workspace.ts",
+      "line": 28,
+      "description": "Three different workspace-append functions: appendWorkspacePayload (knowledge, agents, writing), appendLegacyChatWorkspacePayload (chat), appendLegacyMemoryWorkspacePayload (memory). Each produces a different payload shape for the same conceptual 'workspace context'.",
+      "impact": "Backend must handle 3 different payload shapes. Risk of inconsistency when adding new workspace fields.",
+      "suggestion": "Unify into single appendWorkspacePayload with optional mode flags. Legacy shapes should be phased out."
+    },
+    {
+      "id": "ARCH-004",
+      "dimension": "architecture",
+      "severity": "medium",
+      "title": "Foreshadow/Character analysis frontend APIs don't pass workspace context",
+      "file": "desktop/src/api/knowledge.ts",
+      "line": 170,
+      "description": "plantForeshadow(), getForeshadowStats(), analyzeCharacterDepth(), getCharacterProfile(), getCharacterRelationships() do not accept or forward workspace context. Meanwhile, the backend graph endpoints do support scope filtering via resolveGraphScope().",
+      "impact": "In multi-workspace scenarios, these calls return unfiltered data (all workspaces mixed together). Scope filtering exists in backend but is not exercised by frontend.",
+      "suggestion": "Add workspace parameter to these API calls, matching the pattern used by queryGraph() and getCharacter()."
+    },
+    {
+      "id": "ARCH-005",
+      "dimension": "architecture",
+      "severity": "medium",
+      "title": "Story Bible API _workspace parameter declared but unused",
+      "file": "desktop/src/api/story-bible.ts",
+      "line": 136,
+      "description": "All sb* functions declare _workspace?: ProjectWorkspaceContext but never use it — the parameter is prefixed with underscore indicating intentionally unused. The backend story-bible-endpoints.ts does support workspace scoping.",
+      "impact": "Story Bible data is not scoped to workspace in frontend calls. Same as ARCH-004 pattern.",
+      "suggestion": "Wire _workspace parameter into callApi payloads via appendWorkspacePayload, matching knowledge.ts patterns."
+    },
+    {
+      "id": "CORR-001",
+      "dimension": "correctness",
+      "severity": "low",
+      "title": "analyzeWritingCraftLLM: LLMConfig spreads into body including api_key/base_url (also SEC-001)",
+      "file": "desktop/src/api/writing-craft.ts",
+      "line": 228,
+      "description": "The spread `...llmConfig` into the body payload means api_key and base_url are sent in the request body, but the backend writing-craft-llm.ts also reads from headers. This means the body fields work as fallback but are not the preferred path.",
+      "impact": "Functional but not secure. Works today because backend reads body as fallback, but deprecated path.",
+      "suggestion": "Refactor to header-based transmission as in writing.ts. Mark body fields @deprecated in LLMConfig type."
+    },
+    {
+      "id": "CORR-002",
+      "dimension": "correctness",
+      "severity": "low",
+      "title": "foreshadowPlantEndpoint doesn't validate workspace scoping",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 102,
+      "description": "foreshadowPlantEndpoint calls graphAddEntity('foreshadow', ...) without workspace scope. The created entity has no workspaceId/projectId, so it becomes a 'legacy' (unscoped) entity that pollutes other workspaces' views.",
+      "impact": "Foreshadow entities created via /foreshadow/plant are visible across all workspaces (no isolation).",
+      "suggestion": "Resolve workspace scope from request body (like graphQueryEndpoint does) and pass to graphAddEntity, or include workspaceId in properties."
+    },
+    {
+      "id": "CORR-003",
+      "dimension": "correctness",
+      "severity": "low",
+      "title": "Story Bible sbGetEntity uses GET with path parameter but entityId is not URL-encoded",
+      "file": "desktop/src/api/story-bible.ts",
+      "line": 148,
+      "description": "`callApi('/story-bible/entity/${entityId}', 'GET')` — if entityId contains special characters (/, #, ?), the URL will be malformed. Other GET endpoints like sbDeleteEntity have the same pattern.",
+      "impact": "Entities with IDs containing URL-unsafe characters will fail to load or delete.",
+      "suggestion": "Use encodeURIComponent(entityId) in URL interpolation, matching the pattern in m10-apis.ts styleProfile."
+    },
+    {
+      "id": "CORR-004",
+      "dimension": "correctness",
+      "severity": "low",
+      "title": "chatStream SSE parser does not handle multiline data fields",
+      "file": "desktop/src/api/chat.ts",
+      "line": 376,
+      "description": "The SSE parser in chatStream splits on newlines and processes event/data pairs per line. If a data field spans multiple lines (valid SSE per spec), only the first line is captured. The writing.ts consumeSseWritingEvents has the same pattern.",
+      "impact": "Malformed or multi-line SSE data is truncated. In practice, the backend sends single-line JSON so this rarely triggers.",
+      "suggestion": "Accumulate data lines until an empty line signals event completion, per SSE specification."
+    }
+  ],
+  "security_regression": {
+    "iss_001_cypher_injection": {
+      "status": "FIXED",
+      "evidence": [
+        "knowledgeUtils.ts: validateEntityType() + escapeCypherString() + buildCypherProps() used in buildGraphMergeMutation/buildGraphDeleteMutation",
+        "PersistedEntityTab.tsx: validateEntityType(entityType) before queryGraph, escapeCypherString in rename query",
+        "src-ts/agents/character.ts,worldbuilding.ts,plot.ts: all use escapeCypherString from cypher-safety.ts",
+        "src-ts/mcp/endpoints/analysis.ts: escapeCypherString for category filter"
+      ],
+      "remaining_gaps": [
+        "SEC-002: graphAddEntity() in service layer lacks validateEntityType()",
+        "SEC-003: /graph/query endpoint accepts raw Cypher without guard"
+      ]
+    },
+    "iss_002_api_key_transmission": {
+      "status": "PARTIALLY_FIXED",
+      "evidence": [
+        "writing.ts processWritingHelper: extracts api_key → X-LLM-API-Key header, base_url → X-LLM-Base-Url header",
+        "writing.ts streamWritingHelper: same header pattern",
+        "gateway/models.ts: X-Goog-Api-Key header (not URL ?key=)",
+        "src-ts/mcp/endpoints/writing.ts: resolveProviderConfig reads from headers first, body fallback",
+        "src-ts/mcp/endpoints/writing-craft-llm.ts: same header-priority pattern",
+        "contracts.ts: api_key/base_url marked @deprecated"
+      ],
+      "remaining_gaps": [
+        "SEC-001: writing-craft.ts analyzeWritingCraftLLM() still sends api_key/base_url in POST body (no header extraction)",
+        "LegacyPolishRequest.api_key still declared but routes through processWritingHelper (which does extract)"
+      ]
+    }
+  },
+  "interface_alignment": {
+    "frontend_routes_with_backend_handler": 47,
+    "verified_aligned": 44,
+    "misaligned": 0,
+    "frontend_only_no_backend": 3,
+    "details": [
+      "3 frontend-only calls: sbGetEntity/sbUpdateEntity/sbDeleteEntity use REST-style path params (/story-bible/entity/:id with GET/PUT/DELETE) — backend handlers exist and match via regex route patterns"
+    ]
+  }
+}

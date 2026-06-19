@@ -1,0 +1,236 @@
+{
+  "name": "niko-studio",
+  "description": "Niko-Studio Desktop — AI Writing Assistant. A desktop-native creative writing platform with deep AI integration, craft analysis, story bible management, co-writing engine, reader simulation, and narrative visualization.",
+  "features": [
+    {
+      "name": "AI Chat & Agent Writing",
+      "description": "Multi-level workflow chat (L1-L5) with agent routing, scene writing, revision, and context retrieval. Supports model comparison and quality goals tuning.",
+      "status": "completed"
+    },
+    {
+      "name": "Story Bible & QC",
+      "description": "Automatic extraction and manual management of characters, world-rules, plot-threads, and timeline-events. Completeness scoring and canon promotion to wiki.",
+      "status": "completed"
+    },
+    {
+      "name": "Co-Writing Engine",
+      "description": "AI co-writing with three modes: Auto (seamless continuation), Guided (3 divergent options), and Directed (explicit instruction following). Context scraper + prompt assembler + model router pipeline.",
+      "status": "completed"
+    },
+    {
+      "name": "Reader Simulation",
+      "description": "Dual-engine reader simulation with persona engine + editorial analysis engine. 4-dimension analysis, consensus engine, overlay bridge, and report generation.",
+      "status": "completed"
+    },
+    {
+      "name": "Writing Craft Analysis",
+      "description": "9-dimension writing analysis: structure, character, suspense, emotion, dialogue, webnovel, show/tell, hook, cliffhanger. Score-based feedback with evidence and suggestions.",
+      "status": "completed"
+    },
+    {
+      "name": "Emotional Arc & Tension Curve",
+      "description": "Cross-chapter emotional arc visualization, tension desert detection, and curve matching against classic templates.",
+      "status": "completed"
+    },
+    {
+      "name": "Narrative Visualization",
+      "description": "Timeline view with zoom/filter, reader state + tension curve view, character graph view with interaction. Cytoscape-based graph rendering.",
+      "status": "completed"
+    },
+    {
+      "name": "Voice Fingerprint & Consistency",
+      "description": "5-dimension voice fingerprint extraction (sentence length, catchphrases, formality, emotional expression, rhetorical habits) with consistency tracking across chapters.",
+      "status": "completed"
+    },
+    {
+      "name": "Show vs Tell Detection",
+      "description": "Paragraph-level show/tell heatmap with sensory coverage analysis and inline editor decorations.",
+      "status": "completed"
+    },
+    {
+      "name": "Intelligent Revision",
+      "description": "Multi-pass revision protocol with target score, iteration tracking, and style profile extraction/application.",
+      "status": "completed"
+    },
+    {
+      "name": "Session Intelligence & Style Personalization",
+      "description": "Session-level analytics, style personalization service, and context-aware suggestions.",
+      "status": "completed"
+    },
+    {
+      "name": "Knowledge Graph & Memory",
+      "description": "Workspace-scoped knowledge graph with entity relationships, memory search/add/upload, and embedding-based retrieval.",
+      "status": "completed"
+    },
+    {
+      "name": "Project Wiki / Canon",
+      "description": "Wiki canon pages with promotion from story bible, chat, or research. Markdown-based with curated/draft status.",
+      "status": "completed"
+    },
+    {
+      "name": "Plugin System",
+      "description": "Dynamic plugin registration and execution with manifest-based rules. Keyword-scoring plugin architecture.",
+      "status": "completed"
+    },
+    {
+      "name": "Export System",
+      "description": "Multi-format export: Markdown, HTML, PDF, DOCX. Project-level or current-chapter scope. Export history tracking.",
+      "status": "completed"
+    },
+    {
+      "name": "Cloud Sync",
+      "description": "Push/pull/full sync with remote URL and auth token. Conflict detection and sync status monitoring.",
+      "status": "completed"
+    },
+    {
+      "name": "Evaluation & Critic",
+      "description": "Content evaluation with module scores (lock, style, logic), consistency checking (character, timeline, worldview), and publish recommendation.",
+      "status": "completed"
+    },
+    {
+      "name": "Skills System",
+      "description": "Skill registry with list/load/match/chain/create/save/delete operations. Category-based skill organization.",
+      "status": "completed"
+    },
+    {
+      "name": "Workflow Engine",
+      "description": "Task decomposition, plan execution, recommendations, and checkpoint management with rollback support.",
+      "status": "completed"
+    },
+    {
+      "name": "Intelligent Learning Pipelines",
+      "description": "Import learning, self-evolving writing, and reading learning pipelines with shared infrastructure.",
+      "status": "completed"
+    },
+    {
+      "name": "Tiptap Rich Text Editor",
+      "description": "Custom editor with slash commands, callouts, math blocks, tables, show/tell decorations, voice consistency decorations, and bubble toolbar.",
+      "status": "completed"
+    },
+    {
+      "name": "Foreshadowing Tracker",
+      "description": "Track and visualize foreshadowing elements across chapters with payoff monitoring.",
+      "status": "completed"
+    },
+    {
+      "name": "Character Relationship Panel",
+      "description": "Interactive character relationship visualization and management.",
+      "status": "completed"
+    },
+    {
+      "name": "Onboarding & Welcome Wizard",
+      "description": "First-run onboarding with localStorage gating and guided setup.",
+      "status": "completed"
+    },
+    {
+      "name": "i18n Internationalization",
+      "description": "Multi-language support with i18next, module-split translations, and index aggregator pattern.",
+      "status": "completed"
+    },
+    {
+      "name": "Auto-Updater",
+      "description": "Tauri-based auto-updater with signed releases and update notifications.",
+      "status": "completed"
+    },
+    {
+      "name": "Obsidian Integration",
+      "description": "Optional vault integration with .niko-studio/ metadata directory parallel to .obsidian/. Non-intrusive design.",
+      "status": "completed"
+    }
+  ],
+  "techStack": {
+    "frontend": [
+      "React 18",
+      "TypeScript 5",
+      "Vite",
+      "Tailwind CSS v3",
+      "Zustand (state management)",
+      "Tiptap (rich text editor)",
+      "Cytoscape (graph visualization)",
+      "Lucide React (icons)",
+      "i18next + react-i18next"
+    ],
+    "backend": [
+      "Tauri v2 (Rust desktop framework)",
+      "Node.js sidecar gateway",
+      "Tokio (async runtime)",
+      "Reqwest (HTTP client)",
+      "Sentry (error tracking)"
+    ],
+    "testing": [
+      "Vitest",
+      "React Testing Library",
+      "jsdom",
+      "MSW (mock service worker)"
+    ],
+    "build": [
+      "Vite",
+      "ESLint",
+      "Prettier",
+      "Tauri CLI"
+    ]
+  },
+  "architecture": {
+    "pattern": "Desktop-native hybrid (Tauri + React frontend + Node.js sidecar gateway)",
+    "layers": [
+      "UI Layer: React components + Zustand stores",
+      "API Bridge: Desktop API wrappers (callApi pattern) → MCP endpoints",
+      "Gateway Layer: Node.js sidecar with MCP endpoint routing",
+      "Backend Services: Rust Tauri shell + plugin system"
+    ],
+    "keyPrinciples": [
+      "MCP endpoint exposure for all new capabilities",
+      "Three-layer bridge: MCP Endpoint → Desktop API → React Components",
+      "Protocol-first execution (interface + type before implementation)",
+      "DI registration with bindSingleton + ServiceTypes Symbol",
+      "Workspace-scoped narrative authority",
+      "Wiki/canon authority over graph/memory projections",
+      "Backward compatibility: no breaking interface changes within major versions"
+    ]
+  },
+  "aiCapabilities": [
+    "Multi-level workflow chat with agent routing (L1-L5)",
+    "AI scene writing and revision with quality goals",
+    "Co-writing engine (Auto/Guided/Directed modes)",
+    "Reader simulation with persona + editorial dual engines",
+    "Writing craft analysis across 9 dimensions",
+    "Emotional arc and tension curve analysis",
+    "Voice fingerprint extraction and consistency tracking",
+    "Show vs tell detection with sensory coverage",
+    "Multi-pass intelligent revision with style profiles",
+    "Context-aware suggestions",
+    "Pattern detection and session clustering",
+    "Knowledge retrieval with hybrid search modes",
+    "Model comparison (primary vs control)",
+    "LLM fallback with detection evasion guard"
+  ],
+  "uiFramework": "React 18 + Tailwind CSS + Tiptap editor + Cytoscape graphs + Zustand state management",
+  "extensibility": {
+    "pluginSystem": "Manifest-based dynamic plugin registration with keyword-scoring rules",
+    "skillSystem": "Skill registry with matching, chaining, and custom creation",
+    "mcpEndpoints": "All capabilities exposed via MCP endpoints for external integration",
+    "obsidianIntegration": "Optional non-intrusive vault integration",
+    "exportFormats": ["Markdown", "HTML", "PDF", "DOCX"]
+  },
+  "targetUsers": "Creative writers, novelists, web novel authors, and storytellers seeking AI-assisted writing, analysis, and world-building tools",
+  "license": "Proprietary (not specified in codebase)",
+  "developmentStatus": "Active development — version 11.0.0, 25 completed milestones (M10-M25), current milestone M25 completed 2026-05-27",
+  "roadmapHighlights": [
+    "M26: Performance Optimization + Deep LLM Integration (planned)",
+    "M25: Intelligent Revision + Session Intelligence + Style Personalization (completed 2026-05-27)",
+    "M24: Tech Debt Cleanup + Narrative Visualization MVP (completed 2026-05-25)",
+    "M23: Novel Quality & Reader Experience Enhancement (completed 2026-05-15)",
+    "M22: Intelligent Learning Capabilities (completed 2026-05-14)",
+    "M21: Docs Site Capability Routing + Architecture Deep Dive (completed 2026-05-13)",
+    "M20: Cloud Sync + Code Signing (completed)",
+    "M19: UX Polish + Plugin Architecture (completed)",
+    "M18: Knowledge Expansion + UX Enhancement + LLM Analysis (completed)",
+    "M17: Writing Intelligence UI Integration (completed)",
+    "M16: Dialogue, Scene, Mystery Enhancement (completed)",
+    "M15: Web Novel Analysis + Structure + Character Enhancement (completed)",
+    "M14: Writing Craft Enhancement Phase 2 (completed)",
+    "M13: Writing Craft Knowledge Integration (completed)",
+    "M11: External Integration (completed)",
+    "M10: Deep Writing Intelligence (completed)"
+  ]
+}

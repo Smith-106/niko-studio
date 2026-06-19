@@ -1,0 +1,80 @@
+{
+  "summary": "M26 Phase 1 执行计划：Reader Simulation 2.0 + Anti-AI-Flavor Suite。共 10 个任务，分 5 个 wave。Wave 1 修复空文本 TODO 并统一前后端 API 契约；Wave 2 实现核心检测器与重写能力；Wave 3 集成 A/B 测试、权重反馈与中文 i18n；Wave 4 完成自定义画像持久化；Wave 5 完成测试覆盖与回归验证。",
+  "approach": "基于现有 DualEngine + ConsensusEngine 架构横向扩展。Anti-AI-flavor 采用独立 detector 层（不扩展 QualityDimension）。De-AI rewrite 复用 IRevisionService。前后端 ConsensusReport 契约统一，前端删除本地聚合逻辑。自定义画像持久化采用 JSON 文件方案。",
+  "task_ids": [
+    "TASK-001",
+    "TASK-002",
+    "TASK-003",
+    "TASK-004",
+    "TASK-005",
+    "TASK-006",
+    "TASK-007",
+    "TASK-008",
+    "TASK-009",
+    "TASK-010"
+  ],
+  "task_count": 10,
+  "complexity": "high",
+  "estimated_time": "12h",
+  "recommended_execution": "Agent",
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"],
+      "description": "Foundation: 修复空文本 TODO，统一 API 层，扩展 PersonaDefinition"
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-004", "TASK-005"],
+      "description": "Core: Anti-AI-flavor detector + De-AI rewrite via RevisionService"
+    },
+    {
+      "wave": 3,
+      "tasks": ["TASK-006", "TASK-007", "TASK-008"],
+      "description": "Integration: A/B compare, weight feedback, Chinese i18n"
+    },
+    {
+      "wave": 4,
+      "tasks": ["TASK-009"],
+      "description": "Polish: custom persona persistence to JSON"
+    },
+    {
+      "wave": 5,
+      "tasks": ["TASK-010"],
+      "description": "QA: test coverage >= 80% and regression checks"
+    }
+  ],
+  "data_flow": {
+    "diagram": null,
+    "stages": [
+      "fetch manuscript text",
+      "run DualEngine + anti-AI-flavor detector",
+      "build ConsensusReport",
+      "expose via MCP endpoints",
+      "frontend consumes via unified API layer"
+    ]
+  },
+  "design_decisions": [
+    "Anti-AI-flavor 采用独立 detector 层，不扩展 QualityDimension 枚举",
+    "De-AI rewrite 复用 IRevisionService.revise，将 De-AI 目标作为 qualityGoals 注入",
+    "前后端 ConsensusReport 统一，前端 ReportGenerator 删除本地聚合逻辑",
+    "自定义画像持久化使用 .niko-studio/reader-personas.json",
+    "前端新建 desktop/src/api/reader.ts 统一 API 层，复用 callApi/ApiResponse 模式"
+  ],
+  "shared_context": {
+    "patterns": ["factory pattern (PersonaDefinition)", "Promise.all dual engine", "MCP endpoint pattern", "callApi/ApiResponse frontend pattern"],
+    "conventions": ["ESM imports", "strict TypeScript", "Chinese UI labels", "PascalCase for types", "camelCase for functions/variables"],
+    "dependencies": ["DualEngine", "ConsensusEngine", "DimensionAnalyzer", "IRevisionService", "RevisionServiceImpl", "callApi/ApiResponse"]
+  },
+  "collision_notes": [
+    "src-ts/reader/mcp/reader-endpoints.ts 被 TASK-001/004/005/006/007/009 顺序修改；依赖链已保证串行",
+    "TASK-006 与 TASK-007 均触及 reader-endpoints.ts，已令 TASK-007 depends_on TASK-006 避免并行冲突",
+    "中文 i18n 集中在 TASK-008；TASK-009 不再重复修改 translations.ts / writing-craft.ts"
+  ],
+  "_metadata": {
+    "timestamp": "2026-06-18T21:30:00+08:00",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature"
+  }
+}

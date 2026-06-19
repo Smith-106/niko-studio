@@ -1,0 +1,442 @@
+[
+  {
+    "name": "QMAI (青幕AI写作)",
+    "url": "https://github.com/Mochocyang/QMAI",
+    "description": "A memory-based AI writing desktop system for long-form novel creation, targeting 2-3 million word serialized works. Uses structured memory systems and hybrid retrieval engines so AI 'remembers everything' across long works.",
+    "features": [
+      "Memory System with chapter ingestion and context engine",
+      "Character Soul System (NvwaSKILL framework)",
+      "Six-dimension AI review system",
+      "Graph Visualization (Sigma.js + ForceAtlas2)",
+      "Draft Isolation (AI-generated chapters remain drafts until human confirmation)",
+      "De-AI Rewriting (style transformation to reduce templated AI expressions)",
+      "Fact Check against Canon rules",
+      "Foreshadowing debt tracking",
+      "Local-first storage (Markdown + JSON + vector indexes)",
+      "Hybrid retrieval engine (keyword + vector + graph search with RRF ranking)"
+    ],
+    "techStack": {
+      "frontend": ["React 19", "TypeScript", "Vite 8", "Tailwind CSS 4", "Zustand 5"],
+      "backend": ["Tauri 2", "Rust"],
+      "database": ["LanceDB (vector storage)"],
+      "visualization": ["Sigma.js 3", "Graphology"],
+      "other": ["PDFium (PDF parsing)", "tauri-plugin-updater"]
+    },
+    "license": "MIT",
+    "aiCapabilities": [
+      "LLM-based chapter generation with memory context",
+      "Character personality consistency (NvwaSKILL)",
+      "Six-dimension review (satisfaction, setting, pacing, character, narrative, engagement)",
+      "Automated coherence checks (timeline, character, foreshadowing)",
+      "De-AI style transformation",
+      "Hybrid retrieval (keyword + vector + graph)"
+    ],
+    "community": {
+      "stars": 531,
+      "forks": 102,
+      "commits": 173
+    },
+    "lastActivity": "2026-06-17 (v2.2.16)",
+    "targetUsers": "Web novel daily updaters, novel planners, AI-assisted writers seeking long-form consistency",
+    "notes": "Very similar architecture to niko-studio (Tauri + React + Rust). Strong focus on memory and consistency for long-form writing. MIT license allows commercial use."
+  },
+  {
+    "name": "StoryCraftr",
+    "url": "https://github.com/raestrada/storycraftr",
+    "description": "An open-source AI-powered CLI tool that helps writers craft stories, generate worldbuilding details, and create book outlines and chapters seamlessly. Part of the AI Craftr suite.",
+    "features": [
+      "Worldbuilding (geography, history, cultures, magic systems)",
+      "Outline generation (character summaries to chapter synopses)",
+      "Chapter generation (auto-generate chapters, cover pages, epilogues)",
+      "Interactive Chat with commands (!iterate, !outline, !worldbuilding, !chapters)",
+      "VSCode Extension integration",
+      "Multilingual support",
+      "Checkpoint system",
+      "Behavior customization"
+    ],
+    "techStack": {
+      "primary": ["Python 95.6%", "TypeScript 4.0%"],
+      "framework": ["LangChain"],
+      "packageManagement": ["pipx", "uv/uvx", "Poetry"],
+      "testing": ["pytest", "pre-commit hooks"]
+    },
+    "license": "MIT",
+    "aiCapabilities": [
+      "Multi-provider LLM support (OpenAI, OpenRouter, Ollama)",
+      "Embeddings (BAAI/bge-large-en-v1.5)",
+      "Worldbuilding generation",
+      "Outline and chapter generation",
+      "Interactive chat for brainstorming"
+    ],
+    "community": {
+      "stars": 145,
+      "forks": 28,
+      "commits": 249
+    },
+    "lastActivity": "2025-11-06 (v0.12.0-beta10)",
+    "targetUsers": "Novelists, fiction writers, creative writers needing structure and AI assistance",
+    "notes": "CLI-first tool, not a desktop app. Part of a suite (PaperCraftr also exists). Uses LangChain framework. Beta status."
+  },
+  {
+    "name": "autonovel",
+    "url": "https://github.com/NousResearch/autonovel",
+    "description": "An autonomous pipeline for writing, revising, typesetting, illustrating, and narrating a complete novel. Transforms a seed concept into print-ready PDF, ePub, audiobook, and landing page.",
+    "features": [
+      "4-phase pipeline (Foundation → First Draft → Revision + Opus Review → Export)",
+      "27 Python scripts for orchestration",
+      "Two immune systems (mechanical slop detection + LLM judge)",
+      "Opus review loop (dual-persona literary critique)",
+      "Five co-evolving document layers (voice, world, characters, outline, prose)",
+      "Propagation tracking via state.json",
+      "LaTeX typesetting with EB Garamond",
+      "Multi-voice audiobook generation",
+      "Cover art generation via fal.ai"
+    ],
+    "techStack": {
+      "primary": ["Python 94.8%", "HTML 3.3%", "TeX 1.6%", "CSS 0.3%"],
+      "dependencyManagement": ["uv"],
+      "typesetting": ["LaTeX"]
+    },
+    "license": "Not explicitly stated",
+    "aiCapabilities": [
+      "Anthropic Claude (Sonnet for writing/evaluation, Opus for review)",
+      "Adversarial editing and automated revision cycles",
+      "Voice fingerprint discovery and adherence checking",
+      "Multi-voice audiobook generation (ElevenLabs)",
+      "Cover art generation (fal.ai)",
+      "Anti-slop and anti-pattern detection"
+    ],
+    "community": {
+      "stars": 1200,
+      "forks": 229
+    },
+    "lastActivity": "2026 (active)",
+    "targetUsers": "Writers, AI researchers, publishers interested in automated long-form fiction production",
+    "notes": "Research-oriented project from NousResearch. Focus on fully autonomous novel generation. Not a user-facing tool but a pipeline. Inspired by karpathy/autoresearch."
+  },
+  {
+    "name": "Story Architect (Starc)",
+    "url": "https://github.com/story-apps/starc",
+    "description": "Reinventing the screenwriting software. An advanced text editor for script writers working professionally in film, novel, theatre, radio or writing for comic books.",
+    "features": [
+      "Multi-format support (.starc, .fdx, .docx, .odt, .trelby, .celtx, Fountain)",
+      "Import from Kit Scenarist projects",
+      "Modules for film, TV, comic books, stage, radio",
+      "Research tools (text documents, mind maps, images)",
+      "Character/location tracking with statistics",
+      "Title pages, movie posters, crew information",
+      "Cloud sync (in development)",
+      "Multiple scripts per project for episodic content"
+    ],
+    "techStack": {
+      "primary": ["C++ 98.9%"],
+      "framework": ["Qt framework", "Material Design"],
+      "other": ["Git submodules (qbreakpad)"]
+    },
+    "license": "GPL-3.0",
+    "aiCapabilities": [],
+    "community": {
+      "stars": 357,
+      "forks": 47,
+      "commits": 3293
+    },
+    "lastActivity": "2026-06-08 (release 0.8.2)",
+    "targetUsers": "Professional screenwriters, playwrights, novelists, comic book writers, radio drama writers",
+    "notes": "Successor to open-source Kit Scenarist. Professional screenwriting focus, not AI-powered. C++ native desktop app. Premium pricing model available. Beta status."
+  },
+  {
+    "name": "NovelForge",
+    "url": "https://github.com/RhythmicWave/NovelForge",
+    "description": "新一代 AI 长篇小说创作引擎. AI-assisted long-form novel writing engine with card-based structured creation, designed for million-word-scale fiction projects.",
+    "features": [
+      "Schema-driven card creation with JSON Schema validation",
+      "Streaming field-level AI generation with feedback loops",
+      "Chapter word count control (prompt constraint or control mode)",
+      "Universal review system with draft preview → confirmation",
+      "Context injection via @DSL syntax",
+      "Knowledge graph consistency (Neo4j or SQLite)",
+      "Inspiration Assistant (Agent) with persistent dialogue",
+      "Inspiration Workbench for free-form brainstorming",
+      "Code-based workflow system (Python-style DSL) with visual editor",
+      "Workflow Agent for natural language workflow creation",
+      "Built-in templates (Snowflake Method, book disassembly)",
+      "Token usage tracking and limits"
+    ],
+    "techStack": {
+      "frontend": ["Electron", "Vue 3", "TypeScript", "Pinia", "Element Plus"],
+      "backend": ["FastAPI", "SQLModel", "Uvicorn"],
+      "database": ["SQLite (core)", "Neo4j (knowledge graph, optional)"]
+    },
+    "license": "AGPL-3.0 (default); commercial license required for SaaS/hosting",
+    "aiCapabilities": [
+      "Structured generation with JSON Schema validation",
+      "Context assembly with @ syntax (@self, @parent, @type:角色卡)",
+      "Tool-calling Agent with ReAct mode fallback",
+      "Multi-model support with per-card LLM configuration",
+      "Token usage tracking",
+      "Inspiration Assistant with persistent dialogue"
+    ],
+    "community": {
+      "stars": 941,
+      "forks": 182,
+      "commits": 204,
+      "releases": 26
+    },
+    "lastActivity": "2026-05 (v0.9.5-1)",
+    "targetUsers": "Novelists creating long-form fiction requiring structural consistency, worldbuilding complexity, and AI-assisted iterative refinement",
+    "notes": "Chinese-language interface and documentation. Card-based architecture. Dual-licensed AGPL/commercial. Strong workflow system."
+  },
+  {
+    "name": "StoryLine (obsidian-storyline)",
+    "url": "https://github.com/PixeroJan/obsidian-storyline",
+    "description": "StoryLine transforms your Obsidian vault into a complete book planning and writing tool. Organize scenes, build characters, manage locations, track plotlines, and monitor progress, all inside Obsidian.",
+    "features": [
+      "Multiple Views (Corkboard, Board/Kanban, Plotgrid, Timeline, Plotlines, Manuscript)",
+      "Series mode for multi-book projects with shared Codex hub",
+      "Beat sheet templates (Save the Cat, Hero's Journey, etc.)",
+      "Setup/payoff tracking and plot hole detection",
+      "Pacing analysis",
+      "Writing sprint timer with goals",
+      "Focus mode",
+      "Import from Scrivener",
+      "Export to Markdown, JSON, CSV, HTML, PDF, DOCX",
+      "Image galleries with lightbox",
+      "Research sidebar with auto-suggest",
+      "Custom scene fields and color coding"
+    ],
+    "techStack": {
+      "primary": ["TypeScript 89.8%", "CSS 10.2%"],
+      "platform": ["Obsidian plugin"],
+      "dataFormat": ["Markdown + YAML frontmatter"]
+    },
+    "license": "MIT",
+    "aiCapabilities": [],
+    "community": {
+      "stars": 177,
+      "forks": 13,
+      "releases": 66
+    },
+    "lastActivity": "2026-06 (v1.10.29)",
+    "targetUsers": "Novelists, book authors, and fiction writers seeking Scrivener-like functionality within Obsidian",
+    "notes": "Obsidian plugin, not standalone app. No AI features. Strong visual planning tools. Single contributor. Very active maintenance."
+  },
+  {
+    "name": "Longform",
+    "url": "https://github.com/kevboh/longform",
+    "description": "A plugin for Obsidian that helps you write and edit novels, screenplays, and other long projects. Organizes scenes into ordered manuscripts.",
+    "features": [
+      "Dedicated sidebar collecting projects across vault",
+      "Reorderable, nestable list of scenes",
+      "Scene/draft/project word counts",
+      "Daily writing session goals",
+      "Workflow-based compilation tool for generating manuscripts",
+      "Multiple drafts per project",
+      "Scene-only CSS styling",
+      "Support for single-scene projects"
+    ],
+    "techStack": {
+      "primary": ["TypeScript 70.3%", "Svelte 28.4%", "JavaScript 1.2%", "CSS 0.1%"],
+      "build": ["rollup", "vitest", "ESLint", "Prettier"],
+      "platform": ["Obsidian plugin"]
+    },
+    "license": "See LICENSE.md (not specified in text)",
+    "aiCapabilities": [],
+    "community": {
+      "stars": 938,
+      "forks": 60,
+      "commits": 138,
+      "issues": 116
+    },
+    "lastActivity": "2025-03-19 (v2.1.0)",
+    "targetUsers": "Writers of novels, screenplays, and other long projects using Obsidian",
+    "notes": "Obsidian plugin. Simple and focused on scene organization. Built specifically to never alter note contents. Community compile steps available."
+  },
+  {
+    "name": "Manuskript",
+    "url": "https://github.com/olivierkes/manuskript",
+    "description": "An open-source tool for writers that helps with creating first drafts and refining manuscripts.",
+    "features": [
+      "Grow premise from sentence → paragraph → full summary",
+      "Character creation, plot conception, world-building",
+      "Outline modes (outliner + index cards)",
+      "Distraction free mode",
+      "Story line visualization",
+      "Fiction/non-fiction templates",
+      "Import/export: HTML, ePub, OpenDocument, DocX",
+      "Spell checker, markdown highlighter, frequency analyzer",
+      "Auto-save in open and plain text file format"
+    ],
+    "techStack": {
+      "primary": ["Python 3", "PyQt5"],
+      "other": ["JavaScript 31.6%", "CSS", "HTML", "Shell"]
+    },
+    "license": "GPL-3.0",
+    "aiCapabilities": [],
+    "community": {
+      "stars": 2300,
+      "forks": 313,
+      "issues": 567,
+      "releases": 18
+    },
+    "lastActivity": "2025-06 (v0.17.0)",
+    "targetUsers": "Writers seeking an open-source, cross-platform tool for novel and non-fiction composition",
+    "notes": "Traditional open-source writing tool. No AI features. Cross-platform (Linux, Mac, Windows). Active translation community. Many open issues (567)."
+  },
+  {
+    "name": "novelWriter",
+    "url": "https://github.com/vkbo/novelWriter",
+    "description": "A plain text editor designed for writing novels assembled from many smaller text documents. Minimal formatting syntax inspired by Markdown with meta data syntax for comments, synopsis, and cross-referencing.",
+    "features": [
+      "Human-readable text file storage",
+      "Project format suited for version control and file sync",
+      "Organizes text and notes across multiple documents",
+      "Cross-platform release support",
+      "Minimal formatting syntax (Markdown-inspired)",
+      "Meta data syntax for comments, synopsis, cross-referencing"
+    ],
+    "techStack": {
+      "primary": ["Python", "Qt6", "PyQt6"],
+      "platform": ["Linux", "Windows", "macOS"]
+    },
+    "license": "GPL-3.0",
+    "aiCapabilities": [],
+    "community": {
+      "stars": 3000,
+      "forks": 206,
+      "releases": 150,
+      "commits": 7663
+    },
+    "lastActivity": "2026-01 (v2026.1)",
+    "targetUsers": "Novelists seeking a simple, organized, non-proprietary writing environment",
+    "notes": "Explicitly '100% free of AI slop'. Contribution guidelines reject AI-generated content. Very mature project with 7663+ commits. Free Windows code signing via SignPath.io."
+  },
+  {
+    "name": "AI-Novel-Writing-Assistant (AI小说创作工作台)",
+    "url": "https://github.com/ExplosiveCoderflome/AI-Novel-Writing-Assistant",
+    "description": "AI-native engine for end-to-end novel creation — from idea to full chapters, with structured planning, worldbuilding, and agent-driven workflows. Designed as a production system for long-form fiction.",
+    "features": [
+      "AI Auto-Director (generates complete book directions from inspiration)",
+      "Creative Hub (unified creation center)",
+      "Whole-Book Production Chain (structured pipeline)",
+      "Style Engine (extractable, editable, bindable writing style assets)",
+      "Worldbuilding & Character Systems (faction maps, location networks, relationship webs)",
+      "Knowledge Base / RAG (Qdrant vector database)",
+      "Chapter Execution (writing, auditing, repair, foreshadowing resolution)",
+      "Manga/Comic Workbench (storyboard editing, cross-episode fact checking)",
+      "Model Routing (different providers/models for different tasks)"
+    ],
+    "techStack": {
+      "frontend": ["React 19", "Vite", "React Router", "TanStack Query", "Plate editor"],
+      "backend": ["Express 5", "Prisma", "Zod"],
+      "aiOrchestration": ["LangChain", "LangGraph"],
+      "database": ["SQLite (default)", "Qdrant (vector/RAG)"],
+      "monorepo": ["pnpm workspace"]
+    },
+    "license": "AGPL-3.0 (default); commercial license required for SaaS/hosting",
+    "aiCapabilities": [
+      "Multi-provider support (OpenAI, DeepSeek, SiliconFlow, xAI)",
+      "Task-specific model routing",
+      "Embedding configuration for RAG",
+      "Agent-driven workflows with Planner, Tool Registry, Runtime",
+      "Approval nodes in workflow",
+      "Style extraction and anti-AI rules"
+    ],
+    "community": {
+      "stars": 1700,
+      "forks": 340,
+      "commits": 666,
+      "releases": 33
+    },
+    "lastActivity": "2026-06-17 (v0.3.20)",
+    "targetUsers": "Complete beginners who need help finishing entire novels, not just writing individual passages",
+    "notes": "Chinese-language project. Monorepo architecture. Targets beginners specifically. Dual-licensed AGPL/commercial. Very active development (33 releases)."
+  },
+  {
+    "name": "WeKnora",
+    "url": "https://github.com/Tencent/WeKnora",
+    "description": "Open-source LLM knowledge platform: turn raw documents into a queryable RAG, an autonomous reasoning agent, and a self-maintaining Wiki. Enterprise-focused knowledge management.",
+    "features": [
+      "RAG-based Quick Q&A",
+      "ReAct Agent (autonomous orchestration of retrieval, MCP tools, web search)",
+      "Wiki Mode (self-maintaining markdown knowledge base with interactive graph)",
+      "10+ document format support (PDF, Word, images, Excel, PPT, CSV, HTML, Markdown, JSON, TXT)",
+      "20+ LLM provider integrations",
+      "Multiple vector databases (PostgreSQL/pgvector, Elasticsearch, Milvus, etc.)",
+      "Multi-tenant RBAC with 4-tier role matrix",
+      "AES-256-GCM encryption",
+      "IM channel integrations (WeCom, Feishu, Slack, Telegram, etc.)",
+      "Web search integrations (DuckDuckGo, Bing, Google, etc.)",
+      "Chrome Extension",
+      "WeChat Mini Program",
+      "MCP Server support"
+    ],
+    "techStack": {
+      "backend": ["Go 61.2%"],
+      "frontend": ["Vue 22.1%", "TypeScript 11.8%"],
+      "other": ["Python 3.2%", "Shell", "JavaScript"],
+      "infrastructure": ["Docker", "Kubernetes", "Helm", "Neo4j (optional)", "MinIO (optional)"]
+    },
+    "license": "MIT",
+    "aiCapabilities": [
+      "RAG-based Q&A over knowledge bases",
+      "ReAct Agent with autonomous reasoning",
+      "Wiki auto-generation from documents",
+      "20+ LLM provider support",
+      "Multi-modal support (VLM/ASR)",
+      "MCP Server for external agents"
+    ],
+    "community": {
+      "stars": 16400,
+      "forks": 2100
+    },
+    "lastActivity": "2026-06-10 (v0.6.2)",
+    "targetUsers": "Enterprise teams requiring document-to-knowledge automation, AI-powered internal search, self-hosted private LLM infrastructure",
+    "notes": "Enterprise knowledge platform, not a writing tool per se. But has strong RAG, agent, and wiki capabilities that could be adapted. Very large community (16.4k stars). Tencent-backed. Strong Chinese ecosystem integration."
+  },
+  {
+    "name": "Marginalia",
+    "url": "https://github.com/shenmintao/marginalia",
+    "description": "A library-science-inspired personal knowledge management system with LLM agents. Turns PDFs, notes, spreadsheets, logs, and archives into a private AI library that answers from original sources.",
+    "features": [
+      "Local-first storage with mirror backend",
+      "Ingests diverse formats (text, Markdown, PDFs, DOCX, images, spreadsheets, logs, archives)",
+      "Hybrid retrieval (lexical search + optional embeddings + sqlite-vec + reranking)",
+      "Agent reads original sections before answering",
+      "Quick mode for short lookups",
+      "Deep mode for full ReAct investigation loop",
+      "Cited answers with footnotes",
+      "Durable investigation notes for future recall",
+      "Desktop app (Windows, macOS, Linux)",
+      "CLI/API interfaces",
+      "MCP server support (read-only tools)",
+      "Evaluation framework with BEIR-style datasets"
+    ],
+    "techStack": {
+      "primary": ["Python 3.11+", "TypeScript", "Rust"],
+      "desktop": ["Tauri"],
+      "api": ["FastAPI"],
+      "database": ["SQLite (default)", "PostgreSQL"],
+      "migrations": ["Alembic"],
+      "deployment": ["Docker", "docker-compose"],
+      "storage": ["S3-compatible storage option"]
+    },
+    "license": "AGPL-3.0-or-later",
+    "aiCapabilities": [
+      "Multi-provider support (OpenAI, OpenAI-compatible, Anthropic)",
+      "Configurable models for chat, reflection, ingest, vision",
+      "Optional semantic recall with embeddings",
+      "Agent planning with token budgets",
+      "Vision profile for image enrichment, PDF figure captioning, scanned-PDF OCR",
+      "ReAct workflow favored over one-shot RAG",
+      "Relation discovery with lazy vetting and graph-based neighbors"
+    ],
+    "community": {
+      "stars": 56,
+      "forks": 9,
+      "releases": 11
+    },
+    "lastActivity": "2026-06 (v0.2.4)",
+    "targetUsers": "Researchers and knowledge workers with messy private knowledge bases who want answers that cite source material",
+    "notes": "PKM tool, not a writing tool. But has strong retrieval and agent capabilities. Tauri-based desktop app. Very early stage (56 stars). AGPL license."
+  }
+]

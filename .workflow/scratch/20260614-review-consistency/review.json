@@ -1,0 +1,317 @@
+{
+  "session_id": "maestro-20260614-173000",
+  "review_type": "interface-contract-consistency",
+  "review_date": "2026-06-14",
+  "scope": "Full E2E frontend-backend interface consistency",
+  "modules_reviewed": [
+    "writing (desktop/src/api/writing.ts <-> src-ts/mcp/endpoints/writing.ts)",
+    "writing-craft (desktop/src/api/writing-craft.ts <-> src-ts/mcp/endpoints/writing-craft-llm.ts)",
+    "knowledge/graph (desktop/src/api/knowledge.ts <-> src-ts/mcp/endpoints/graph.ts)",
+    "story-bible (desktop/src/api/story-bible.ts <-> src-ts/knowledge/mcp/story-bible-endpoints.ts)",
+    "qc (desktop/src/api/story-bible.ts qc section <-> src-ts/quality/mcp/qc-endpoints.ts)",
+    "m10-style (desktop/src/api/m10-apis.ts <-> src-ts/mcp/endpoints/m10-style.ts)",
+    "m10-consistency (desktop/src/api/m10-apis.ts <-> src-ts/mcp/endpoints/m10-consistency.ts)",
+    "analysis (desktop/src/api/analysis.ts <-> src-ts/mcp/endpoints/analysis.ts)",
+    "agents (desktop/src/api/agents.ts <-> src-ts/mcp/endpoints/agent.ts)",
+    "chat (desktop/src/api/chat.ts <-> src-ts/mcp/endpoints/chat.ts)",
+    "workflow (desktop/src/api/workflow.ts <-> src-ts/mcp/endpoints/workflow.ts)",
+    "wiki (desktop/src/api/wiki.ts <-> src-ts/mcp/endpoints/wiki.ts)",
+    "skills (desktop/src/api/skills.ts <-> src-ts/mcp/endpoints/skills.ts)",
+    "plugins (desktop/src/api/plugins.ts <-> src-ts/mcp/endpoints/plugins.ts)"
+  ],
+  "critical_findings": [
+    {
+      "id": "CF-001",
+      "severity": "CRITICAL",
+      "category": "response_shape_mismatch",
+      "module": "knowledge",
+      "endpoints": ["/foreshadow/plant", "/character/depth", "/character/profile", "/character/relationships"],
+      "description": "Double-envelope mismatch: Frontend types expect raw body = { success, data: T } but backend returns flat data (no envelope). Since callApi wraps raw response in { success: true, data: <raw> }, accessing result.data.data or result.data.success returns undefined.",
+      "affected_functions": ["plantForeshadow", "analyzeCharacterDepth", "getCharacterProfile", "getCharacterRelationships"],
+      "impact": "Runtime: any code accessing result.data.data or result.data.success gets undefined. Frontend types incorrectly describe the shape.",
+      "fix": "Remove inner { success, data: T } envelope from frontend types. Change ApiResponse<{ success: boolean; data: T }> to ApiResponse<T> where T = flat backend shape."
+    },
+    {
+      "id": "CF-002",
+      "severity": "CRITICAL",
+      "category": "response_shape_mismatch",
+      "module": "knowledge",
+      "endpoints": ["/foreshadow/stats"],
+      "description": "Double-envelope mismatch + workspace header ignored: Frontend type expects { success, data: ForeshadowStats } but backend returns { total, by_state, ... } (flat). Additionally, frontend sends X-Workspace-Id header but backend foreshadowStatsEndpoint(_request) ignores the entire request - stats are global, not workspace-scoped.",
+      "affected_functions": ["getForeshadowStats"],
+      "impact": "Runtime: result.data.data undefined. Workspace filtering is non-functional - stats always return global counts.",
+      "fix": "Fix frontend type to ApiResponse<ForeshadowStats> (flat). Fix backend to read workspace from headers and scope the query."
+    },
+    {
+      "id": "CF-003",
+      "severity": "CRITICAL",
+      "category": "missing_response_field",
+      "module": "writing",
+      "endpoints": ["/writing/quality"],
+      "description": "Frontend NovelQualityCheckResult requires 'decision' field ('APPROVED'|'REVISE'|'REWRITE'|'HUMAN_REVIEW') but backend never returns it. Backend returns { status, total_score, lock_score, style_score, logic_score, actionable_feedback, suggestions }.",
+      "affected_functions": ["novelQualityCheck"],
+      "impact": "Runtime: result.data.decision is always undefined. Any frontend code branching on decision will fall through to default/undefined behavior.",
+      "fix": "Add 'decision' derivation logic to backend (e.g., derive from total_score thresholds), or add it to frontend via post-processing."
+    },
+    {
+      "id": "CF-004",
+      "severity": "CRITICAL",
+      "category": "response_shape_mismatch",
+      "module": "analysis",
+      "endpoints": ["/analysis/patterns", "/analysis/sessions"],
+      "description": "Frontend expects { success: boolean; data: T[] } envelope but backend returns bare arrays []. callApi wraps in { success: true, data: [] }, so result.data.data is undefined.",
+      "affected_functions": ["detectPatterns", "clusterSessions"],
+      "impact": "Runtime: result.data.data undefined. Frontend code expecting .data array will fail.",
+      "fix": "Change frontend types from ApiResponse<{ success: boolean; data: T[] }> to ApiResponse<T[]> (bare array as raw body)."
+    },
+    {
+      "id": "CF-005",
+      "severity": "CRITICAL",
+      "category": "type_null_mismatch",
+      "module": "m10",
+      "endpoints": ["/style/profile/:projectId"],
+      "description": "Backend always returns null (unimplemented). Frontend types response as Record<string, unknown>. Accessing keys on null throws TypeError at runtime.",
+      "affected_functions": ["getStyleProfile"],
+      "impact": "Runtime TypeError when accessing any key on result.data (which is null).",
+      "fix": "Type frontend as ApiResponse<Record<string, unknown> | null> and add null guard in consumer code."
+    },
+    {
+      "id": "CF-006",
+      "severity": "CRITICAL",
+      "category": "response_shape_mismatch",
+      "module": "skills",
+      "endpoints": ["/skills/list"],
+      "description": "Frontend types response as flat Array<{ id: string; name: string }> but backend wraps in { skills: [...] }. callApi produces { success: true, data: { skills: [...] } } so result.data is an object, not an array.",
+      "affected_functions": ["listSkills"],
+      "impact": "Runtime: iterating result.data as array fails since it's { skills: [...] }.",
+      "fix": "Change frontend type to ApiResponse<{ skills: Array<{ id: string; name: string }> }>."
+    },
+    {
+      "id": "CF-007",
+      "severity": "CRITICAL",
+      "category": "response_shape_mismatch",
+      "module": "plugins",
+      "endpoints": ["/plugins/execute"],
+      "description": "Frontend PluginResult type { success: boolean; output: string; error?: string } is completely different from backend PluginResult { pluginId, pluginName, score, maxScore, evidence, suggestions, details }. These are unrelated shapes.",
+      "affected_functions": ["executePlugin"],
+      "impact": "Runtime: result.data.success is undefined, result.data.output is undefined. All expected frontend fields are missing from actual response.",
+      "fix": "Redefine frontend PluginResult to match backend shape: { pluginId, pluginName, score, maxScore, evidence, suggestions, details }."
+    },
+    {
+      "id": "CF-008",
+      "severity": "CRITICAL",
+      "category": "response_shape_mismatch",
+      "module": "plugins",
+      "endpoints": ["/plugins/register"],
+      "description": "Frontend expects { id: string; status: string } but backend returns { id: plugin.id, name: plugin.name }. 'status' field does not exist in backend response.",
+      "affected_functions": ["registerPlugin"],
+      "impact": "Runtime: result.data.status is undefined.",
+      "fix": "Change frontend type to { id: string; name: string } or add 'status' to backend response."
+    }
+  ],
+  "warnings": [
+    {
+      "id": "W-001",
+      "severity": "MEDIUM",
+      "category": "workspace_context_dropped",
+      "module": "writing",
+      "endpoints": ["/writing/helper", "/writing/stream"],
+      "description": "Frontend sends workspace via appendWorkspacePayload but backend endpoint handlers do not read body.workspace. Workspace travels to backend but has no effect.",
+      "affected_functions": ["processWritingHelper", "streamWritingHelper"]
+    },
+    {
+      "id": "W-002",
+      "severity": "MEDIUM",
+      "category": "workspace_context_dropped",
+      "module": "story-bible",
+      "endpoints": ["/story-bible/entities/list", "/story-bible/entities", "/story-bible/entity/:id (PUT)", "/story-bible/extract"],
+      "description": "Frontend appends workspace via appendWorkspacePayload but backend story-bible endpoints do not consume workspace from body. Data is sent but unused by backend.",
+      "affected_functions": ["sbGetEntities", "sbCreateEntity", "sbUpdateEntity", "sbExtractFromManuscript"]
+    },
+    {
+      "id": "W-003",
+      "severity": "MEDIUM",
+      "category": "workspace_context_dropped",
+      "module": "m10",
+      "endpoints": ["/style/apply", "/consistency/cross-chapter", "/suggestions/context-aware", "/agent/revise-multi-pass"],
+      "description": "Frontend sends workspace but backend endpoints do not consume it. M10 endpoints ignore workspace in body.",
+      "affected_functions": ["applyStyle", "runCrossChapterConsistency", "getContextAwareSuggestions", "runMultiPassRevision"]
+    },
+    {
+      "id": "W-004",
+      "severity": "MEDIUM",
+      "category": "semantic_default_mismatch",
+      "module": "knowledge",
+      "endpoints": ["/graph/foreshadows"],
+      "description": "Frontend treats status as optional (undefined = get all). Backend defaults status to 'pending' (only get pending). Semantic mismatch: not specifying status means 'all' on frontend but 'pending' on backend.",
+      "affected_functions": ["getForeshadows"]
+    },
+    {
+      "id": "W-005",
+      "severity": "MEDIUM",
+      "category": "extra_backend_fields",
+      "module": "writing",
+      "endpoints": ["/writing/helper"],
+      "description": "Backend returns 'status' and 'provider' fields not in WritingHelperResponse type. Frontend expects 'stats' but backend never returns it.",
+      "affected_functions": ["processWritingHelper"]
+    },
+    {
+      "id": "W-006",
+      "severity": "MEDIUM",
+      "category": "frontend_fields_ignored",
+      "module": "writing",
+      "endpoints": ["/writing/quality"],
+      "description": "Frontend sends scene_card, dimensions, quality_goals but backend does not read them. 6 backend fields (retrieval_metadata, context_budget, self_learning, quality_level, quality_mode, critical_gate_always_on) read but frontend never sends.",
+      "affected_functions": ["novelQualityCheck"]
+    },
+    {
+      "id": "W-007",
+      "severity": "MEDIUM",
+      "category": "error_swallowed",
+      "module": "writing",
+      "endpoints": ["/writing/quality"],
+      "description": "Backend swallows exceptions by returning qualityDefaultPayload() with 200 status and zeroed scores instead of error response. Frontend receives success=true with useless data.",
+      "affected_functions": ["novelQualityCheck"]
+    },
+    {
+      "id": "W-008",
+      "severity": "MEDIUM",
+      "category": "extra_backend_fields",
+      "module": "chat",
+      "endpoints": ["/chat", "/chat/stream"],
+      "description": "Backend returns 4 undocumented top-level keys (workflow_level, workflow_level_slug, context, _contract) and workflow_info.scene_type not in frontend ChatResponse/StreamDonePayload types.",
+      "affected_functions": ["chat", "chatStream"]
+    },
+    {
+      "id": "W-009",
+      "severity": "MEDIUM",
+      "category": "frontend_fields_ignored",
+      "module": "workflow",
+      "endpoints": ["/workflow/route"],
+      "description": "Frontend sends 'level' field but backend workflowRouteEndpoint only extracts body.task. Level is ignored.",
+      "affected_functions": ["routeWorkflow"]
+    },
+    {
+      "id": "W-010",
+      "severity": "MEDIUM",
+      "category": "frontend_fields_ignored",
+      "module": "workflow",
+      "endpoints": ["/workflow/plan"],
+      "description": "Frontend does not send 'genre' but backend reads body.genre. Genre will always be undefined from frontend.",
+      "affected_functions": ["createPlan"]
+    },
+    {
+      "id": "W-011",
+      "severity": "MEDIUM",
+      "category": "missing_field_in_frontend",
+      "module": "workflow",
+      "endpoints": ["/checkpoint/restore"],
+      "description": "Backend accepts confirm_token for checkpoint restore but frontend never sends it.",
+      "affected_functions": ["restoreCheckpoint"]
+    },
+    {
+      "id": "W-012",
+      "severity": "MEDIUM",
+      "category": "field_asymmetry",
+      "module": "knowledge",
+      "endpoints": ["/graph/character"],
+      "description": "Backend reads body.include_timeline (defaults false) but frontend never sends this field. Also backend lacks input validation for empty name.",
+      "affected_functions": ["getCharacter"]
+    },
+    {
+      "id": "W-013",
+      "severity": "MEDIUM",
+      "category": "field_asymmetry",
+      "module": "knowledge",
+      "endpoints": ["/character/relationships"],
+      "description": "Backend reads body.name but frontend never passes it. Backend falls back to empty string = all relationships.",
+      "affected_functions": ["getCharacterRelationships"]
+    },
+    {
+      "id": "W-014",
+      "severity": "MEDIUM",
+      "category": "hardcoded_placeholder",
+      "module": "knowledge",
+      "endpoints": ["/character/depth"],
+      "description": "Backend hardcodes depth_level='moderate' and suggestions=[]. Frontend types treat these as meaningful computed values.",
+      "affected_functions": ["analyzeCharacterDepth"]
+    },
+    {
+      "id": "W-015",
+      "severity": "MEDIUM",
+      "category": "extra_backend_fields",
+      "module": "m10",
+      "endpoints": ["/agent/revise-multi-pass"],
+      "description": "Backend returns finalDecision, learningInsights, comparison not in MultiPassRevisionResult type. Backend reads chapter_id which frontend never sends.",
+      "affected_functions": ["runMultiPassRevision"]
+    },
+    {
+      "id": "W-016",
+      "severity": "MEDIUM",
+      "category": "field_asymmetry",
+      "module": "agents",
+      "endpoints": ["/agent/write", "/agent/revise"],
+      "description": "Backend reads allow_llm_fallback (defaults true) which frontend never sends.",
+      "affected_functions": ["agentWrite", "agentRevise"]
+    },
+    {
+      "id": "W-017",
+      "severity": "MEDIUM",
+      "category": "missing_field_in_frontend",
+      "module": "plugins",
+      "endpoints": ["/plugins/list"],
+      "description": "Frontend PluginInfo includes 'enabled' field but backend response does not include it. Backend only returns { id, name, version, description, dimension }.",
+      "affected_functions": ["listPlugins"]
+    },
+    {
+      "id": "W-018",
+      "severity": "LOW",
+      "category": "lost_type_safety",
+      "module": "m10",
+      "endpoints": ["/style/extract", "/consistency/cross-chapter"],
+      "description": "Frontend response types are Record<string, unknown> when backend returns specific shapes with known fields.",
+      "affected_functions": ["extractStyleProfile", "runCrossChapterConsistency"]
+    },
+    {
+      "id": "W-019",
+      "severity": "LOW",
+      "category": "workspace_inconsistency",
+      "module": "story-bible",
+      "endpoints": ["/story-bible/completeness"],
+      "description": "sbGetCompleteness accepts _workspace param but does NOT call appendWorkspacePayload (unlike sibling endpoints). Inconsistent within same module.",
+      "affected_functions": ["sbGetCompleteness"]
+    },
+    {
+      "id": "W-020",
+      "severity": "LOW",
+      "category": "error_handling_gap",
+      "module": "all_modules",
+      "endpoints": ["ALL"],
+      "description": "Systemic: No frontend function has explicit error type handling for backend error shapes. All rely on generic callApi error extraction. Backend endpoints return { error: string } with status codes but frontend has no application-level error type awareness.",
+      "affected_functions": ["ALL"]
+    }
+  ],
+  "field_alignment": {
+    "fully_aligned_modules": ["wiki", "workflow/revision", "workflow/scheduler", "workflow/execute", "workflow/lifecycle", "workflow/rollback", "checkpoint/create", "checkpoint/list", "skills/create", "skills/save", "skills/delete"],
+    "partially_aligned_modules": ["writing/helper", "writing/stream", "chat", "agents", "knowledge/graph-query", "story-bible (field-level)"],
+    "misaligned_modules": ["knowledge (response envelope)", "analysis (response envelope)", "plugins (response shape)", "skills/list (response shape)", "writing/quality (missing decision)"]
+  },
+  "error_coverage": {
+    "well_covered": ["writing/helper (400/500)", "writing/stream (400/500)", "skills CRUD (400/404/409)", "workflow (typed errors)", "chat (generic error)", "knowledge POSTs (400 validation)"],
+    "gaps": ["writing/quality (200 with zeroed scores on error)", "analysis (no validation, empty on failure)", "m10 (400 for empty text only)", "plugins (no structured error types)", "wiki (generic 500 propagation)"]
+  },
+  "workspace_context": {
+    "properly_wired": ["knowledge (POST endpoints)", "workflow (all endpoints)", "chat", "wiki", "agents/write"],
+    "frontend_sends_backend_ignores": ["writing/helper", "writing/stream", "story-bible (POST endpoints)", "m10 (style/apply, consistency, suggestions, multi-pass)"],
+    "not_applicable": ["skills (global)", "plugins (global)", "analysis (global)", "qc (global)", "style/extract", "style/profile"]
+  },
+  "summary": {
+    "total_endpoints_reviewed": 65,
+    "critical_findings": 8,
+    "warnings": 20,
+    "clean_endpoints": 37,
+    "endpoints_with_issues": 28,
+    "most_problematic_modules": ["plugins", "analysis", "knowledge (envelope)", "writing/quality"],
+    "systemic_issue": "Frontend types inconsistently apply { success, data: T } inner envelope. Some modules (knowledge, analysis) expect this envelope but backend returns bare data. callApi already provides the outer envelope. Correct pattern: ApiResponse<T> where T = raw backend body shape (no inner envelope)."
+  }
+}
