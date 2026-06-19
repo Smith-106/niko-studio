@@ -95,6 +95,7 @@ export class MCPServiceDiscoveryImpl implements IMCPServiceDiscovery {
         });
       });
     }, this.config.scanIntervalMs);
+    this.scanTimer.unref?.();
 
     _log.info('Service discovery started', { scanIntervalMs: this.config.scanIntervalMs });
   }

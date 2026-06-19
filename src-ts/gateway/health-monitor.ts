@@ -99,6 +99,7 @@ export class MCPHealthMonitorImpl implements IMCPHealthMonitor {
         });
       });
     }, this.config.probeIntervalMs);
+    this.probeTimer.unref?.();
 
     _log.info('Health monitor started', { probeIntervalMs: this.config.probeIntervalMs });
   }
