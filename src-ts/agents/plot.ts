@@ -9,6 +9,7 @@
 
 import { BaseAgent } from './base';
 import type { IAgentGraphEngine, IAgentMemoryEngine } from './base';
+import { escapeCypherString } from '../utils/cypher-safety';
 
 // ── Enums ──────────────────────────────────────────────────
 
@@ -156,13 +157,13 @@ export class PlotAgent extends BaseAgent {
     if (this._graphEngine?.query) {
       try {
         let updateQuery =
-          `MATCH (f:Foreshadow {id: '${foreshadowId}'})\n` +
-          `SET f.status = '${newStatus}'`;
+          `MATCH (f:Foreshadow {id: '${escapeCypherString(foreshadowId)}'})\n` +
+          `SET f.status = '${escapeCypherString(newStatus)}'`;
 
         if (action === 'harvest') {
-          updateQuery += `, f.harvested_at = '${sceneId}'`;
+          updateQuery += `, f.harvested_at = '${escapeCypherString(sceneId)}'`;
         } else if (action === 'hint') {
-          updateQuery += `, f.hints = f.hints + ['${sceneId}']`;
+          updateQuery += `, f.hints = f.hints + ['${escapeCypherString(sceneId)}']`;
         }
 
         await this._graphEngine.query(updateQuery);

@@ -105,6 +105,19 @@ describe('workspace store integration', () => {
     })
   })
 
+  it('keeps state unchanged when syncing a conversation id that does not exist', () => {
+    const baselineWorkspace = useAppStore.getState().currentWorkspace
+    useAppStore.getState().syncConversationWorkspace('missing-conversation', {
+      identity: {
+        projectId: 'ignored-project',
+      },
+    })
+
+    const state = useAppStore.getState()
+    expect(state.currentWorkspace).toBe(baselineWorkspace)
+    expect(state.conversationsById).toEqual({})
+  })
+
   it('keeps current workspace stable when syncing an inactive conversation', async () => {
     useAppStore.getState().createConversation()
     const firstId = useAppStore.getState().currentConversationId!

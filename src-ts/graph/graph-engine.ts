@@ -1183,7 +1183,7 @@ export class GraphEngine {
 
   /** Get foreshadow status */
   async getForeshadows(
-    status: string = 'pending',
+    status?: string,
     chapter?: number | null,
     scope?: GraphReadScope | null
   ): Promise<Record<string, unknown>[]> {
@@ -1198,7 +1198,7 @@ export class GraphEngine {
     }
 
     if (status) {
-      sql += " AND json_extract(properties, '$.status') = ?";
+      sql += " AND json_extract(properties, '$.state') = ?";
       params.push(status);
     }
 

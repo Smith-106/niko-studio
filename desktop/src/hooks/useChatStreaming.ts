@@ -43,7 +43,7 @@ function isStreamErrorPayload(payload: any): payload is StreamErrorPayload {
 }
 
 interface StartStreamOptions {
-  onRecoverStatus: (status: RecoverStatus | null) => void
+  onRecoverStatus: (status: RecoverStatus) => void
   onCommitAssistantMessage: (args: { content: string; writerMetadata?: StreamDonePayload['writer_metadata'] }) => void
   onInterrupted: () => void
   onStreamPhase: (phase: StreamPhase) => void

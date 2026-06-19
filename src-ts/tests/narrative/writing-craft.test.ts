@@ -10,6 +10,10 @@ import {
   STORY_STRUCTURES,
   WEB_NOVEL_PSYCHOLOGY,
 } from '../../narrative/writing-craft/craft-catalog';
+import {
+  getSatisfactionPatterns,
+  reloadCatalog,
+} from '../../narrative/writing-craft/catalog-loader';
 
 import {
   WebNovelGenre,
@@ -45,6 +49,17 @@ describe('Writing Craft — Craft Catalog', () => {
       const enumValues = Object.values(SatisfactionPattern);
       const recordKeys = Object.keys(SATISFACTION_PATTERNS);
       expect(enumValues.sort()).toEqual(recordKeys.sort());
+    });
+
+    it('reloads cached catalog records on demand', () => {
+      const first = getSatisfactionPatterns();
+      expect(first).toBe(getSatisfactionPatterns());
+
+      reloadCatalog();
+
+      const reloaded = getSatisfactionPatterns();
+      expect(reloaded).not.toBe(first);
+      expect(Object.keys(reloaded).sort()).toEqual(Object.keys(first).sort());
     });
   });
 

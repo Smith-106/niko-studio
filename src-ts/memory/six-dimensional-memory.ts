@@ -172,7 +172,8 @@ export class BaseDimensionProcessor implements IDimensionProcessor {
     }
 
     // Calculate score based on keyword density
-    const wordCount = content.split(/\s+/).length;
+    const words = content.trim().split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
     if (wordCount === 0) {
       return new DimensionScore({
         dimension: this._dimension,

@@ -352,7 +352,7 @@ export interface WorkflowExecutionResponseContext {
 }
 
 export interface WorkflowAuthoritySnapshot {
-  sessionId: string;
+  sessionId: string | null;
   workspaceId: string | null;
   projectId: string | null;
 }

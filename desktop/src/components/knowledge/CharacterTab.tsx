@@ -44,8 +44,8 @@ export function CharacterTab(props: CharacterTabProps) {
     const name = profileName.trim()
     if (!name) return
     const response = await getCharacterProfile(name)
-    if (response.success && response.data?.data) {
-      setProfile(response.data.data)
+    if (response.success && response.data) {
+      setProfile(response.data)
       onStatusChange({ type: 'success', message: t.knowledgeProfileTitle })
     } else {
       setProfile(null)
@@ -56,8 +56,8 @@ export function CharacterTab(props: CharacterTabProps) {
   const handleAnalyzeDepth = async () => {
     if (!profile) return
     const response = await analyzeCharacterDepth(profile.id)
-    if (response.success && response.data?.data) {
-      setDepth(response.data.data)
+    if (response.success && response.data) {
+      setDepth(response.data)
       onStatusChange({ type: 'success', message: t.knowledgeDepthTitle })
     } else {
       onStatusChange({ type: 'error', message: t.knowledgeProfileNotFound })
@@ -66,8 +66,8 @@ export function CharacterTab(props: CharacterTabProps) {
 
   const handleLoadRelationships = async () => {
     const response = await getCharacterRelationships()
-    if (response.success && response.data?.data) {
-      setRelationships(response.data.data)
+    if (response.success && response.data) {
+      setRelationships(response.data)
       onStatusChange({ type: 'success', message: t.knowledgeRelationshipsTitle })
     }
   }

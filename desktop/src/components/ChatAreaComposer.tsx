@@ -85,7 +85,7 @@ export function ChatAreaComposer({
 
   const copyLastReply = () => {
     if (!lastAssistantContent) return
-    navigator.clipboard?.writeText(lastAssistantContent).then(() => {
+    navigator.clipboard?.writeText?.(lastAssistantContent)?.then(() => {
       setCopied(true)
     }).catch(() => {})
   }

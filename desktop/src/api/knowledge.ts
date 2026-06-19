@@ -165,19 +165,26 @@ export async function plantForeshadow(
     importance?: number
     tags?: string[]
     metadata?: Record<string, unknown>
+    workspace?: ProjectWorkspaceContext
   },
-): Promise<ApiResponse<{ success: boolean; data: ForeshadowItem }>> {
-  return callApi('/foreshadow/plant', 'POST', {
-    description,
-    scene_id: options?.scene_id,
-    importance: options?.importance,
-    tags: options?.tags,
-    metadata: options?.metadata,
-  })
+): Promise<ApiResponse<ForeshadowItem>> {
+  return callApi('/foreshadow/plant', 'POST',
+    appendWorkspacePayload({
+      description,
+      scene_id: options?.scene_id,
+      importance: options?.importance,
+      tags: options?.tags,
+      metadata: options?.metadata,
+    }, options?.workspace),
+  )
 }
 
-export async function getForeshadowStats(): Promise<ApiResponse<{ success: boolean; data: ForeshadowStats }>> {
-  return callApi('/foreshadow/stats', 'GET')
+export async function getForeshadowStats(
+  workspace?: ProjectWorkspaceContext,
+): Promise<ApiResponse<ForeshadowStats>> {
+  return callApi('/foreshadow/stats', 'GET', undefined,
+    workspace ? { 'X-Workspace-Id': workspace.identity.workspaceId } : undefined,
+  )
 }
 
 // ============ Character Depth API ============
@@ -216,18 +223,20 @@ export interface CharacterRelationshipNetwork {
 
 export async function analyzeCharacterDepth(
   id: string,
-): Promise<ApiResponse<{ success: boolean; data: CharacterDepthAssessment }>> {
-  return callApi('/character/depth', 'POST', { id })
+  workspace?: ProjectWorkspaceContext,
+): Promise<ApiResponse<CharacterDepthAssessment>> {
+  return callApi('/character/depth', 'POST', appendWorkspacePayload({ id }, workspace))
 }
 
 export async function getCharacterProfile(
   name: string,
-): Promise<ApiResponse<{ success: boolean; data: CharacterProfile }>> {
-  return callApi('/character/profile', 'POST', { name })
+  workspace?: ProjectWorkspaceContext,
+): Promise<ApiResponse<CharacterProfile>> {
+  return callApi('/character/profile', 'POST', appendWorkspacePayload({ name }, workspace))
 }
 
-export async function getCharacterRelationships(): Promise<
-  ApiResponse<{ success: boolean; data: CharacterRelationshipNetwork }>
-> {
-  return callApi('/character/relationships', 'POST')
+export async function getCharacterRelationships(
+  workspace?: ProjectWorkspaceContext,
+): Promise<ApiResponse<CharacterRelationshipNetwork>> {
+  return callApi('/character/relationships', 'POST', appendWorkspacePayload({}, workspace))
 }

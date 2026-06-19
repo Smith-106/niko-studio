@@ -52,7 +52,7 @@ export async function extractStyleProfile(
 
 export async function getStyleProfile(
   projectId: string,
-): Promise<ApiResponse<Record<string, unknown>>> {
+): Promise<ApiResponse<Record<string, unknown> | null>> {
   return callApi(`/style/profile/${encodeURIComponent(projectId)}`, 'GET')
 }
 

@@ -297,4 +297,89 @@ describe('useAppViewModel', () => {
 
     expect(hookMocks.getCurrentEditorSelectionTextMock).not.toHaveBeenCalled()
   })
+
+  it('uses zh evaluation source labels when the interface language is Chinese', () => {
+    const appStoreState = {
+      setSessionIntelligenceEnabled: vi.fn(),
+      setSessionIntelligenceSummary: vi.fn(),
+      setSessionIntelligenceInsights: vi.fn(),
+      setSessionIntelligenceSessionId: vi.fn(),
+      setPersonalizedCraftEnabled: vi.fn(),
+      setPersonalizedCraftSummary: vi.fn(),
+      setPersonalizedCraftTrajectory: vi.fn(),
+      setPersonalizedCraftRecommendations: vi.fn(),
+    }
+    const appStoreMock = hookMocks.useAppStoreMock as AppStoreMockWithState
+    appStoreMock.mockReturnValue({ backendStatus: true, checkBackend: vi.fn() })
+    appStoreMock.getState = vi.fn(() => appStoreState)
+    hookMocks.useBackendStatusMock.mockReturnValue(true)
+    hookMocks.useCheckBackendMock.mockReturnValue(vi.fn())
+    hookMocks.useAppUiPersistenceMock.mockReturnValue({
+      sidebarCollapsed: false,
+      setSidebarCollapsed: vi.fn(),
+      chatSidebarCollapsed: false,
+      setChatSidebarCollapsed: vi.fn(),
+      activeRightPanel: 'evaluation',
+      setActiveRightPanel: vi.fn(),
+      writingHelperDraft: { content: ' 中文草稿 ', mode: 'polish', maxSentences: 3, maxItems: 6, guidance: '' },
+      setWritingHelperDraft: vi.fn(),
+      clearWritingHelperDraft: vi.fn(),
+      sessionIntelligenceState: {
+        enabled: true,
+        summary: 'summary',
+        insights: ['insight'],
+        sessionId: 'session-1',
+      },
+      personalizedCraftState: {
+        enabled: true,
+        summary: 'craft summary',
+        trajectory: 'trajectory',
+        recommendations: ['recommendation'],
+      },
+    })
+    hookMocks.useLatestAssistantMessageContentMock.mockReturnValue(' 最近一次回复 ')
+    hookMocks.getCurrentEditorSelectionTextMock.mockReturnValue('当前选区')
+    hookMocks.useAppContextUsageMock.mockReturnValue({
+      contextUsage: { usedK: 64, totalK: 128, percent: 50 },
+      handleContextUsageChange: vi.fn(),
+    })
+    hookMocks.useAppRuntimeHealthMock.mockReturnValue({ connectionState: 'connected' })
+    hookMocks.useI18nMock.mockReturnValue({
+      t: { restoreFailed: '恢复失败', restoreSuccess: '恢复成功' },
+      language: 'zh',
+    })
+    hookMocks.useAppPanelOrchestrationMock.mockReturnValue({})
+    hookMocks.useAppCheckpointMenuMock.mockReturnValue({})
+    hookMocks.useAppHeaderViewModelMock.mockReturnValue({})
+    hookMocks.useAppShellViewModelMock.mockReturnValue({
+      sidebarProps: {},
+      appRightPanelsProps: {},
+      appMainContentProps: {},
+      chatSidebarProps: {},
+    })
+
+    renderHook(() => useAppViewModel())
+
+    expect(hookMocks.useAppShellViewModelMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evaluationSources: [
+          {
+            kind: 'latestAssistantReply',
+            label: '最近一次助手回复',
+            content: '最近一次回复',
+          },
+          {
+            kind: 'editorSelection',
+            label: '当前编辑器选区',
+            content: '当前选区',
+          },
+          {
+            kind: 'currentDraft',
+            label: '当前写作草稿',
+            content: '中文草稿',
+          },
+        ],
+      }),
+    )
+  })
 })

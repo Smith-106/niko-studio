@@ -752,6 +752,10 @@ export class UnifiedMemoryEngine {
     this._initSchema();
     log.info("Memory engine initialized", { dbPath: this.dbPath });
 
+    // Force lazy model initialization once so startup degraded logging reflects
+    // the actual embedding state before the first search/add request.
+    this.embedder.embed("", false);
+
     // Log degraded mode loudly at startup so operators know retrieval won't work
     if (this.embedder.isDegraded) {
       log.error(

@@ -489,9 +489,7 @@ function analyzeWebNovel(text: string): RevisionDimensionReport {
   const curveResult = analyzer.analyzeWebNovelCurve(chapters);
   const immersionResult = analyzeReaderImmersion(chapters);
   const scores = [
-    curveResult.curveData.length > 0
-      ? curveResult.curveData.reduce((sum, item) => sum + item.hookStrength, 0) / curveResult.curveData.length / 10
-      : 0,
+    curveResult.curveData.reduce((sum, item) => sum + item.hookStrength, 0) / Math.max(curveResult.curveData.length, 1) / 10,
     immersionResult.averageImmersion * 10,
     (1 - immersionResult.averageDropoutRisk) * 10,
   ].filter((value) => Number.isFinite(value) && value > 0);

@@ -13,6 +13,7 @@ import {
   documentFormatExtension,
   documentFormatFromExtension,
   isBinaryFormat,
+  validateArtifact,
 } from '../../store/store-manager';
 
 function createBasePath(): string {
@@ -343,7 +344,30 @@ describe('store/store-manager', () => {
       metadata: undefined,
       chunks: [],
     });
+    const formatLikeMarkdown = {
+      toString: () => DocumentFormat.MARKDOWN,
+    } as unknown as DocumentFormat;
+    const nonStringFormatDoc = Document.fromDict({
+      id: 'dict-non-string-format',
+      content: 'dict body with object-backed format',
+      format: formatLikeMarkdown,
+      metadata: undefined,
+      chunks: [],
+    });
+    const emptyContentDoc = new Document({
+      id: 'empty-content-doc',
+      content: '',
+      format: DocumentFormat.PLAIN_TEXT,
+    });
+    const cjkDoc = new Document({
+      id: 'cjk-doc',
+      content: '阿丽 guards old harbor',
+      format: DocumentFormat.PLAIN_TEXT,
+    });
     expect(dictDoc.metadata).toEqual({});
+    expect(nonStringFormatDoc.format).toBe(formatLikeMarkdown);
+    expect(emptyContentDoc.wordCount).toBe(0);
+    expect(cjkDoc.wordCount).toBe(5);
 
     const matchingFilter = new DocumentFilter({
       format: DocumentFormat.JSON,
@@ -692,6 +716,36 @@ describe('store/store-manager', () => {
       saveErrorSpy.mockRestore();
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('covers artifact validation error branches before storage writes occur', () => {
+    const basePath = createBasePath();
+    const manager = new StoreManager({ basePath, autoChunk: false });
+
+    try {
+      expect(
+        validateArtifact({
+          id: 42,
+          content: 'valid content',
+          format: 'unsupported',
+        }),
+      ).toMatchObject({
+        valid: false,
+        missingFields: [],
+        errors: expect.arrayContaining([
+          'Unknown document format: "unsupported"',
+          'Field "id" must be a string',
+        ]),
+      });
+
+      expect(() => manager.addDocument('invalid-content.md', '', {}, 'invalid-doc-id')).toThrow(
+        'Artifact validation failed: Required field "content" must not be empty',
+      );
+      expect(manager.documentCount).toBe(0);
+      expect(existsSync(join(basePath, 'store', 'sources', 'invalid-doc-id.md'))).toBe(false);
+    } finally {
+      rmSync(basePath, { recursive: true, force: true });
     }
   });
 });

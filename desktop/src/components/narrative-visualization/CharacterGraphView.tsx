@@ -385,6 +385,7 @@ export function CharacterGraphView({ data }: CharacterGraphViewProps) {
       <div className="mt-4 grid gap-2 max-h-36 overflow-y-auto custom-scrollbar pr-1" aria-label="Character graph text fallback">
         {data.edges.map((edge, index) => {
           const color = getEdgeColor(edge.type)
+          const weight = edge.weight ?? 0.5
           return (
             <div
               key={`${edge.source}-${edge.target}-${index}`}
@@ -396,7 +397,7 @@ export function CharacterGraphView({ data }: CharacterGraphViewProps) {
               </div>
               <div className="text-[10px] text-gray-500 dark:text-dark-text-secondary font-mono flex items-center gap-3">
                 <span>类型: <strong className="font-extrabold capitalize" style={{ color: color }}>{edge.type}</strong></span>
-                <span>相关度: <strong className="font-extrabold text-gray-700 dark:text-dark-text">{edge.weight.toFixed(2)}</strong></span>
+                <span>相关度: <strong className="font-extrabold text-gray-700 dark:text-dark-text">{weight.toFixed(2)}</strong></span>
               </div>
             </div>
           )

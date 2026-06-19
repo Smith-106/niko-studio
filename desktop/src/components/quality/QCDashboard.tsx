@@ -157,17 +157,13 @@ function scoreBarBg(score: number): string {
 }
 
 function formatTimestamp(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
+  const d = new Date(iso);
+  return d.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 // ============================================================
@@ -492,10 +488,8 @@ export const QCDashboard: React.FC<QCDashboardProps> = ({ novelId }) => {
       );
 
       const overallScore =
-        dimensionResults.length > 0
-          ? dimensionResults.reduce((sum, r) => sum + r.score, 0) /
-            dimensionResults.length
-          : 0;
+        dimensionResults.reduce((sum, r) => sum + r.score, 0) /
+        dimensionResults.length;
 
       const blockingViolations = allViolations.filter(
         (v) => v.severity === 'critical' || v.severity === 'high',

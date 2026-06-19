@@ -41,6 +41,17 @@ describe('AccordionWrapper', () => {
     expect(screen.getByText('Content B')).toBeTruthy()
   })
 
+  it('removes an expanded item when clicking it again in multi mode', () => {
+    render(<AccordionWrapper items={items} mode="multi" />)
+    const button = screen.getByText('Item A').closest('button')!
+
+    fireEvent.click(button)
+    fireEvent.click(button)
+
+    const region = document.getElementById('accordion-content-a')
+    expect(['0', '0px']).toContain(region?.style.maxHeight)
+  })
+
   it('renders empty list without errors', () => {
     const { container } = render(<AccordionWrapper items={[]} mode="single" />)
     expect(container.innerHTML).toContain('space-y-2')

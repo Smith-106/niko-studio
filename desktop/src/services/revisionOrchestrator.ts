@@ -89,6 +89,7 @@ export class RevisionOrchestrator {
     let iterations = 0;
     let checkpointId: string | null = null;
     let result: RevisionResult | null = null;
+    let degradedScore: { from: number; to: number } | null = null;
     const chapterId = this.config.workspace?.manuscript?.chapterId ?? this.config.workspace?.workflow?.sessionId ?? 'chapter-unknown';
     let revisionSession: RevisionResult['revisionSession'] = null;
     let revisionSessionId: string | null = null;
@@ -206,6 +207,12 @@ export class RevisionOrchestrator {
 
       const newEvaluation = await this.evaluate(revisedContent);
       if (!newEvaluation || newEvaluation.score <= lastScore) {
+         if (newEvaluation && newEvaluation.score < lastScore) {
+           degradedScore = {
+             from: lastScore,
+             to: newEvaluation.score,
+           };
+         }
          result = {
             initialContent: content, revisedContent: currentContent, initialScore,
             finalScore: lastScore, iterations, completed: true, reason: 'no_improvement',
@@ -264,9 +271,9 @@ export class RevisionOrchestrator {
     return result;
 
     } finally {
-      if (result && checkpointId && result.finalScore < result.initialScore) {
+      if (result && checkpointId && degradedScore) {
         logger.warn(
-          `Revision degraded quality from ${result.initialScore} to ${result.finalScore}. Restoring checkpoint...`,
+          `Revision degraded quality from ${degradedScore.from} to ${degradedScore.to}. Restoring checkpoint...`,
         );
         await restoreCheckpoint(checkpointId, this.config.workspace);
       }

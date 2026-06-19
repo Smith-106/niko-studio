@@ -149,7 +149,7 @@ export function compareStyleProfiles(a: StyleProfile, b: StyleProfile): {
   }))
 
   const totalDissimilarity = differences.reduce((sum, d) => {
-    const max = maxValues[d.metric] || 1
+    const max = maxValues[d.metric]
     return sum + (d.delta / max)
   }, 0)
 

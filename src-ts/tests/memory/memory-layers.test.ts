@@ -191,6 +191,7 @@ describe('LayerEntry', () => {
 describe('BaseMemoryLayer', () => {
   it('stores and retrieves entries', async () => {
     const layer = new BaseMemoryLayer(LAYER_CONFIGS[LayerType.USER]);
+    expect(layer.config).toBe(LAYER_CONFIGS[LayerType.USER]);
     const entry = await layer.store('id-1', 'Test content', 0.8);
     expect(entry.id).toBe('id-1');
     expect(entry.content).toBe('Test content');

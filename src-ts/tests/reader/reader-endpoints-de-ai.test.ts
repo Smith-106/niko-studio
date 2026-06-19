@@ -5,12 +5,13 @@
  * style-shift mode, error handling, and text transformation verification.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { HttpRequest, HttpResponse } from '../../mcp/http-types.js';
 import {
   clearReaderStores,
   rsDeAIEndpoint,
+  rsAIFlavorEndpoint,
 } from '../../reader/mcp/reader-endpoints.js';
 
 function mockRequest({
@@ -148,5 +149,49 @@ describe('reader/mcp/reader-endpoints — rsDeAIEndpoint', () => {
     expect(body.revisedText).not.toBe(aiText);
     expect(body.revisedText.toLowerCase()).not.toContain('it is important to note that');
     expect(body.revisedText.toLowerCase()).not.toContain('in conclusion');
+  });
+
+  it('catches detectAIFlavor errors and returns 500', async () => {
+    // Spy on detectAIFlavor to throw an error
+    const { detectAIFlavor } = await import('../../reader/ai-flavor-detector.js');
+    const spy = vi.spyOn(await import('../../reader/ai-flavor-detector.js'), 'detectAIFlavor').mockImplementation(() => {
+      throw new Error('AI flavor detection error');
+    });
+
+    const response = await rsAIFlavorEndpoint(mockRequest({
+      url: '/reader/ai-flavor',
+      body: { novelId: 'novel-error', text: 'some text' },
+    }));
+
+    expect(response.statusCode).toBe(500);
+    const body = getBody(response);
+    expect(body.error).toBe('AI flavor detection error');
+
+    spy.mockRestore();
+  });
+
+  it('catches revision service errors and returns 500', async () => {
+    // Mock RevisionService to throw an error
+    vi.doMock('../../services/revision-service.js', () => ({
+      RevisionServiceImpl: class {
+        initialize() { return Promise.resolve(); }
+        revise() {
+          return Promise.reject(new Error('Revision service failed'));
+        }
+      },
+    }));
+
+    // Reset modules and re-import to pick up the mock
+    vi.resetModules();
+    const module = await import('../../reader/mcp/reader-endpoints.js');
+    const response = await module.rsDeAIEndpoint(mockRequest({
+      body: { novelId: 'novel-deai-error', text: 'Some text that needs revision.' },
+    }));
+
+    expect(response.statusCode).toBe(500);
+    const body = response.body as any;
+    expect(body.error).toBe('Revision service failed');
+
+    vi.doUnmock('../../services/revision-service.js');
   });
 });

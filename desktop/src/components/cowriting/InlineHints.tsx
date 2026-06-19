@@ -67,7 +67,7 @@ export function InlineHints({ suggestions, onAccept, onDismiss, position }: Inli
     zIndex: 50,
   }
 
-  const activeSuggestions = suggestions.filter(s => !dismissed.has(s.id))
+  const activeSuggestions = suggestions
 
   if (activeSuggestions.length === 0) return null
 

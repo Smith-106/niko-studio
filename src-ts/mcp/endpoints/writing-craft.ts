@@ -148,9 +148,7 @@ function analyzeStructure(
   if (threeAct.overallStructureScore > 0) scores.push(threeAct.overallStructureScore);
   scores.push(antiResult.overallHealthScore);
 
-  const score = scores.length > 0
-    ? Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10
-    : 0;
+  const score = Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10;
 
   const evidence: string[] = [
     ...edsonResult.missingBeats.slice(0, 3).map((b) => `缺少段落: ${b}`),
@@ -219,9 +217,7 @@ function analyzeSuspense(
   const scores: number[] = [techniqueResult.overallScore * 10, trickResult.overallTrickScore];
   if (deductionResult.chainScore > 0) scores.push(deductionResult.chainScore);
 
-  const score = scores.length > 0
-    ? Math.min(10, Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10)
-    : 0;
+  const score = Math.min(10, Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10);
 
   const detectedTechniques = techniqueResult.detections.filter((d) => d.detected);
   const detectedTricks = trickResult.tricks.filter((t) => t.detected);

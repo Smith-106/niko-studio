@@ -218,5 +218,18 @@ describe('M13 Remaining Items', () => {
       const result = analyzeRetentionRhythm(chapters, 2);
       expect(result.profiles[1].payWallProximity).toBe('at');
     });
+
+    it('returns an empty profile set for missing chapters', () => {
+      const result = analyzeRetentionRhythm([]);
+
+      expect(result).toEqual({
+        profiles: [],
+        goldenThreeScore: 0,
+        payWallDensity: 0,
+        rhythmScore: 0,
+        microCycles: [],
+        suggestions: ['没有章节数据'],
+      });
+    });
   });
 });

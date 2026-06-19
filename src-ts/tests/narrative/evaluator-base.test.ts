@@ -40,6 +40,20 @@ class TestEvaluator extends BaseEvaluator {
   }
 }
 
+class DefaultSkillEvaluator extends BaseEvaluator {
+  get name(): string {
+    return 'default-skill-evaluator';
+  }
+
+  get description(): string {
+    return 'default skill description';
+  }
+
+  async evaluate(): Promise<EvaluationResult> {
+    return new EvaluationResult(this.name, 0, ScoreLevel.FAIR);
+  }
+}
+
 describe('narrative/evaluators/base', () => {
   it('exposes evaluation-result helpers and dictionary conversion', () => {
     const result = new EvaluationResult(
@@ -90,5 +104,11 @@ describe('narrative/evaluators/base', () => {
       code: 'TEST',
       relatedSkill: 'test-skill',
     });
+  });
+
+  it('defaults relatedSkill to null when subclasses do not override it', () => {
+    const evaluator = new DefaultSkillEvaluator();
+
+    expect(evaluator.relatedSkill).toBeNull();
   });
 });

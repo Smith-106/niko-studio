@@ -44,6 +44,16 @@ describe('migrationService', () => {
       expect(count).toBe(1)
       expect(localStorage.getItem('niko.draft.backup:conv1')).toBe('{"text":"hello"}')
     })
+
+    it('ignores empty draft values and unrelated keys', () => {
+      localStorage.setItem('niko.draft:empty', '')
+      localStorage.setItem('other.key', 'value')
+
+      const count = backupLocalStorage()
+
+      expect(count).toBe(0)
+      expect(localStorage.getItem('niko.draft.backup:empty')).toBeNull()
+    })
   })
 
   describe('restoreFromBackup', () => {
@@ -55,6 +65,22 @@ describe('migrationService', () => {
       expect(result).toBe(true)
       expect(localStorage.getItem('niko.draft:conv1')).toBe('{"text":"restored"}')
       expect(localStorage.getItem('niko.migrated')).toBeNull()
+    })
+
+    it('returns false when restoring a backup throws', () => {
+      localStorage.setItem('niko.draft.backup:conv1', '{"text":"restored"}')
+
+      const originalSetItem = Storage.prototype.setItem
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+        if (key === 'niko.draft:conv1') {
+          throw new Error('quota exceeded')
+        }
+        return originalSetItem.call(this, key, value)
+      })
+
+      expect(restoreFromBackup()).toBe(false)
+
+      setItemSpy.mockRestore()
     })
   })
 
@@ -100,6 +126,7 @@ describe('migrationService', () => {
       const result = await migrateFromLocalStorage()
       expect(result.success).toBe(true)
       expect(result.chaptersMigrated).toBe(0)
+      expect(localStorage.getItem('niko.migrated')).toBe('true')
     })
 
     it('migrates drafts to project structure', async () => {
@@ -130,6 +157,78 @@ describe('migrationService', () => {
       expect(localStorage.getItem('niko.migrated')).toBe('true')
     })
 
+    it('treats malformed draft payloads as empty chapter content and still completes', async () => {
+      localStorage.setItem('niko.draft:conv1', 'not-json')
+
+      const { readChapterContent, writeChapterContent } = await import('./projectFileService')
+      vi.mocked(readChapterContent).mockResolvedValue('content')
+
+      const { useAppStore } = await import('../stores/appStore')
+      vi.mocked(useAppStore.getState).mockReturnValue({
+        loadProjectMeta: vi.fn(),
+        selectProject: vi.fn(),
+        selectChapter: vi.fn(),
+      } as never)
+
+      const result = await migrateFromLocalStorage()
+
+      expect(result.success).toBe(true)
+      expect(vi.mocked(writeChapterContent)).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        JSON.stringify({ type: 'doc', content: [] }),
+      )
+    })
+
+    it('treats empty or textless drafts as empty chapter content', async () => {
+      localStorage.setItem('niko.draft:conv1', '')
+      localStorage.setItem('niko.draft:conv2', '{"timestamp":2}')
+
+      const { readChapterContent, writeChapterContent } = await import('./projectFileService')
+      vi.mocked(readChapterContent).mockResolvedValue('content')
+
+      const { useAppStore } = await import('../stores/appStore')
+      vi.mocked(useAppStore.getState).mockReturnValue({
+        loadProjectMeta: vi.fn(),
+        selectProject: vi.fn(),
+        selectChapter: vi.fn(),
+      } as never)
+
+      const result = await migrateFromLocalStorage()
+
+      expect(result.success).toBe(true)
+      expect(vi.mocked(writeChapterContent)).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        expect.any(String),
+        JSON.stringify({ type: 'doc', content: [] }),
+      )
+      expect(vi.mocked(writeChapterContent)).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.any(String),
+        JSON.stringify({ type: 'doc', content: [] }),
+      )
+    })
+
+    it('returns failure when migrated chapter files cannot be read back', async () => {
+      localStorage.setItem('niko.draft:conv1', '{"text":"hello","timestamp":1}')
+
+      const { readChapterContent, writeChapterContent } = await import('./projectFileService')
+      vi.mocked(readChapterContent).mockResolvedValue('')
+
+      const result = await migrateFromLocalStorage()
+
+      expect(result).toEqual({
+        success: false,
+        projectId: '',
+        chaptersMigrated: 0,
+        error: 'Validation failed — some chapter files could not be read back',
+      })
+      expect(vi.mocked(writeChapterContent)).toHaveBeenCalledTimes(1)
+      expect(localStorage.getItem('niko.migrated')).toBeNull()
+    })
+
     it('returns failure on error', async () => {
       localStorage.setItem('niko.draft:conv1', '{"text":"hello"}')
 
@@ -139,6 +238,22 @@ describe('migrationService', () => {
       const result = await migrateFromLocalStorage()
       expect(result.success).toBe(false)
       expect(result.error).toBeTruthy()
+    })
+
+    it('stringifies non-Error failures', async () => {
+      localStorage.setItem('niko.draft:conv1', '{"text":"hello"}')
+
+      const { writeProjectMeta } = await import('./projectFileService')
+      vi.mocked(writeProjectMeta).mockRejectedValue('write failed as string')
+
+      const result = await migrateFromLocalStorage()
+
+      expect(result).toEqual({
+        success: false,
+        projectId: '',
+        chaptersMigrated: 0,
+        error: 'write failed as string',
+      })
     })
   })
 })

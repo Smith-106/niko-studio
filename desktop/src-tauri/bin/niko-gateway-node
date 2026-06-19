@@ -68,8 +68,15 @@ function tryLaunchRealGateway() {
   const entryPath = `./${path.relative(realGateway.cwd, realGateway.entry).replace(/\\/g, '/')}`;
 
   const args = [];
+  // Node >= 24 removed --experimental-specifier-resolution=node; use a custom
+  // loader that rewrites extensionless relative imports for ts-node/esm.
   if (Number.isFinite(nodeMajor) && nodeMajor >= 24) {
-    const loaderUrl = pathToFileURL(realGateway.loader).href;
+    const customLoader = path.join(realGateway.cwd, 'gateway-loader.mjs');
+    if (!fs.existsSync(customLoader)) {
+      console.error('[niko-gateway-node] gateway-loader.mjs is required for Node >= 24');
+      return null;
+    }
+    const loaderUrl = pathToFileURL(customLoader).href;
     const importScript =
       "data:text/javascript,import { register } from 'node:module'; import { pathToFileURL } from 'node:url'; register(" +
       JSON.stringify(loaderUrl) +
@@ -79,8 +86,11 @@ function tryLaunchRealGateway() {
     args.push('--loader', pathToFileURL(realGateway.loader).href);
   }
 
+  if (!Number.isFinite(nodeMajor) || nodeMajor < 24) {
+    args.push('--experimental-specifier-resolution=node');
+  }
+
   args.push(
-    '--experimental-specifier-resolution=node',
     entryPath,
     '--host',
     getListenHost(),
@@ -96,6 +106,7 @@ function tryLaunchRealGateway() {
       NIKO_GATEWAY_HOST: getListenHost(),
       NIKO_GATEWAY_PORT: String(getListenPort()),
       NIKO_WORKFLOW_WORKSPACE: process.env.NIKO_WORKFLOW_WORKSPACE || repoRoot,
+      TS_NODE_TRANSPILE_ONLY: 'false',
     },
   });
 

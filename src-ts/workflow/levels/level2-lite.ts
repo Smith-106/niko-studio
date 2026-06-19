@@ -207,7 +207,7 @@ export class Level2Lite {
     const state: BaseState = {
       session_id: crypto.randomUUID(),
     };
-    (state as Record<string, unknown>).plan_id = planDict.planId ?? '';
+    (state as Record<string, unknown>).plan_id = planDict.planId ?? planDict.plan_id ?? '';
     state.user_request = (planDict.objective as string) ?? '';
     state.context = typeof planDict.context === 'string' ? planDict.context : '';
     (state as Record<string, unknown>).steps = planDict.steps ?? [];
@@ -597,10 +597,10 @@ export class Level2Lite {
     step: Record<string, unknown>,
     _state: BaseState,
   ): Record<string, unknown> {
-    const action = (step.action as string) ?? '';
-    const inputs = (step.inputs as Record<string, unknown>) ?? {};
-
     try {
+      const action = (step.action as string) ?? '';
+      const inputs = (step.inputs as Record<string, unknown>) ?? {};
+
       if (action === 'analyze_requirements') {
         return {
           success: true,

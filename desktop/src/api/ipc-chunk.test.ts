@@ -1,4 +1,4 @@
-import { describe, expect, it, afterEach } from 'vitest'
+import { describe, expect, it, afterEach, vi } from 'vitest'
 
 import {
   splitIntoChunks,
@@ -79,6 +79,7 @@ describe('splitIntoChunks', () => {
 
 describe('reassembleChunk', () => {
   afterEach(() => {
+    vi.useRealTimers()
     clearReassemblyState()
   })
 
@@ -142,6 +143,91 @@ describe('reassembleChunk', () => {
     }
     // totalChunks=1 且 chunkIndex=0，应立即完成
     expect(reassembleChunk(newChunk)).toBe('Z')
+  })
+
+  it('cleans stale partial reassemblies on the scheduled timeout', async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const {
+      reassembleChunk: reassembleChunkFresh,
+      clearReassemblyState: clearReassemblyStateFresh,
+    } = await import('./ipc-chunk')
+
+    expect(reassembleChunkFresh({
+      channelId: 'stale-test',
+      chunkIndex: 0,
+      totalChunks: 2,
+      data: 'old-',
+    })).toBeNull()
+
+    // The first cleanup pass lands exactly at the timeout boundary; because
+    // production uses a strict ">" check, the stale state is removed on the
+    // next scheduled pass.
+    vi.advanceTimersByTime(20_000)
+
+    expect(reassembleChunkFresh({
+      channelId: 'stale-test',
+      chunkIndex: 1,
+      totalChunks: 2,
+      data: 'ignored',
+    })).toBeNull()
+    clearReassemblyStateFresh()
+  })
+
+  it('reschedules cleanup while non-expired reassemblies remain pending', async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const {
+      reassembleChunk: reassembleChunkFresh,
+      clearReassemblyState: clearReassemblyStateFresh,
+    } = await import('./ipc-chunk')
+
+    expect(reassembleChunkFresh({
+      channelId: 'fresh-test',
+      chunkIndex: 0,
+      totalChunks: 2,
+      data: 'A',
+    })).toBeNull()
+
+    vi.advanceTimersByTime(5_000)
+    expect(reassembleChunkFresh({
+      channelId: 'fresh-test',
+      chunkIndex: 0,
+      totalChunks: 2,
+      data: 'A',
+    })).toBeNull()
+
+    vi.advanceTimersByTime(10_000)
+    expect(reassembleChunkFresh({
+      channelId: 'fresh-test',
+      chunkIndex: 1,
+      totalChunks: 2,
+      data: 'B',
+    })).toBe('AB')
+    clearReassemblyStateFresh()
+  })
+
+  it('drops corrupt reassembly state when a required chunk index is missing', () => {
+    expect(reassembleChunk({
+      channelId: 'corrupt-test',
+      chunkIndex: 0,
+      totalChunks: 2,
+      data: 'A',
+    })).toBeNull()
+
+    expect(reassembleChunk({
+      channelId: 'corrupt-test',
+      chunkIndex: 2,
+      totalChunks: 2,
+      data: 'C',
+    })).toBeNull()
+
+    expect(reassembleChunk({
+      channelId: 'corrupt-test',
+      chunkIndex: 0,
+      totalChunks: 1,
+      data: 'fresh',
+    })).toBe('fresh')
   })
 })
 

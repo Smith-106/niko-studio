@@ -57,7 +57,7 @@ export class PreferenceTracker {
         accept: entry.accept,
         reject: entry.reject,
         modify: entry.modify,
-        avgValue: entry.total > 0 ? entry.sum / entry.total : 0,
+        avgValue: entry.sum / entry.total,
       };
     }
     return result;

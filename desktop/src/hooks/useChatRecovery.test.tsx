@@ -253,4 +253,30 @@ describe('useChatRecovery', () => {
     expect(result.current.recoverStatus?.type).toBe('error')
     expect(result.current.recoverStatus?.message).toBe('destructive restore requires secondary confirmation')
   })
+
+  it('restoreToCheckpoint falls back to restoreFailed when the response has no error message', async () => {
+    createCheckpointMock.mockResolvedValue({
+      success: true,
+      data: { checkpoint_id: 'cp-1' },
+    })
+    restoreCheckpointMock.mockResolvedValue({
+      success: false,
+    })
+
+    const { result } = renderHook(() =>
+      useChatRecovery({ connectionState: 'connected', t: defaultT }),
+    )
+
+    await act(async () => {
+      await result.current.createBeforeSendCheckpoint('pre-send')
+    })
+
+    await act(async () => {
+      await result.current.restoreToCheckpoint()
+    })
+
+    expect(result.current.recoverableCheckpointId).toBe('cp-1')
+    expect(result.current.recoverStatus?.type).toBe('error')
+    expect(result.current.recoverStatus?.message).toBe('Restore failed')
+  })
 })

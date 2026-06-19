@@ -176,9 +176,7 @@ export function resolveLocalhostOnlyEnabled(): boolean {
   const raw = process.env.NIKO_GATEWAY_LOCALHOST_ONLY;
   if (raw !== undefined) return isTruthyString(raw);
 
-  const rawConfig = getConfigValue('gateway.localhost_only', true);
-  if (typeof rawConfig === 'boolean') return rawConfig;
-  return isTruthyString(String(rawConfig));
+  return getConfigValue('gateway.localhost_only', true);
 }
 
 /**
@@ -215,7 +213,7 @@ export function resolveSearchRouteMode(): string {
   if (raw === undefined) {
     raw = String(getConfigValue('integration.search_route_mode', 'legacy'));
   }
-  const mode = raw !== undefined ? raw.trim().toLowerCase() : 'legacy';
+  const mode = raw.trim().toLowerCase();
   if (mode !== 'legacy' && mode !== 'elastic' && mode !== 'hybrid') return 'legacy';
   return mode;
 }
@@ -259,7 +257,7 @@ export function resolveLangflowFlowName(): string {
   if (raw === undefined) {
     raw = String(getConfigValue('integration.langflow_flow_name', 'niko-search-pilot'));
   }
-  const flowName = raw !== undefined ? raw.trim() : 'niko-search-pilot';
+  const flowName = raw.trim();
   return flowName || 'niko-search-pilot';
 }
 

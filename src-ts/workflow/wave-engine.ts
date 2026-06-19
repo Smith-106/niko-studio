@@ -269,64 +269,96 @@ export class WaveExecutionEngineImpl implements IWaveExecutionEngine {
     taskExecutor: (taskId: string) => Promise<void>,
     abortController: AbortController,
   ): Promise<WaveResult> {
-    let attempt = 0;
+    return this._executeWaveAttempt(wave, taskExecutor, abortController, 0);
+  }
+
+  private async _executeWaveAttempt(
+    wave: WaveSpec,
+    taskExecutor: (taskId: string) => Promise<void>,
+    abortController: AbortController,
+    attempt: number,
+  ): Promise<WaveResult> {
     const maxRetries = this.config.maxRetriesPerWave;
+    if (attempt > maxRetries) {
+      return this._buildRetriesExhaustedResult(wave, maxRetries);
+    }
 
-    while (attempt <= maxRetries) {
-      // Check cancellation before each attempt
-      if (abortController.signal.aborted) {
-        return this._buildSkippedResult(wave);
-      }
+    // Check cancellation before each attempt
+    if (abortController.signal.aborted) {
+      return this._buildSkippedResult(wave);
+    }
 
-      // Check wave timeout
-      const waveTimeoutPromise = this._createWaveTimeout(wave.wave);
+    // Check wave timeout
+    const waveTimeoutPromise = this._createWaveTimeout(wave.wave);
 
-      let taskResults: WaveResult['taskResults'];
-      let waveStatus: WaveResult['status'];
+    let taskResults: WaveResult['taskResults'];
+    let waveStatus: WaveResult['status'];
 
-      try {
-        // Execute wave with timeout
-        const executionPromise = wave.parallel
-          ? this._executeParallelWave(wave, taskExecutor, abortController)
-          : this._executeSequentialWave(wave, taskExecutor, abortController);
+    try {
+      // Execute wave with timeout
+      const executionPromise = wave.parallel
+        ? this._executeParallelWave(wave, taskExecutor, abortController)
+        : this._executeSequentialWave(wave, taskExecutor, abortController);
 
-        // Race between execution and wave timeout
-        taskResults = await Promise.race([executionPromise, waveTimeoutPromise]);
+      // Race between execution and wave timeout
+      taskResults = await Promise.race([executionPromise, waveTimeoutPromise]);
 
-        // Determine wave status from task results
-        waveStatus = this._computeWaveStatus(taskResults);
-      } catch (err) {
-        // Wave timeout or unexpected error
-        _log.error('Wave execution error', {
-          waveNumber: wave.wave,
-          attempt,
-          error: String(err),
-        });
+      // Determine wave status from task results
+      waveStatus = this._computeWaveStatus(taskResults);
+    } catch (err) {
+      // Wave timeout or unexpected error
+      _log.error('Wave execution error', {
+        waveNumber: wave.wave,
+        attempt,
+        error: String(err),
+      });
 
-        if (err instanceof WaveTimeoutError) {
-          return {
-            waveNumber: wave.wave,
-            status: 'timeout',
-            taskResults: err.partialResults,
-            startedAt: 0, // filled by caller
-            completedAt: 0,
-          };
-        }
-
-        // Unexpected error — treat as failed
+      if (err instanceof WaveTimeoutError) {
         return {
           waveNumber: wave.wave,
-          status: 'failed',
-          taskResults: Object.fromEntries(
-            wave.tasks.map(id => [id, { status: 'failed', error: String(err), durationMs: 0 }]),
-          ),
-          startedAt: 0,
+          status: 'timeout',
+          taskResults: err.partialResults,
+          startedAt: 0, // filled by caller
           completedAt: 0,
         };
       }
 
-      // Success or non-retryable strategy
-      if (waveStatus === 'completed') {
+      // Unexpected error — treat as failed
+      return {
+        waveNumber: wave.wave,
+        status: 'failed',
+        taskResults: Object.fromEntries(
+          wave.tasks.map(id => [id, { status: 'failed', error: String(err), durationMs: 0 }]),
+        ),
+        startedAt: 0,
+        completedAt: 0,
+      };
+    }
+
+    // Success or non-retryable strategy
+    if (waveStatus === 'completed') {
+      return {
+        waveNumber: wave.wave,
+        status: waveStatus,
+        taskResults,
+        startedAt: 0,
+        completedAt: 0,
+      };
+    }
+
+    // Handle failure based on strategy
+    switch (this.config.failureStrategy) {
+      case 'abort':
+        return {
+          waveNumber: wave.wave,
+          status: 'failed',
+          taskResults,
+          startedAt: 0,
+          completedAt: 0,
+        };
+
+      case 'skip':
+        // Return partial result, continue to next wave
         return {
           waveNumber: wave.wave,
           status: waveStatus,
@@ -334,127 +366,82 @@ export class WaveExecutionEngineImpl implements IWaveExecutionEngine {
           startedAt: 0,
           completedAt: 0,
         };
+
+      case 'retry-all': {
+        const nextAttempt = attempt + 1;
+        _log.info('Retrying entire wave', {
+          waveNumber: wave.wave,
+          attempt: nextAttempt,
+          maxRetries,
+        });
+        return this._executeWaveAttempt(wave, taskExecutor, abortController, nextAttempt);
       }
 
-      // Handle failure based on strategy
-      switch (this.config.failureStrategy) {
-        case 'abort':
+      case 'retry-failed': {
+        const nextAttempt = attempt + 1;
+        const failedTaskIds = Object.entries(taskResults)
+          .filter(([, r]) => r.status === 'failed')
+          .map(([id]) => id);
+
+        _log.info('Retrying failed tasks in wave', {
+          waveNumber: wave.wave,
+          attempt: nextAttempt,
+          maxRetries,
+          failedTasks: failedTaskIds,
+        });
+
+        if (failedTaskIds.length === 0) {
+          // All tasks actually succeeded — shouldn't reach here but handle gracefully
           return {
             waveNumber: wave.wave,
-            status: 'failed',
+            status: 'completed',
             taskResults,
             startedAt: 0,
             completedAt: 0,
           };
+        }
 
-        case 'skip':
-          // Return partial result, continue to next wave
+        // Retry only failed tasks, keep successful results
+        const retryWave: WaveSpec = {
+          ...wave,
+          tasks: failedTaskIds,
+        };
+
+        const retryResults = await this._executeWaveCore(
+          retryWave,
+          taskExecutor,
+          abortController,
+        );
+
+        // Merge retry results with existing successful results
+        const mergedResults = { ...taskResults };
+        for (const [taskId, taskResult] of Object.entries(retryResults)) {
+          mergedResults[taskId] = taskResult;
+        }
+
+        const mergedStatus = this._computeWaveStatus(mergedResults);
+        if (mergedStatus === 'completed' || nextAttempt >= maxRetries) {
           return {
             waveNumber: wave.wave,
-            status: waveStatus,
-            taskResults,
+            status: mergedStatus,
+            taskResults: mergedResults,
             startedAt: 0,
             completedAt: 0,
           };
+        }
 
-        case 'retry-all':
-          attempt++;
-          _log.info('Retrying entire wave', {
-            waveNumber: wave.wave,
-            attempt,
-            maxRetries,
-          });
-          // All tasks will be re-executed on next loop iteration
-          continue;
-
-        case 'retry-failed':
-          attempt++;
-          _log.info('Retrying failed tasks in wave', {
-            waveNumber: wave.wave,
-            attempt,
-            maxRetries,
-            failedTasks: Object.entries(taskResults)
-              .filter(([, r]) => r.status === 'failed')
-              .map(([id]) => id),
-          });
-
-          // Build a reduced wave spec with only failed tasks
-          const failedTaskIds = Object.entries(taskResults)
-            .filter(([, r]) => r.status === 'failed')
-            .map(([id]) => id);
-
-          if (failedTaskIds.length === 0) {
-            // All tasks actually succeeded — shouldn't reach here but handle gracefully
-            return {
-              waveNumber: wave.wave,
-              status: 'completed',
-              taskResults,
-              startedAt: 0,
-              completedAt: 0,
-            };
-          }
-
-          // Retry only failed tasks, keep successful results
-          const retryWave: WaveSpec = {
-            ...wave,
-            tasks: failedTaskIds,
-          };
-
-          const retryResults = await this._executeWaveCore(
-            retryWave,
-            taskExecutor,
-            abortController,
-          );
-
-          // Merge retry results with existing successful results
-          const mergedResults = { ...taskResults };
-          for (const [taskId, taskResult] of Object.entries(retryResults)) {
-            mergedResults[taskId] = taskResult;
-          }
-
-          const mergedStatus = this._computeWaveStatus(mergedResults);
-          if (mergedStatus === 'completed' || attempt >= maxRetries) {
-            return {
-              waveNumber: wave.wave,
-              status: mergedStatus,
-              taskResults: mergedResults,
-              startedAt: 0,
-              completedAt: 0,
-            };
-          }
-
-          // Update taskResults for next retry iteration
-          taskResults = mergedResults;
-          continue;
-
-        default:
-          return {
-            waveNumber: wave.wave,
-            status: waveStatus,
-            taskResults,
-            startedAt: 0,
-            completedAt: 0,
-          };
+        return this._executeWaveAttempt(wave, taskExecutor, abortController, nextAttempt);
       }
+
+      default:
+        return {
+          waveNumber: wave.wave,
+          status: waveStatus,
+          taskResults,
+          startedAt: 0,
+          completedAt: 0,
+        };
     }
-
-    // Exhausted retries — return last known results
-    _log.warn('Wave retries exhausted', {
-      waveNumber: wave.wave,
-      maxRetries,
-    });
-
-    // We shouldn't reach here normally — the loop returns in all branches.
-    // Fallback: return a failed result
-    return {
-      waveNumber: wave.wave,
-      status: 'failed',
-      taskResults: Object.fromEntries(
-        wave.tasks.map(id => [id, { status: 'failed', error: 'Retries exhausted', durationMs: 0 }]),
-      ),
-      startedAt: 0,
-      completedAt: 0,
-    };
   }
 
   // ─── Internal: core wave execution (no retry wrapper) ──────────────
@@ -625,6 +612,20 @@ export class WaveExecutionEngineImpl implements IWaveExecutionEngine {
       ),
       startedAt: Date.now(),
       completedAt: Date.now(),
+    };
+  }
+
+  private _buildRetriesExhaustedResult(wave: WaveSpec, maxRetries: number): WaveResult {
+    _log.warn('Wave retries exhausted', { waveNumber: wave.wave, maxRetries });
+
+    return {
+      waveNumber: wave.wave,
+      status: 'failed',
+      taskResults: Object.fromEntries(
+        wave.tasks.map(id => [id, { status: 'failed', error: 'Retries exhausted', durationMs: 0 }]),
+      ),
+      startedAt: 0,
+      completedAt: 0,
     };
   }
 

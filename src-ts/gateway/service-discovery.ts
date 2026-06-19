@@ -114,6 +114,7 @@ export class MCPServiceDiscoveryImpl implements IMCPServiceDiscovery {
   async discoverProviders(): Promise<DiscoveredProvider[]> {
     const previousNames = new Set(this.providers.keys());
     const discovered: DiscoveredProvider[] = [];
+    const discoveredNames = new Set<string>();
 
     // Config-based discovery
     const configProviders = await this.discoverFromConfig();
@@ -126,6 +127,7 @@ export class MCPServiceDiscoveryImpl implements IMCPServiceDiscovery {
     // Register new providers and publish events
     for (const provider of discovered) {
       const isNew = !previousNames.has(provider.name);
+      discoveredNames.add(provider.name);
       this.providers.set(provider.name, provider);
 
       if (isNew) {
@@ -137,7 +139,7 @@ export class MCPServiceDiscoveryImpl implements IMCPServiceDiscovery {
 
     // Detect removed providers (only from config source)
     for (const name of previousNames) {
-      if (!this.providers.has(name)) {
+      if (!discoveredNames.has(name)) {
         this.providers.delete(name);
         this.eventBus.publish('mcp:provider-removed', { name });
         _log.info('Provider removed', { name });

@@ -168,6 +168,86 @@ describe('appStore', () => {
       expect(useAppStore.getState().conversationsById[convId].title).toBe(conv.title)
     })
 
+    it('ignores title updates for missing conversations', () => {
+      useAppStore.getState().createConversation()
+      const convId = useAppStore.getState().currentConversationId!
+      const before = useAppStore.getState().conversationsById[convId]
+
+      useAppStore.getState().updateConversationTitle('missing', 'Ignored')
+
+      expect(useAppStore.getState().conversationsById[convId]).toEqual(before)
+      expect(useAppStore.getState().getConversationById('missing')).toBeUndefined()
+    })
+
+    it('ignores addMessage when currentConversationId points to a missing record', () => {
+      useAppStore.setState({
+        currentConversationId: 'ghost',
+        allConversationIds: ['ghost'],
+        conversationsById: {},
+      })
+
+      useAppStore.getState().addMessage('user', 'Orphaned message')
+
+      expect(useAppStore.getState().currentConversationId).toBe('ghost')
+      expect(useAppStore.getState().conversationsById).toEqual({})
+    })
+
+    it('ignores deleteMessage when there is no current conversation', () => {
+      useAppStore.getState().deleteMessage('missing-message')
+
+      expect(useAppStore.getState().currentConversationId).toBeNull()
+      expect(useAppStore.getState().conversationsById).toEqual({})
+    })
+
+    it('ignores deleteMessage when the current conversation record is missing', () => {
+      useAppStore.setState({
+        currentConversationId: 'ghost',
+        allConversationIds: ['ghost'],
+        conversationsById: {},
+      })
+
+      useAppStore.getState().deleteMessage('missing-message')
+
+      expect(useAppStore.getState().conversationsById).toEqual({})
+    })
+
+    it('ignores editMessage when there is no current conversation', () => {
+      useAppStore.getState().editMessage('missing-message', 'Edited')
+
+      expect(useAppStore.getState().currentConversationId).toBeNull()
+      expect(useAppStore.getState().conversationsById).toEqual({})
+    })
+
+    it('ignores editMessage when the current conversation record is missing', () => {
+      useAppStore.setState({
+        currentConversationId: 'ghost',
+        allConversationIds: ['ghost'],
+        conversationsById: {},
+      })
+
+      useAppStore.getState().editMessage('missing-message', 'Edited')
+
+      expect(useAppStore.getState().conversationsById).toEqual({})
+    })
+
+    it('edits only the matching message and leaves other messages untouched', async () => {
+      useAppStore.getState().createConversation()
+      useAppStore.getState().addMessage('user', 'Keep me')
+
+      await new Promise((resolve) => setTimeout(resolve, 2))
+
+      useAppStore.getState().addMessage('assistant', 'Change me')
+
+      const convId = useAppStore.getState().currentConversationId!
+      const [firstMessage, secondMessage] = useAppStore.getState().conversationsById[convId].messages
+
+      useAppStore.getState().editMessage(secondMessage.id, 'Changed')
+
+      const [updatedFirst, updatedSecond] = useAppStore.getState().conversationsById[convId].messages
+      expect(updatedFirst.content).toBe(firstMessage.content)
+      expect(updatedSecond.content).toBe('Changed')
+    })
+
     it('getConversationById returns conversation or undefined', () => {
       useAppStore.getState().createConversation()
       const convId = useAppStore.getState().currentConversationId!
@@ -192,11 +272,13 @@ describe('appStore', () => {
     it('refreshes available skills from API', async () => {
       listSkillsMock.mockResolvedValue({
         success: true,
-        data: [
-          { id: 'skill-a' },
-          { id: 'skill-b' },
-          { id: 'skill-c' },
-        ],
+        data: {
+          skills: [
+            { id: 'skill-a' },
+            { id: 'skill-b' },
+            { id: 'skill-c' },
+          ],
+        },
       })
 
       await useAppStore.getState().refreshAvailableSkills()
@@ -208,13 +290,15 @@ describe('appStore', () => {
     it('filters out invalid skill ids from API response', async () => {
       listSkillsMock.mockResolvedValue({
         success: true,
-        data: [
-          { id: 'valid' },
-          { id: '' },
-          { id: '   ' },
-          { id: null },
-          {},
-        ],
+        data: {
+          skills: [
+            { id: 'valid' },
+            { id: '' },
+            { id: '   ' },
+            { id: null },
+            {},
+          ],
+        },
       })
 
       await useAppStore.getState().refreshAvailableSkills()
@@ -222,11 +306,32 @@ describe('appStore', () => {
       expect(useAppStore.getState().availableSkills).toEqual(['valid'])
     })
 
+    it('keeps fallback skills when every returned skill id is invalid after trimming', async () => {
+      const beforeRefresh = useAppStore.getState().availableSkills
+      listSkillsMock.mockResolvedValue({
+        success: true,
+        data: {
+          skills: [
+            { id: '' },
+            { id: '   ' },
+            { id: null },
+            {},
+          ],
+        },
+      })
+
+      await useAppStore.getState().refreshAvailableSkills()
+
+      expect(useAppStore.getState().availableSkills).toEqual(beforeRefresh)
+    })
+
     it('removes selected skills that are no longer available after refresh', async () => {
       useAppStore.getState().toggleSkill('character-forge')
       listSkillsMock.mockResolvedValue({
         success: true,
-        data: [{ id: 'new-skill' }],
+        data: {
+          skills: [{ id: 'new-skill' }],
+        },
       })
 
       await useAppStore.getState().refreshAvailableSkills()
@@ -241,7 +346,9 @@ describe('appStore', () => {
       })
       listSkillsMock.mockResolvedValue({
         success: true,
-        data: [{ id: 'skill-a' }, { id: 'skill-c' }],
+        data: {
+          skills: [{ id: 'skill-a' }, { id: 'skill-c' }],
+        },
       })
 
       await useAppStore.getState().refreshAvailableSkills()
@@ -251,7 +358,7 @@ describe('appStore', () => {
     })
 
     it('keeps static fallback skills when API returns empty', async () => {
-      listSkillsMock.mockResolvedValue({ success: true, data: [] })
+      listSkillsMock.mockResolvedValue({ success: true, data: { skills: [] } })
 
       await useAppStore.getState().refreshAvailableSkills()
 

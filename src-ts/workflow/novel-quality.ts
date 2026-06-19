@@ -157,13 +157,13 @@ function _normalizeSentence(sentence: string): string {
 }
 
 function _normalizeQualityLevel(level: string): QualityLevel {
-  const lower = (level ?? '').trim().toLowerCase();
+  const lower = String(level).trim().toLowerCase();
   if (lower in LEVEL_DIMENSION_MULTIPLIER) return lower as QualityLevel;
   return 'high';
 }
 
 function _normalizeQualityMode(mode: string): QualityMode {
-  const lower = (mode ?? '').trim().toLowerCase();
+  const lower = String(mode).trim().toLowerCase();
   if (lower === 'auto' || lower === 'manual') return lower;
   return 'auto';
 }
@@ -240,15 +240,6 @@ function _countKeywordHits(text: string, keywords: Set<string>): number {
     }
   }
   return total;
-}
-
-function _countOccurrences(text: string, substr: string): number {
-  let count = 0;
-  let pos = -1;
-  while ((pos = text.indexOf(substr, pos + 1)) !== -1) {
-    count++;
-  }
-  return count;
 }
 
 function _computeMetrics(text: string): InternalMetrics {
@@ -352,7 +343,7 @@ function _applyQualityLevelToScores(
   const multipliers = LEVEL_DIMENSION_MULTIPLIER[qualityLevel];
   const adjusted: Record<string, number> = {};
   for (const [key, value] of Object.entries(scores)) {
-    const factor = multipliers[key] ?? 1.0;
+    const factor = multipliers[key];
     adjusted[key] = Math.round(_clamp(value * factor, 0.0, 100.0) * 10) / 10;
   }
   return adjusted;
@@ -360,7 +351,7 @@ function _applyQualityLevelToScores(
 
 function _extractCriticalIssues(issues: Array<Record<string, string>>): Array<Record<string, string>> {
   return issues.filter(
-    issue => String(issue.severity ?? '').toLowerCase() === 'critical',
+    issue => String(issue.severity).toLowerCase() === 'critical',
   );
 }
 

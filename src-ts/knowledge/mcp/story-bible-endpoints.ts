@@ -194,6 +194,9 @@ export async function sbCreateEntityEndpoint(request: HttpRequest): Promise<Http
   }
 
   try {
+    // Prevent workspace context from leaking into entity data
+    delete body.workspace;
+
     const entity = createEntityFromPartial({
       ...body,
       type: type as SbEntityType,
@@ -235,6 +238,7 @@ export async function sbUpdateEntityEndpoint(request: HttpRequest): Promise<Http
   delete body.novelId;
   delete body.type;
   delete body.createdAt;
+  delete body.workspace;
 
   const updated: StoryBibleEntity = {
     ...existing,
@@ -282,8 +286,7 @@ export async function sbExtractFromManuscriptEndpoint(request: HttpRequest): Pro
     return jsonResponse({ error: 'novelId is required' }, 400);
   }
 
-  // TODO: Implement actual extraction using LLM
-  // For now, return a placeholder result
+  // Extraction from manuscript is not implemented in this release; return a placeholder result.
   const result: ExtractionResult = {
     novelId,
     extracted: [],
@@ -293,7 +296,7 @@ export async function sbExtractFromManuscriptEndpoint(request: HttpRequest): Pro
     timestamp: new Date().toISOString(),
   };
 
-  _log.info('Story Bible extraction requested', { novelId });
+  _log.warn('Story Bible extraction from manuscript is not yet implemented', { novelId });
 
   return jsonResponse(result);
 }

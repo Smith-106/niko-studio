@@ -63,7 +63,7 @@ export class QueryEmbeddingCache {
 
   /** Check if a cache entry has expired. */
   private _isExpired(entry: CacheEntry): boolean {
-    return (Date.now() - entry.created_at) > this.ttl_seconds;
+    return (Date.now() - entry.created_at) > this.ttl_seconds * 1000;
   }
 
   /**
@@ -186,18 +186,19 @@ export class QueryEmbeddingCache {
     }
 
     // Create the computation promise and register it
-    const computePromise = (async () => {
-      try {
-        const maybePromise = compute_fn(query);
-        const embedding = maybePromise instanceof Promise
-          ? await maybePromise
-          : maybePromise;
+    let computePromise: Promise<number[]>;
+    computePromise = Promise.resolve()
+      .then(() => compute_fn(query))
+      .then((embedding) => {
         this.put(query, embedding);
         return embedding;
-      } finally {
-        this._pending.delete(key);
-      }
-    })();
+      })
+      .finally(() => {
+        const currentPending = this._pending.get(key);
+        if (currentPending === computePromise) {
+          this._pending.delete(key);
+        }
+      });
 
     this._pending.set(key, computePromise);
     return computePromise;
@@ -239,7 +240,7 @@ export class QueryEmbeddingCache {
     const now = Date.now();
     const expiredKeys: string[] = [];
     for (const [key, entry] of this._cache.entries()) {
-      if ((now - entry.created_at) > this.ttl_seconds) {
+      if ((now - entry.created_at) > this.ttl_seconds * 1000) {
         expiredKeys.push(key);
       }
     }

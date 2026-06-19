@@ -1,10 +1,11 @@
 import { act } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useDraftCache } from './useDraftCache'
 
 describe('useDraftCache', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     localStorage.clear()
   })
 
@@ -105,6 +106,20 @@ describe('useDraftCache', () => {
       result.current.persist('')
     })
     expect(localStorage.getItem('niko.draft:conv-5')).toBeNull()
+  })
+
+  it('ignores localStorage write failures when persisting text', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('storage full')
+    })
+
+    const { result } = renderHook(() => useDraftCache('conv-storage-full'))
+
+    expect(() => {
+      act(() => {
+        result.current.persist('still safe')
+      })
+    }).not.toThrow()
   })
 
   it('handles corrupted localStorage data gracefully', () => {

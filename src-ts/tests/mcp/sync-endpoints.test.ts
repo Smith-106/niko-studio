@@ -15,9 +15,8 @@ describe('Sync MCP Endpoints', () => {
     const resp = await syncStatusEndpoint({ method: 'GET', url: '', headers: {}, body: {}, query: {}, params: {} } as any);
     expect(resp.statusCode).toBe(200);
     const body = resp.body as any;
-    expect(body.success).toBe(true);
-    expect(body.data).toHaveProperty('lastSyncAt');
-    expect(body.data).toHaveProperty('isConfigured');
+    expect(body).toHaveProperty('lastSyncAt');
+    expect(body).toHaveProperty('isConfigured');
   });
 
   it('push returns 400 without remoteUrl', async () => {

@@ -87,6 +87,122 @@ function createOptions() {
 }
 
 describe('useAppShellViewModel', () => {
+  it('covers sidebar, header, main-content, and chat-sidebar action callbacks', () => {
+    const options = createOptions()
+    options.onReconnectGateway = vi.fn()
+
+    const { result } = renderHook(() => useAppShellViewModel(options))
+
+    act(() => {
+      result.current.sidebarProps.onToggle()
+      result.current.sidebarProps.onOpenKnowledge()
+      result.current.sidebarProps.onOpenEvaluation()
+      result.current.sidebarProps.onOpenForeshadowingTracker()
+      result.current.sidebarProps.onOpenPatternDashboard()
+      result.current.sidebarProps.onOpenSessionAnalytics()
+      result.current.sidebarProps.onOpenAnalysis()
+      result.current.sidebarProps.onOpenEvaluationDrillDown()
+      result.current.sidebarProps.onOpenCharacterRelationships()
+      result.current.sidebarProps.onOpenNarrativeVisualization()
+      result.current.sidebarProps.onOpenMcpStatus()
+
+      result.current.appMainContentProps.headerProps.onAiRewrite()
+      result.current.appMainContentProps.headerProps.onAiDescribe()
+      result.current.appMainContentProps.headerProps.onAiBrainstorm()
+      result.current.appMainContentProps.headerProps.onOpenWritingHelper()
+      result.current.appMainContentProps.headerProps.onOpenTextOptimizer()
+
+      result.current.appMainContentProps.onOpenWritingHelper()
+      result.current.appMainContentProps.onOpenSettings()
+      result.current.appMainContentProps.onOpenCharacterPanel()
+      result.current.appMainContentProps.onOpenTemplateBrowser()
+      result.current.appMainContentProps.onOpenPanel('workflowEditor')
+
+      result.current.chatSidebarProps.onToggleChatSidebar()
+      result.current.chatSidebarProps.chatAreaProps.onToggleKnowledgePanel()
+    })
+
+    expect(options.uiPersistence.setSidebarCollapsed).toHaveBeenCalledWith(true)
+    expect(options.uiPersistence.setChatSidebarCollapsed).toHaveBeenCalledWith(true)
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('knowledge')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('evaluation')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('foreshadowingTracker')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('patternDashboard')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('sessionAnalytics')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('analysis')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('evaluationDrillDown')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('characterRelationships')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('narrativeVisualization')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('mcpStatus')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('textOptimizer')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('templateBrowser')
+    expect(options.panelOrchestration.toggleRightPanel).toHaveBeenCalledWith('workflowEditor')
+    expect(options.panelOrchestration.openSettings).toHaveBeenCalledTimes(1)
+    expect(result.current.appMainContentProps.headerProps.onReconnectGateway).toBe(options.onReconnectGateway)
+
+    expect(options.uiPersistence.setWritingHelperDraft).toHaveBeenNthCalledWith(1, {
+      content: '',
+      mode: 'rewrite',
+      maxSentences: 3,
+      maxItems: 6,
+      guidance: '',
+      handoff: null,
+    })
+    expect(options.uiPersistence.setWritingHelperDraft).toHaveBeenNthCalledWith(2, {
+      content: '',
+      mode: 'expand',
+      maxSentences: 3,
+      maxItems: 6,
+      guidance: '',
+      handoff: null,
+    })
+    expect(options.uiPersistence.setWritingHelperDraft).toHaveBeenNthCalledWith(3, {
+      content: '',
+      mode: 'outline',
+      maxSentences: 3,
+      maxItems: 6,
+      guidance: '',
+      handoff: null,
+    })
+    expect(options.uiPersistence.setWritingHelperDraft).toHaveBeenNthCalledWith(4, {
+      content: '',
+      mode: 'polish',
+      maxSentences: 3,
+      maxItems: 6,
+      guidance: '',
+      handoff: null,
+    })
+    expect(options.uiPersistence.setWritingHelperDraft).toHaveBeenNthCalledWith(5, {
+      content: '',
+      mode: 'polish',
+      maxSentences: 3,
+      maxItems: 6,
+      guidance: '',
+      handoff: null,
+    })
+  })
+
+  it('uses connected fallback, exposes visible context percent, and avoids reopening the active panel', () => {
+    const options = createOptions()
+    options.uiPersistence.activeRightPanel = 'knowledge'
+    options.headerViewModel.headerConnectionState = undefined as never
+    options.headerViewModel.contextUsageVisible = true
+    options.headerViewModel.contextUsageWidthPercent = 42
+    options.headerViewModel.contextUsageText = ''
+
+    const { result } = renderHook(() => useAppShellViewModel(options))
+
+    act(() => {
+      result.current.appMainContentProps.onOpenPanel('knowledge')
+    })
+
+    expect(result.current.appMainContentProps.headerProps.headerConnectionState).toBe('connected')
+    expect(result.current.chatSidebarProps.chatAreaProps.connectionState).toBe('connected')
+    expect(result.current.appMainContentProps.contextEstimatedText).toBe('')
+    expect(result.current.appMainContentProps.contextPercent).toBe(42)
+    expect(options.panelOrchestration.toggleRightPanel).not.toHaveBeenCalled()
+  })
+
   it('wires the header connection state into both the header and chat sidebar props', () => {
     const options = createOptions()
 

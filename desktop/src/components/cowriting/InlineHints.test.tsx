@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { InlineHints } from './InlineHints'
 import type { InlineSuggestion } from './InlineHints'
 
@@ -102,6 +102,7 @@ describe('InlineHints', () => {
   })
 
   it('calls onDismiss when dismiss button is clicked', async () => {
+    vi.useFakeTimers()
     const onAccept = vi.fn()
     const onDismiss = vi.fn()
 
@@ -117,13 +118,34 @@ describe('InlineHints', () => {
     const dismissButtons = screen.getAllByText('忽略')
     fireEvent.click(dismissButtons[1])
 
-    // Wait for animation timeout
-    await new Promise(resolve => setTimeout(resolve, 250))
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
 
     expect(onDismiss).toHaveBeenCalledWith('suggestion-2')
+    vi.useRealTimers()
+  })
+
+  it('applies the dismissed animation class before the parent removes a suggestion', () => {
+    render(
+      <InlineHints
+        suggestions={mockSuggestions}
+        onAccept={vi.fn()}
+        onDismiss={vi.fn()}
+        position={mockPosition}
+      />
+    )
+
+    const dismissButton = screen.getAllByText('忽略')[1]
+    fireEvent.click(dismissButton)
+
+    const suggestionCard = dismissButton?.closest('div[class*="transition-all duration-200"]') as HTMLElement | null
+    expect(suggestionCard?.className).toContain('opacity-0')
+    expect(suggestionCard?.className).toContain('scale-95')
   })
 
   it('dismisses all suggestions when close button is clicked', async () => {
+    vi.useFakeTimers()
     const onAccept = vi.fn()
     const onDismiss = vi.fn()
 
@@ -139,13 +161,15 @@ describe('InlineHints', () => {
     const closeButton = screen.getByLabelText('关闭所有建议')
     fireEvent.click(closeButton)
 
-    // Wait for animation timeout
-    await new Promise(resolve => setTimeout(resolve, 250))
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
 
     expect(onDismiss).toHaveBeenCalledTimes(3)
     expect(onDismiss).toHaveBeenCalledWith('suggestion-1')
     expect(onDismiss).toHaveBeenCalledWith('suggestion-2')
     expect(onDismiss).toHaveBeenCalledWith('suggestion-3')
+    vi.useRealTimers()
   })
 
   it('applies correct confidence colors', () => {

@@ -48,6 +48,14 @@ describe('extractStyleProfile', () => {
     const p2 = extractStyleProfile('Content B.')
     expect(p1.sampleHash).not.toBe(p2.sampleHash)
   })
+
+  it('detects dominant first-person POV when first-person references clearly dominate', () => {
+    const profile = extractStyleProfile(
+      'I keep my notes close. We tell ourselves this is our road. My hands remember every turn.',
+    )
+
+    expect(profile.dominantPOV).toBe('first')
+  })
 })
 
 describe('buildStyleGuidance', () => {
@@ -73,5 +81,18 @@ describe('compareStyleProfiles', () => {
     const result = compareStyleProfiles(p1, p2)
     expect(result.overallSimilarity).toBeLessThan(1)
     expect(result.differences.length).toBeGreaterThan(0)
+  })
+
+  it('clamps similarity using the fallback max scale for unknown metrics', () => {
+    const profile = extractStyleProfile('The cat sat on the mat. It was happy.')
+    const result = compareStyleProfiles(profile, {
+      ...profile,
+      avgSentenceLength: profile.avgSentenceLength + 5,
+      // Force the reducer fallback path for unknown metric keys.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      differences: undefined as any,
+    } as typeof profile)
+
+    expect(result.overallSimilarity).toBeLessThan(1)
   })
 })

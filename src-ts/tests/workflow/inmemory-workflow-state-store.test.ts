@@ -132,6 +132,20 @@ describe('InMemoryWorkflowStateStore', () => {
       const loaded = await store.loadCheckpoint('p1');
       expect(loaded!.step_id).toBe('step2');
     });
+
+    it('falls back to the empty plan id and returns an empty list for missing checkpoint groups', async () => {
+      const checkpoint = {
+        ...makeCheckpoint('ignored', 'step-empty'),
+        plan_id: undefined,
+      } as unknown as Checkpoint;
+
+      await store.saveCheckpoint(checkpoint);
+
+      const loaded = await store.loadCheckpoint('');
+      expect(loaded).not.toBeNull();
+      expect(loaded!.step_id).toBe('step-empty');
+      expect(await store.listCheckpoints('missing-plan')).toEqual([]);
+    });
   });
 
   // ── Close ──

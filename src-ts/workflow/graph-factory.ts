@@ -28,10 +28,10 @@ function buildResumeDecision(
 }
 
 function mergeResumeMetadata(
-  metadata: Record<string, unknown> | null,
+  metadata: Record<string, unknown>,
   resumeDecision: ResumeDecision | null,
 ): Record<string, unknown> {
-  const merged: Record<string, unknown> = { ...(metadata ?? {}) };
+  const merged: Record<string, unknown> = { ...metadata };
   if (resumeDecision) {
     if (!merged['resume_decision']) {
       merged['resume_decision'] = resumeDecision;

@@ -124,12 +124,14 @@ describe('writing-craft browser bridge integration', () => {
       expect.stringMatching(/\/writing-craft\/llm-analyze$/),
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          'X-LLM-API-Key': 'sk-test',
+          'X-LLM-Base-Url': 'https://api.openai.com/v1',
+        }),
         body: JSON.stringify({
           text: '章节正文',
           dimensions: ['dialogue'],
-          api_key: 'sk-test',
-          base_url: 'https://api.openai.com/v1',
           model: 'gpt-4o',
         }),
       }),

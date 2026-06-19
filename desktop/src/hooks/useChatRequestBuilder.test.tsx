@@ -290,6 +290,26 @@ describe('useChatRequestBuilder', () => {
     expect(request.confidence_threshold).toBe(0.9)
   })
 
+  it('omits profile when retrieval profile is empty', () => {
+    const retrieval = makeRetrieval({
+      profile: '',
+    })
+
+    const { result } = renderHook(() =>
+      useChatRequestBuilder({ ...baseHookOptions, retrieval }),
+    )
+
+    const request = result.current.buildChatRequest({
+      userMessage: 'Test',
+      workflowLevel: 'L3',
+      selectedSkills: [],
+      enableModelComparison: false,
+      comparisonModel: '',
+    })
+
+    expect(request.profile).toBeUndefined()
+  })
+
   // -----------------------------------------------------------------------
   // 8. keepRecentMessages: keeps at least 16 recent messages
   // -----------------------------------------------------------------------

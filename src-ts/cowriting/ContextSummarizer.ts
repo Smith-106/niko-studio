@@ -144,7 +144,7 @@ function scoreSentence(
       }
     }
     // Normalize by sentence token estimate to get density
-    const tokens = estimateTokens(sentence) || 1;
+    const tokens = estimateTokens(sentence);
     score += (keywordHits / tokens) * 10;
   }
 
@@ -168,11 +168,6 @@ function scoreSentence(
  * Cuts at the last sentence boundary that fits within the budget.
  */
 function summarizeTruncation(text: string, targetTokens: number): string {
-  const tokens = estimateTokens(text);
-  if (tokens <= targetTokens) {
-    return text;
-  }
-
   // Try to cut at a sentence boundary
   const sentences = splitSentences(text);
   let accumulated = '';
@@ -206,11 +201,6 @@ function summarizeExtractive(
   targetTokens: number,
   keywords: string[],
 ): string {
-  const tokens = estimateTokens(text);
-  if (tokens <= targetTokens) {
-    return text;
-  }
-
   const sentences = splitSentences(text);
   if (sentences.length === 0) {
     return text;
@@ -265,11 +255,6 @@ function summarizeHierarchical(
   targetTokens: number,
   keywords: string[],
 ): string {
-  const tokens = estimateTokens(text);
-  if (tokens <= targetTokens) {
-    return text;
-  }
-
   // Split into chapters — try explicit delimiter first, then paragraphs
   let chapters: string[];
   if (text.includes('\n\n---\n\n')) {

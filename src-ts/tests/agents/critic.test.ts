@@ -196,6 +196,122 @@ describe('CriticAgent', () => {
     expect(agent.shouldHumanReview(output)).toBe(true);
   });
 
+  it('rethrows original llm errors when fallback remains enabled and ignores failing narrative reports', async () => {
+    const llmFailure = new Error('llm exploded');
+    const fallbackAgent = new CriticAgent({
+      llmService: {
+        generateJson: vi.fn().mockRejectedValue(llmFailure),
+      } as never,
+      narrativeCriticEngine: null,
+    });
+
+    await expect(fallbackAgent.review('draft', {}, [], {})).rejects.toBe(llmFailure);
+
+    const reportFailingAgent = new CriticAgent({
+      llmService: {
+        generateJson: vi.fn().mockResolvedValue(createBaseCriticOutput()),
+      } as never,
+      narrativeCriticEngine: {
+        evaluate: vi.fn().mockRejectedValue(new Error('narrative offline')),
+      } as never,
+    });
+
+    const result = await reportFailingAgent.review('draft', {}, [], {});
+    expect(result.narrative_report).toBeUndefined();
+  });
+
+  it('covers approval, human review, and revise decisions plus low-score dimension extraction', async () => {
+    const buildDimensions = (score: number) => [
+      { dimension: 'L_lead', score, weight: 0.08, feedback: 'good', issues: [] },
+      { dimension: 'O_objective', score, weight: 0.08, feedback: 'good', issues: [] },
+      { dimension: 'C_confrontation', score, weight: 0.16, feedback: 'good', issues: [] },
+      { dimension: 'K_knockout', score, weight: 0.08, feedback: 'good', issues: [] },
+      { dimension: 'sensory_balance', score, weight: 0.07, feedback: 'good', issues: [] },
+      { dimension: 'dickensian_style', score, weight: 0.07, feedback: 'good', issues: [] },
+      { dimension: 'dialogue_quality', score, weight: 0.09, feedback: 'good', issues: [] },
+      { dimension: 'character_consistency', score, weight: 0.07, feedback: 'good', issues: [] },
+      { dimension: 'rhythm_control', score, weight: 0.05, feedback: 'good', issues: [] },
+      { dimension: 'plot_logic', score, weight: 0.09, feedback: 'good', issues: [] },
+      { dimension: 'reader_experience', score, weight: 0.09, feedback: 'good', issues: [] },
+      { dimension: 'worldbuilding_consistency', score, weight: 0.07, feedback: 'good', issues: [] },
+    ];
+
+    const approvedAgent = new CriticAgent({
+      llmService: {
+        generateJson: vi.fn().mockResolvedValue(createBaseCriticOutput({
+          total_score: 100,
+          dimension_details: buildDimensions(10),
+          lock_analysis: {
+            L: { score: 8, reasoning: 'ok' },
+            O: { score: 8, reasoning: 'ok' },
+            C: { score: 8, reasoning: 'ok' },
+            K: { score: 8, reasoning: 'ok' },
+          },
+        })),
+      } as never,
+      narrativeCriticEngine: null,
+    });
+    const humanReviewAgent = new CriticAgent({
+      llmService: {
+        generateJson: vi.fn().mockResolvedValue(createBaseCriticOutput({
+          total_score: 98,
+          dimension_details: buildDimensions(9.8),
+        })),
+      } as never,
+      narrativeCriticEngine: null,
+    });
+    const reviseAgent = new CriticAgent({
+      llmService: {
+        generateJson: vi.fn().mockResolvedValue(createBaseCriticOutput({
+          total_score: 80,
+          dimension_details: [
+            ...buildDimensions(8),
+            {
+              dimension: 'dialogue_quality',
+              score: 6.5,
+              weight: 0.09,
+              feedback: 'needs work',
+              issues: [],
+            },
+          ],
+        })),
+      } as never,
+      narrativeCriticEngine: null,
+    });
+
+    await expect(approvedAgent.review('clean draft', {}, [], {})).resolves.toMatchObject({
+      decision: 'APPROVED',
+    });
+    await expect(humanReviewAgent.review('borderline draft', {}, [], {})).resolves.toMatchObject({
+      decision: 'HUMAN_REVIEW',
+    });
+
+    const reviseResult = await reviseAgent.review('needs revision', {}, [], {});
+    expect(reviseResult.decision).toBe('REVISE');
+    expect(reviseAgent.getLowScoreDimensions(reviseResult, 7.0)).toEqual(['dialogue_quality']);
+  });
+
+  it('forces rewrite when LOCK analysis contains a critical failure', async () => {
+    const criticalLockAgent = new CriticAgent({
+      llmService: {
+        generateJson: vi.fn().mockResolvedValue(createBaseCriticOutput({
+          total_score: 100,
+          lock_analysis: {
+            L: { score: 8, reasoning: 'ok' },
+            O: { score: 8, reasoning: 'ok' },
+            C: { score: 2, reasoning: 'critical gap' },
+            K: { score: 8, reasoning: 'ok' },
+          },
+        })),
+      } as never,
+      narrativeCriticEngine: null,
+    });
+
+    await expect(criticalLockAgent.review('clean draft', {}, [], {})).resolves.toMatchObject({
+      decision: 'REWRITE',
+    });
+  });
+
   it('exposes node and chain helpers over the review contract', async () => {
     const llmService = {
       generateJson: vi.fn().mockResolvedValue(createBaseCriticOutput()),

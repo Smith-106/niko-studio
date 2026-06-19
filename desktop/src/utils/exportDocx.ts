@@ -98,6 +98,9 @@ const nodeHandlers: Record<string, NodeHandler> = {
       })
       return new TableRow({ children: cells })
     })
+    if (rows.length === 0) {
+      return []
+    }
     return [new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } })]
   },
   mathInline: (node) => [new Paragraph({ children: [new TextRun(`$${node.attrs?.latex}$`)] })],

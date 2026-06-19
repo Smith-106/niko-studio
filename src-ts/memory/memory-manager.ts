@@ -184,13 +184,7 @@ export class MemoryEntry {
       metadata: Object.keys(this.metadata).length > 0 ? this.metadata : undefined,
     };
 
-    // Remove null/undefined values
-    const cleaned: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(frontmatter)) {
-      if (v !== undefined && v !== null) cleaned[k] = v;
-    }
-
-    const yamlContent = yamlDump(cleaned);
+    const yamlContent = yamlDump(frontmatter);
     return `---\n${yamlContent}\n---\n\n${this.content}`;
   }
 
@@ -486,6 +480,13 @@ export class MemoryManager {
     }
   }
 
+  private _persistEntry(entry: MemoryEntry): void {
+    if (!(entry.id in this._index.memories)) return;
+    const relativePath = this._index.memories[entry.id];
+    const filePath = path.join(this.memoriesDir, relativePath);
+    fs.writeFileSync(filePath, entry.toYamlFrontmatter(), "utf-8");
+  }
+
   /**
    * Get memory by ID.
    */
@@ -617,12 +618,12 @@ export class MemoryManager {
 
     // Update new entry to reference old
     newEntry.supersedes = oldMemoryId;
-    this.update(newEntry.id, undefined, undefined, undefined, undefined, { supersedes: oldMemoryId });
+    this._persistEntry(newEntry);
 
     // Mark old entry as superseded
     oldEntry.supersededBy = newEntry.id;
     oldEntry.validUntil = new Date().toISOString();
-    this.update(oldMemoryId, undefined, undefined, oldEntry.validUntil, undefined, { supersededBy: newEntry.id });
+    this._persistEntry(oldEntry);
 
     _log.info(`Superseded ${oldMemoryId} with ${newEntry.id}`);
     return newEntry;

@@ -281,7 +281,7 @@ export class CrossChapterCharacterTracker {
         if (jointMatch) {
           const a = jointMatch[1];
           const b = jointMatch[2];
-          if (!falsePositives.has(a)) candidates.set(a, (candidates.get(a) ?? 0) + 1);
+          if (!falsePositives.has(a)) candidates.set(a, candidates.get(a)! + 1);
           if (!falsePositives.has(b)) candidates.set(b, (candidates.get(b) ?? 0) + 1);
         }
       }

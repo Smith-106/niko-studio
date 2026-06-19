@@ -134,7 +134,7 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
       return
     }
     const response = await plantForeshadow(description)
-    if (response.success && response.data?.data) {
+    if (response.success && response.data) {
       setForeshadowPlantDesc('')
       onStatusChange({ type: 'success', message: t.knowledgeForeshadowPlanted })
       loadForeshadowStats()
@@ -145,8 +145,8 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
 
   const loadForeshadowStats = async () => {
     const response = await getForeshadowStats()
-    if (response.success && response.data?.data) {
-      setForeshadowStats(response.data.data)
+    if (response.success && response.data) {
+      setForeshadowStats(response.data)
       onStatusChange({ type: 'success', message: t.knowledgeForeshadowStatsLoaded })
     } else {
       onStatusChange({ type: 'error', message: (response.error as string) || t.knowledgeRequestFailed })

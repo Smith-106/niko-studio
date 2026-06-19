@@ -11,6 +11,7 @@ import {
   queryGraph,
   readProjectWikiCanonPageApi,
 } from '../api/client'
+import { readCanonCopy, readNarrativeAuthoringCopy } from './story-bible/storyBiblePanelUtils'
 
 type PersistedEntity = {
   id: string
@@ -80,31 +81,79 @@ function persistWorkspaceItem(payload: Record<string, unknown>) {
   return entity
 }
 
+function parseCypherPropsFromMock(propsText: string): Record<string, unknown> {
+  // Try JSON format first (backward compat), fall back to Cypher prop format
+  try {
+    return JSON.parse(propsText) as Record<string, unknown>
+  } catch {
+    // Parse Cypher property format: {key: 'value', key2: 'value2'}
+    const inner = propsText.slice(1, -1).trim()
+    if (!inner) return {}
+    const result: Record<string, unknown> = {}
+    let remaining = inner
+    while (remaining.length > 0) {
+      remaining = remaining.trimStart()
+      if (!remaining) break
+      const keyMatch = /^(\w+)\s*:\s*/.exec(remaining)
+      if (!keyMatch) break
+      const key = keyMatch[1]
+      remaining = remaining.slice(keyMatch[0].length).trimStart()
+      if (remaining.startsWith("'") || remaining.startsWith('"')) {
+        const quote = remaining[0]!
+        let valueEnd = 1
+        while (valueEnd < remaining.length) {
+          if (remaining[valueEnd] === '\\') { valueEnd += 2; continue }
+          if (remaining[valueEnd] === quote) { valueEnd += 1; break }
+          valueEnd += 1
+        }
+        result[key] = remaining.slice(1, valueEnd - 1)
+        remaining = remaining.slice(valueEnd)
+      } else {
+        const valueMatch = /^([^,}]+)/.exec(remaining)
+        if (valueMatch) {
+          const raw = valueMatch[1]!.trim()
+          if (raw === 'true') result[key] = true
+          else if (raw === 'false') result[key] = false
+          else if (raw === 'null') result[key] = null
+          else result[key] = Number(raw)
+          remaining = remaining.slice(valueMatch[0].length)
+        }
+      }
+      remaining = remaining.trimStart()
+      if (remaining.startsWith(',')) remaining = remaining.slice(1)
+    }
+    return result
+  }
+}
+
 vi.mock('../api/client', () => ({
   queryGraph: vi.fn(async (cypher: string) => {
     if (cypher.startsWith('MERGE (n:Item')) {
-      const setStart = cypher.indexOf(' SET ')
-      const returnStart = cypher.lastIndexOf(' RETURN n')
-      const payload = JSON.parse(cypher.slice(setStart + 5, returnStart)) as Record<string, unknown>
+      const setRegion = cypher.slice(cypher.indexOf(' SET n += '))
+      const braceStart = setRegion.indexOf('{')
+      const braceEnd = setRegion.lastIndexOf('}')
+      const payloadText = setRegion.slice(braceStart, braceEnd + 1)
+      // Use parseCypherProps to handle both old JSON and new Cypher prop formats
+      const payload = parseCypherPropsFromMock(payloadText)
       const persisted = persistWorkspaceItem(payload)
       return { success: true, data: [{ n: persisted }] }
     }
 
-    if (cypher.includes('MATCH (n:Item) WHERE n.itemKind = "narrative-scene"')) {
+    if (cypher.includes('itemKind') && cypher.includes('narrative-scene')) {
       return {
         success: true,
         data: persistedState.scenes.map((scene) => ({ n: scene })),
       }
     }
 
-    if (cypher.includes('MATCH (n:Item) WHERE n.itemKind = "narrative-event"')) {
+    if (cypher.includes('itemKind') && cypher.includes('narrative-event')) {
       return {
         success: true,
         data: persistedState.events.map((event) => ({ n: event })),
       }
     }
 
-    if (cypher.includes('MATCH (n:Item) WHERE n.itemKind = "narrative-timeline"')) {
+    if (cypher.includes('itemKind') && cypher.includes('narrative-timeline')) {
       return {
         success: true,
         data: persistedState.timelines.map((timeline) => ({ n: timeline })),
@@ -141,6 +190,8 @@ vi.mock('../api/client', () => ({
 
 
 const zh = translations.zh
+const canonCopy = readCanonCopy('zh')
+const narrativeCopy = readNarrativeAuthoringCopy('zh')
 
 describe('StoryBiblePanel', () => {
   const originalConsoleError = console.error
@@ -434,6 +485,30 @@ describe('StoryBiblePanel', () => {
     }
   })
 
+  it('rejects empty narrative record titles before trying to persist scene, event, or timeline records', async () => {
+    const user = userEvent.setup()
+
+    render(<StoryBiblePanel />)
+
+    const scenesToggle = await screen.findByRole('button', { name: new RegExp(`${narrativeCopy.scene.sectionTitle} \\(0\\)`) })
+    await user.click(scenesToggle)
+    await user.click(screen.getByRole('button', { name: narrativeCopy.scene.addLabel }))
+    expect(await screen.findByText(narrativeCopy.scene.titlePlaceholder)).toBeInTheDocument()
+    expect(persistedState.scenes).toHaveLength(0)
+
+    const eventsToggle = screen.getByRole('button', { name: new RegExp(`${narrativeCopy.event.sectionTitle} \\(0\\)`) })
+    await user.click(eventsToggle)
+    await user.click(screen.getByRole('button', { name: narrativeCopy.event.addLabel }))
+    expect(await screen.findByText(narrativeCopy.event.titlePlaceholder)).toBeInTheDocument()
+    expect(persistedState.events).toHaveLength(0)
+
+    const timelinesToggle = screen.getByRole('button', { name: new RegExp(`${narrativeCopy.timeline.sectionTitle} \\(0\\)`) })
+    await user.click(timelinesToggle)
+    await user.click(screen.getByRole('button', { name: narrativeCopy.timeline.addLabel }))
+    expect(await screen.findByText(narrativeCopy.timeline.titlePlaceholder)).toBeInTheDocument()
+    expect(persistedState.timelines).toHaveLength(0)
+  })
+
 
 
   it('authors workspace-scoped scene, event, and timeline records and activates them', async () => {
@@ -508,6 +583,19 @@ describe('StoryBiblePanel', () => {
     await user.click(setActiveTimeline)
     await screen.findByText(/当前时间线: timeline-default-project-主线时间/)
   }, 15000)
+
+  it('surfaces an explicit error when canon list refresh fails', async () => {
+    vi.mocked(listProjectWikiCanonPagesApi).mockResolvedValue({
+      success: false,
+      error: 'canon unavailable',
+      data: undefined,
+    })
+
+    render(<StoryBiblePanel />)
+
+    expect(await screen.findByText(canonCopy.reviewLoadFailed)).toBeInTheDocument()
+    expect(readProjectWikiCanonPageApi).not.toHaveBeenCalled()
+  })
 
   it('renders without errors', async () => {
     render(<StoryBiblePanel />)
@@ -611,5 +699,47 @@ describe('StoryBiblePanel', () => {
     expect(document.body).toHaveTextContent('story-bible/default-project-synopsis.md')
     expect(document.body).toHaveTextContent('# Canon')
     expect(document.body).toHaveTextContent('导入概要')
+  })
+
+  it('keeps the canon list visible and reports read failures when a selected canon page cannot load', async () => {
+    const user = userEvent.setup()
+
+    vi.mocked(listProjectWikiCanonPagesApi).mockResolvedValue({
+      success: true,
+      data: {
+        available: true,
+        reason: null,
+        workspace_id: 'default-project',
+        total_pages: 1,
+        pages: [
+          {
+            id: 'canon-1',
+            slug: 'story-bible/default-project-synopsis',
+            title: 'default-project Story Bible Synopsis',
+            status: 'curated',
+            file_path: 'story-bible/default-project-synopsis.md',
+          },
+        ],
+      },
+    })
+    vi.mocked(readProjectWikiCanonPageApi).mockResolvedValue({
+      success: false,
+      error: 'read failed',
+      data: undefined,
+    })
+
+    render(<StoryBiblePanel />)
+
+    await user.click(await screen.findByRole('button', { name: canonCopy.reviewTitle }))
+    const canonPageButton = screen.getByRole('button', {
+      name: /default-project Story Bible Synopsis story-bible\/default-project-synopsis/,
+    })
+    await user.click(canonPageButton)
+
+    expect(await screen.findByText(canonCopy.reviewReadFailed)).toBeInTheDocument()
+    expect(screen.getByRole('button', {
+      name: /default-project Story Bible Synopsis story-bible\/default-project-synopsis/,
+    })).toBeInTheDocument()
+    expect(screen.getByText(canonCopy.reviewSelectHint)).toBeInTheDocument()
   })
 })

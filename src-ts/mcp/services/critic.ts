@@ -47,7 +47,7 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function getEngine(): CriticEngine | null {
+function getEngine(): CriticEngine {
   if (!criticEngineInstance) {
     const engine = new NarrativeCriticEngine();
     criticEngineInstance = {
@@ -57,6 +57,22 @@ function getEngine(): CriticEngine | null {
           quality_goals: qualityGoals ?? {},
         });
         const reportRecord = asRecord(report);
+        const alreadyLegacy =
+          typeof reportRecord.total_score === 'number' ||
+          typeof reportRecord.actionable_feedback === 'string';
+        if (alreadyLegacy) {
+          return reportRecord;
+        }
+
+        const alreadyNarrative =
+          'dimensions' in reportRecord ||
+          'overall_score' in reportRecord ||
+          'recommended_skills' in reportRecord ||
+          'issues' in reportRecord;
+        if (alreadyNarrative) {
+          return reportRecord;
+        }
+
         const moduleScores = asRecord(reportRecord.moduleScores);
         const top3Issues = Array.isArray(reportRecord.top3Issues) ? reportRecord.top3Issues : [];
         const criticalIssues = Array.isArray(reportRecord.criticalIssues) ? reportRecord.criticalIssues : [];
@@ -183,14 +199,22 @@ function normalizeScore(value: unknown): number {
 
 function normalizeEvaluateContentResult(raw: Record<string, unknown>): EvaluateContentResult {
   const totalScore = normalizeScore(raw.total_score);
+  const actionableFeedback = raw.actionable_feedback ?? raw.summary ?? 'Evaluation complete';
+  const suggestions = Array.isArray(raw.suggestions)
+    ? raw.suggestions
+    : Array.isArray(raw.recommendedSkills)
+      ? raw.recommendedSkills
+      : Array.isArray(raw.recommended_skills)
+        ? raw.recommended_skills
+        : [];
   return {
     decision: normalizeDecision(raw.decision, totalScore),
     total_score: totalScore,
     lock_score: normalizeScore(raw.lock_score),
     style_score: normalizeScore(raw.style_score),
     logic_score: normalizeScore(raw.logic_score),
-    actionable_feedback: String(raw.actionable_feedback ?? 'Evaluation complete'),
-    suggestions: Array.isArray(raw.suggestions) ? raw.suggestions : [],
+    actionable_feedback: String(actionableFeedback),
+    suggestions,
   };
 }
 
@@ -201,17 +225,6 @@ export async function evaluateContent(
   qualityGoals?: Record<string, unknown> | null
 ): Promise<EvaluateContentResult> {
   const engine = getEngine();
-  if (!engine) {
-    return {
-      decision: 'REVISE',
-      total_score: 0,
-      lock_score: 0,
-      style_score: 0,
-      logic_score: 0,
-      actionable_feedback: 'Critic engine unavailable',
-      suggestions: [],
-    };
-  }
 
   let raw: Record<string, unknown>;
   if (qualityGoals != null) {
@@ -230,10 +243,7 @@ export async function evaluateContent(
   }
 
   // Legacy format: already has total_score + actionable_feedback
-  if (
-    typeof raw.total_score === 'number' &&
-    typeof raw.actionable_feedback === 'string'
-  ) {
+  if (typeof raw.total_score === 'number') {
     return normalizeEvaluateContentResult(raw);
   }
 
@@ -284,7 +294,6 @@ export async function getImprovementSuggestions(
   maxSuggestions = 5
 ): Promise<unknown[]> {
   const engine = getEngine();
-  if (!engine) return [];
   return engine.suggestImprovements(content, issues, maxSuggestions);
 }
 
@@ -293,6 +302,5 @@ export async function compareVersions(
   versionB: string
 ): Promise<Record<string, unknown>> {
   const engine = getEngine();
-  if (!engine) return { error: 'Critic engine unavailable' };
   return engine.compare(versionA, versionB);
 }

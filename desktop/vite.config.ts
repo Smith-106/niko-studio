@@ -92,6 +92,10 @@ export default defineConfig({
         'src/types/**',
         'src/i18n/**',
         'src/styles/**',
+        'src/components/knowledge/KnowledgeTypes.ts',
+        'src/contracts/runtimePreferences.ts',
+        'src/api/contracts.ts',
+        'src/contracts/backendConfig.ts',
       ],
       thresholds: {
         lines: 75,

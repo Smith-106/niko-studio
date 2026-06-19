@@ -6,7 +6,9 @@ Covers runtime resolution, argument parsing, and the two runtime branches
 
 from __future__ import annotations
 
+import builtins
 import importlib.util
+import runpy
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -140,6 +142,50 @@ class TestBuildParser:
 
 
 # ---------------------------------------------------------------------------
+# _load_dotenv_into
+# ---------------------------------------------------------------------------
+
+
+class TestLoadDotenvInto:
+    def test_noops_when_env_file_is_missing(self, start_gateway, tmp_path) -> None:
+        env = {"KEEP": "original"}
+
+        start_gateway._load_dotenv_into(env, tmp_path)
+
+        assert env == {"KEEP": "original"}
+
+    def test_loads_supported_lines_without_overriding_existing_values(
+        self, start_gateway, tmp_path
+    ) -> None:
+        (tmp_path / ".env").write_text(
+            "\n".join(
+                [
+                    "# ignored comment",
+                    "PLAIN=value",
+                    "QUOTED_DOUBLE=\"quoted value\"",
+                    "QUOTED_SINGLE='single quoted value'",
+                    "SPACED = spaced value ",
+                    "KEEP=from-file",
+                    "INVALID_LINE",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        env = {"KEEP": "original"}
+
+        start_gateway._load_dotenv_into(env, tmp_path)
+
+        assert env == {
+            "KEEP": "original",
+            "PLAIN": "value",
+            "QUOTED_DOUBLE": "quoted value",
+            "QUOTED_SINGLE": "single quoted value",
+            "SPACED": "spaced value",
+        }
+
+
+# ---------------------------------------------------------------------------
 # _run_node_gateway
 # ---------------------------------------------------------------------------
 
@@ -254,6 +300,152 @@ class TestRunLegacyPythonGateway:
         assert "Legacy Python runtime is unavailable" in out
         assert "--runtime python" in out
 
+    def test_returns_1_when_legacy_dependencies_cannot_be_imported(
+        self, start_gateway, tmp_path, monkeypatch, capsys
+    ) -> None:
+        legacy = tmp_path / "gateway.py"
+        legacy.write_text("# stub", encoding="utf-8")
+        monkeypatch.setattr(start_gateway, "LEGACY_PY_GATEWAY", legacy)
+
+        original_import = builtins.__import__
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name in {"uvicorn", "src.config"}:
+                raise ImportError(f"blocked import: {name}")
+            return original_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+
+        rc = start_gateway._run_legacy_python_gateway(_ns())
+
+        assert rc == 1
+        out = capsys.readouterr().out
+        assert "Legacy Python runtime dependency missing" in out
+        assert "--runtime node" in out
+
+    def test_runs_legacy_gateway_with_default_production_config(
+        self, start_gateway, tmp_path, monkeypatch, capsys
+    ) -> None:
+        legacy = tmp_path / "gateway.py"
+        legacy.write_text("# stub", encoding="utf-8")
+        production_config = tmp_path / "config" / "niko-studio.production.yaml"
+        production_config.parent.mkdir(parents=True)
+        production_config.write_text("env: production\n", encoding="utf-8")
+        monkeypatch.setattr(start_gateway, "LEGACY_PY_GATEWAY", legacy)
+        monkeypatch.setattr(start_gateway, "PROJECT_ROOT", tmp_path)
+
+        captured: dict[str, object] = {}
+        uvicorn_module = ModuleType("uvicorn")
+        uvicorn_module.run = lambda *args, **kwargs: captured.setdefault(
+            "uvicorn", (args, kwargs)
+        )
+        src_module = ModuleType("src")
+        src_module.__path__ = []
+        config_module = ModuleType("src.config")
+
+        def init_config(*, config_path=None, hot_reload=None) -> None:
+            captured["init_config"] = (config_path, hot_reload)
+
+        def ensure_environment(*, strict=False) -> None:
+            captured["strict"] = strict
+
+        def get_config_value(key: str, default):
+            values = {
+                "gateway.host": "0.0.0.0",
+                "gateway.port": 9100,
+                "env": "production",
+            }
+            return values.get(key, default)
+
+        config_module.init_config = init_config
+        config_module.ensure_environment = ensure_environment
+        config_module.get_config_value = get_config_value
+        src_module.config = config_module
+        monkeypatch.setitem(sys.modules, "uvicorn", uvicorn_module)
+        monkeypatch.setitem(sys.modules, "src", src_module)
+        monkeypatch.setitem(sys.modules, "src.config", config_module)
+        monkeypatch.delenv("NIKO_CONFIG_PATH", raising=False)
+
+        rc = start_gateway._run_legacy_python_gateway(
+            _ns(reload=True, log_level="warning", env="production")
+        )
+
+        assert rc == 0
+        assert captured["init_config"] == (str(production_config), False)
+        assert captured["strict"] is False
+        args, kwargs = captured["uvicorn"]
+        assert args == ("src.mcp.gateway:app",)
+        assert kwargs == {
+            "host": "0.0.0.0",
+            "port": 9100,
+            "reload": False,
+            "log_level": "warning",
+        }
+        out = capsys.readouterr().out
+        assert "--reload is ignored in production" in out
+        assert "compatibility runtime" in out
+
+    def test_runs_legacy_gateway_with_explicit_overrides_in_development(
+        self, start_gateway, tmp_path, monkeypatch
+    ) -> None:
+        legacy = tmp_path / "gateway.py"
+        legacy.write_text("# stub", encoding="utf-8")
+        monkeypatch.setattr(start_gateway, "LEGACY_PY_GATEWAY", legacy)
+        monkeypatch.setattr(start_gateway, "PROJECT_ROOT", tmp_path)
+
+        captured: dict[str, object] = {}
+        uvicorn_module = ModuleType("uvicorn")
+        uvicorn_module.run = lambda *args, **kwargs: captured.setdefault(
+            "uvicorn", (args, kwargs)
+        )
+        src_module = ModuleType("src")
+        src_module.__path__ = []
+        config_module = ModuleType("src.config")
+
+        def init_config(*, config_path=None, hot_reload=None) -> None:
+            captured["init_config"] = (config_path, hot_reload)
+
+        def ensure_environment(*, strict=False) -> None:
+            captured["strict"] = strict
+
+        def get_config_value(key: str, default):
+            values = {
+                "gateway.host": "127.0.0.9",
+                "gateway.port": 8001,
+                "env": "development",
+            }
+            return values.get(key, default)
+
+        config_module.init_config = init_config
+        config_module.ensure_environment = ensure_environment
+        config_module.get_config_value = get_config_value
+        src_module.config = config_module
+        monkeypatch.setitem(sys.modules, "uvicorn", uvicorn_module)
+        monkeypatch.setitem(sys.modules, "src", src_module)
+        monkeypatch.setitem(sys.modules, "src.config", config_module)
+
+        rc = start_gateway._run_legacy_python_gateway(
+            _ns(
+                host="127.0.0.1",
+                port=8124,
+                reload=True,
+                log_level="debug",
+                config="custom-config.yaml",
+            )
+        )
+
+        assert rc == 0
+        assert captured["init_config"] == ("custom-config.yaml", False)
+        assert captured["strict"] is False
+        args, kwargs = captured["uvicorn"]
+        assert args == ("src.mcp.gateway:app",)
+        assert kwargs == {
+            "host": "127.0.0.1",
+            "port": 8124,
+            "reload": True,
+            "log_level": "debug",
+        }
+
 
 # ---------------------------------------------------------------------------
 # main()
@@ -334,3 +526,20 @@ class TestMain:
         assert "node" in seen
         out = capsys.readouterr().out
         assert "Falling back to node runtime" in out
+
+    def test_module_entrypoint_executes_main_guard(self, monkeypatch) -> None:
+        original_exists = Path.exists
+
+        def fake_exists(path: Path) -> bool:
+            if path.name == "niko-gateway-node":
+                return False
+            return original_exists(path)
+
+        monkeypatch.setattr(Path, "exists", fake_exists)
+        monkeypatch.setattr(sys, "argv", ["start_gateway.py"])
+        monkeypatch.setenv("NIKO_GATEWAY_RUNTIME", "node")
+
+        with pytest.raises(SystemExit) as excinfo:
+            runpy.run_path(str(PROJECT_ROOT / "scripts" / "start_gateway.py"), run_name="__main__")
+
+        assert excinfo.value.code == 2

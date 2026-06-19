@@ -286,7 +286,6 @@ function detectSensoryGap(text: string): {
 } {
   const evidence: string[] = [];
   const lowerText = text.toLowerCase();
-  const textLength = Math.max(text.length, 1);
 
   const counts: Record<string, number> = {};
   for (const [sense, words] of Object.entries(SENSORY_WORDS)) {

@@ -5,6 +5,7 @@ const setConfigAccessMock = vi.hoisted(() => vi.fn());
 const setMcpServiceStateMock = vi.hoisted(() => vi.fn());
 const setUiBridgeEnabledMock = vi.hoisted(() => vi.fn());
 const setLlmAvailabilityProbeMock = vi.hoisted(() => vi.fn());
+const logInfoMock = vi.hoisted(() => vi.fn());
 const buildGatewayDepsMock = vi.hoisted(() => vi.fn(() => ({ deps: true })));
 const buildConfigAccessMock = vi.hoisted(() => vi.fn(() => ({
   getConfig: () => ({}),
@@ -64,6 +65,14 @@ vi.mock('../../container/ServiceContainer', () => ({
 
 vi.mock('../../container/workflow-runtime-provider', () => ({
   setWorkflowEngineRuntimeProvider: vi.fn(),
+}));
+
+vi.mock('../../logger/index.js', () => ({
+  createLogger: () => ({
+    info: logInfoMock,
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
 }));
 
 vi.mock('../../config', () => ({
@@ -132,5 +141,13 @@ describe('gateway-control-plane', () => {
     expect(firstManager.onChange).toHaveBeenCalledTimes(1);
     expect(firstManager.offChange).toHaveBeenCalledTimes(1);
     expect(secondManager.onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes the compatibility shutdown helper', async () => {
+    const { shutdownGatewayControlPlane } = await import('../../container/gateway-control-plane');
+
+    await shutdownGatewayControlPlane();
+
+    expect(logInfoMock).toHaveBeenCalledWith('Control plane shutdown complete');
   });
 });

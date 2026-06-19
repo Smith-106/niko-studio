@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Search, User, MapPin, BookOpen, Sparkles, X } from 'lucide-react'
 import { promoteProjectWikiCanonApi } from '../api/client'
 import { useI18n } from '../i18n'
@@ -268,52 +268,48 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   )
 
   const renderTabContent = () => {
-    switch (activeTab) {
-      case 'characters':
-        return (
-          <CharacterTab
-            items={items}
-            onItemsChange={handleItemsChange}
-            loading={loading}
-            onLoadingChange={handleLoadingChange}
-            onItemClick={handleItemClick}
-            selectedItemId={selectedItemId}
-            selectedItem={selectedItem}
-            searchQuery={searchQuery}
-            onStatusChange={handleStatusChange}
-          />
-        )
-      case 'locations':
-        return (
-          <LocationTab
-            items={items}
-            onItemsChange={handleItemsChange}
-            loading={loading}
-            onLoadingChange={handleLoadingChange}
-            onItemClick={handleItemClick}
-            selectedItemId={selectedItemId}
-            selectedItem={selectedItem}
-            searchQuery={searchQuery}
-            onStatusChange={handleStatusChange}
-          />
-        )
-      case 'plots':
-        return (
-          <PlotTab
-            items={items}
-            onItemsChange={handleItemsChange}
-            loading={loading}
-            onLoadingChange={handleLoadingChange}
-            onItemClick={handleItemClick}
-            selectedItemId={selectedItemId}
-            selectedItem={selectedItem}
-            searchQuery={searchQuery}
-            onStatusChange={handleStatusChange}
-          />
-        )
-      default:
-        return null
+    const tabContent: Record<StoryTabType, ReactNode> = {
+      characters: (
+        <CharacterTab
+          items={items}
+          onItemsChange={handleItemsChange}
+          loading={loading}
+          onLoadingChange={handleLoadingChange}
+          onItemClick={handleItemClick}
+          selectedItemId={selectedItemId}
+          selectedItem={selectedItem}
+          searchQuery={searchQuery}
+          onStatusChange={handleStatusChange}
+        />
+      ),
+      locations: (
+        <LocationTab
+          items={items}
+          onItemsChange={handleItemsChange}
+          loading={loading}
+          onLoadingChange={handleLoadingChange}
+          onItemClick={handleItemClick}
+          selectedItemId={selectedItemId}
+          selectedItem={selectedItem}
+          searchQuery={searchQuery}
+          onStatusChange={handleStatusChange}
+        />
+      ),
+      plots: (
+        <PlotTab
+          items={items}
+          onItemsChange={handleItemsChange}
+          loading={loading}
+          onLoadingChange={handleLoadingChange}
+          onItemClick={handleItemClick}
+          selectedItemId={selectedItemId}
+          selectedItem={selectedItem}
+          searchQuery={searchQuery}
+          onStatusChange={handleStatusChange}
+        />
+      ),
     }
+    return tabContent[activeTab]
   }
 
   const renderSurfaceNotice = () => (

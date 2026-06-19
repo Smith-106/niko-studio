@@ -169,6 +169,17 @@ describe('WorldviewCoherenceValidator', () => {
     expect(validator.getRules()).toHaveLength(0);
   });
 
+  it('returns empty report through async analyze for empty input and no graph adapter', async () => {
+    const validator = new WorldviewCoherenceValidator();
+
+    await expect(validator.loadRulesFromGraph()).resolves.toEqual([]);
+
+    const report = await validator.analyze([], []);
+
+    expect(report.totalConflicts).toBe(0);
+    expect(report.summary).toBe('No chapters provided for analysis.');
+  });
+
   // ---------------------------------------------------------------
   // No conflicts scenario
   // ---------------------------------------------------------------
@@ -274,6 +285,89 @@ describe('WorldviewCoherenceValidator', () => {
 
     // Should have extracted magic references
     expect(profile.magicReferences.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('converts worldview settings into rules and extracts cultural references', () => {
+    const validator = new WorldviewCoherenceValidator({
+      worldviewSettings: [
+        {
+          term: 'Sky Law',
+          nature: 'forbidden',
+          detail: 'No AI;No phones',
+          source: 'Ch.12: Setup',
+        },
+        {
+          term: '',
+          nature: 'ignored',
+          detail: 'ignored',
+          source: 'Ch.1',
+        },
+      ],
+    });
+
+    expect(validator.getRules()).toEqual([
+      expect.objectContaining({
+        id: 'WVE-Sky-Law',
+        category: 'forbidden',
+        constraints: ['No AI', 'No phones'],
+        establishedIn: 12,
+      }),
+    ]);
+
+    const report = validator.quickAnalyze(
+      ['青莲风俗与赤云传统都被写进城志。'],
+      [{ chapterNumber: 1, title: 'Culture' }],
+    );
+
+    expect(report.chapterProfiles[0].culturalReferences.length).toBeGreaterThan(0);
+  });
+
+  it('detects overlapping location names through cross-chapter consistency checks', () => {
+    const validator = new WorldviewCoherenceValidator();
+    const checkCrossChapterConsistency = (
+      validator as unknown as {
+        checkCrossChapterConsistency: (
+          current: {
+            chapterNumber: number;
+            chapterTitle: string;
+            locationsMentioned: string[];
+            characterAbilities: Map<string, string[]>;
+            culturalReferences: string[];
+            technologyReferences: string[];
+            magicReferences: string[];
+            potentialViolations: unknown[];
+          },
+          allProfiles: Array<{
+            chapterNumber: number;
+            chapterTitle: string;
+            locationsMentioned: string[];
+            characterAbilities: Map<string, string[]>;
+            culturalReferences: string[];
+            technologyReferences: string[];
+            magicReferences: string[];
+            potentialViolations: unknown[];
+          }>,
+        ) => Array<{ type: WorldviewConflictType }>;
+      }
+    ).checkCrossChapterConsistency.bind(validator);
+    const profile = {
+      chapterNumber: 1,
+      chapterTitle: 'Location aliases',
+      locationsMentioned: ['StoneGateCity', 'GateCity'],
+      characterAbilities: new Map<string, string[]>(),
+      culturalReferences: [],
+      technologyReferences: [],
+      magicReferences: [],
+      potentialViolations: [],
+    };
+
+    const conflicts = checkCrossChapterConsistency(profile, [profile]);
+
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        type: WorldviewConflictType.NAMING_INCONSISTENCY,
+      }),
+    ]);
   });
 
   // ---------------------------------------------------------------

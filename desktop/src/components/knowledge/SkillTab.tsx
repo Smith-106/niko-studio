@@ -38,9 +38,9 @@ export function SkillTab({
     onLoadingChange(true)
     try {
       const skillsResult = await listSkills()
-      if (skillsResult?.success && Array.isArray(skillsResult.data)) {
+      if (skillsResult?.success && Array.isArray(skillsResult.data?.skills)) {
         onItemsChange(
-          skillsResult.data.map((skill) => ({
+          skillsResult.data.skills.map((skill) => ({
             id: skill.id,
             name: skill.name || skill.id,
             description: '',

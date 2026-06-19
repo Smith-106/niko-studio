@@ -1,12 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EvaluationPanel } from './EvaluationPanel'
 import { type ProjectWorkspaceContext } from '../types/workspace'
 import { useSettingsStore } from '../stores/settingsStore'
 import { translations } from '../i18n'
 
-const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
+const {
+  resetMockAppStore,
+  revisionOrchestratorCtorMock,
+  revisionOrchestratorRunMock,
+  useAppStoreMock,
+} = vi.hoisted(() => {
+  const revisionOrchestratorCtorMock = vi.fn()
+  const revisionOrchestratorRunMock = vi.fn()
+
   const createMockWorkspace = (): ProjectWorkspaceContext => ({
     schemaVersion: '2026-04-08',
     identity: {
@@ -152,12 +160,14 @@ const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
 
   return {
     resetMockAppStore,
+    revisionOrchestratorCtorMock,
+    revisionOrchestratorRunMock,
     useAppStoreMock,
   }
 })
 
 vi.mock('@/types/settingsOwnership', () => ({
-  PERSISTED_SETTINGS_KEYS: [],
+  PERSISTED_SETTINGS_KEYS: ['language'],
 }))
 
 vi.mock('../api/client', () => ({
@@ -175,6 +185,15 @@ vi.mock('../api/client', () => ({
   createPlan: vi.fn(),
   executePlan: vi.fn(),
   workflowLifecycle: vi.fn(),
+}))
+
+vi.mock('../services/revisionOrchestrator', () => ({
+  RevisionOrchestrator: vi.fn().mockImplementation((config) => {
+    revisionOrchestratorCtorMock(config)
+    return {
+      run: (content: string) => revisionOrchestratorRunMock(content, config),
+    }
+  }),
 }))
 
 vi.mock('../stores/appStore', () => ({
@@ -215,6 +234,7 @@ const mockedRouteWorkflow = vi.mocked(routeWorkflow)
 const mockedCreatePlan = vi.mocked(createPlan)
 const mockedExecutePlan = vi.mocked(executePlan)
 const mockedWorkflowLifecycle = vi.mocked(workflowLifecycle)
+const en = translations.en
 const zh = translations.zh
 const evaluationAdvancedControlsLabel = '高级控制'
 const evaluationDetailedReviewLabel = '详细评估'
@@ -333,6 +353,8 @@ describe('EvaluationPanel actions', () => {
     resetMockAppStore()
     useSettingsStore.getState().resetSettings()
     vi.clearAllMocks()
+    revisionOrchestratorRunMock.mockReset()
+    revisionOrchestratorCtorMock.mockClear()
 
     mockedEvaluateContent.mockResolvedValue({
       success: true,
@@ -424,6 +446,105 @@ describe('EvaluationPanel actions', () => {
         expect.any(Object),
       )
       expect(screen.getByRole('button', { name: '当前写作草稿' })).toHaveAttribute('aria-pressed', 'true')
+    })
+  })
+
+  it('falls back to default source copy and Chinese remaining-suggestions hint when source metadata is sparse', async () => {
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: true,
+      data: {
+        decision: 'REVISE',
+        total_score: 72,
+        lock_score: 24,
+        style_score: 24,
+        logic_score: 24,
+        actionable_feedback: '补强冲突推进',
+        suggestions: [
+          { id: 'rec-01', title: '增加冲突', reason: '提升张力', action: 'apply' },
+          { id: 'rec-02', title: '收束视角', reason: '保证一致', action: 'apply' },
+          { id: 'rec-03', title: '补充细节', reason: '增强画面感', action: 'apply' },
+        ],
+      },
+    })
+
+    render(
+      <EvaluationPanel
+        evaluationSources={[
+          {
+            kind: 'currentDraft',
+            label: undefined,
+            content: '  当前草稿正文  ',
+          } as any,
+        ]}
+        onClose={() => {}}
+      />,
+    )
+
+    await screen.findByText(zh.evaluationSuggestions)
+
+    expect(mockedEvaluateContent).toHaveBeenCalledWith(
+      '当前草稿正文',
+      undefined,
+      undefined,
+      expect.any(Object),
+    )
+    expect(screen.getByText('评估来源')).toBeInTheDocument()
+    expect(screen.getByText((text) => text.includes('当前面板会基于这个来源给出评分'))).toBeInTheDocument()
+    expect(screen.getByText((text) => text.includes('还有 1 条建议') && text.includes('详细评估'))).toBeInTheDocument()
+  })
+
+  it('falls back to the remaining source when the selected source disappears', async () => {
+    const user = userEvent.setup()
+    const view = render(
+      <EvaluationPanel
+        evaluationSources={[
+          {
+            kind: 'latestAssistantReply',
+            label: '最近一次助手回复',
+            content: '助手回复',
+          },
+          {
+            kind: 'currentDraft',
+            label: '当前写作草稿',
+            content: '草稿正文',
+          },
+        ]}
+        onClose={() => {}}
+      />,
+    )
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: '当前写作草稿' }))
+
+    await waitFor(() => {
+      expect(mockedEvaluateContent).toHaveBeenCalledWith(
+        '草稿正文',
+        undefined,
+        undefined,
+        expect.any(Object),
+      )
+    })
+
+    view.rerender(
+      <EvaluationPanel
+        evaluationSources={[
+          {
+            kind: 'latestAssistantReply',
+            label: '最近一次助手回复',
+            content: '助手回复',
+          },
+        ]}
+        onClose={() => {}}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockedEvaluateContent).toHaveBeenLastCalledWith(
+        '助手回复',
+        undefined,
+        undefined,
+        expect.any(Object),
+      )
     })
   })
 
@@ -659,6 +780,134 @@ describe('EvaluationPanel actions', () => {
 
     expect(screen.getByRole('button', { name: zh.evaluationConsistencyRun })).toBeDisabled()
   })
+  it('shows consistency errors when the consistency run throws', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    useAppStoreMock.setState({
+      currentWorkspace: createMeaningfulWorkspace(),
+    })
+    const user = userEvent.setup()
+
+    mockedRunConsistencyCheck.mockRejectedValueOnce(new Error('consistency offline'))
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.click(screen.getByRole('button', { name: en.evaluationConsistencyRun }))
+
+    expect(await screen.findByText('consistency offline')).toBeInTheDocument()
+  })
+
+  it('syncs consistency results through the active conversation and uses fallback chapter metadata when needed', async () => {
+    useAppStoreMock.setState({
+      currentConversationId: 'conv-42',
+      currentWorkspace: {
+        ...createMeaningfulWorkspace(),
+        manuscript: {
+          manuscriptId: null,
+          title: null,
+          chapterId: null,
+          chapterTitle: null,
+          chapterNumber: null,
+        },
+        chat: {
+          conversationId: 'conv-42',
+          comparisonEnabled: null,
+        },
+      } as any,
+      conversationsById: {
+        'conv-42': {
+          workspace: {
+            ...createMeaningfulWorkspace(),
+            chat: {
+              conversationId: 'conv-42',
+              comparisonEnabled: null,
+            },
+          },
+        },
+      },
+    })
+    mockedRunConsistencyCheck.mockResolvedValueOnce({
+      success: true,
+      data: {
+        character: {},
+        timeline: {},
+        worldview: {},
+        combined: {
+          totalConflicts: 0,
+          criticalCount: 0,
+          majorCount: 0,
+          minorCount: 0,
+          infoCount: 0,
+          conflicts: [],
+          overallScore: 8.8,
+          summary: 'All clear.',
+        },
+        analyzedAt: '2026-04-25T12:00:00.000Z',
+        runId: 'consistency-fallback',
+        workspace: {
+          ...createMeaningfulWorkspace(),
+          authority: {
+            recordSetId: 'atlas-workspace',
+            activeSceneId: null,
+            activeEventId: null,
+            activeTimelineId: null,
+            consistencyRunId: 'consistency-fallback',
+          },
+          chat: {
+            conversationId: 'conv-42',
+            comparisonEnabled: null,
+          },
+        } satisfies ProjectWorkspaceContext,
+      },
+    })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationConsistencyRun }))
+
+    await waitFor(() => {
+      expect(mockedRunConsistencyCheck).toHaveBeenCalledWith(
+        ['测试内容'],
+        [{ chapterNumber: 1, title: 'Chapter 1' }],
+        undefined,
+        expect.objectContaining({
+          identity: expect.objectContaining({
+            workspaceId: 'atlas-workspace',
+          }),
+        }),
+      )
+      expect(useAppStoreMock.getState().syncConversationWorkspace).toHaveBeenCalledWith(
+        'conv-42',
+        expect.objectContaining({
+          authority: expect.objectContaining({
+            consistencyRunId: 'consistency-fallback',
+          }),
+        }),
+      )
+    })
+  })
+
+  it('shows string-based consistency failures from thrown non-Error values', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    useAppStoreMock.setState({
+      currentWorkspace: createMeaningfulWorkspace(),
+    })
+    const user = userEvent.setup()
+
+    mockedRunConsistencyCheck.mockRejectedValueOnce('consistency string failure')
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.click(screen.getByRole('button', { name: en.evaluationConsistencyRun }))
+
+    expect(await screen.findByText('consistency string failure')).toBeInTheDocument()
+  })
+
   it('shows a classified failure state when the initial evaluation request fails', async () => {
     mockedEvaluateContent.mockResolvedValueOnce({
       success: false,
@@ -855,5 +1104,574 @@ describe('EvaluationPanel actions', () => {
       expect(mockedUndoRecommendation).toHaveBeenCalledTimes(2)
       expect(screen.getByText(zh.evaluationBatchUndoResult.replace('{success}', '2').replace('{failed}', '0'))).toBeInTheDocument()
     })
+  })
+
+  it('renders English approved verdicts with high score styling and remaining suggestions hint', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    const onOpenWritingHelper = vi.fn()
+
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: true,
+      data: {
+        decision: 'APPROVED',
+        total_score: 86,
+        lock_score: 32,
+        style_score: 34,
+        logic_score: 34,
+        actionable_feedback: 'Ready for the next draft pass.',
+        suggestions: [
+          { id: 'style-01', title: 'Polish tone', reason: 'style clarity', action: 'apply' },
+          { id: 'conflict-01', title: 'Raise conflict', reason: 'increase tension', action: 'apply' },
+          { id: 'detail-01', title: 'Add scene details', reason: 'ground the imagery', action: 'apply' },
+        ],
+        module_scores: {
+          pacing: 8.8,
+        },
+      },
+    })
+
+    render(
+      <EvaluationPanel
+        content="The draft already lands cleanly."
+        onClose={() => {}}
+        onOpenWritingHelper={onOpenWritingHelper}
+      />,
+    )
+
+    expect(await screen.findByRole('dialog', { name: en.evaluationTitle })).toBeInTheDocument()
+    expect(screen.getByText('8.6 / 10')).toBeInTheDocument()
+    expect(screen.getByText(en.evaluationPassed)).toBeInTheDocument()
+    expect(screen.getByText('Ready for the next draft pass.')).toBeInTheDocument()
+    expect(screen.getByText('1 more suggestions are available in detailed review.')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Continue to Writing Helper with the original reply' }).length).toBeGreaterThan(0)
+  })
+
+  it('renders rewrite and unknown decision branches without treating them as approved', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: true,
+      data: {
+        decision: 'REWRITE',
+        total_score: 42,
+        lock_score: 12,
+        style_score: 14,
+        logic_score: 16,
+        actionable_feedback: 'The scene needs a full rewrite.',
+        suggestions: [],
+      },
+    })
+
+    const firstRender = render(<EvaluationPanel content="Weak scene draft." onClose={() => {}} />)
+    expect(await screen.findByText(en.evaluationNeedRewrite)).toBeInTheDocument()
+    expect(screen.getByText('4.2 / 10')).toBeInTheDocument()
+    firstRender.unmount()
+
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: true,
+      data: {
+        decision: 'NEEDS_EDITOR',
+        total_score: 55,
+        lock_score: 18,
+        style_score: 19,
+        logic_score: 18,
+        actionable_feedback: 'The evaluator returned a custom state.',
+        suggestions: [],
+      },
+    })
+
+    render(<EvaluationPanel content="Ambiguous evaluator state." onClose={() => {}} />)
+    expect(await screen.findByText(en.evaluationUnknown)).toBeInTheDocument()
+    expect(screen.getByText('5.5 / 10')).toBeInTheDocument()
+  })
+
+  it('runs multi-pass revision and carries revision session metadata into writing-helper handoff', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    useAppStoreMock.setState({
+      currentWorkspace: createMeaningfulWorkspace(),
+    })
+    const user = userEvent.setup()
+    const onOpenWritingHelper = vi.fn()
+
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: true,
+      data: {
+        decision: 'REVISE',
+        total_score: 72,
+        lock_score: 24,
+        style_score: 24,
+        logic_score: 24,
+        actionable_feedback: 'Strengthen the protagonist pressure.',
+        suggestions: [
+          { id: 'rec-english-01', title: 'Raise conflict earlier', reason: 'increase tension', action: 'apply' },
+        ],
+      },
+    })
+    revisionOrchestratorRunMock.mockResolvedValueOnce({
+      initialContent: 'Draft under review.',
+      revisedContent: 'Revised draft.',
+      initialScore: 6.5,
+      finalScore: 8.7,
+      iterations: 2,
+      completed: true,
+      reason: 'target_reached',
+      sessionId: 'checkpoint-42',
+      revisionSession: {
+        id: 'revision-session-42',
+        chapterId: 'chapter-9',
+        state: 'revised',
+        iteration: 2,
+        comparisonSummary: 'Sharper pressure.',
+      },
+    })
+
+    render(
+      <EvaluationPanel
+        content="Draft under review."
+        onClose={() => {}}
+        onOpenWritingHelper={onOpenWritingHelper}
+      />,
+    )
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+
+    const [targetInput, maxIterationsInput] = screen.getAllByRole('spinbutton')
+    fireEvent.change(targetInput, { target: { value: '9.5' } })
+    fireEvent.change(maxIterationsInput, { target: { value: '3' } })
+    await user.click(screen.getByRole('button', { name: 'Run Multi-Pass' }))
+
+    await waitFor(() => {
+      expect(revisionOrchestratorCtorMock).toHaveBeenCalledWith(expect.objectContaining({
+        targetScore: 9.5,
+        maxIterations: 3,
+        workspace: expect.objectContaining({
+          identity: expect.objectContaining({ workspaceId: 'atlas-workspace' }),
+        }),
+      }))
+      expect(revisionOrchestratorRunMock).toHaveBeenCalledWith(
+        'Draft under review.',
+        expect.objectContaining({ targetScore: 9.5, maxIterations: 3 }),
+      )
+    })
+
+    expect(screen.getByText('Iterations: 2')).toBeInTheDocument()
+    expect(screen.getByText((text) => text.includes('Initial Score') && text.includes('6.5') && text.includes('Final Score') && text.includes('8.7'))).toBeInTheDocument()
+    expect(screen.getByText('Reason: target_reached')).toBeInTheDocument()
+    expect(screen.getByText('Session ID: checkpoint-42')).toBeInTheDocument()
+    expect(screen.getByText((text) => text.includes('Session State') && text.includes('revised') && text.includes('Iteration 2'))).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Continue to Writing Helper with the original reply' }))
+    expect(onOpenWritingHelper).toHaveBeenCalledWith(expect.objectContaining({
+      content: 'Draft under review.',
+      handoff: expect.objectContaining({
+        carriedContent: 'original-reply',
+        revisionSession: {
+          id: 'checkpoint-42',
+          chapterId: 'chapter-9',
+          state: 'revised',
+          iteration: 2,
+          comparisonSummary: 'Sharper pressure.',
+        },
+      }),
+    }))
+  })
+
+  it('shows the multi-pass fallback result when the revision orchestrator fails', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    const user = userEvent.setup()
+    revisionOrchestratorRunMock.mockRejectedValueOnce(new Error('offline'))
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.click(screen.getByRole('button', { name: 'Run Multi-Pass' }))
+
+    expect(await screen.findByText('Iterations: 0')).toBeInTheDocument()
+    expect(screen.getByText((text) => text.includes('Initial Score') && text.includes('0.0') && text.includes('Final Score'))).toBeInTheDocument()
+    expect(screen.getByText('Reason: error')).toBeInTheDocument()
+  })
+
+  it('creates, refreshes, and restores checkpoints from the parent support-tools callbacks', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    const user = userEvent.setup()
+
+    mockedListCheckpoints.mockResolvedValue({
+      success: true,
+      data: [
+        { id: 'cp-restore', description: 'Before revision pass', created_at: '2026-06-06T00:00:00.000Z' },
+      ],
+    })
+    mockedCreateCheckpoint.mockResolvedValue({
+      success: true,
+      data: { checkpoint_id: 'cp-new' },
+    })
+    mockedRestoreCheckpoint.mockResolvedValue({
+      success: true,
+      data: { status: 'ok' },
+    })
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.type(screen.getByLabelText(en.evaluationCheckpointPlaceholder), 'Before revision pass')
+    await user.click(screen.getByRole('button', { name: en.save }))
+
+    await waitFor(() => {
+      expect(mockedCreateCheckpoint).toHaveBeenCalledWith(
+        'Before revision pass',
+        undefined,
+        expect.objectContaining({
+          workflow: expect.objectContaining({ level: 'L3' }),
+        }),
+      )
+    })
+    expect(await screen.findByText('Before revision pass')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: en.evaluationRefresh }))
+    await waitFor(() => {
+      expect(mockedListCheckpoints).toHaveBeenCalledTimes(2)
+    })
+
+    await user.click(screen.getByRole('button', { name: en.restore }))
+    await waitFor(() => {
+      expect(mockedRestoreCheckpoint).toHaveBeenCalledWith(
+        'cp-restore',
+        expect.objectContaining({
+          workflow: expect.objectContaining({ level: 'L3' }),
+        }),
+      )
+      expect(useAppStoreMock.getState().addMessage).toHaveBeenCalledWith(
+        'assistant',
+        expect.stringContaining('cp-restore'),
+      )
+    })
+  })
+
+  it('supports workflow confirmation, lifecycle action selection, and writer workflow presets', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    useAppStoreMock.setState({
+      currentWorkspace: createMeaningfulWorkspace(),
+    })
+    const user = userEvent.setup()
+
+    mockedExecutePlan
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'waiting_confirmation',
+          plan_id: 'plan-confirm',
+          step_id: 'step-1',
+          gate: { reason: 'Needs approval' },
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'completed',
+          plan_id: 'plan-confirm',
+          step_id: 'step-2',
+        },
+      })
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.click(screen.getByRole('button', { name: /Find the next writing move/ }))
+    await waitFor(() => {
+      expect(mockedRouteWorkflow).toHaveBeenCalledWith(
+        expect.stringContaining('Choose the best next writing workflow'),
+        'L3',
+        expect.objectContaining({
+          identity: expect.objectContaining({ workspaceId: 'atlas-workspace' }),
+        }),
+      )
+    })
+
+    await user.click(screen.getByRole('button', { name: /Continue the current workflow/ }))
+    await waitFor(() => {
+      expect(mockedCreatePlan).toHaveBeenCalledWith(
+        expect.stringContaining('Continue the workflow'),
+        'L3',
+        undefined,
+        undefined,
+        expect.objectContaining({
+          identity: expect.objectContaining({ workspaceId: 'atlas-workspace' }),
+        }),
+      )
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Advanced controls' }))
+    await user.clear(screen.getByLabelText(en.evaluationWorkflowPlanIdPlaceholder))
+    await user.type(screen.getByLabelText(en.evaluationWorkflowPlanIdPlaceholder), 'plan-confirm')
+    await user.selectOptions(screen.getByLabelText(en.evaluationWorkflowLifecycleActionLabel), 'pause')
+    await user.click(screen.getByRole('button', { name: en.evaluationWorkflowLifecycle }))
+    await waitFor(() => {
+      expect(mockedWorkflowLifecycle).toHaveBeenCalledWith(
+        'plan-confirm',
+        'pause',
+        undefined,
+        expect.objectContaining({
+          identity: expect.objectContaining({ workspaceId: 'atlas-workspace' }),
+        }),
+      )
+    })
+
+    await user.click(screen.getByRole('button', { name: en.evaluationWorkflowExecute }))
+    expect(await screen.findByText(en.evaluationWorkflowWaitingConfirmation)).toBeInTheDocument()
+    expect(screen.getByText(`${en.evaluationWorkflowGateReason}: Needs approval`)).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText(en.evaluationWorkflowConfirmTokenPlaceholder), 'APPROVE')
+    await user.click(screen.getByRole('button', { name: en.evaluationWorkflowConfirmAndContinue }))
+    await waitFor(() => {
+      expect(mockedExecutePlan).toHaveBeenLastCalledWith(
+        'plan-confirm',
+        'step-1',
+        undefined,
+        undefined,
+        'APPROVE',
+        expect.objectContaining({
+          identity: expect.objectContaining({ workspaceId: 'atlas-workspace' }),
+        }),
+      )
+    })
+  })
+
+  it('uses the default workflow scope copy when no meaningful workspace is available', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    useAppStoreMock.setState({
+      currentWorkspace: {
+        ...useAppStoreMock.getState().currentWorkspace,
+        identity: {
+          ...useAppStoreMock.getState().currentWorkspace.identity,
+          projectName: '',
+        },
+      },
+    })
+    const user = userEvent.setup()
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.click(screen.getByRole('button', { name: /Find the next writing move/ }))
+
+    await waitFor(() => {
+      expect(mockedRouteWorkflow).toHaveBeenCalledWith(
+        expect.stringContaining('the current draft'),
+        'L3',
+        expect.objectContaining({
+          identity: expect.objectContaining({ workspaceId: 'default-project' }),
+        }),
+      )
+    })
+  })
+
+  it('continues the current workflow by executing a seeded plan id from the active conversation', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    useAppStoreMock.setState({
+      currentConversationId: 'conv-42',
+      currentWorkspace: {
+        ...createMeaningfulWorkspace(),
+        workflow: {
+          level: 'L3',
+          planId: 'plan-seeded',
+          sessionId: null,
+        },
+      },
+      conversationsById: {
+        'conv-42': {
+          workspace: {
+            ...createMeaningfulWorkspace(),
+            workflow: {
+              level: 'L3',
+              planId: 'plan-seeded',
+              sessionId: 'conv-42',
+            },
+            chat: {
+              conversationId: 'conv-42',
+              comparisonEnabled: null,
+            },
+          },
+        },
+      },
+    })
+    const user = userEvent.setup()
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.click(screen.getByRole('button', { name: /Continue the current workflow/ }))
+
+    await waitFor(() => {
+      expect(mockedExecutePlan).toHaveBeenCalledWith(
+        'plan-seeded',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        expect.objectContaining({
+          workflow: expect.objectContaining({
+            planId: 'plan-seeded',
+            sessionId: 'conv-42',
+          }),
+          chat: expect.objectContaining({
+            conversationId: 'conv-42',
+          }),
+        }),
+      )
+    })
+  })
+
+  it('uses English fallback copy for source title and multi-source hint when metadata is sparse', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+
+    render(
+      <EvaluationPanel
+        evaluationSources={[
+          {
+            kind: 'currentDraft',
+            label: undefined,
+            content: '  Draft body  ',
+          } as any,
+          {
+            kind: 'editorSelection',
+            label: 'Editor selection',
+            content: 'Selected passage',
+          },
+        ]}
+        onClose={() => {}}
+      />,
+    )
+
+    await screen.findByText(en.evaluationSuggestions)
+
+    expect(screen.getByText('Evaluation source')).toBeInTheDocument()
+    expect(screen.getByText((text) => text.includes('Scores, suggestions, and Writing Helper handoff all use the selected source.'))).toBeInTheDocument()
+    expect(mockedEvaluateContent).toHaveBeenCalledWith(
+      'Draft body',
+      undefined,
+      undefined,
+      expect.any(Object),
+    )
+  })
+
+  it('shows the fallback consistency error when the run fails without an explicit error message', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    useAppStoreMock.setState({
+      currentWorkspace: createMeaningfulWorkspace(),
+    })
+    const user = userEvent.setup()
+
+    mockedRunConsistencyCheck.mockResolvedValueOnce({ success: false })
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.click(screen.getByRole('button', { name: en.evaluationConsistencyRun }))
+
+    expect(await screen.findByText(en.evaluationConsistencyFailed)).toBeInTheDocument()
+  })
+
+  it('uses the Chinese current-draft fallback copy in workflow presets when no scope labels exist', async () => {
+    useAppStoreMock.setState({
+      currentWorkspace: {
+        ...useAppStoreMock.getState().currentWorkspace,
+        identity: {
+          ...useAppStoreMock.getState().currentWorkspace.identity,
+          projectName: '',
+        },
+      },
+    })
+    const user = userEvent.setup()
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
+    await user.click(screen.getByRole('button', { name: /制定修订计划/ }))
+
+    await waitFor(() => {
+      expect(mockedCreatePlan).toHaveBeenCalledWith(
+        expect.stringContaining('当前草稿'),
+        'L3',
+        undefined,
+        undefined,
+        expect.any(Object),
+      )
+    })
+  })
+
+  it('uses fallback revision-session fields when multi-pass metadata is partial', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    useAppStoreMock.setState({
+      currentWorkspace: createMeaningfulWorkspace(),
+    })
+    const user = userEvent.setup()
+    const onOpenWritingHelper = vi.fn()
+
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: true,
+      data: {
+        decision: 'REVISE',
+        total_score: 72,
+        lock_score: 24,
+        style_score: 24,
+        logic_score: 24,
+        actionable_feedback: 'Strengthen the protagonist pressure.',
+        suggestions: [
+          { id: 'rec-english-01', title: 'Raise conflict earlier', reason: 'increase tension', action: 'apply' },
+        ],
+      },
+    })
+    revisionOrchestratorRunMock.mockResolvedValueOnce({
+      initialContent: 'Draft under review.',
+      revisedContent: 'Revised draft.',
+      initialScore: 6.5,
+      finalScore: 8.1,
+      iterations: 1,
+      completed: true,
+      reason: 'target_reached',
+      revisionSession: {
+        chapterId: 'chapter-9',
+        state: 'revised',
+        iteration: 1,
+      },
+    })
+
+    render(
+      <EvaluationPanel
+        content="Draft under review."
+        onClose={() => {}}
+        onOpenWritingHelper={onOpenWritingHelper}
+      />,
+    )
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'More tools' }))
+    await user.click(screen.getByRole('button', { name: 'Run Multi-Pass' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Iterations: 1')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Continue to Writing Helper with the original reply' }))
+
+    expect(onOpenWritingHelper).toHaveBeenCalledWith(expect.objectContaining({
+      handoff: expect.objectContaining({
+        revisionSession: {
+          id: 'revision-session',
+          chapterId: 'chapter-9',
+          state: 'revised',
+          iteration: 1,
+          comparisonSummary: null,
+        },
+      }),
+    }))
   })
 })

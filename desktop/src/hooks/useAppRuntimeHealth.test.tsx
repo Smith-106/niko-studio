@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GatewayRuntimeView } from '../api/client'
 
 const mockCheckBackend = vi.fn().mockResolvedValue(undefined)
@@ -181,5 +181,125 @@ describe('useAppRuntimeHealth', () => {
 
     addSpy.mockRestore()
     removeSpy.mockRestore()
+  })
+
+  it('polls backend health on the scheduled interval', async () => {
+    vi.useFakeTimers()
+
+    const { unmount } = renderHook(() =>
+      useAppRuntimeHealth({
+        backendStatus: true,
+        checkBackend: mockCheckBackend,
+      }),
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(1)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(2)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(2)
+
+    unmount()
+    vi.useRealTimers()
+  })
+
+  it('stops polling while the document is hidden and resumes with an immediate refresh when visible again', async () => {
+    vi.useFakeTimers()
+
+    let hidden = false
+    const hiddenGetter = vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden)
+
+    const { unmount } = renderHook(() =>
+      useAppRuntimeHealth({
+        backendStatus: true,
+        checkBackend: mockCheckBackend,
+      }),
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(1)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(1)
+
+    hidden = true
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(1)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(1)
+
+    hidden = false
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      await Promise.resolve()
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(2)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(2)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(3)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(3)
+
+    unmount()
+    hiddenGetter.mockRestore()
+    vi.useRealTimers()
+  })
+
+  it('restarts the existing polling interval when a visibility refresh occurs while already visible', async () => {
+    vi.useFakeTimers()
+
+    const hiddenGetter = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+
+    const { unmount } = renderHook(() =>
+      useAppRuntimeHealth({
+        backendStatus: true,
+        checkBackend: mockCheckBackend,
+      }),
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(1)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      await Promise.resolve()
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(2)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(2)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
+
+    expect(mockCheckBackend).toHaveBeenCalledTimes(3)
+    expect(mockGetGatewayHealth).toHaveBeenCalledTimes(3)
+
+    unmount()
+    hiddenGetter.mockRestore()
+    vi.useRealTimers()
   })
 })

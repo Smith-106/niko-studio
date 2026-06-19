@@ -229,10 +229,6 @@ export function useEditorAI({
         streamError = error instanceof Error ? error.message : String(error)
         logger.error('AI stream error:', error)
       } finally {
-        if (!isCurrentRequest()) {
-          return
-        }
-
         const totalLen = streamer.finish()
         const shouldRestoreRewrite = Boolean(
           recovery?.fallbackText !== undefined &&

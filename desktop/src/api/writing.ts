@@ -59,10 +59,23 @@ export interface LegacyPolishResponse {
 export async function processWritingHelper(
   payload: WritingHelperRequest
 ): Promise<ApiResponse<WritingHelperResponse>> {
+  // Extract api_key from payload to send via header instead of body
+  const apiKey = payload.api_key
+  const { api_key: _removedKey, base_url: _removedBaseUrl, ...bodyPayload } = payload
+
+  const headers: Record<string, string> = {}
+  if (apiKey) {
+    headers['X-LLM-API-Key'] = apiKey
+  }
+  if (payload.base_url) {
+    headers['X-LLM-Base-Url'] = payload.base_url
+  }
+
   return callApi(
     '/writing/helper',
     'POST',
-    appendWorkspacePayload(payload as unknown as Record<string, unknown>, payload.workspace),
+    appendWorkspacePayload(bodyPayload as unknown as Record<string, unknown>, payload.workspace),
+    headers,
   )
 }
 
@@ -263,15 +276,27 @@ export async function streamWritingHelper(
     : getResolvedApiBase()
   const url = `${base}/writing/stream`
 
+  // Extract api_key from payload to send via header instead of body
+  const apiKey = payload.api_key
+  const { api_key: _removedKey, base_url: _removedBaseUrl, ...bodyPayload } = payload
+
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    }
+    if (apiKey) {
+      headers['X-LLM-API-Key'] = apiKey
+    }
+    if (payload.base_url) {
+      headers['X-LLM-Base-Url'] = payload.base_url
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-      },
+      headers,
       body: JSON.stringify(
-        appendWorkspacePayload(payload as unknown as Record<string, unknown>, payload.workspace),
+        appendWorkspacePayload(bodyPayload as unknown as Record<string, unknown>, payload.workspace),
       ),
       signal: options?.signal,
     })

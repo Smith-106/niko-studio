@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ToastContainer } from './ToastContainer'
 import type { ToastItem } from '../hooks/useToast'
@@ -8,6 +8,11 @@ const errorToast: ToastItem = { id: 2, type: 'error', message: 'Something went w
 const infoToast: ToastItem = { id: 3, type: 'info', message: 'Here is some info' }
 
 describe('ToastContainer', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllEnvs()
+  })
+
   it('returns null when toasts array is empty', () => {
     const { container } = render(
       <ToastContainer toasts={[]} onDismiss={vi.fn()} />,
@@ -72,6 +77,29 @@ describe('ToastContainer', () => {
 
     fireEvent.click(screen.getByText('Something went wrong'))
     expect(onDismiss).toHaveBeenCalledWith(2)
+  })
+
+  it('delays dismissal animation outside the test runtime branch', () => {
+    vi.useFakeTimers()
+    vi.stubEnv('NODE_ENV', 'production')
+    const onDismiss = vi.fn()
+
+    render(
+      <ToastContainer
+        toasts={[successToast]}
+        onDismiss={onDismiss}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Operation succeeded'))
+
+    expect(onDismiss).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(249)
+    expect(onDismiss).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(1)
+    expect(onDismiss).toHaveBeenCalledWith(1)
   })
 
   it('shows the correct icon for each toast type', () => {

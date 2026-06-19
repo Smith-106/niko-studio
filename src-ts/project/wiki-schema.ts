@@ -125,7 +125,7 @@ function sanitizeSlugSegment(value: string): string {
 
 function lastSlugSegment(value: string): string {
   const segments = value.split('/');
-  return segments[segments.length - 1] ?? value;
+  return segments[segments.length - 1];
 }
 
 export function normalizeProjectWikiWorkspaceId(value: string): string {
@@ -141,7 +141,7 @@ export function normalizeProjectWikiSlug(value: string): string {
     .map((segment) => sanitizeSlugSegment(segment))
     .filter(Boolean);
 
-  return segments.length ? segments.join('/') : 'untitled';
+  return segments.join('/');
 }
 
 export function projectWikiSlugToFilePath(slug: string): string {
@@ -156,7 +156,7 @@ export function projectWikiProjectionDirectory(kind: ProjectWikiProjectionKind):
 
 export function projectWikiProjectionSnapshotFilename(pageId: string): string {
   const normalizedId = readString(pageId)?.replace(/[\\/]+/g, '-').trim() ?? 'projection';
-  return `${normalizedId || 'projection'}${PROJECT_WIKI_JSON_EXTENSION}`;
+  return `${normalizedId}${PROJECT_WIKI_JSON_EXTENSION}`;
 }
 
 export function projectWikiProjectionFilePath(

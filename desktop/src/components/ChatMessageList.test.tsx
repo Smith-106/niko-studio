@@ -41,10 +41,12 @@ vi.mock('./MessageBubble', () => ({
 
 import { useMessages, useSelectedSkills } from '../stores/selectors'
 import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 const mockedUseMessages = vi.mocked(useMessages)
 const mockedUseSelectedSkills = vi.mocked(useSelectedSkills)
 const mockedUseWriterWorkspaceSummary = vi.mocked(useWriterWorkspaceSummary)
+const mockedUseVirtualizer = vi.mocked(useVirtualizer)
 
 const createMockScrollPos = () => ({
   containerRef: { current: document.createElement('div') },
@@ -80,6 +82,11 @@ const defaultProps = {
 describe('ChatMessageList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockedUseVirtualizer.mockReturnValue({
+      getTotalSize: () => 0,
+      getVirtualItems: () => [],
+      measureElement: vi.fn(),
+    } as any)
     mockedUseMessages.mockReturnValue([])
     mockedUseSelectedSkills.mockReturnValue([])
     mockedUseWriterWorkspaceSummary.mockReturnValue({
@@ -151,5 +158,30 @@ describe('ChatMessageList', () => {
     expect(screen.getByText('专注写作')).toBeInTheDocument()
     expect(screen.getByText('智能诊断')).toBeInTheDocument()
     expect(screen.getByText('对比审阅')).toBeInTheDocument()
+  })
+
+  it('renders virtualized rows and skips rows without a backing message', () => {
+    mockedUseMessages.mockReturnValue(
+      Array.from({ length: 51 }, (_, index) => ({
+        id: `msg-${index}`,
+        role: index % 2 === 0 ? 'user' : 'assistant',
+        content: `Message ${index}`,
+        timestamp: new Date(),
+      })) as any,
+    )
+    const measureElement = vi.fn()
+    mockedUseVirtualizer.mockReturnValue({
+      getTotalSize: () => 640,
+      getVirtualItems: () => [
+        { index: 0, start: 0, size: 80, key: 'msg-0' },
+        { index: 999, start: 80, size: 80, key: 'missing-row' },
+      ],
+      measureElement,
+    } as any)
+
+    const { container } = render(<ChatMessageList {...defaultProps} />)
+
+    expect(screen.getByTestId('message-msg-0')).toBeInTheDocument()
+    expect(container.querySelector('[data-index="999"]')).toBeNull()
   })
 })

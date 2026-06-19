@@ -82,11 +82,15 @@ interface BuildWorkflowResumeMetadataForPlanInput {
   getPlanSessionId: (planId: string) => string;
 }
 
+interface ResolvedWorkflowAuthoritySnapshot extends WorkflowAuthoritySnapshot {
+  sessionId: string;
+}
+
 function resolveAuthoritySnapshot(
   planId: string,
   getPlanAuthority: (planId: string) => WorkflowAuthoritySnapshot | null,
   getPlanSessionId: (planId: string) => string,
-): WorkflowAuthoritySnapshot {
+): ResolvedWorkflowAuthoritySnapshot {
   const authority = getPlanAuthority(planId);
   const sessionId = authority?.sessionId ?? getPlanSessionId(planId);
   return {

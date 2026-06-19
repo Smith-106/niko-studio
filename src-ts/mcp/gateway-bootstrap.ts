@@ -31,7 +31,7 @@ export function resolveGatewayServerStartOptions(
   return { host, port };
 }
 
-function logGatewayStartup(host: string, port: number, wsEnabled: boolean): void {
+function logGatewayStartup(host: string, port: number): void {
   _log.info('NIKO Studio Gateway started', { host, port });
   _log.info('Endpoints available', {
     health: `http://localhost:${port}/health`,
@@ -39,7 +39,7 @@ function logGatewayStartup(host: string, port: number, wsEnabled: boolean): void
     graph: `http://localhost:${port}/graph/query`,
     skills: `http://localhost:${port}/skills/list`,
     workflow: `http://localhost:${port}/workflow/route`,
-    ws: wsEnabled ? `ws://localhost:${port}/ws/events` : 'disabled',
+    ws: `ws://localhost:${port}/ws/events`,
   });
 }
 
@@ -75,7 +75,7 @@ export async function startGatewayServer(
   (wsRelay as unknown as { initialize(server: Server): void }).initialize(server);
 
   await listen(server, host, port);
-  logGatewayStartup(host, port, true);
+  logGatewayStartup(host, port);
 
   // Graceful shutdown: flush WorkflowEngine state, close WebSocket relay, then close HTTP server
   const shutdown = async (signal: string) => {

@@ -45,6 +45,17 @@ describe('versionService', () => {
       expect(result.some((r) => r.type === 'removed')).toBe(true)
       expect(result.some((r) => r.type === 'added')).toBe(true)
     })
+
+    it('uses empty text when snapshots do not include text content', async () => {
+      vi.mocked(fs.getSnapshot)
+        .mockResolvedValueOnce({ id: 'v1' } as never)
+        .mockResolvedValueOnce({ id: 'v2' } as never)
+      vi.mocked(Diff.diffLines).mockReturnValue([])
+
+      await expect(diffSnapshots('p1', 'c1', 'v1', 'v2')).resolves.toEqual([])
+
+      expect(Diff.diffLines).toHaveBeenCalledWith('', '')
+    })
   })
 
   describe('autoSaveSnapshot', () => {

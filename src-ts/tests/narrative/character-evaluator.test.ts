@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { CharacterEvaluator } from '../../narrative/evaluators/character-evaluator';
 
 describe('narrative/evaluators/character-evaluator', () => {
+  it('exposes public metadata getters', () => {
+    const evaluator = new CharacterEvaluator();
+
+    expect(evaluator.name).toContain('人物');
+    expect(evaluator.description).toContain('人物塑造深度');
+    expect(evaluator.relatedSkill).toBe('character-forge');
+  });
+
   it('quickScan returns character-depth metrics and lightweight issue signals', () => {
     const evaluator = new CharacterEvaluator();
 

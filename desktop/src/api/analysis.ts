@@ -33,12 +33,12 @@ export interface SessionCluster {
 
 export async function detectPatterns(
   category?: string,
-): Promise<ApiResponse<{ success: boolean; data: DetectedPattern[] }>> {
+): Promise<ApiResponse<DetectedPattern[]>> {
   return callApi('/analysis/patterns', 'POST', { category })
 }
 
 export async function clusterSessions(
   sessions: Array<{ id: string; type: string; [key: string]: unknown }>,
-): Promise<ApiResponse<{ success: boolean; data: SessionCluster[] }>> {
+): Promise<ApiResponse<SessionCluster[]>> {
   return callApi('/analysis/sessions', 'POST', { sessions })
 }

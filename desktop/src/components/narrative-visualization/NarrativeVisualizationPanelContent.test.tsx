@@ -131,8 +131,33 @@ const sampleBundle: NarrativeVisualizationBundle = {
   },
 }
 
+function mockAppState(overrides: Record<string, unknown> = {}) {
+  const state = {
+    currentProjectId: 'project-1',
+    currentWorkspace: {
+      identity: {
+        workspaceId: 'workspace-1',
+        projectId: 'project-1',
+        projectName: 'Atlas',
+        workspaceRoot: '/tmp/atlas',
+      },
+    },
+    getChaptersForProject: () => [
+      { id: 'chapter-1', title: 'Opening' },
+      { id: 'chapter-2', title: 'Fallout' },
+    ],
+    ...overrides,
+  }
+
+  useAppStoreMock.mockImplementation((selector?: (state: Record<string, unknown>) => unknown) => {
+    return selector ? selector(state) : state
+  })
+}
+
 describe('NarrativeVisualizationPanelContent', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
+    mockAppState()
     vi.mocked(readChapterContent).mockResolvedValue('chapter text')
     vi.mocked(getNarrativeVisualization).mockResolvedValue({
       success: true,
@@ -197,5 +222,45 @@ describe('NarrativeVisualizationPanelContent', () => {
     })
 
     expect(await screen.findByText('Timeline summary')).toBeInTheDocument()
+  })
+
+  it('does not auto-load when no project is selected', () => {
+    mockAppState({ currentProjectId: null })
+    render(<NarrativeVisualizationPanel />)
+
+    expect(screen.getByText('No timeline data available.')).toBeInTheDocument()
+    expect(getNarrativeVisualization).not.toHaveBeenCalled()
+  })
+
+  it('does not auto-load when the selected project has no chapters', () => {
+    mockAppState({ getChaptersForProject: () => [] })
+    render(<NarrativeVisualizationPanel />)
+
+    expect(screen.getByText('No timeline data available.')).toBeInTheDocument()
+    expect(getNarrativeVisualization).not.toHaveBeenCalled()
+  })
+
+  it('shows remote loading errors and invokes the close handler', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    vi.mocked(getNarrativeVisualization).mockResolvedValueOnce({
+      success: false,
+      error: 'remote visualization failed',
+    })
+
+    render(<NarrativeVisualizationPanel onClose={onClose} />)
+
+    expect(await screen.findByText('remote visualization failed')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the default visualization error when chapter reading fails', async () => {
+    vi.mocked(readChapterContent).mockRejectedValueOnce(new Error('read failed'))
+
+    render(<NarrativeVisualizationPanel />)
+
+    expect(await screen.findByText('Failed to load narrative visualization.')).toBeInTheDocument()
+    expect(getNarrativeVisualization).not.toHaveBeenCalled()
   })
 })

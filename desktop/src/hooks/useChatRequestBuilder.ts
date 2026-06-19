@@ -28,7 +28,7 @@ interface BudgetResult {
 
 // 旧消息截断：距离末尾超过阈值的消息，内容截断到 TRUNCATED_CONTENT_CHARS 字符
 // 服务端仍持有完整历史，截断仅减少网络传输量
-const truncateOldMessages = (messages: ChatMessage[]): ChatMessage[] => {
+export const truncateOldMessages = (messages: ChatMessage[]): ChatMessage[] => {
   if (messages.length <= TRUNCATION_THRESHOLD) return messages
 
   return messages.map((msg, i) => {
@@ -40,7 +40,7 @@ const truncateOldMessages = (messages: ChatMessage[]): ChatMessage[] => {
   })
 }
 
-const clipMessageContent = (content: string, maxChars: number): { content: string; clipped: boolean } => {
+export const clipMessageContent = (content: string, maxChars: number): { content: string; clipped: boolean } => {
   if (content.length <= maxChars) return { content, clipped: false }
 
   const headChars = Math.max(0, Math.floor(maxChars * 0.7))
@@ -55,7 +55,7 @@ const clipMessageContent = (content: string, maxChars: number): { content: strin
   }
 }
 
-const applyHistoryBudget = (
+export const applyHistoryBudget = (
   baseMessages: ChatMessage[],
   nextUserMessage: ChatMessage,
   config?: {

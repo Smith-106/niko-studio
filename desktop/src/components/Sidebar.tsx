@@ -176,10 +176,8 @@ export const Sidebar = React.memo(function Sidebar({
   }
 
   const handleMouseEnterPopover = () => {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current)
-      closeTimeoutRef.current = null
-    }
+    closeTimeoutRef.current && clearTimeout(closeTimeoutRef.current)
+    closeTimeoutRef.current = null
   }
 
   const handleMouseLeavePopover = () => {

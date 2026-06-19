@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ErrorBoundary } from './ErrorBoundary'
+import { translations } from '../i18n/translations'
 import { useSettingsStore } from '../stores/settingsStore'
+
+const captureExceptionMock = vi.hoisted(() => vi.fn())
+
+vi.mock('../sentry', () => ({
+  captureException: (...args: unknown[]) => captureExceptionMock(...args),
+}))
 
 vi.mock('../stores/settingsStore', () => ({
   useSettingsStore: {
@@ -40,6 +47,8 @@ describe('ErrorBoundary', () => {
 
   beforeEach(() => {
     console.error = vi.fn()
+    vi.unstubAllEnvs()
+    captureExceptionMock.mockReset()
     vi.mocked(useSettingsStore).getState = () => ({
       settings: { language: 'zh' },
     }) as ReturnType<typeof useSettingsStore.getState>
@@ -47,6 +56,7 @@ describe('ErrorBoundary', () => {
 
   afterEach(() => {
     console.error = originalConsoleError
+    vi.unstubAllEnvs()
   })
 
   it('renders children when no error occurs', () => {
@@ -149,6 +159,21 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Reload Page')).toBeInTheDocument()
   })
 
+  it('falls back to zh translations when language is empty', () => {
+    vi.mocked(useSettingsStore).getState = () => ({
+      settings: { language: '' },
+    }) as unknown as ReturnType<typeof useSettingsStore.getState>
+
+    render(
+      <ErrorBoundary>
+        <ThrowingChild shouldThrow={true} />
+      </ErrorBoundary>,
+    )
+
+    expect(screen.getByText(translations.zh.errorBoundaryTitle)).toBeInTheDocument()
+    expect(screen.getByText(translations.zh.errorBoundaryTryAgain)).toBeInTheDocument()
+  })
+
   it('displays default description when error has no message', () => {
     function NoMessageChild(): never {
       throw new Error('')
@@ -170,5 +195,28 @@ describe('ErrorBoundary', () => {
     )
     const buttons = screen.getAllByRole('button')
     expect(buttons).toHaveLength(2)
+  })
+
+  it('captures caught errors through sentry when a DSN is configured', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://examplePublicKey@o0.ingest.sentry.io/1')
+
+    render(
+      <ErrorBoundary>
+        <ThrowingChild shouldThrow={true} />
+      </ErrorBoundary>,
+    )
+
+    await waitFor(() => {
+      expect(captureExceptionMock).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          contexts: expect.objectContaining({
+            react: expect.objectContaining({
+              componentStack: expect.any(String),
+            }),
+          }),
+        }),
+      )
+    })
   })
 })

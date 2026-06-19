@@ -94,6 +94,23 @@ describe('PromptTemplatePanel', () => {
     expect(screen.getByRole('button', { name: zh.templateFavoriteOnlyOn })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('filters out non-favorite templates when favorite-only mode is enabled', async () => {
+    render(
+      <PromptTemplatePanel
+        templates={baseTemplates}
+        variablePresets={{}}
+        onToggleFavorite={() => {}}
+        onApplyTemplate={() => {}}
+        onClose={() => {}}
+      />
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: zh.templateFavoriteOnlyOff }))
+
+    expect(screen.queryByText('故事脑暴')).not.toBeInTheDocument()
+    expect(screen.getAllByText('章节大纲').length).toBeGreaterThan(0)
+  })
+
   it('uses separate row select and favorite buttons for template cards', async () => {
     const onToggleFavorite = vi.fn()
 
@@ -264,6 +281,25 @@ describe('PromptTemplatePanel', () => {
     fireEvent.click(scrim)
 
     expect(onClose).toHaveBeenCalledWith('backdrop')
+  })
+
+  it('renders no-match and empty-detail states when search returns zero templates', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <PromptTemplatePanel
+        templates={baseTemplates}
+        variablePresets={{}}
+        onToggleFavorite={() => {}}
+        onApplyTemplate={() => {}}
+        onClose={() => {}}
+      />
+    )
+
+    await user.type(screen.getByRole('textbox', { name: zh.templateSearchPlaceholder }), 'not-found-template')
+
+    expect(screen.getByText(zh.templateNoMatch)).toBeInTheDocument()
+    expect(screen.getByText(zh.templateEmptyList)).toBeInTheDocument()
   })
 })
 

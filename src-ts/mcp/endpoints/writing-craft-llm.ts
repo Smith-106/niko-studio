@@ -42,10 +42,22 @@ interface ProviderConfig {
   model: string;
 }
 
-function resolveProviderConfig(body: Record<string, unknown>): ProviderConfig | null {
-  const apiKey = body.api_key as string | undefined;
-  const baseUrl = body.base_url as string | undefined;
-  const model = body.model as string | undefined;
+function resolveProviderConfig(
+  body: Record<string, unknown>,
+  headers?: Record<string, string>,
+): ProviderConfig | null {
+  // Prefer header-based API key transmission over body field
+  const apiKey =
+    headers?.['x-llm-api-key']?.trim()
+    ?? headers?.['X-LLM-API-Key']?.trim()
+    ?? (body.api_key as string | undefined)?.trim()
+    ?? undefined;
+  const baseUrl =
+    headers?.['x-llm-base-url']?.trim()
+    ?? headers?.['X-LLM-Base-Url']?.trim()
+    ?? (body.base_url as string | undefined)?.trim()
+    ?? undefined;
+  const model = (body.model as string | undefined)?.trim() ?? undefined;
 
   if (!apiKey || !baseUrl || !model) return null;
 
@@ -116,7 +128,7 @@ export async function writingCraftLLMEndpoint(
     return jsonResponse({ success: false, error: 'text is required' }, 400);
   }
 
-  const config = resolveProviderConfig(body as Record<string, unknown>);
+  const config = resolveProviderConfig(body as Record<string, unknown>, request.headers);
   if (!config) {
     return jsonResponse({ success: false, error: 'LLM config (api_key, base_url, model) is required' }, 400);
   }

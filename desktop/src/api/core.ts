@@ -109,7 +109,8 @@ export function clearApiCache(): void {
 export async function callApi<T, E = unknown>(
   endpoint: string,
   method: GatewayRequestMethod = 'GET',
-  body?: Record<string, unknown>
+  body?: Record<string, unknown>,
+  extraHeaders?: Record<string, string>,
 ): Promise<ApiResponse<T, E>> {
   // 对 GET 请求检查 LRU 缓存，避免重复 IPC 开销
   if (method === 'GET') {
@@ -140,7 +141,7 @@ export async function callApi<T, E = unknown>(
     } else {
       const options: RequestInit = {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...extraHeaders },
       }
       if (body && method !== 'GET') {
         options.body = JSON.stringify(body)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import {
@@ -292,6 +292,24 @@ describe('AutomationPanel reliability regressions', () => {
     })
   })
 
+  it('refreshes the scheduler list from the top-level refresh button', async () => {
+    const user = userEvent.setup()
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+    expect(mockedWorkflowSchedulerList).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: 'Refresh' }))
+
+    await waitFor(() => {
+      expect(mockedWorkflowSchedulerList).toHaveBeenCalledTimes(2)
+      expect(mockedWorkflowSchedulerList).toHaveBeenLastCalledWith(50, undefined, workspaceAuthority)
+    })
+  })
+
   it('handles waiting-confirmation transition and confirm-token recovery', async () => {
     const user = userEvent.setup()
 
@@ -355,6 +373,62 @@ describe('AutomationPanel reliability regressions', () => {
     })
   })
 
+  it('falls back to execute.status when the run-now payload omits the top-level status', async () => {
+    const user = userEvent.setup()
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockedWorkflowSchedulerRunNow.mockResolvedValueOnce({
+      success: true,
+      data: {
+        trigger: 'manual_run_now',
+        run_id: 'run-fallback',
+        plan_id: 'plan-1',
+        task: buildTask(),
+        execute: buildExecuteResponse('waiting_confirmation', 'Need explicit approval'),
+      },
+    } as Awaited<ReturnType<typeof workflowSchedulerRunNow>>)
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Run now / Retry' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Task is waiting for confirmation.')).toBeInTheDocument()
+      expect(screen.getByText('Need explicit approval')).toBeInTheDocument()
+      expect(screen.getByText('waiting_confirmation')).toBeInTheDocument()
+    })
+  })
+
+  it('treats non-object execute payloads as completed when top-level status is present', async () => {
+    const user = userEvent.setup()
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockedWorkflowSchedulerRunNow.mockResolvedValueOnce({
+      success: true,
+      data: {
+        status: 'completed',
+        trigger: 'manual_run_now',
+        run_id: 'run-top-level-status',
+        plan_id: 'plan-1',
+        task: buildTask(),
+        execute: 'invalid-execute-record',
+      },
+    } as Awaited<ReturnType<typeof workflowSchedulerRunNow>>)
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Run now / Retry' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Task execution triggered.')).toBeInTheDocument()
+      expect(screen.getByText('completed')).toBeInTheDocument()
+    })
+  })
+
   it('imports lite-plan tasks with L5 policy and refreshes scheduler list', async () => {
     const user = userEvent.setup()
 
@@ -375,6 +449,471 @@ describe('AutomationPanel reliability regressions', () => {
       expect(mockedWorkflowSchedulerList).toHaveBeenCalledTimes(2)
       expect(mockedWorkflowSchedulerList).toHaveBeenLastCalledWith(50, undefined, workspaceAuthority)
     })
+  })
+
+  it('includes failed-count and session details in the english import success message', async () => {
+    const user = userEvent.setup()
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockedWorkflowSchedulerImportLitePlan.mockResolvedValueOnce({
+      success: true,
+      data: {
+        session_id: 'sess-failed',
+        imported: 2,
+        registered: 2,
+        updated: 0,
+        failed: 1,
+        total_tasks: 3,
+        force_level: 'L5',
+        tasks: [buildTask()],
+        failures: [{ task_id: 'task-2' }],
+      },
+    } as Awaited<ReturnType<typeof workflowSchedulerImportLitePlan>>)
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Import plan' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Imported 2 task(s), 1 failed (session: sess-failed).')).toBeInTheDocument()
+    })
+  })
+
+  it('rejects and pauses the active plan from the manual intervention actions', async () => {
+    const user = userEvent.setup()
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockedWorkflowLifecycle.mockResolvedValueOnce({
+      success: true,
+      data: buildLifecycleResponse('pause'),
+    })
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Reject & Pause plan' }))
+
+    await waitFor(() => {
+      expect(mockedWorkflowLifecycle).toHaveBeenCalledWith('plan-1', 'pause', undefined, workspaceAuthority)
+      expect(screen.getByText('Plan paused.')).toBeInTheDocument()
+    })
+  })
+
+
+  it('shows loading progress followed by the empty queue state', async () => {
+    let resolveList: ((value: { success: boolean; data: { total: number; tasks: WorkflowSchedulerTaskRecord[] } }) => void) | null = null
+
+    mockedWorkflowSchedulerList.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveList = resolve
+      }) as ReturnType<typeof workflowSchedulerList>,
+    )
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(screen.getByText('加载中...')).toBeInTheDocument()
+
+    await act(async () => {
+      resolveList?.({
+        success: true,
+        data: {
+          total: 0,
+          tasks: [],
+        },
+      })
+    })
+
+    expect(await screen.findByText('暂无自动化任务。')).toBeInTheDocument()
+  })
+
+  it('falls back to the default load error when the scheduler list request fails', async () => {
+    mockedWorkflowSchedulerList.mockResolvedValueOnce({
+      success: false,
+      error: undefined,
+    } as Awaited<ReturnType<typeof workflowSchedulerList>>)
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('加载自动化任务失败。')).toBeInTheDocument()
+    expect(screen.queryByText('章节修订推进')).not.toBeInTheDocument()
+  })
+
+  it('renders english state summaries, fallback retry fields, and top-level controls', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const onOpenSettings = vi.fn()
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockUseWriterWorkspaceSummary.mockReturnValue({
+      meaningfulWorkspace: workspaceAuthority,
+      hasMeaningfulScope: false,
+      projectLabel: 'Project One',
+      chapterLabel: 'Chapter 1',
+      storyBibleLabel: 'sb-1',
+      focusLabel: 'entity-1',
+      workspaceLabel: 'project-1',
+      workflowLabel: 'plan-1',
+      scopeChips: [],
+    })
+    mockedWorkflowSchedulerList.mockResolvedValue({
+      success: true,
+      data: {
+        total: 2,
+        tasks: [
+          buildTask({
+            status: 'paused',
+            updated_at: 'not-a-date',
+            last_plan_id: null,
+            retry: {
+              strategy: 'linear',
+              max_retries: 3,
+            } as never,
+            approval_status: 'awaiting_review' as never,
+            blocked_reason: 'Needs manual review' as never,
+            next_action: 'Resume after review' as never,
+          }),
+          buildTask({
+            task_id: 'sched-2',
+            title: 'Background sync',
+            task: 'Sync notes',
+            status: 'blocked' as never,
+            last_plan_id: 'plan-2',
+            updated_at: null,
+            gate_status: 'blocked' as never,
+            retry_status: 'backoff-pending' as never,
+            pending_reason: 'Waiting on token' as never,
+            recommended_action: 'Open settings' as never,
+          }),
+        ],
+      },
+    })
+
+    render(<AutomationPanel onClose={onClose} onOpenSettings={onOpenSettings} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+    expect(screen.getByText('Run status')).toBeInTheDocument()
+    expect(screen.getByText('awaiting_review')).toBeInTheDocument()
+    expect(screen.getByText('linear (3)')).toBeInTheDocument()
+    expect(screen.getByText('Needs manual review')).toBeInTheDocument()
+    expect(screen.getByText('Resume after review')).toBeInTheDocument()
+    expect(screen.getByText('not-a-date')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Resume schedule' }))
+
+    await waitFor(() => {
+      expect(mockedWorkflowSchedulerResume).toHaveBeenCalledWith('sched-1', undefined, workspaceAuthority)
+      expect(screen.getByText('Scheduler task resumed.')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Background sync'))
+
+    expect(await screen.findByText('backoff-pending')).toBeInTheDocument()
+    expect(screen.getByText('Waiting on token')).toBeInTheDocument()
+    expect(screen.getByText('Open settings')).toBeInTheDocument()
+    expect(screen.getByText('plan-2')).toBeInTheDocument()
+
+    const blockedBadge = screen.getAllByText('blocked').find((node) => node.className.includes('bg-gray-100'))
+    expect(blockedBadge).toBeDefined()
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+
+    expect(onOpenSettings).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces gate-blocked, pause, lifecycle, import, and run-now failure states', async () => {
+    const user = userEvent.setup()
+
+    mockedWorkflowSchedulerRunNow
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'gate_blocked',
+          trigger: 'manual_run_now',
+          run_id: 'run-blocked',
+          plan_id: 'plan-1',
+          task: buildTask(),
+          execute: buildExecuteResponse('gate_blocked', '门控阻塞，需人工恢复'),
+        },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        error: undefined,
+      } as Awaited<ReturnType<typeof workflowSchedulerRunNow>>)
+
+    mockedWorkflowSchedulerPause.mockResolvedValueOnce({
+      success: false,
+      error: undefined,
+    } as Awaited<ReturnType<typeof workflowSchedulerPause>>)
+    mockedWorkflowLifecycle.mockResolvedValueOnce({
+      success: false,
+      error: undefined,
+    } as Awaited<ReturnType<typeof workflowLifecycle>>)
+    mockedWorkflowSchedulerImportLitePlan.mockResolvedValueOnce({
+      success: false,
+      error: undefined,
+    } as Awaited<ReturnType<typeof workflowSchedulerImportLitePlan>>)
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    await screen.findByText('章节修订推进')
+
+    await user.click(screen.getByRole('button', { name: '立即执行 / 重试' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('任务进入阻塞状态，请执行恢复操作。')).toBeInTheDocument()
+      expect(screen.getAllByText('门控阻塞，需人工恢复').length).toBeGreaterThan(0)
+    })
+
+    await user.click(screen.getByRole('button', { name: '暂停调度' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('更新任务状态失败。')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: '恢复计划' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('生命周期操作失败。')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: '导入计划' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('导入 lite-plan 任务失败。')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: '立即执行 / 重试' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('执行 run-now 失败。')).toBeInTheDocument()
+    })
+  })
+
+  it('passes undefined workspace and renders the english empty state when the payload omits tasks', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockUseWriterWorkspaceSummary.mockReturnValue({
+      meaningfulWorkspace: null,
+      hasMeaningfulScope: false,
+      projectLabel: 'Project One',
+      chapterLabel: 'Chapter 1',
+      storyBibleLabel: 'sb-1',
+      focusLabel: 'entity-1',
+      workspaceLabel: 'project-1',
+      workflowLabel: 'plan-1',
+      scopeChips: [],
+    })
+    mockedWorkflowSchedulerList.mockResolvedValueOnce({
+      success: true,
+      data: {},
+    } as Awaited<ReturnType<typeof workflowSchedulerList>>)
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('No automation tasks yet.')).toBeInTheDocument()
+    expect(mockedWorkflowSchedulerList).toHaveBeenCalledWith(50, undefined, undefined)
+    expect(screen.queryByText('Execution state')).not.toBeInTheDocument()
+  })
+
+  it('renders sparse english metadata fallbacks for tasks with missing optional fields', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockedWorkflowSchedulerList.mockResolvedValueOnce({
+      success: true,
+      data: {
+        total: 1,
+        tasks: [
+          buildTask({
+            status: 'blocked' as never,
+            last_trigger: null as never,
+            updated_at: null,
+            last_plan_id: null,
+            retry: null as never,
+          }),
+        ],
+      },
+    })
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+    expect(screen.getByText('ready')).toBeInTheDocument()
+    expect(screen.getAllByText('--').length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('shows the processing label while resuming a paused scheduler task', async () => {
+    const user = userEvent.setup()
+    let resolveResume: ((value: Awaited<ReturnType<typeof workflowSchedulerResume>>) => void) | null = null
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockedWorkflowSchedulerList.mockResolvedValueOnce({
+      success: true,
+      data: {
+        total: 1,
+        tasks: [buildTask({ status: 'paused' })],
+      },
+    })
+    mockedWorkflowSchedulerResume.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveResume = resolve
+      }) as ReturnType<typeof workflowSchedulerResume>,
+    )
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Resume schedule' }))
+
+    expect(screen.getByRole('button', { name: 'Processing...' })).toBeInTheDocument()
+
+    await act(async () => {
+      resolveResume?.({
+        success: true,
+        data: {
+          status: 'active',
+          task: buildTask({ status: 'active' }),
+        },
+      } as Awaited<ReturnType<typeof workflowSchedulerResume>>)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Scheduler task resumed.')).toBeInTheDocument()
+    })
+  })
+
+  it('shows the confirming label while confirmation submission is pending', async () => {
+    const user = userEvent.setup()
+    let resolveConfirm: ((value: Awaited<ReturnType<typeof workflowSchedulerRunNow>>) => void) | null = null
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockedWorkflowSchedulerRunNow
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'waiting_confirmation',
+          trigger: 'manual_run_now',
+          run_id: 'run-waiting',
+          plan_id: 'plan-1',
+          task: buildTask(),
+          execute: buildExecuteResponse('waiting_confirmation', 'Need explicit approval'),
+        },
+      } as Awaited<ReturnType<typeof workflowSchedulerRunNow>>)
+      .mockImplementationOnce(
+        () => new Promise((resolve) => {
+          resolveConfirm = resolve
+        }) as ReturnType<typeof workflowSchedulerRunNow>,
+      )
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Run now / Retry' }))
+    await user.type(
+      screen.getByPlaceholderText('Enter confirm_token then click Confirm & Continue'),
+      'confirm-token',
+    )
+    await user.click(screen.getByRole('button', { name: 'Confirm & Continue' }))
+
+    expect(screen.getByRole('button', { name: 'Confirming...' })).toBeInTheDocument()
+
+    await act(async () => {
+      resolveConfirm?.({
+        success: true,
+        data: {
+          status: 'completed',
+          trigger: 'manual_run_now',
+          run_id: 'run-confirmed',
+          plan_id: 'plan-1',
+          task: buildTask(),
+          execute: buildExecuteResponse('completed'),
+        },
+      } as Awaited<ReturnType<typeof workflowSchedulerRunNow>>)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Task execution triggered.')).toBeInTheDocument()
+    })
+  })
+
+  it('uses english defaults for run-now, load, and import fallback copy', async () => {
+    const user = userEvent.setup()
+
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockUseWriterWorkspaceSummary.mockReturnValue({
+      meaningfulWorkspace: null,
+      hasMeaningfulScope: false,
+      projectLabel: 'Project One',
+      chapterLabel: 'Chapter 1',
+      storyBibleLabel: 'sb-1',
+      focusLabel: 'entity-1',
+      workspaceLabel: 'project-1',
+      workflowLabel: 'plan-1',
+      scopeChips: [],
+    })
+    mockedWorkflowSchedulerRunNow.mockResolvedValueOnce({
+      success: false,
+      error: undefined,
+    } as Awaited<ReturnType<typeof workflowSchedulerRunNow>>)
+    mockedWorkflowSchedulerImportLitePlan
+      .mockResolvedValueOnce({
+        success: true,
+        data: {},
+      } as Awaited<ReturnType<typeof workflowSchedulerImportLitePlan>>)
+      .mockResolvedValueOnce({
+        success: false,
+        error: undefined,
+      } as Awaited<ReturnType<typeof workflowSchedulerImportLitePlan>>)
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Automation tasks')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Run now / Retry' }))
+    await waitFor(() => {
+      expect(mockedWorkflowSchedulerRunNow).toHaveBeenCalledWith(
+        'sched-1',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      )
+      expect(screen.getByText('Failed to run task now.')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Import plan' }))
+    await waitFor(() => {
+      expect(mockedWorkflowSchedulerImportLitePlan).toHaveBeenNthCalledWith(
+        1,
+        undefined,
+        'L5',
+        true,
+        undefined,
+        undefined,
+      )
+      expect(screen.getByText('Imported 0 task(s).')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Import plan' }))
+    await waitFor(() => {
+      expect(screen.getByText('Failed to import lite-plan tasks.')).toBeInTheDocument()
+    })
+  })
+
+  it('uses the english default load error copy when the scheduler request fails', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    mockedWorkflowSchedulerList.mockResolvedValueOnce({
+      success: false,
+      error: undefined,
+    } as Awaited<ReturnType<typeof workflowSchedulerList>>)
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(await screen.findByText('Failed to load automation tasks.')).toBeInTheDocument()
   })
 
   it('restores focus to the opener when the automation panel closes', async () => {

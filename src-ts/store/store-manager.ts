@@ -200,7 +200,7 @@ export class Document {
     );
 
     // Parse format
-    const formatValue = data.format ?? 'markdown';
+    const formatValue = data.format;
     const formatEnum =
       typeof formatValue === 'string'
         ? (formatValue as DocumentFormat)

@@ -112,12 +112,61 @@ export function filterWorkspaceKnowledgeItems(
   })
 }
 
+/**
+ * Allowed entity types for Cypher label injection prevention.
+ * Only these values are permitted in label positions.
+ */
+const ALLOWED_ENTITY_TYPES = new Set(['Character', 'Location', 'Event', 'Foreshadow', 'Plot', 'Theme', 'Item'])
+
+/**
+ * Validate that an entityType is in the allowlist.
+ * Throws if the value is not permitted.
+ */
+export function validateEntityType(entityType: string): void {
+  if (!ALLOWED_ENTITY_TYPES.has(entityType)) {
+    throw new Error(`Invalid entity type: "${entityType}". Allowed: ${[...ALLOWED_ENTITY_TYPES].join(', ')}`)
+  }
+}
+
+/**
+ * Escape a string value for safe Cypher single-quoted string literal.
+ * Doubles any single-quote characters (Cypher/SQL convention).
+ */
+export function escapeCypherString(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+/**
+ * Build a Cypher property map string from a record.
+ * Uses single-quoted string literals (valid Cypher syntax) with escaping.
+ * Non-string values are serialized as-is (numbers, booleans).
+ */
+export function buildCypherProps(props: Record<string, unknown>): string {
+  const entries = Object.entries(props).map(([key, val]) => {
+    if (typeof val === 'string') {
+      return `${key}: '${escapeCypherString(val)}'`
+    }
+    return `${key}: ${JSON.stringify(val)}`
+  })
+  return `{${entries.join(', ')}}`
+}
+
 export function buildGraphMergeMutation(
   entityType: string,
   matchProps: Record<string, unknown>,
   setProps: Record<string, unknown>,
 ): string {
-  return `MERGE (n:${entityType} ${JSON.stringify(matchProps)}) SET ${JSON.stringify(setProps)} RETURN n`
+  validateEntityType(entityType)
+  return `MERGE (n:${entityType} ${buildCypherProps(matchProps)}) SET n += ${buildCypherProps(setProps)} RETURN n`
+}
+
+export function buildGraphDeleteMutation(
+  entityType: string,
+  name: string,
+  workspaceId: string,
+): string {
+  validateEntityType(entityType)
+  return `MATCH (n:${entityType} {name: '${escapeCypherString(name)}', workspaceId: '${escapeCypherString(workspaceId)}'}) DETACH DELETE n`
 }
 
 export function buildStoryBibleGraphName(workspace: ProjectWorkspaceContext): string {
@@ -142,14 +191,6 @@ export function buildWorkspaceNotice(language: 'zh' | 'en'): string[] {
     'Story Bible and knowledge entries now persist into the active workspace authority and survive reloads.',
     'Import and export remain available for legacy local-draft compatibility, not as the primary source of truth.',
   ]
-}
-
-export function buildGraphDeleteMutation(
-  entityType: string,
-  name: string,
-  workspaceId: string,
-): string {
-  return `MATCH (n:${entityType} {name: ${JSON.stringify(name)}, workspaceId: ${JSON.stringify(workspaceId)}}) DETACH DELETE n`
 }
 
 export const WORKSPACE_KNOWLEDGE_CHANGED_EVENT = 'niko:workspace-knowledge-changed'

@@ -466,7 +466,7 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   }
 
   const union = a.size + b.size - intersection
-  return union === 0 ? 0 : intersection / union
+  return intersection / union
 }
 
 function temporalProximity(orderA: number, orderB: number): number {
@@ -486,7 +486,7 @@ function plotConnectivity(entitiesA: string[], entitiesB: string[]): number {
 
   // Normalize by smaller set size
   const minSize = Math.min(entitiesA.length, entitiesB.length)
-  return minSize === 0 ? 0 : overlap / minSize
+  return overlap / minSize
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -513,7 +513,7 @@ function mostFrequent(items: string[]): string | null {
   for (const item of items) {
     freq[item] = (freq[item] ?? 0) + 1
   }
-  return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+  return Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0]
 }
 
 // ============================================================

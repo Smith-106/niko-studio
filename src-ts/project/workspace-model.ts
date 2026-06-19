@@ -332,16 +332,14 @@ export function normalizeProjectWorkspaceContext(
       ?? readString(root.workspaceId)
       ?? readString(root.workspace_id)
       ?? basenameOrNull(workspaceRoot)
-      ?? projectId
-      ?? fallback.identity.workspaceId,
+      ?? projectId,
   );
 
   const projectName = readString(identityRecord?.projectName)
     ?? readString(identityRecord?.project_name)
     ?? readString(root.projectName)
     ?? readString(root.project_name)
-    ?? projectId
-    ?? fallback.identity.projectName;
+    ?? projectId;
 
   const draftId = readString(storyBibleRecord?.draftId)
     ?? readString(storyBibleRecord?.draft_id)
@@ -356,7 +354,7 @@ export function normalizeProjectWorkspaceContext(
     schemaVersion: PROJECT_WORKSPACE_SCHEMA_VERSION,
     identity: {
       workspaceId,
-      projectId: projectId ?? fallback.identity.projectId,
+      projectId,
       projectName,
       workspaceRoot,
     },

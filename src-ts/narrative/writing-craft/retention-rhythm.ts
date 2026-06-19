@@ -76,9 +76,7 @@ export function analyzeRetentionRhythm(
 
   // Golden 3 chapters score
   const first3 = profiles.slice(0, Math.min(3, profiles.length));
-  const goldenThreeScore = first3.length > 0
-    ? Math.round(first3.reduce((sum, p) => sum + p.hookStrength + p.satisfactionDensity * 2, 0) / first3.length)
-    : 0;
+  const goldenThreeScore = Math.round(first3.reduce((sum, p) => sum + p.hookStrength + p.satisfactionDensity * 2, 0) / first3.length);
 
   // Pay wall density
   const payWallCh = profiles.find((p) => p.payWallProximity === 'before' || p.payWallProximity === 'at');
@@ -97,7 +95,7 @@ export function analyzeRetentionRhythm(
   const avgHook = profiles.reduce((s, p) => s + p.hookStrength, 0) / profiles.length;
   const avgSatisfaction = profiles.reduce((s, p) => s + p.satisfactionDensity, 0) / profiles.length;
   const cyclesWithSatisfaction = microCycles.filter((c) => c.satisfactionPresent).length;
-  const cycleRatio = microCycles.length > 0 ? cyclesWithSatisfaction / microCycles.length : 0;
+  const cycleRatio = cyclesWithSatisfaction / microCycles.length;
   const rhythmScore = Math.round(avgHook * 0.3 + Math.min(avgSatisfaction * 10, 40) + cycleRatio * 30);
 
   // Suggestions

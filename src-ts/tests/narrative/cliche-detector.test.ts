@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { ClicheDetector } from '../../narrative/evaluators/cliche-detector';
+import { WebNovelGenre } from '../../narrative/writing-craft/genre-templates';
 
 describe('narrative/evaluators/cliche-detector', () => {
+  it('exposes public metadata getters', () => {
+    const detector = new ClicheDetector();
+
+    expect(detector.name).toContain('陈词滥调');
+    expect(detector.description).toContain('检测文本中的陈词滥调');
+    expect(detector.relatedSkill).toBe('script-doctor');
+  });
+
   it('quickScan returns a stable cliche score envelope', () => {
     const detector = new ClicheDetector();
 
@@ -29,5 +38,20 @@ describe('narrative/evaluators/cliche-detector', () => {
       total_cliche_occurrences: expect.any(Number),
     });
     expect(result.summary).toContain('陈词滥调');
+  });
+
+  it('returns an empty genre result when the genre template is unknown', () => {
+    const detector = new ClicheDetector();
+
+    const result = detector.detectGenreCliches(
+      '这是一段正常文本，没有任何类型套板。',
+      'unknown-genre' as WebNovelGenre,
+    );
+
+    expect(result).toEqual({
+      genre: 'unknown-genre',
+      foundCliches: [],
+      genreScore: 100,
+    });
   });
 });

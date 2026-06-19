@@ -77,6 +77,38 @@ function mockENOENT() {
   });
 }
 
+function mockProcessEventError(message: string, code?: string) {
+  const { EventEmitter } = require('events');
+  (mockSpawn as any).mockImplementation((_cmd: string, _args: string[], _opts: unknown) => {
+    const child = new EventEmitter();
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.stdin = { write: vi.fn(), end: vi.fn() };
+    setTimeout(() => {
+      const err = new Error(message);
+      if (code) (err as Error & { code?: string }).code = code;
+      child.emit('error', err);
+    }, 0);
+    return child;
+  });
+}
+
+function mockTimeout(stdout = '', stderr = '') {
+  const { EventEmitter } = require('events');
+  (mockSpawn as any).mockImplementation((_cmd: string, _args: string[], _opts: unknown) => {
+    const child = new EventEmitter();
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.stdin = { write: vi.fn(), end: vi.fn() };
+    child.kill = vi.fn(() => {
+      if (stdout) child.stdout.emit('data', Buffer.from(stdout));
+      if (stderr) child.stderr.emit('data', Buffer.from(stderr));
+      return true;
+    });
+    return child;
+  });
+}
+
 describe('NowledgeMemAdapter', () => {
   let adapter: NowledgeMemAdapter;
 
@@ -708,5 +740,374 @@ describe('NowledgeMemAdapter', () => {
       expect(child.stdin.write).toHaveBeenCalledWith('## Focus\nToday I will...');
       expect(child.stdin.end).toHaveBeenCalled();
     });
+  });
+});
+
+describe('NowledgeMemAdapter additional coverage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('uses default constructor values and falls back to unknown status on invalid JSON', async () => {
+    const adapter = new NowledgeMemAdapter();
+    mockStdout('status-ok');
+    const result = await adapter.status();
+
+    expect(result).toEqual({ connected: true, version: 'unknown' });
+    expect(mockSpawn).toHaveBeenCalledWith(
+      'nmem',
+      ['status', '--json'],
+      expect.objectContaining({
+        timeout: 10000,
+        env: expect.objectContaining({
+          NMEM_API_KEY: '',
+          NMEM_SPACE: '',
+        }),
+      }),
+    );
+  });
+
+  it('kills timed-out CLI processes and preserves stderr when present', async () => {
+    vi.useFakeTimers();
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd', timeout: 10 });
+
+    mockTimeout('', 'slow process');
+    const statusRequest = adapter.status();
+
+    await vi.advanceTimersByTimeAsync(10);
+
+    await expect(statusRequest).resolves.toEqual({ connected: false });
+    expect(mockSpawn.mock.results.at(-1)?.value.kill).toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it('writes only truthy stdin content and handles ENOENT process errors outside status()', async () => {
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd' });
+
+    mockStdout(JSON.stringify({ id: 'thread-empty', title: 'Empty Thread' }));
+    await expect(
+      adapter.addThread([{ role: 'user', content: 'hello' }]),
+    ).resolves.toMatchObject({
+      id: 'thread-empty',
+    });
+    expect(mockSpawn.mock.results.at(-1)?.value.stdin.write).toHaveBeenCalled();
+
+    mockProcessEventError('missing binary', 'ENOENT');
+    await expect(adapter.addMemory('offline')).rejects.toThrow(
+      'Failed to add memory: nmem CLI not found',
+    );
+  });
+
+  it('surfaces child-process error events for addMemory and falls back to raw stdout shapes', async () => {
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd' });
+
+    mockProcessEventError('spawn exploded');
+    await expect(adapter.addMemory('broken')).rejects.toThrow('Failed to add memory: spawn exploded');
+
+    mockStdout('mem-manual-id');
+    await expect(
+      adapter.addMemory('decision log', {
+        id: 'mem-explicit',
+        sourceRefs: ['src-1', 'src-2'],
+      }),
+    ).resolves.toEqual({
+      id: 'mem-explicit',
+      content: 'decision log',
+      labels: undefined,
+      importance: undefined,
+    });
+    let args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--source-refs');
+    expect(args).toContain('src-1,src-2');
+
+    mockStdout('mem-from-stdout');
+    await expect(adapter.addMemory('plain memory')).resolves.toEqual({
+      id: 'mem-from-stdout',
+      content: 'plain memory',
+      labels: undefined,
+      importance: undefined,
+    });
+  });
+
+  it('covers search fallback branches and the remaining query/list filters', async () => {
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd' });
+
+    mockStdout('not-json');
+    await expect(
+      adapter.searchMemories('deep search', {
+        labels: ['story'],
+        importance: 0.7,
+        mode: 'hybrid',
+        limit: 3,
+        unitType: 'decision',
+        recordedTo: '2026-03-02',
+        spaceId: 'writers-room',
+      }),
+    ).resolves.toEqual({ memories: [], total: 0, query: 'deep search' });
+    let args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--importance');
+    expect(args).toContain('0.7');
+    expect(args).toContain('--mode');
+    expect(args).toContain('hybrid');
+    expect(args).toContain('--recorded-to');
+    expect(args).toContain('2026-03-02');
+    expect(args).toContain('--space');
+    expect(args).toContain('writers-room');
+
+    mockStdout('not-json');
+    await expect(
+      adapter.searchByTimeRange({
+        eventFrom: '2026-01-01',
+        limit: 2,
+      }),
+    ).resolves.toEqual({ memories: [], total: 0 });
+    args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--limit');
+    expect(args).toContain('2');
+
+    mockStdout('not-json');
+    await expect(
+      adapter.listMemories({
+        label: 'urgent',
+        since: '2026-06-01',
+        spaceId: 'studio',
+      }),
+    ).resolves.toEqual([]);
+    args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--label');
+    expect(args).toContain('urgent');
+    expect(args).toContain('--since');
+    expect(args).toContain('2026-06-01');
+    expect(args).toContain('--space');
+    expect(args).toContain('studio');
+  });
+
+  it('covers update, graph, source, and working-memory error branches', async () => {
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd' });
+
+    mockStdout(JSON.stringify({ id: 'mem-labels', content: 'updated' }));
+    await expect(
+      adapter.updateMemory('mem-labels', {
+        labels: ['one', 'two'],
+        unitType: 'decision',
+      }),
+    ).resolves.toMatchObject({ id: 'mem-labels' });
+    let args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--labels');
+    expect(args).toContain('one,two');
+    expect(args).toContain('--unit-type');
+    expect(args).toContain('decision');
+
+    mockError('graph offline');
+    await expect(adapter.expandGraph('mem-offline')).resolves.toEqual({
+      memoryId: 'mem-offline',
+      relations: [],
+    });
+
+    mockError('source ingest failed');
+    await expect(adapter.ingestSource('src-offline', { dryRun: true })).resolves.toEqual({
+      memoryIds: [],
+      extractedEntities: 0,
+    });
+    args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--dry-run');
+
+    mockError('working memory unavailable');
+    await expect(adapter.getWorkingMemory('2026-06-07')).resolves.toEqual({
+      date: '2026-06-07',
+      content: '',
+    });
+
+    mockError('thread import failed');
+    await expect(
+      adapter.importThread({
+        messages: [{ role: 'user', content: 'broken import' }],
+      }),
+    ).rejects.toThrow('Failed to import thread: thread import failed');
+  });
+
+  it('covers graph and relation fallbacks', async () => {
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd' });
+
+    mockStdout('not-json');
+    await expect(adapter.expandGraph('mem-99')).resolves.toEqual({
+      memoryId: 'mem-99',
+      relations: [],
+    });
+
+    mockStdout(JSON.stringify({ memories: [{ id: 'mem-2', content: 'linked' }] }));
+    await expect(adapter.getRelatedMemories('mem-1', 2)).resolves.toEqual([
+      { id: 'mem-2', content: 'linked' },
+    ]);
+    let args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--depth');
+    expect(args).toContain('2');
+
+    mockStdout('not-json');
+    await expect(adapter.getRelatedMemories('mem-1')).resolves.toEqual([]);
+    mockStdout('not-json');
+    await expect(adapter.searchRelations({})).resolves.toEqual([]);
+    mockStdout('not-json');
+    await expect(adapter.getEvolvesChain('mem-1')).resolves.toEqual([]);
+  });
+
+  it('covers source, space, and library helper fallbacks', async () => {
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd' });
+
+    mockStdout('src-raw');
+    await expect(
+      adapter.addSource('https://example.com/ref', {
+        labels: ['ref', 'web'],
+      }),
+    ).resolves.toEqual({
+      id: 'src-raw',
+      type: 'file',
+      name: 'https://example.com/ref',
+    });
+    let args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--labels');
+    expect(args).toContain('ref,web');
+
+    mockStdout('not-json');
+    await expect(adapter.listSources({ type: 'url', limit: 5 })).resolves.toEqual([]);
+    args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--type');
+    expect(args).toContain('url');
+    expect(args).toContain('--limit');
+    expect(args).toContain('5');
+
+    mockStdout('not-json');
+    await expect(adapter.ingestSource('src-1')).resolves.toEqual({
+      memoryIds: [],
+      extractedEntities: 0,
+    });
+
+    mockStdout('not-json');
+    await expect(adapter.searchSourceChunks('src-1', 'chunk', { limit: 2 })).resolves.toEqual([]);
+
+    mockStdout('space-raw');
+    await expect(adapter.createSpace('Research')).resolves.toEqual({
+      id: 'space-raw',
+      name: 'Research',
+    });
+
+    mockStdout('not-json');
+    await expect(adapter.listSpaces()).resolves.toEqual([]);
+    mockStdout('not-json');
+    await expect(adapter.getSpace('space-1')).resolves.toBeNull();
+
+    mockStdout('not-json');
+    await expect(adapter.addToLibrary(['/tmp/a.md'])).resolves.toEqual([]);
+    mockStdout('not-json');
+    await expect(adapter.searchLibrary('book', { limit: 4 })).resolves.toEqual([]);
+    mockError('read failed');
+    await expect(adapter.readArtifact('lib-1')).resolves.toBe('');
+  });
+
+  it('covers working memory, communities, feed, summary, and lifecycle fallback branches', async () => {
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd' });
+    const today = new Date().toISOString().slice(0, 10);
+
+    mockStdout('## Raw Focus');
+    await expect(adapter.getWorkingMemory()).resolves.toEqual({
+      date: today,
+      content: '## Raw Focus',
+    });
+    let args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).not.toContain('--date');
+
+    mockStdout('not-json');
+    await expect(adapter.listCommunities()).resolves.toEqual([]);
+    args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).not.toContain('--limit');
+
+    mockStdout('not-json');
+    await expect(adapter.getFeed()).resolves.toEqual([]);
+    args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).not.toContain('--days');
+
+    mockStdout('combined insights');
+    await expect(adapter.summarizeMemories(['mem-1', 'mem-2'])).resolves.toBe('combined insights');
+
+    mockError('write failed');
+    await expect(adapter.setWorkingMemory('## Broken')).rejects.toThrow(
+      'Failed to set working memory: write failed',
+    );
+
+    mockError('connection failed');
+    await expect(adapter.healthCheck()).resolves.toBe(false);
+    expect(adapter.available).toBe(false);
+  });
+
+  it('covers thread and library-import fallbacks plus remaining option branches', async () => {
+    const adapter = new NowledgeMemAdapter({ cliPath: 'nmem.cmd' });
+
+    mockStdout('thread-add-raw');
+    await expect(
+      adapter.addThread([{ role: 'user', content: 'hello' }], { spaceId: 'writers-room' }),
+    ).resolves.toEqual({
+      id: 'thread-add-raw',
+      title: '',
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+    let args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--space');
+    expect(args).toContain('writers-room');
+
+    mockStdout('not-json');
+    await expect(adapter.searchThreads('test')).resolves.toEqual([]);
+
+    mockStdout('not-json');
+    await expect(
+      adapter.appendThread('thread-1', [{ role: 'assistant', content: 'response' }]),
+    ).resolves.toBeNull();
+
+    mockStdout('thread-file-raw');
+    await expect(
+      adapter.importThread({
+        file: '/tmp/thread.json',
+        title: 'Imported File',
+        source: 'archive',
+      }),
+    ).resolves.toEqual({
+      id: 'thread-file-raw',
+      title: 'Imported File',
+    });
+    args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--file');
+    expect(args).toContain('/tmp/thread.json');
+    expect(args).not.toContain('--stdin');
+    const child = mockSpawn.mock.results.at(-1)?.value;
+    expect(child.stdin.write).not.toHaveBeenCalled();
+
+    mockStdout('thread-save-raw');
+    await expect(adapter.saveThread({ title: 'Saved Raw' })).resolves.toEqual({
+      id: 'thread-save-raw',
+      title: 'Saved Raw',
+    });
+
+    mockStdout('not-json');
+    await expect(adapter.reconcileTail('thread-1')).resolves.toEqual({ reconciled: false });
+
+    mockStdout('not-json');
+    await expect(
+      adapter.importFromLibrary('/path/to/file.pdf', {
+        maxItems: 3,
+        filterLabels: ['story', 'draft'],
+        dryRun: true,
+      }),
+    ).resolves.toEqual({
+      imported: 0,
+      skipped: 0,
+      errors: [],
+      ids: [],
+    });
+    args = mockSpawn.mock.calls.at(-1)?.[1] as string[];
+    expect(args).toContain('--max-items');
+    expect(args).toContain('3');
+    expect(args).toContain('--labels');
+    expect(args).toContain('story,draft');
+    expect(args).toContain('--dry-run');
   });
 });

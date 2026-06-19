@@ -11,17 +11,22 @@ import { useAppStore } from './appStore'
 import {
   useAddMessage,
   useAllowLlmFallback,
+  useAvailableSkills,
   useBackendStatus,
   useCheckBackend,
+  useChatAreaSettings,
   useConversationList,
   useCreateConversation,
   useCurrentConversation,
   useCurrentConversationId,
+  useDocumentEditorState,
+  useEvaluationSettings,
   useLatestAssistantMessageContent,
   useMessages,
   useQualityGoals,
   useSelectConversation,
   useSelectedSkills,
+  useWritingHelperSkillsState,
   useWorkflowLevel,
 } from './selectors'
 
@@ -75,6 +80,18 @@ describe('selectors', () => {
       expect(result.current).toEqual([])
     })
 
+    it('returns empty array when the selected conversation entry is missing', () => {
+      act(() => {
+        useAppStore.setState({
+          currentConversationId: 'missing-conversation',
+          conversationsById: {},
+        })
+      })
+
+      const { result } = renderHook(() => useMessages())
+      expect(result.current).toEqual([])
+    })
+
     it('returns messages of the current conversation', () => {
       useAppStore.getState().createConversation()
       useAppStore.getState().addMessage('user', 'Hello')
@@ -101,6 +118,18 @@ describe('selectors', () => {
       expect(result.current).toBe('')
     })
 
+    it('returns empty string when the selected conversation entry is missing', () => {
+      act(() => {
+        useAppStore.setState({
+          currentConversationId: 'missing-conversation',
+          conversationsById: {},
+        })
+      })
+
+      const { result } = renderHook(() => useLatestAssistantMessageContent())
+      expect(result.current).toBe('')
+    })
+
     it('returns the last assistant message content', () => {
       useAppStore.getState().createConversation()
       useAppStore.getState().addMessage('user', 'Q1')
@@ -110,6 +139,14 @@ describe('selectors', () => {
 
       const { result } = renderHook(() => useLatestAssistantMessageContent())
       expect(result.current).toBe('A2')
+    })
+
+    it('falls back to empty content when the latest assistant message has no text', () => {
+      useAppStore.getState().createConversation()
+      useAppStore.getState().addMessage('assistant', '')
+
+      const { result } = renderHook(() => useLatestAssistantMessageContent())
+      expect(result.current).toBe('')
     })
   })
 
@@ -168,6 +205,11 @@ describe('selectors', () => {
 
       expect(result.current).toEqual(['skill-b'])
     })
+
+    it('returns available skills through its shallow selector', () => {
+      const { result } = renderHook(() => useAvailableSkills())
+      expect(result.current).toEqual(['skill-a', 'skill-b'])
+    })
   })
 
   describe('action selectors', () => {
@@ -225,6 +267,33 @@ describe('selectors', () => {
       expect(result.current).toBe(true)
     })
   })
+
+  describe('batched selectors', () => {
+    it('returns a null conversation title when the selected conversation entry is unavailable', () => {
+      act(() => {
+        useAppStore.setState({
+          currentConversationId: 'missing-conversation',
+          conversationsById: {},
+        })
+      })
+
+      const { result } = renderHook(() => useDocumentEditorState())
+      expect(result.current.currentConversationTitle).toBeNull()
+    })
+
+    it('normalizes missing personalized craft recommendations to an empty array', () => {
+      act(() => {
+        useAppStore.setState({
+          personalizedCraftRecommendations: null as unknown as string[],
+        })
+      })
+
+      const { result } = renderHook(() => useWritingHelperSkillsState())
+      expect(result.current.selectedSkills).toEqual([])
+      expect(result.current.availableSkills).toEqual(['skill-a', 'skill-b'])
+      expect(result.current.personalizedCraftRecommendations).toEqual([])
+    })
+  })
 })
 
 describe('settings-based selectors', () => {
@@ -242,5 +311,19 @@ describe('settings-based selectors', () => {
     const { result } = renderHook(() => useQualityGoals())
     expect(result.current).toBeDefined()
     expect(typeof result.current).toBe('object')
+  })
+
+  it('useChatAreaSettings returns grouped template helpers', () => {
+    const { result } = renderHook(() => useChatAreaSettings())
+    expect(result.current.settings).toBeDefined()
+    expect(typeof result.current.toggleTemplateFavorite).toBe('function')
+    expect(typeof result.current.recordTemplateUsage).toBe('function')
+    expect(typeof result.current.setTemplateVariablePreset).toBe('function')
+  })
+
+  it('useEvaluationSettings returns grouped evaluation preferences', () => {
+    const { result } = renderHook(() => useEvaluationSettings())
+    expect(result.current.qualityGoals).toBeDefined()
+    expect(typeof result.current.detectionEvasionGuardEnabled).toBe('boolean')
   })
 })

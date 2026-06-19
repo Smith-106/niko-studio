@@ -135,10 +135,10 @@ function formatAutoOutput(cleaned: string): string {
  */
 function extractScore(text: string, dimension: string): number {
   const patterns = [
-    // "dimension: 85/100" or "dimension: 85"
-    new RegExp(`${dimension}[^\\d]*(\\d{1,3})(?:\\/100)?`, 'i'),
     // "dimension: 0.85" (0-1 scale)
     new RegExp(`${dimension}[^\\d]*(0\\.\\d{1,2})`, 'i'),
+    // "dimension: 85/100" or "dimension: 85"
+    new RegExp(`${dimension}[^\\d]*(\\d{1,3})(?:\\/100)?`, 'i'),
   ];
 
   for (const pattern of patterns) {
@@ -295,7 +295,7 @@ function formatGuidedOutput(cleaned: string): GuidedOption[] {
  * when they had to adapt the instruction to fit quality constraints.
  */
 const COMPLIANCE_PATTERNS = {
-  adaptation: /(?:note:|adaptation:|adjusted:|modified:)\s*(?:the |instruction )?(?:was|has been|is) (?:adjusted|modified|adapted)/i,
+  adaptation: /(?:note:|adaptation:|adjusted:|modified:)\s*(?:(?:the\s+)?instruction\s+)?(?:was|has been|is) (?:adjusted|modified|adapted)/i,
   conflict: /(?:conflicts?|violates?|contradicts?) (?:with )?(?:quality|constraint|established|character|plot)/i,
   followed: /(?:followed|executed|carried out) (?:the |your )?instruction/i,
 };

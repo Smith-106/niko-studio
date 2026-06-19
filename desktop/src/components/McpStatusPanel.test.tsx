@@ -192,7 +192,7 @@ describe('McpStatusPanel', () => {
     })
 
     expect(screen.getByRole('dialog', { name: 'Service diagnostics panel' })).toBeInTheDocument()
-    expect(screen.getByText('Runtime diagnostics')).toBeInTheDocument()
+    expect(await screen.findByText('Runtime diagnostics')).toBeInTheDocument()
     expect(screen.getAllByText('Document parser missing').length).toBeGreaterThan(0)
     expect(screen.getAllByText('mammoth is required').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Install mammoth and retry.').length).toBeGreaterThan(0)

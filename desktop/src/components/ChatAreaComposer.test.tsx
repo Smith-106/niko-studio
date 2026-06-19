@@ -1,5 +1,5 @@
 import { createRef } from 'react'
-import { act, render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent, createEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -100,6 +100,42 @@ describe('ChatAreaComposer toolbar buttons', () => {
 
     const button = screen.getByRole('button', { name: baseProps.uploadLabel })
     expect(button).toHaveClass('focus-visible:ring-2')
+  })
+
+  it('prevents default on send button mouse down and only sends when enabled', () => {
+    const onSend = vi.fn()
+    render(
+      <ChatAreaComposer
+        {...baseProps}
+        input="hello"
+        sendDisabled={false}
+        onSend={onSend}
+      />,
+    )
+
+    const enabledSendButton = screen.getByRole('button', { name: baseProps.sendLabel })
+    const enabledMouseDown = createEvent.mouseDown(enabledSendButton)
+    enabledMouseDown.preventDefault = vi.fn()
+    fireEvent(enabledSendButton, enabledMouseDown)
+    fireEvent.click(enabledSendButton)
+
+    expect(enabledMouseDown.preventDefault).toHaveBeenCalled()
+    expect(onSend).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders cancel button while loading and calls onCancelStream on click', () => {
+    const onCancelStream = vi.fn()
+    render(
+      <ChatAreaComposer
+        {...baseProps}
+        isLoading={true}
+        onCancelStream={onCancelStream}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: baseProps.cancelLabel }))
+
+    expect(onCancelStream).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -220,5 +256,32 @@ describe('ChatAreaComposer drag-drop file attachment', () => {
     fireEvent.drop(composer, { dataTransfer: { files: [file] } })
 
     expect(screen.queryByText('virus.exe')).not.toBeInTheDocument()
+  })
+
+  it('rejects dropped files without an extension', () => {
+    render(<ChatAreaComposer {...baseProps} />)
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-xl"]')!
+
+    const file = new File(['mystery'], 'README', { type: 'text/plain' })
+    fireEvent.drop(composer, { dataTransfer: { files: [file] } })
+
+    expect(screen.queryByText('README')).not.toBeInTheDocument()
+  })
+})
+
+describe('ChatAreaComposer clipboard fallbacks', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('does not crash when clipboard writeText is unavailable', async () => {
+    vi.stubGlobal('navigator', { clipboard: {} })
+
+    render(<ChatAreaComposer {...baseProps} lastAssistantContent="reply without clipboard writer" />)
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'copy last reply' }))
+    })
+
+    expect(screen.getByRole('button', { name: 'copy last reply' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'copied!' })).not.toBeInTheDocument()
   })
 })

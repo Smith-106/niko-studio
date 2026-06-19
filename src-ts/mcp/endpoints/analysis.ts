@@ -8,6 +8,7 @@ import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { graphQuery } from '../services/graph';
 import { graphGetRelationships } from '../services/graph';
+import { escapeCypherString } from '../../utils/cypher-safety';
 import {
   buildNarrativeVisualizationBundle,
   type NarrativeVisualizationChapterInput,
@@ -20,7 +21,7 @@ import {
 export async function analysisPatternsEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const category = body.category as string | undefined;
-  const categoryFilter = category ? ` AND n.category = '${category.replace(/'/g, "''")}'` : '';
+  const categoryFilter = category ? ` AND n.category = '${escapeCypherString(category)}'` : '';
 
   const rawEntities = await graphQuery(
     `MATCH (n) WHERE (n.type IN ['Scene', 'Chapter', 'Event'] OR labels(n)[0] IN ['Scene', 'Chapter', 'Event'])${categoryFilter} RETURN n.id as id, n.name as name, coalesce(n.observations, []) as observations`
@@ -59,9 +60,9 @@ export async function analysisNarrativeVisualizationEndpoint(request: HttpReques
   const consistencyResult = await runConsistencyCheck({
     ...body,
     chapters: normalizedChapters.map((chapter) => chapter.content),
-    chapterMeta: normalizedChapters.map((chapter) => ({
-      chapterNumber: chapter.chapterNumber ?? chapter.chapterIndex + 1,
-      title: chapter.title ?? `Chapter ${chapter.chapterIndex + 1}`,
+    chapterMeta: normalizedChapters.map((chapter, index) => ({
+      chapterNumber: chapter.chapterNumber ?? index + 1,
+      title: chapter.title ?? `Chapter ${index + 1}`,
     })),
   });
 

@@ -6,7 +6,14 @@ vi.mock('./core', () => ({
   callApi: callApiMock,
 }))
 
-import { evaluateContent, getImprovementSuggestions, novelQualityCheck, runConsistencyCheck } from './evaluation'
+import {
+  evaluateContent,
+  evaluateWithModules,
+  getImprovementSuggestions,
+  novelQualityCheck,
+  runConsistencyCheck,
+  runStandaloneConsistencyCheck,
+} from './evaluation'
 
 describe('evaluateContent', () => {
   beforeEach(() => {
@@ -111,6 +118,50 @@ describe('evaluateContent', () => {
       },
     )
     expect(result.data?.suggestions).toHaveLength(1)
+  })
+})
+
+describe('evaluateWithModules', () => {
+  beforeEach(() => {
+    callApiMock.mockReset()
+  })
+
+  it('calls /critic/evaluate with module-score enrichment enabled', async () => {
+    callApiMock.mockResolvedValue({
+      success: true,
+      data: {
+        decision: 'APPROVED',
+        total_score: 91,
+        lock_score: 90,
+        style_score: 92,
+        logic_score: 89,
+        actionable_feedback: 'Strong revision pass.',
+        suggestions: [],
+        module_scores: {
+          readability: 94,
+        },
+      },
+    })
+
+    const result = await evaluateWithModules(
+      'chapter text',
+      { scene_id: 'scene-4' },
+      ['logic', 'style'],
+      { coherence: 90 },
+    )
+
+    expect(callApiMock).toHaveBeenCalledWith(
+      '/critic/evaluate',
+      'POST',
+      {
+        content: 'chapter text',
+        scene_card: { scene_id: 'scene-4' },
+        dimensions: ['logic', 'style'],
+        quality_goals: { coherence: 90 },
+        include_module_scores: true,
+      },
+    )
+    expect(result.data?.module_scores).toEqual({ readability: 94 })
   })
 })
 
@@ -256,6 +307,115 @@ describe('runConsistencyCheck', () => {
           }),
         }),
       }),
+    )
+  })
+})
+
+describe('runStandaloneConsistencyCheck', () => {
+  beforeEach(() => {
+    callApiMock.mockReset()
+  })
+
+  it('calls /consistency/check with optional check types and workspace', async () => {
+    callApiMock.mockResolvedValue({
+      success: true,
+      data: {
+        valid: false,
+        issues: ['timeline drift'],
+        score: 72,
+      },
+    })
+
+    const workspace = {
+      schemaVersion: '2026-04-08',
+      identity: {
+        workspaceId: 'atlas-workspace',
+        projectId: 'atlas-project',
+        projectName: 'Atlas',
+        workspaceRoot: '/tmp/atlas',
+      },
+      manuscript: {
+        manuscriptId: null,
+        title: null,
+        chapterId: 'chapter-2',
+        chapterTitle: null,
+        chapterNumber: 2,
+      },
+      storyBible: {
+        storyBibleId: null,
+        draftId: null,
+        version: null,
+        storage: 'workspace',
+      },
+      knowledge: {
+        focusEntityId: null,
+        graphEntityIds: [],
+        memoryEntryIds: [],
+      },
+      authority: {
+        recordSetId: null,
+        activeSceneId: null,
+        activeEventId: null,
+        activeTimelineId: null,
+        consistencyRunId: null,
+      },
+      workflow: {
+        sessionId: null,
+        planId: null,
+        level: 'L3',
+      },
+      chat: {
+        conversationId: null,
+        comparisonEnabled: null,
+      },
+      compatibility: {
+        additiveContract: true,
+        migratedLegacyFields: [],
+        notes: [],
+      },
+    } as const
+
+    const result = await runStandaloneConsistencyCheck('chapter body', {
+      checkTypes: ['timeline', 'worldview'],
+      workspace,
+    })
+
+    expect(callApiMock).toHaveBeenCalledWith(
+      '/consistency/check',
+      'POST',
+      {
+        content: 'chapter body',
+        check_types: ['timeline', 'worldview'],
+        workspace,
+      },
+    )
+    expect(result.data).toEqual({
+      valid: false,
+      issues: ['timeline drift'],
+      score: 72,
+    })
+  })
+
+  it('omits optional fields when no standalone-check options are provided', async () => {
+    callApiMock.mockResolvedValue({
+      success: true,
+      data: {
+        valid: true,
+        issues: [],
+        score: 100,
+      },
+    })
+
+    await runStandaloneConsistencyCheck('clean chapter')
+
+    expect(callApiMock).toHaveBeenCalledWith(
+      '/consistency/check',
+      'POST',
+      {
+        content: 'clean chapter',
+        check_types: undefined,
+        workspace: undefined,
+      },
     )
   })
 })

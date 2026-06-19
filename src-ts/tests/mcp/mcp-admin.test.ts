@@ -144,6 +144,39 @@ describe('mcp admin endpoints', () => {
     expect(response.body).toEqual({ error: 'builtin service path is immutable' });
   });
 
+  it('updates a custom service and returns the serialized runtime config', async () => {
+    await createMcpService(
+      makeRequest({
+        body: {
+          id: 'shadow-admin',
+          name: 'Shadow Admin',
+          path: '/shadow-admin',
+        },
+      }),
+    );
+
+    const response = await updateMcpService(
+      makeRequest({
+        params: { service_id: 'shadow-admin' },
+        body: {
+          name: 'Shadow Admin v2',
+          path: '/shadow-admin-v2',
+          enabled: true,
+        },
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({
+      service: expect.objectContaining({
+        id: 'shadow-admin',
+        name: 'Shadow Admin v2',
+        path: '/shadow-admin-v2',
+        enabled: true,
+      }),
+    });
+  });
+
   it('updates runtime state for health probes and custom service deletion', async () => {
     await createMcpService(
       makeRequest({

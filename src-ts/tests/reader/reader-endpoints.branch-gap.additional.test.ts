@@ -100,4 +100,5 @@ describe('reader/mcp/reader-endpoints branch-gap coverage', () => {
     expect(response.statusCode).toBe(400);
     expect((response.body as any).error).toBe('parameters.focusAreas must be an array');
   });
+
 });

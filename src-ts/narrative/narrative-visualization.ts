@@ -22,8 +22,8 @@ import type {
   NarrativeVisualizationBundle,
 } from './types/visualization-types.js';
 
-function chapterLabel(index: number, chapterNumber?: number, title?: string): string {
-  const numberLabel = chapterNumber ?? index + 1;
+function chapterLabel(index: number, chapterNumber: number, title?: string): string {
+  const numberLabel = chapterNumber;
   return title?.trim() ? `Chapter ${numberLabel}: ${title.trim()}` : `Chapter ${numberLabel}`;
 }
 

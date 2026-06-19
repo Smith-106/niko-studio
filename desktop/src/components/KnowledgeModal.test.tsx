@@ -10,7 +10,15 @@ import { useSettingsStore } from '../stores/settingsStore'
 const knowledgeTabScenario = vi.hoisted(() => ({
   value: 'empty' as 'empty' | 'filled' | 'effect',
   characterLoadEffectRuns: 0,
+  characterItem: { id: 'char-1', name: 'Alice', description: '主角' } as Record<string, unknown>,
+  locationItem: { id: 'loc-1', name: 'Harbor', description: '港口' } as Record<string, unknown>,
+  plotItem: { id: 'plot-1', title: 'Bridge Alarm', content: 'Act 1 turning point' } as Record<string, unknown>,
 }))
+
+function getScenarioItemLabel(item: Record<string, unknown>): string {
+  const label = item.name ?? item.title ?? item.id
+  return typeof label === 'string' && label.trim() ? label : 'Item'
+}
 
 vi.mock('../api/client', () => ({
   searchMemory: vi.fn(),
@@ -51,7 +59,7 @@ vi.mock('./knowledge/CharacterTab', async () => {
 
         onLoadingChange(true)
         onStatusChange(null)
-        onItemsChange([{ id: 'char-1', name: 'Alice', description: '主角' }])
+        onItemsChange([knowledgeTabScenario.characterItem])
         onLoadingChange(false)
       }, [onItemsChange, onLoadingChange, onStatusChange])
 
@@ -63,9 +71,9 @@ vi.mock('./knowledge/CharacterTab', async () => {
         ? (
             <button
               type="button"
-              onClick={() => onItemClick({ id: 'char-1', name: 'Alice', description: '主角' })}
+              onClick={() => onItemClick(knowledgeTabScenario.characterItem)}
             >
-              Alice
+              {getScenarioItemLabel(knowledgeTabScenario.characterItem)}
             </button>
           )
         : (
@@ -83,9 +91,9 @@ vi.mock('./knowledge/LocationTab', () => ({
       ? (
           <button
             type="button"
-            onClick={() => onItemClick({ id: 'loc-1', name: 'Harbor', description: '港口' })}
+            onClick={() => onItemClick(knowledgeTabScenario.locationItem)}
           >
-            Harbor
+            {getScenarioItemLabel(knowledgeTabScenario.locationItem)}
           </button>
         )
       : (
@@ -101,11 +109,9 @@ vi.mock('./knowledge/PlotTab', () => ({
       ? (
           <button
             type="button"
-            onClick={() =>
-              onItemClick({ id: 'plot-1', title: 'Bridge Alarm', content: 'Act 1 turning point' })
-            }
+            onClick={() => onItemClick(knowledgeTabScenario.plotItem)}
           >
-            Bridge Alarm
+            {getScenarioItemLabel(knowledgeTabScenario.plotItem)}
           </button>
         )
       : (
@@ -123,6 +129,9 @@ describe('KnowledgeModal accessibility and labels', () => {
     vi.clearAllMocks()
     knowledgeTabScenario.value = 'empty'
     knowledgeTabScenario.characterLoadEffectRuns = 0
+    knowledgeTabScenario.characterItem = { id: 'char-1', name: 'Alice', description: '主角' }
+    knowledgeTabScenario.locationItem = { id: 'loc-1', name: 'Harbor', description: '港口' }
+    knowledgeTabScenario.plotItem = { id: 'plot-1', title: 'Bridge Alarm', content: 'Act 1 turning point' }
     useSettingsStore.getState().updateSettings({ language: 'zh' })
     useAppStore.setState({
       currentWorkspace: {
@@ -291,6 +300,23 @@ describe('KnowledgeModal accessibility and labels', () => {
     expect(screen.getAllByText('Act 1 turning point').length).toBeGreaterThan(0)
   })
 
+  it('updates the shared search query and closes the selected detail card', async () => {
+    knowledgeTabScenario.value = 'filled'
+
+    const user = userEvent.setup()
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    const searchInput = screen.getByRole('textbox', { name: zh.knowledgeSearchPlaceholder })
+    await user.type(searchInput, 'hero')
+    expect(searchInput).toHaveValue('hero')
+
+    await user.click(await screen.findByRole('button', { name: 'Alice' }))
+    expect(screen.getByRole('button', { name: zh.knowledgePromoteCanon })).toBeInTheDocument()
+
+    await user.click(screen.getAllByRole('button', { name: zh.knowledgeClose })[1]!)
+    expect(screen.queryByRole('button', { name: zh.knowledgePromoteCanon })).not.toBeInTheDocument()
+  })
+
   it('switches to the skills tab without breaking hook order', async () => {
     const user = userEvent.setup()
     render(<KnowledgeModal isOpen onClose={() => {}} />)
@@ -360,6 +386,54 @@ describe('KnowledgeModal accessibility and labels', () => {
     expect(screen.getByText(zh.knowledgePromoteCanonSuccess)).toBeInTheDocument()
   })
 
+  it.each([
+    [zh.knowledgeTabLocations, 'Harbor', 'locations/atlas-workspace-loc-1', 'knowledge.locations.loc-1'],
+    [zh.knowledgeTabPlots, 'Bridge Alarm', 'plots/atlas-workspace-plot-1', 'knowledge.plots.plot-1'],
+  ])(
+    'promotes a selected %s item into canon with the correct slug prefix',
+    async (tabLabel, itemLabel, expectedSlug, expectedSourceRef) => {
+      knowledgeTabScenario.value = 'filled'
+      vi.mocked(promoteProjectWikiCanonApi).mockResolvedValue({
+        success: true,
+        data: {
+          available: true,
+          reason: null,
+          workspace_id: 'atlas-workspace',
+          page: {
+            id: 'canon-knowledge-extra',
+            slug: expectedSlug,
+            title: itemLabel,
+            status: 'curated',
+            path: '/tmp/item.md',
+            markdown: `# ${itemLabel}`,
+            promoted_from: 'manual',
+          },
+          raw_evidence_path: '/tmp/item.json',
+          log_entry: { type: 'promotion' },
+        },
+      })
+
+      const user = userEvent.setup()
+      render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+      await user.click(screen.getByRole('button', { name: tabLabel }))
+      await user.click(await screen.findByRole('button', { name: itemLabel }))
+      await user.click(screen.getByRole('button', { name: zh.knowledgePromoteCanon }))
+
+      await waitFor(() => {
+        expect(promoteProjectWikiCanonApi).toHaveBeenCalledTimes(1)
+      })
+
+      const [payload] = vi.mocked(promoteProjectWikiCanonApi).mock.calls[0] ?? []
+      expect(payload).toMatchObject({
+        title: itemLabel,
+        slug: expectedSlug,
+        sourceRef: expectedSourceRef,
+      })
+      expect(screen.getByText(zh.knowledgePromoteCanonSuccess)).toBeInTheDocument()
+    },
+  )
+
   it('renders disabled create affordances for empty non-skill tabs', async () => {
     knowledgeTabScenario.value = 'empty'
 
@@ -373,5 +447,58 @@ describe('KnowledgeModal accessibility and labels', () => {
 
     await user.click(screen.getByRole('button', { name: zh.knowledgeTabPlots }))
     expect(screen.getByTitle(zh.knowledgeAddPrefix + zh.knowledgeTabPlots)).toBeDisabled()
+  })
+
+  it('renders empty scope guidance and reference-specific hint when no workspace is bound', async () => {
+    const user = userEvent.setup()
+    useAppStore.setState({ currentWorkspace: null })
+
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    await user.click(await screen.findByRole('button', { name: zh.knowledgeTaskReference }))
+
+    expect(screen.getByText(zh.knowledgeTaskScopeEmpty)).toBeInTheDocument()
+    expect(screen.getAllByText(zh.knowledgeTaskReferenceHint).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('renders fallback labels and structured details for sparse selected items', async () => {
+    const user = userEvent.setup()
+    knowledgeTabScenario.value = 'filled'
+    knowledgeTabScenario.characterItem = {
+      metadata: { stage: 'draft' },
+      notes: 'Keep this clue hidden',
+      empty: '',
+      nil: null,
+    }
+
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    await user.click(await screen.findByRole('button', { name: 'Item' }))
+
+    expect(screen.getAllByText(zh.knowledgeNoDescription).length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('metadata')).toBeInTheDocument()
+    expect(screen.getByText(/"stage": "draft"/)).toBeInTheDocument()
+    expect(screen.getByText('Keep this clue hidden')).toBeInTheDocument()
+  })
+
+  it('surfaces an error banner when canon promotion is unavailable', async () => {
+    const user = userEvent.setup()
+    knowledgeTabScenario.value = 'filled'
+    vi.mocked(promoteProjectWikiCanonApi).mockResolvedValue({
+      success: true,
+      data: {
+        available: false,
+        reason: 'canon-disabled',
+      },
+    } as never)
+
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    await user.click(await screen.findByRole('button', { name: 'Alice' }))
+    await user.click(screen.getByRole('button', { name: zh.knowledgePromoteCanon }))
+
+    await waitFor(() => {
+      expect(screen.getByText(zh.knowledgePromoteCanonFailure)).toBeInTheDocument()
+    })
   })
 })

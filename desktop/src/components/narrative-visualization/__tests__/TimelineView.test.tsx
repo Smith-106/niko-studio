@@ -265,6 +265,202 @@ describe('TimelineView', () => {
     expect(onSelectChapter).toHaveBeenCalledWith('ch-1')
   })
 
+  it('calls onSelectChapter when the chapter hit area is clicked', () => {
+    const onSelectChapter = vi.fn()
+    const { container } = render(
+      <TimelineView
+        data={sampleTimelineData}
+        selectedChapterId={null}
+        onSelectChapter={onSelectChapter}
+      />,
+    )
+
+    const chapterHitAreas = container.querySelectorAll('circle[r="16"]')
+    expect(chapterHitAreas.length).toBe(sampleTimelineData.chapters.length)
+
+    fireEvent.click(chapterHitAreas[0]!)
+
+    expect(onSelectChapter).toHaveBeenCalledWith('ch-1')
+  })
+
+  it('shows chapter tooltip and hover styling when hovering a chapter marker', () => {
+    const { container } = render(
+      <TimelineView
+        data={sampleTimelineData}
+        selectedChapterId={null}
+        onSelectChapter={() => {}}
+      />,
+    )
+
+    const chapterHitAreas = container.querySelectorAll('circle[r="16"]')
+    fireEvent.mouseEnter(chapterHitAreas[1]!)
+
+    expect(container.querySelector('circle[r="9"][stroke="#7240dd"]')).toBeInTheDocument()
+    expect(container.querySelector('circle[r="6"][fill="#7240dd"]')).toBeInTheDocument()
+    expect(screen.getAllByText('0.30')).toHaveLength(2)
+
+    fireEvent.mouseLeave(chapterHitAreas[1]!)
+
+    expect(container.querySelector('circle[r="9"][stroke="#7240dd"]')).not.toBeInTheDocument()
+    expect(screen.getAllByText('0.30')).toHaveLength(1)
+  })
+
+  it('shows event tooltip, hover styling, and selects chapter when an event marker is used', () => {
+    const onSelectChapter = vi.fn()
+    const { container } = render(
+      <TimelineView
+        data={sampleTimelineData}
+        selectedChapterId={null}
+        onSelectChapter={onSelectChapter}
+      />,
+    )
+
+    const eventMarker = container.querySelector('circle[r="4"][fill="#f43f5e"]')
+    expect(eventMarker).toBeInTheDocument()
+
+    fireEvent.mouseEnter(eventMarker!)
+
+    expect(screen.getByText('Major conflict')).toBeInTheDocument()
+    expect(container.querySelector('line[stroke-width="2.5"]')).toBeInTheDocument()
+    expect(container.querySelector('circle[r="5.5"][fill="#f43f5e"]')).toBeInTheDocument()
+
+    fireEvent.click(eventMarker!)
+    expect(onSelectChapter).toHaveBeenCalledWith('ch-1')
+
+    fireEvent.mouseLeave(eventMarker!)
+    expect(screen.queryByText('Major conflict')).not.toBeInTheDocument()
+  })
+
+  it('renders the turning point tooltip label for turning-point events', () => {
+    const turningPointData: NarrativeVisualizationTimelineData = {
+      ...sampleTimelineData,
+      events: [
+        {
+          id: 'evt-turn',
+          label: 'reversal',
+          chapterIndex: 0,
+          chapterNumber: 1,
+          type: 'turning_point',
+          severity: 'major',
+          description: 'Story reversal',
+        },
+      ],
+    }
+
+    const { container } = render(
+      <TimelineView
+        data={turningPointData}
+        selectedChapterId={null}
+        onSelectChapter={() => {}}
+      />,
+    )
+
+    const eventMarker = container.querySelector('circle[r="4"][fill="#7240dd"]')
+    expect(eventMarker).toBeInTheDocument()
+
+    fireEvent.mouseEnter(eventMarker!)
+
+    expect(screen.getByText('转折点')).toBeInTheDocument()
+    expect(screen.getByText('Story reversal')).toBeInTheDocument()
+  })
+
+  it('falls back to the default event color and skips events without a mapped chapter', () => {
+    const unknownTypeData: NarrativeVisualizationTimelineData = {
+      ...sampleTimelineData,
+      events: [
+        {
+          id: 'evt-unknown',
+          label: 'mystery',
+          chapterIndex: 0,
+          chapterNumber: 1,
+          type: 'mystery',
+          severity: 'minor',
+          description: 'Unknown event',
+        },
+        {
+          id: 'evt-missing',
+          label: 'missing',
+          chapterIndex: 99,
+          chapterNumber: 100,
+          type: 'warning',
+          severity: 'major',
+          description: 'Missing chapter',
+        },
+      ],
+    }
+
+    const { container } = render(
+      <TimelineView
+        data={unknownTypeData}
+        selectedChapterId={null}
+        onSelectChapter={() => {}}
+      />,
+    )
+
+    const eventMarkers = container.querySelectorAll('circle[stroke="#ffffff"]')
+    expect(eventMarkers.length).toBe(1)
+
+    const unknownMarker = container.querySelector('circle[r="4"][fill="#94a3b8"]')
+    expect(unknownMarker).toBeInTheDocument()
+
+    fireEvent.mouseEnter(unknownMarker!)
+    expect(screen.getByText('Unknown event')).toBeInTheDocument()
+  })
+
+  it('drops the hovered event tooltip when the hovered event no longer maps to a chapter after rerender', () => {
+    const { container, rerender } = render(
+      <TimelineView
+        data={sampleTimelineData}
+        selectedChapterId={null}
+        onSelectChapter={() => {}}
+      />,
+    )
+
+    const eventMarker = container.querySelector('circle[r="4"][fill="#f43f5e"]')
+    expect(eventMarker).toBeInTheDocument()
+
+    fireEvent.mouseEnter(eventMarker!)
+    expect(screen.getByText('Major conflict')).toBeInTheDocument()
+
+    const remappedData: NarrativeVisualizationTimelineData = {
+      ...sampleTimelineData,
+      events: [
+        {
+          ...sampleTimelineData.events[0],
+          chapterIndex: 99,
+        },
+      ],
+    }
+
+    rerender(
+      <TimelineView
+        data={remappedData}
+        selectedChapterId={null}
+        onSelectChapter={() => {}}
+      />,
+    )
+
+    expect(screen.queryByText('Major conflict')).not.toBeInTheDocument()
+  })
+
+  it('zooms out and clamps to the minimum scale on positive wheel delta', () => {
+    const onZoomChange = vi.fn()
+
+    render(
+      <TimelineView
+        data={sampleTimelineData}
+        selectedChapterId={null}
+        onSelectChapter={() => {}}
+        zoomScale={0.55}
+        onZoomChange={onZoomChange}
+      />,
+    )
+
+    fireEvent.wheel(screen.getByRole('img'), { deltaY: 100 })
+
+    expect(onZoomChange).toHaveBeenCalledWith(0.5, { x: 0, y: 0 })
+  })
+
   it('renders text fallback for each chapter', () => {
     render(
       <TimelineView

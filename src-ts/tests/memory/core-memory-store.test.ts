@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CoreMemory,
   CoreMemoryStore,
+  getCoreMemoryStore,
   resetCoreMemoryStore,
 } from '../../memory/core-memory-store';
 
@@ -25,6 +26,101 @@ import BetterSqlite3 from 'better-sqlite3';
 
 function createTempDir(): string {
   return mkdtempSync(join(tmpdir(), 'niko-core-memory-'));
+}
+
+type MockVectorItem = {
+  id: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  type: string;
+};
+
+function createMockVectorSearch(dbPath: string) {
+  const items = new Map<string, MockVectorItem>();
+  const close = vi.fn();
+  const connection = {
+    prepare(sql: string) {
+      if (sql.includes("SELECT id, content, metadata FROM items WHERE id = ? AND type = 'memory'")) {
+        return {
+          get(id: string) {
+            const item = items.get(id);
+            if (!item || item.type !== 'memory') return undefined;
+            return {
+              id: item.id,
+              content: item.content,
+              metadata: JSON.stringify(item.metadata),
+            };
+          },
+        };
+      }
+
+      if (sql.includes('SELECT metadata FROM items WHERE id = ?')) {
+        return {
+          get(id: string) {
+            const item = items.get(id);
+            if (!item) return undefined;
+            return { metadata: JSON.stringify(item.metadata) };
+          },
+        };
+      }
+
+      if (sql.includes('UPDATE items SET metadata = ? WHERE id = ?')) {
+        return {
+          run(metadataJson: string, id: string) {
+            const item = items.get(id);
+            if (item) {
+              item.metadata = JSON.parse(metadataJson) as Record<string, unknown>;
+            }
+          },
+        };
+      }
+
+      if (sql.includes("SELECT id, content, metadata FROM items WHERE type = 'memory' LIMIT ?")) {
+        return {
+          all(limit: number) {
+            return Array.from(items.values())
+              .filter((item) => item.type === 'memory')
+              .slice(0, limit)
+              .map((item) => ({
+                id: item.id,
+                content: item.content,
+                metadata: JSON.stringify(item.metadata),
+              }));
+          },
+        };
+      }
+
+      throw new Error(`Unexpected vector SQL in test double: ${sql}`);
+    },
+    close,
+  };
+
+  const vectorSearch = {
+    dbPath,
+    _getConnection: vi.fn(() => connection),
+    upsertVector: vi.fn((params: { id: string; content: string; metadata: Record<string, unknown>; type: string }) => {
+      items.set(params.id, {
+        id: params.id,
+        content: params.content,
+        metadata: { ...params.metadata },
+        type: params.type,
+      });
+    }),
+    searchMemoryVectors: vi.fn((query: string, topK: number) => {
+      const normalized = query.toLowerCase();
+      return Array.from(items.values())
+        .filter((item) => item.type === 'memory' && item.content.toLowerCase().includes(normalized))
+        .slice(0, topK)
+        .map((item) => ({
+          id: item.id,
+          content: item.content,
+          metadata: { ...item.metadata },
+        }));
+    }),
+    deleteVector: vi.fn((id: string) => items.delete(id)),
+  };
+
+  return { vectorSearch, items, connection, close };
 }
 
 // Patch the COMMIT bug in _initSchema by monkey-patching Database.exec
@@ -437,6 +533,154 @@ describe('CoreMemoryStore', () => {
     it('delete returns true even without vectorSearch', () => {
       store.upsertMemory({ content: 'Delete safe', memoryId: 'del-safe' });
       expect(store.delete('del-safe')).toBe(true);
+    });
+
+    it('syncs through vector upsert/search paths and falls back from getMemory to vector storage', () => {
+      const vectorDbPath = join(tempDir, 'vector-upsert.db');
+      const { vectorSearch, items } = createMockVectorSearch(vectorDbPath);
+      const vectorStore = new CoreMemoryStore({
+        dbPath: vectorDbPath,
+        vectorSearch: vectorSearch as any,
+      });
+
+      expect(vectorStore.vectorSearch).toBe(vectorSearch);
+
+      const created = vectorStore.upsert({
+        content: 'Alpha memory text',
+        memoryId: 'vec-upsert',
+        metadata: { chapter: 1 },
+        importance: 0.8,
+        summary: 'Alpha summary',
+      });
+      expect(items.get('vec-upsert')?.metadata).toMatchObject({
+        summary: 'Alpha summary',
+        importance: 0.8,
+        access_count: 0,
+        extra: { chapter: 1 },
+      });
+
+      const updated = vectorStore.upsert({
+        content: 'Alpha memory revised',
+        memoryId: 'vec-upsert',
+        metadata: { chapter: 2 },
+        importance: 0.9,
+      });
+
+      expect(updated.createdAt).toBe(created.createdAt);
+      expect(updated.accessCount).toBe(0);
+      expect(items.get('vec-upsert')?.metadata).toMatchObject({
+        summary: null,
+        importance: 0.9,
+        extra: { chapter: 2 },
+      });
+      expect(vectorStore.getMemory('vec-upsert')?.content).toBe('Alpha memory revised');
+
+      const results = vectorStore.searchMemories({ query: 'alpha', topK: 1 });
+      expect(results).toHaveLength(1);
+      expect(results[0]?.id).toBe('vec-upsert');
+    });
+
+    it('tracks access, archives, and updates summaries through owned vector connections', () => {
+      const vectorDbPath = join(tempDir, 'vector-owned.db');
+      const { vectorSearch, items, close } = createMockVectorSearch(vectorDbPath);
+      const vectorStore = new CoreMemoryStore({
+        dbPath: vectorDbPath,
+        vectorSearch: vectorSearch as any,
+        ownsVectorSearch: true,
+      });
+
+      vectorStore.upsertMemory({
+        content: 'A long note about a silver archive under the old station.',
+        memoryId: 'owned-1',
+        metadata: { lane: 'owned' },
+      });
+
+      const tracked = vectorStore.get('owned-1', true);
+      expect(tracked?.accessCount).toBe(1);
+      expect(items.get('owned-1')?.metadata.access_count).toBe(1);
+
+      const summary = vectorStore.generateSummary({
+        memoryId: 'owned-1',
+        tool: () => 'Owned summary',
+      });
+      expect(summary).toBe('Owned summary');
+      expect(vectorStore.getMemory('owned-1')?.summary).toBe('Owned summary');
+      expect(items.get('owned-1')?.metadata.summary).toBe('Owned summary');
+
+      expect(vectorStore.archive('owned-1')).toBe(true);
+      expect(items.get('owned-1')?.metadata.archived).toBe(true);
+      expect(vectorStore.listAll()).toHaveLength(0);
+      expect(vectorStore.listAll({ includeArchived: true })).toHaveLength(1);
+      expect(close).toHaveBeenCalled();
+    });
+
+    it('marks pending sync on archive failure, falls back to sqlite search, and keeps sqlite rows on delete failure', () => {
+      const vectorDbPath = join(tempDir, 'vector-failure.db');
+      const { vectorSearch, items } = createMockVectorSearch(vectorDbPath);
+      const vectorStore = new CoreMemoryStore({
+        dbPath: vectorDbPath,
+        vectorSearch: vectorSearch as any,
+      });
+
+      vectorStore.upsertMemory({
+        content: 'Vector failure path with silver archive keywords',
+        memoryId: 'fail-case',
+      });
+      items.delete('fail-case');
+
+      expect(vectorStore.archiveMemory('fail-case')).toBe(false);
+      expect(
+        vectorStore.searchMemories({
+          query: 'silver archive',
+          topK: 5,
+          includeArchived: true,
+        }),
+      ).toHaveLength(1);
+
+      const conn = new BetterSqlite3(vectorDbPath);
+      try {
+        const row = conn
+          .prepare('SELECT archived, pending_vector_sync FROM core_memories WHERE id = ?')
+          .get('fail-case') as { archived: number; pending_vector_sync: number };
+        expect(row.archived).toBe(1);
+        expect(row.pending_vector_sync).toBe(1);
+      } finally {
+        conn.close();
+      }
+
+      vectorStore.upsertMemory({
+        content: 'Delete should fail before sqlite removal',
+        memoryId: 'delete-fail',
+      });
+      vectorSearch.deleteVector.mockImplementationOnce(() => {
+        throw new Error('boom');
+      });
+
+      expect(vectorStore.deleteMemory('delete-fail')).toBe(false);
+      expect(vectorStore.getMemory('delete-fail')).not.toBeNull();
+    });
+  });
+
+  describe('helpers and singleton factory', () => {
+    it('covers default summary helper branches', () => {
+      expect((store as any)._defaultSummary('First sentence. Second sentence.', 50)).toBe(
+        'First sentence.',
+      );
+
+      const truncated = (store as any)._defaultSummary('x'.repeat(210), 20);
+      expect(truncated).toHaveLength(20);
+      expect(truncated.endsWith('...')).toBe(true);
+    });
+
+    it('reuses and resets the singleton store instance', () => {
+      const first = getCoreMemoryStore({ dbPath });
+      const second = getCoreMemoryStore({ dbPath: join(tempDir, 'other-core.db') });
+      expect(second).toBe(first);
+
+      resetCoreMemoryStore();
+
+      const third = getCoreMemoryStore({ dbPath: join(tempDir, 'reset-core.db') });
+      expect(third).not.toBe(first);
     });
   });
 });

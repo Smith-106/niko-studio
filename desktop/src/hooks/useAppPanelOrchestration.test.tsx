@@ -87,6 +87,33 @@ describe('useAppPanelOrchestration', () => {
     expect(setActiveRightPanel).toHaveBeenCalledTimes(2)
   })
 
+  it('supports panel toggles, prompt routing, diagnostics routing, and explicit close actions', () => {
+    const setActiveRightPanel = vi.fn()
+
+    const { result } = renderHook(() => useAppPanelOrchestration({ setActiveRightPanel }))
+
+    act(() => {
+      result.current.closeRightPanel()
+      result.current.toggleRightPanel('automation')
+      result.current.openPrompts()
+      result.current.openDiagnostics()
+      result.current.openDetailedDiagnostics()
+    })
+
+    expect(result.current.isTemplatePanelOpen).toBe(false)
+    expect(result.current.settingsOpen).toBe(false)
+    expect(result.current.settingsRequestedSection).toBe('diagnostics')
+
+    expect(setActiveRightPanel).toHaveBeenNthCalledWith(1, 'none')
+    expect(setActiveRightPanel).toHaveBeenNthCalledWith(2, expect.any(Function))
+    expect(setActiveRightPanel).toHaveBeenNthCalledWith(3, 'none')
+    expect(setActiveRightPanel).toHaveBeenNthCalledWith(4, 'mcpStatus')
+
+    const toggleResolver = setActiveRightPanel.mock.calls[1][0] as (prev: string) => string
+    expect(toggleResolver('automation')).toBe('none')
+    expect(toggleResolver('writingHelper')).toBe('automation')
+  })
+
 
   it('does not restore a panel when settings are opened globally', () => {
     const setActiveRightPanel = vi.fn()

@@ -91,7 +91,7 @@ const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
 })
 
 vi.mock('@/types/settingsOwnership', () => ({
-  PERSISTED_SETTINGS_KEYS: [],
+  PERSISTED_SETTINGS_KEYS: ['language'],
 }))
 
 vi.mock('../api/client', () => ({
@@ -140,6 +140,7 @@ const mockedProcessWritingHelper = vi.mocked(processWritingHelper)
 const mockedGetEditorHandle = vi.mocked(getEditorHandle)
 
 const zh = translations.zh
+const en = translations.en
 
 describe('EvaluationPanel revision loop', () => {
   beforeEach(() => {
@@ -409,5 +410,232 @@ describe('EvaluationPanel revision loop', () => {
         },
       }),
     }))
+  })
+
+  it('surfaces the default evaluation failure when revision preview generation returns blank content', async () => {
+    const user = userEvent.setup()
+
+    mockedProcessWritingHelper.mockResolvedValueOnce({
+      success: true,
+      data: {
+        mode: 'rewrite',
+        processed_text: '   ',
+      },
+    })
+
+    render(<EvaluationPanel content="娴嬭瘯鍐呭" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: '生成修改预览' }))
+
+    expect(await screen.findByText(zh.evaluationFailed)).toBeInTheDocument()
+    expect(screen.queryByText('淇敼棰勮')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '生成修改预览' })).toBeInTheDocument()
+  })
+
+  it('shows thrown revision-preview errors and restores the trigger action', async () => {
+    const user = userEvent.setup()
+
+    mockedProcessWritingHelper.mockRejectedValueOnce(new Error('writer offline'))
+
+    render(<EvaluationPanel content="娴嬭瘯鍐呭" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: '生成修改预览' }))
+
+    expect(await screen.findByText('writer offline')).toBeInTheDocument()
+    expect(screen.queryByText('淇敼棰勮')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '生成修改预览' })).toBeInTheDocument()
+  })
+
+  it('passes workspace and provider fields to revision preview requests when available', async () => {
+    const user = userEvent.setup()
+    const currentSettings = useSettingsStore.getState().settings
+    useSettingsStore.setState({
+      settings: {
+        ...currentSettings,
+        primaryProvider: 'openai',
+        llmProviders: currentSettings.llmProviders.map((provider) =>
+          provider.id === 'openai'
+            ? {
+                ...provider,
+                enabled: true,
+                apiKey: 'sk-openai-test',
+                baseUrl: 'https://api.openai.example/v1',
+                defaultModel: 'gpt-4-turbo',
+              }
+            : provider,
+        ),
+      },
+    })
+    useAppStoreMock.setState({
+      currentWorkspace: {
+        schemaVersion: '2026-04-08',
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'Atlas',
+          workspaceRoot: '/tmp/atlas',
+        },
+        manuscript: {
+          manuscriptId: null,
+          title: null,
+          chapterId: 'chapter-9',
+          chapterTitle: 'Chapter 9',
+          chapterNumber: 9,
+        },
+        storyBible: {
+          storyBibleId: null,
+          draftId: null,
+          version: null,
+          storage: 'workspace',
+        },
+        knowledge: {
+          focusEntityId: null,
+          graphEntityIds: [],
+          memoryEntryIds: [],
+        },
+        authority: {
+          recordSetId: null,
+          activeSceneId: null,
+          activeEventId: null,
+          activeTimelineId: null,
+          consistencyRunId: null,
+        },
+        workflow: {
+          level: 'L3',
+          planId: '',
+          sessionId: null,
+        },
+        chat: {
+          conversationId: null,
+        },
+        compatibility: {
+          additiveContract: true,
+          migratedLegacyFields: [],
+          notes: [],
+        },
+      } as any,
+    })
+
+    mockedProcessWritingHelper.mockResolvedValueOnce({
+      success: true,
+      data: {
+        mode: 'rewrite',
+        processed_text: '带工作区和 provider 的预览稿。',
+      },
+    })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: '生成修改预览' }))
+
+    await waitFor(() => {
+      expect(mockedProcessWritingHelper).toHaveBeenCalledWith(expect.objectContaining({
+        content: '测试内容',
+        api_key: 'sk-openai-test',
+        base_url: 'https://api.openai.example/v1',
+        model: 'gpt-4-turbo',
+        provider: 'openai',
+        workspace: expect.objectContaining({
+          identity: expect.objectContaining({
+            workspaceId: 'atlas-workspace',
+          }),
+        }),
+      }))
+    })
+  })
+
+  it('surfaces string-based revision preview failures', async () => {
+    const user = userEvent.setup()
+
+    mockedProcessWritingHelper.mockRejectedValueOnce('writer string failure' as never)
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: '生成修改预览' }))
+
+    expect(await screen.findByText('writer string failure')).toBeInTheDocument()
+  })
+
+  it('surfaces selection-changed and undo-failed revision messages from the editor bridge', async () => {
+    const user = userEvent.setup()
+    const editorHandle = {
+      insertText: vi.fn(),
+      getSelectedText: vi.fn(() => ''),
+      getJSON: vi.fn(() => ({ type: 'doc', content: [] })),
+      captureSelectionSnapshot: vi.fn(() => ({ from: 2, to: 6, text: '测试内容' })),
+      replaceSelectionSnapshot: vi.fn(() => false),
+      insertBelowSelectionSnapshot: vi.fn(() => false),
+      undoLastRevisionApply: vi.fn(() => false),
+      triggerAIContinue: vi.fn(),
+    }
+
+    mockedGetEditorHandle.mockReturnValue(editorHandle)
+    mockedProcessWritingHelper.mockResolvedValueOnce({
+      success: true,
+      data: {
+        mode: 'rewrite',
+        processed_text: '失败分支预览稿。',
+      },
+    })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: '生成修改预览' }))
+    await screen.findByText('失败分支预览稿。')
+
+    await user.click(screen.getByRole('button', { name: '替换选区' }))
+    expect(await screen.findByText('当前选区已变化，请重新选择后再试。')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '作为备选插入' }))
+    expect(await screen.findByText('当前选区已变化，请重新选择后再试。')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '撤销上次应用' }))
+    expect(await screen.findByText('没有可撤销的最近应用。')).toBeInTheDocument()
+  })
+
+  it('builds the english revision instruction when the interface language is english', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    const user = userEvent.setup()
+
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: true,
+      data: {
+        decision: 'REVISE',
+        total_score: 72,
+        lock_score: 24,
+        style_score: 24,
+        logic_score: 24,
+        actionable_feedback: 'Strengthen conflict escalation.',
+        suggestions: [
+          { id: 'rec-en-01', title: 'Raise conflict earlier', reason: 'increase tension', action: 'apply' },
+        ],
+      },
+    })
+    mockedProcessWritingHelper.mockResolvedValueOnce({
+      success: true,
+      data: {
+        mode: 'rewrite',
+        processed_text: 'Revised draft in English.',
+      },
+    })
+
+    render(<EvaluationPanel content="Draft under review." onClose={() => {}} />)
+
+    await screen.findByText(en.evaluationSuggestions)
+    await user.click(screen.getByRole('button', { name: 'Generate revision preview' }))
+
+    await waitFor(() => {
+      expect(mockedProcessWritingHelper).toHaveBeenCalledWith(expect.objectContaining({
+        content: 'Draft under review.',
+        mode: 'rewrite',
+        instruction: expect.stringContaining('Rewrite the text according to the evaluation guidance below.'),
+      }))
+    })
+    expect(await screen.findByText('Revised draft in English.')).toBeInTheDocument()
   })
 })

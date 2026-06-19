@@ -54,14 +54,6 @@ export function CoWritingPanel() {
     setResult(null)
 
     try {
-      // TODO: Wire to actual MCP endpoint
-      // const response = await fetch('/cowriting/generate/auto', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ novelId: 'default', chapterId: 'current', creativityLevel: creativityValue }),
-      // })
-      // const data = await response.json()
-
       // Mock result for now
       await new Promise(resolve => setTimeout(resolve, 800))
       const mockResult: AutoResult = {
@@ -90,14 +82,6 @@ export function CoWritingPanel() {
     setResult(null)
 
     try {
-      // TODO: Wire to actual MCP endpoint
-      // const response = await fetch('/cowriting/generate/guided', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ novelId: 'default', chapterId: 'current', creativityLevel: creativityValue }),
-      // })
-      // const data = await response.json()
-
       // Mock result for now
       await new Promise(resolve => setTimeout(resolve, 1200))
       const mockResult: GuidedResult = {
@@ -152,14 +136,8 @@ export function CoWritingPanel() {
   }, [])
 
   // Handle "Use This" button for guided options
-  const handleUseOption = useCallback((index: number) => {
-    // TODO: Insert option text into manuscript
-    if (result && result.mode === 'guided') {
-      const option = result.options.find(o => o.index === index)
-      if (option) {
-        console.log('Use option:', option.text)
-      }
-    }
+  const handleUseOption = useCallback((_index: number) => {
+    // Placeholder: option insertion is not implemented in this release
   }, [result])
 
   return (

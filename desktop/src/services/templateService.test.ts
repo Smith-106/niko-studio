@@ -53,6 +53,24 @@ describe('templateService', () => {
       expect(templates.some((t) => t.id === 'user1')).toBe(true)
       expect(templates.some((t) => t.isBuiltIn)).toBe(true)
     })
+
+    it('skips corrupted user template files and keeps valid ones', async () => {
+      const userTpl = {
+        id: 'user2', title: 'Healthy Template', description: '', category: 'custom',
+        content: {}, placeholders: [], isBuiltIn: false, createdAt: '', updatedAt: '',
+      }
+
+      mockFs.exists.mockResolvedValue(true)
+      mockFs.readDir.mockResolvedValue([{ name: 'broken.json' } as any, { name: 'user2.json' } as any])
+      mockFs.readTextFile
+        .mockResolvedValueOnce('{broken json')
+        .mockResolvedValueOnce(JSON.stringify(userTpl))
+
+      const templates = await listTemplates()
+
+      expect(templates.some((t) => t.id === 'user2')).toBe(true)
+      expect(templates.some((t) => t.id === 'broken')).toBe(false)
+    })
   })
 
   describe('getTemplate', () => {
@@ -121,6 +139,14 @@ describe('templateService', () => {
       expect(dup.category).toBe('custom')
       expect(dup.isBuiltIn).toBe(false)
       expect(dup.id).not.toBe('builtin-basic-chapter')
+    })
+
+    it('throws when the source template cannot be resolved', async () => {
+      mockFs.readTextFile.mockRejectedValue(new Error('not found'))
+
+      await expect(duplicateTemplate('missing-template', 'Missing Copy')).rejects.toThrow(
+        'Template not found: missing-template',
+      )
     })
   })
 

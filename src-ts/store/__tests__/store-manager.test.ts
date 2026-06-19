@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe('StoreManager - index persistence', () => {
-  it('throws when _saveIndex fails (e.g. indexPath is a directory)', () => {
+  it('logs and preserves document creation when _saveIndex fails (e.g. indexPath is a directory)', () => {
     const basePath = createBasePath();
     try {
       const manager = new StoreManager({ basePath, autoChunk: false });
@@ -48,7 +48,9 @@ describe('StoreManager - index persistence', () => {
       mkdirSync(dirAsFile, { recursive: true });
       manager.indexPath = dirAsFile;
 
-      expect(() => manager.addDocument('fail.md', 'This should throw')).toThrow();
+      const docId = manager.addDocument('fail.md', 'This should not throw');
+      expect(docId).toBeTruthy();
+      expect(manager.getDocument(docId)?.content).toContain('This should not throw');
     } finally {
       rmSync(basePath, { recursive: true, force: true });
     }

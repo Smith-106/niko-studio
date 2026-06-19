@@ -111,20 +111,15 @@ export class EmbeddingServiceImpl {
     // Check cache
     let cacheResults: Record<string, number[] | null> = {};
     const textsToEmbed: string[] = [];
-    const textIndices: Map<string, number> = new Map();
 
     if (this._cache) {
       cacheResults = await this._cache.getBatch(texts, modelName);
       for (let i = 0; i < texts.length; i++) {
-        textIndices.set(texts[i], i);
         if (cacheResults[texts[i]] == null) {
           textsToEmbed.push(texts[i]);
         }
       }
     } else {
-      for (let i = 0; i < texts.length; i++) {
-        textIndices.set(texts[i], i);
-      }
       textsToEmbed.push(...texts);
     }
 
@@ -149,12 +144,12 @@ export class EmbeddingServiceImpl {
 
     // Merge results, preserving original order
     const results: number[][] = new Array(texts.length).fill(null as any) as number[][];
-    for (const text of texts) {
-      const idx = textIndices.get(text)!;
+    for (let i = 0; i < texts.length; i++) {
+      const text = texts[i];
       if (newEmbeddings.has(text)) {
-        results[idx] = newEmbeddings.get(text)!;
+        results[i] = newEmbeddings.get(text)!;
       } else if (cacheResults[text]) {
-        results[idx] = cacheResults[text]!;
+        results[i] = cacheResults[text]!;
       }
     }
 
@@ -189,14 +184,17 @@ export class EmbeddingServiceImpl {
     // Call provider
     if (textsToEmbed.length > 0) {
       const embeddings = await embProvider.embed(textsToEmbed, modelName);
+      const newItems: Record<string, number[]> = {};
+
+      for (let i = 0; i < textsToEmbed.length; i++) {
+        const text = textsToEmbed[i];
+        const embedding = embeddings[i];
+        cachedEmbeddings.set(text, embedding);
+        newItems[text] = embedding;
+      }
 
       // Update cache
       if (this._cache) {
-        const newItems: Record<string, number[]> = {};
-        for (let i = 0; i < textsToEmbed.length; i++) {
-          newItems[textsToEmbed[i]] = embeddings[i];
-          cachedEmbeddings.set(textsToEmbed[i], embeddings[i]);
-        }
         await this._cache.setBatch(newItems, modelName);
       }
 

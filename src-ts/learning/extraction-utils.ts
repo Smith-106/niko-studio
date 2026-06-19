@@ -80,9 +80,6 @@ function segmentByChapter(text: string): Segment[] {
       segments.push({ index: segments.length, content });
     }
   }
-  if (segments.length === 0 && text.trim()) {
-    segments.push({ index: 0, content: text.trim() });
-  }
   return segments;
 }
 

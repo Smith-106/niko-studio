@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
+
 import { useI18n } from '../i18n'
 
 interface ContentSearchProps {
@@ -15,11 +16,6 @@ interface SearchState {
   caseSensitive: boolean
 }
 
-/**
- * In-page message search using CSS Custom Highlight API.
- * Adapted from Cherry Studio's ContentSearch pattern.
- * Zero-DOM-modification text highlighting.
- */
 export const ContentSearch = forwardRef<{ focus: () => void }, ContentSearchProps>(
   function ContentSearchInner({ containerRef, visible, onClose }, ref) {
     const { t } = useI18n()
@@ -31,34 +27,39 @@ export const ContentSearch = forwardRef<{ focus: () => void }, ContentSearchProp
     })
     const inputRef = useRef<HTMLInputElement>(null)
     const rangesRef = useRef<Range[]>([])
-    // Debounce timer ref for search — cleared on new input or unmount
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
     useImperativeHandle(ref, () => ({
       focus: () => inputRef.current?.focus(),
     }))
 
-    // Auto-focus on open
-    useEffect(() => {
-      if (visible) {
-        requestAnimationFrame(() => inputRef.current?.focus())
-      } else {
-        clearHighlights()
+    const clearHighlights = useCallback(() => {
+      if ('Highlights' in CSS && typeof CSS.highlights !== 'undefined') {
+        try {
+          CSS.highlights.delete('content-search')
+        } catch {
+          // Ignore browsers without highlight support.
+        }
       }
-    }, [visible])
+      rangesRef.current = []
+    }, [])
 
     const performSearch = useCallback(() => {
       if (!containerRef.current || !state.query) {
         clearHighlights()
+        setState((prev) => ({
+          ...prev,
+          matchCount: 0,
+          currentIndex: 0,
+        }))
         return
       }
 
-      const container = containerRef.current
       const matches: Range[] = []
-
-      // Walk text nodes using TreeWalker
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null)
+      const walker = document.createTreeWalker(containerRef.current, NodeFilter.SHOW_TEXT, null)
       const textNodes: Text[] = []
       let node: Text | null
+
       while ((node = walker.nextNode() as Text | null)) {
         textNodes.push(node)
       }
@@ -66,28 +67,32 @@ export const ContentSearch = forwardRef<{ focus: () => void }, ContentSearchProp
       const query = state.caseSensitive ? state.query : state.query.toLowerCase()
 
       for (const textNode of textNodes) {
-        const text = state.caseSensitive ? textNode.textContent! : textNode.textContent!.toLowerCase()
-        let startIdx = 0
+        const rawText = textNode.data
+        const searchableText = state.caseSensitive ? rawText : rawText.toLowerCase()
+        let startIndex = 0
+
         while (true) {
-          const idx = text.indexOf(query, startIdx)
-          if (idx === -1) break
+          const matchIndex = searchableText.indexOf(query, startIndex)
+          if (matchIndex === -1) {
+            break
+          }
+
           const range = document.createRange()
-          range.setStart(textNode, idx)
-          range.setEnd(textNode, idx + query.length)
+          range.setStart(textNode, matchIndex)
+          range.setEnd(textNode, matchIndex + query.length)
           matches.push(range)
-          startIdx = idx + 1
+          startIndex = matchIndex + 1
         }
       }
 
       rangesRef.current = matches
 
-      // Apply CSS Custom Highlight API
       if ('Highlights' in CSS && typeof CSS.highlights !== 'undefined') {
         try {
           const highlight = new Highlight(...matches)
           CSS.highlights.set('content-search', highlight)
         } catch {
-          // Fallback: no highlighting support
+          // Ignore browsers without highlight support.
         }
       }
 
@@ -96,60 +101,78 @@ export const ContentSearch = forwardRef<{ focus: () => void }, ContentSearchProp
         matchCount: matches.length,
         currentIndex: matches.length > 0 ? Math.min(prev.currentIndex, matches.length - 1) : 0,
       }))
-    }, [containerRef, state.query, state.caseSensitive])
+    }, [clearHighlights, containerRef, state.caseSensitive, state.query])
 
-    const clearHighlights = useCallback(() => {
-      if ('Highlights' in CSS && typeof CSS.highlights !== 'undefined') {
-        try {
-          CSS.highlights.delete('content-search')
-        } catch {
-          // ignore
+    useEffect(() => {
+      if (visible) {
+        requestAnimationFrame(() => inputRef.current?.focus())
+      } else {
+        clearHighlights()
+      }
+    }, [clearHighlights, visible])
+
+    useEffect(() => {
+      if (!visible) {
+        return
+      }
+
+      searchTimerRef.current = setTimeout(() => {
+        performSearch()
+      }, 150)
+
+      return () => {
+        if (searchTimerRef.current) {
+          clearTimeout(searchTimerRef.current)
+          searchTimerRef.current = null
         }
       }
-      rangesRef.current = []
-    }, [])
+    }, [performSearch, visible])
 
-    // Cleanup on unmount
     useEffect(() => {
       return () => {
         clearHighlights()
-        if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
       }
     }, [clearHighlights])
 
+    const navigateNext = useCallback((direction: number) => {
+      if (rangesRef.current.length === 0) {
+        return
+      }
+
+      let nextIndex = 0
+      setState((prev) => {
+        const next = (prev.currentIndex + direction + prev.matchCount) % prev.matchCount
+        nextIndex = next
+        return { ...prev, currentIndex: next }
+      })
+
+      requestAnimationFrame(() => {
+        const range = rangesRef.current[nextIndex]
+        range?.startContainer.parentElement?.scrollIntoView({
+          block: 'center',
+          behavior: 'smooth',
+        })
+      })
+    }, [])
+
     const handleKeyDown = useCallback(
-      (e: React.KeyboardEvent) => {
-        if (e.key === 'Escape') {
+      (event: React.KeyboardEvent) => {
+        if (event.key === 'Escape') {
           onClose()
-        } else if (e.key === 'Enter') {
-          e.preventDefault()
-          navigateNext(e.shiftKey ? -1 : 1)
+          return
+        }
+
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          navigateNext(event.shiftKey ? -1 : 1)
         }
       },
-      [onClose],
+      [navigateNext, onClose],
     )
 
-    const navigateNext = useCallback(
-      (direction: number) => {
-        if (rangesRef.current.length === 0) return
-        let nextIndex = 0
-        setState((prev) => {
-          const next = (prev.currentIndex + direction + prev.matchCount) % prev.matchCount
-          nextIndex = next
-          return { ...prev, currentIndex: next }
-        })
-        // Use requestAnimationFrame to ensure DOM state is updated before scrolling
-        requestAnimationFrame(() => {
-          const range = rangesRef.current[nextIndex]
-          if (range) {
-            range.startContainer.parentElement?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-          }
-        })
-      },
-      [],
-    )
-
-    if (!visible) return null
+    if (!visible) {
+      return null
+    }
 
     return (
       <div className="absolute top-0 right-0 z-50 m-2 animate-fade-in">
@@ -158,12 +181,9 @@ export const ContentSearch = forwardRef<{ focus: () => void }, ContentSearchProp
           <input
             ref={inputRef}
             value={state.query}
-            onChange={(e) => {
-              const query = e.target.value
+            onChange={(event) => {
+              const query = event.target.value
               setState((prev) => ({ ...prev, query, currentIndex: 0 }))
-              // Debounced search — clear previous timer to avoid stale searches
-              if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
-              searchTimerRef.current = setTimeout(() => performSearch(), 150)
             }}
             onKeyDown={handleKeyDown}
             placeholder={t.contentSearchPlaceholder}

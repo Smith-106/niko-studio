@@ -20,7 +20,7 @@ interface AutomationPanelProps {
 
 type TaskLikeRecord = WorkflowSchedulerTaskRecord & Record<string, unknown>
 
-function readTextField(task: TaskLikeRecord | null, keys: string[]): string | null {
+export function readTextField(task: TaskLikeRecord | null, keys: string[]): string | null {
   if (!task) return null
   for (const key of keys) {
     const value = task[key]
@@ -31,7 +31,7 @@ function readTextField(task: TaskLikeRecord | null, keys: string[]): string | nu
   return null
 }
 
-function readRetryState(task: TaskLikeRecord | null): string | null {
+export function readRetryState(task: TaskLikeRecord | null): string | null {
   if (!task) return null
   const retry = task.retry
   if (retry && typeof retry === 'object') {
@@ -234,17 +234,12 @@ export function AutomationPanel({ onClose, onOpenSettings }: AutomationPanelProp
   }, [selectedTask, confirmToken, workspaceSummary.meaningfulWorkspace, setWorkflowError, setWorkflowMessage, isZh, refreshTasks])
 
   const handlePlanLifecycle = useCallback(async (action: 'pause' | 'resume') => {
-    if (!selectedPlanId) {
-      setWorkflowError(isZh ? '当前任务缺少 plan_id，无法执行生命周期操作。' : 'Selected task has no plan_id for lifecycle action.')
-      return
-    }
-
     setActionLoading(action)
     setMessage(null)
     setError(null)
 
     const response = await workflowLifecycle(
-      selectedPlanId,
+      selectedPlanId!,
       action,
       undefined,
       workspaceSummary.meaningfulWorkspace ?? undefined,

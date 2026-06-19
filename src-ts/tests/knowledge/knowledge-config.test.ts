@@ -207,9 +207,49 @@ providers:
 
   describe('fromEnv', () => {
     let originalEnv: NodeJS.ProcessEnv;
+    const envKeysToClear = [
+      'OPENAI_API_KEY',
+      'OPENAI_BASE_URL',
+      'OPENAI_MODEL_FAST',
+      'OPENAI_MODEL_DEFAULT',
+      'OPENAI_MODEL_POWERFUL',
+      'OPENAI_EMBEDDING_MODEL',
+      'ANTHROPIC_API_KEY',
+      'ANTHROPIC_MODEL_FAST',
+      'ANTHROPIC_MODEL_DEFAULT',
+      'ANTHROPIC_MODEL_POWERFUL',
+      'AZURE_OPENAI_API_KEY',
+      'AZURE_OPENAI_ENDPOINT',
+      'AZURE_MODEL_FAST',
+      'AZURE_MODEL_DEFAULT',
+      'AZURE_MODEL_POWERFUL',
+      'AZURE_EMBEDDING_MODEL',
+      'LOCAL_LLM_BASE_URL',
+      'LOCAL_MODEL_FAST',
+      'LOCAL_MODEL_DEFAULT',
+      'LOCAL_MODEL_POWERFUL',
+      'LOCAL_EMBEDDING_MODEL',
+      'LLM_DEFAULT_PROVIDER',
+      'EMBEDDING_DEFAULT_PROVIDER',
+      'EMBEDDING_CACHE_ENABLED',
+      'EMBEDDING_CACHE_TTL',
+      'EMBEDDING_CACHE_MAX_SIZE',
+      'RETRY_MAX_ATTEMPTS',
+      'RETRY_INITIAL_DELAY',
+      'RETRY_MAX_DELAY',
+      'RETRY_EXPONENTIAL_BASE',
+      'HEALTH_CHECK_INTERVAL',
+    ] as const;
+
+    const clearConfigEnv = () => {
+      for (const key of envKeysToClear) {
+        delete process.env[key];
+      }
+    };
 
     beforeEach(() => {
       originalEnv = { ...process.env };
+      clearConfigEnv();
     });
 
     afterEach(() => {

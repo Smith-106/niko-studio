@@ -12,7 +12,7 @@
  */
 
 import type { IAgentLLMService } from './base';
-import { AgentType } from './base';
+import { AgentType, BaseAgent } from './base';
 import type { AgentLifecycleHook } from './lifecycle-hooks';
 import { LifecycleStage } from './lifecycle-hooks';
 import { CommanderAgent } from './commander';
@@ -72,7 +72,6 @@ export class AgentFactory {
 
     // Register lifecycle hooks if provided
     if (options?.lifecycleHooks) {
-      const { BaseAgent } = require('./base');
       if (agent instanceof BaseAgent) {
         for (const { stage, handler } of options.lifecycleHooks) {
           (agent as InstanceType<typeof BaseAgent>).addHook(stage, handler);

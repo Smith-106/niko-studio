@@ -141,4 +141,32 @@ describe('SceneCoherenceDetector', () => {
       suggestions: ['insert a transition scene'],
     });
   });
+
+  it('does not report a teleport contradiction when the interval metadata is missing', () => {
+    const detector = new SceneCoherenceDetector();
+
+    detector.createScene(
+      'scene-1',
+      'City center',
+      '下午她还在城中心调查。',
+      1,
+      { timeOfDay: 'afternoon' },
+      { name: '城中心', type: 'district' },
+      ['林岚'],
+    );
+    detector.createScene(
+      'scene-2',
+      'Distant harbor',
+      '随后她出现在远港，但这里没有写明具体路程耗时。',
+      2,
+      { timeOfDay: 'afternoon' },
+      { name: '远港', type: 'district' },
+      ['林岚'],
+    );
+
+    detector.setTravelTime('城中心', '远港', '2小时');
+    const report = detector.detectAll();
+
+    expect(report.locationIssues).toHaveLength(0);
+  });
 });

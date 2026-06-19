@@ -65,12 +65,22 @@ interface ProviderConfig {
   provider: string
 }
 
-function resolveProviderConfig(body: Record<string, unknown>): ProviderConfig | null {
-  // Only honor provider config explicitly passed in the request.
-  // `/writing-helper/process` keeps deterministic local-helper semantics by default,
-  // while callers that want remote LLM behavior must opt in per request.
-  const apiKey = body.api_key as string | undefined
-  const baseUrl = body.base_url as string | undefined
+function resolveProviderConfig(
+  body: Record<string, unknown>,
+  headers?: Record<string, string>,
+): ProviderConfig | null {
+  // Prefer header-based API key transmission (X-LLM-API-Key) over body field.
+  // Body field is still accepted for backward compatibility but deprecated.
+  const apiKey =
+    headers?.['x-llm-api-key']?.trim()
+    ?? headers?.['X-LLM-API-Key']?.trim()
+    ?? (body.api_key as string | undefined)?.trim()
+    ?? undefined
+  const baseUrl =
+    headers?.['x-llm-base-url']?.trim()
+    ?? headers?.['X-LLM-Base-Url']?.trim()
+    ?? (body.base_url as string | undefined)?.trim()
+    ?? undefined
   const model = body.model as string | undefined
   const provider = body.provider as string | undefined
 
@@ -218,19 +228,6 @@ function mergeSkillInstruction(instruction: string, skillInstruction: string): s
   return parts.join('\n\n');
 }
 
-
-function qualityDefaultPayload(): Record<string, unknown> {
-  return {
-    status: 'ok',
-    total_score: 0,
-    lock_score: 0,
-    style_score: 0,
-    logic_score: 0,
-    actionable_feedback: '',
-    suggestions: [],
-  }
-}
-
 /**
  * Evaluate novel quality using the real CriticEngine.
  * Wraps the MCP critic service evaluateContent for use in the
@@ -238,21 +235,13 @@ function qualityDefaultPayload(): Record<string, unknown> {
  */
 async function evaluateNovelQuality(
   content: string,
-  options?: Record<string, unknown>,
+  _options?: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const dimensions = Array.isArray(options?.dimensions)
-    ? (options.dimensions as string[])
-    : undefined;
-
-  const qualityGoals = (options?.quality_goals ?? options?.qualityGoals) as
-    | Record<string, unknown>
-    | undefined;
-
   const result: EvaluateContentResult = await evaluateContent(
     content,
     undefined,
-    dimensions,
-    qualityGoals,
+    undefined,
+    undefined,
   );
 
   return {
@@ -302,7 +291,7 @@ export async function novelQualityCheckEndpoint(
     body = {}
   }
 
-  if (typeof body !== 'object' || body === null) body = {}
+  if (typeof body !== 'object') body = {}
 
   const content = body.content as string
   if (typeof content !== 'string' || !content.trim()) {
@@ -314,20 +303,26 @@ export async function novelQualityCheckEndpoint(
   const contextBudget = body.context_budget
   const selfLearning = body.self_learning
 
-  const qualityKwargs: Record<string, unknown> = {}
-  if ('quality_level' in body) qualityKwargs.quality_level = String(body.quality_level ?? 'high')
-  if ('quality_mode' in body) qualityKwargs.quality_mode = String(body.quality_mode ?? 'auto')
-  if ('critical_gate_always_on' in body) qualityKwargs.critical_gate_always_on = Boolean(body.critical_gate_always_on ?? true)
-  if ('degrade_reason' in body) qualityKwargs.degrade_reason = String(body.degrade_reason ?? '')
+  const qualityOptions: Record<string, unknown> = {}
+  if ('quality_level' in body) qualityOptions.qualityLevel = String(body.quality_level ?? 'high')
+  if ('quality_mode' in body) qualityOptions.qualityMode = String(body.quality_mode ?? 'auto')
+  if ('critical_gate_always_on' in body) qualityOptions.criticalGateAlwaysOn = Boolean(body.critical_gate_always_on ?? true)
+  if ('degrade_reason' in body) qualityOptions.degradeReason = String(body.degrade_reason ?? '')
 
   let result: Record<string, unknown>
   try {
-    result = await evaluateNovelQuality(normalizedContent, qualityKwargs)
+    result = await evaluateNovelQuality(normalizedContent, qualityOptions)
   } catch {
-    result = qualityDefaultPayload()
+    return jsonResponse({ error: 'Quality evaluation failed' }, 500)
   }
 
-  result = mergeQualitySidecar(result, retrievalMetadata, contextBudget, selfLearning)
+  // Derive decision from total_score (aligned with critic.ts thresholds)
+  const totalScore = Number.isFinite(result.total_score) ? (result.total_score as number) : 0
+  const decision = totalScore >= 80 ? 'APPROVED'
+    : totalScore >= 60 ? 'REVISE'
+    : 'REWRITE'
+
+  result = mergeQualitySidecar({ ...result, decision }, retrievalMetadata, contextBudget, selfLearning)
 
   return jsonResponse(result)
 }
@@ -342,7 +337,7 @@ export async function writingHelperProcessEndpoint(
     body = {}
   }
 
-  if (typeof body !== 'object' || body === null) body = {}
+  if (typeof body !== 'object') body = {}
 
   const content = body.content as string
   if (typeof content !== 'string' || !content.trim()) {
@@ -365,7 +360,7 @@ export async function writingHelperProcessEndpoint(
       ? body.maxItems
       : undefined
 
-  const config = resolveProviderConfig(body)
+  const config = resolveProviderConfig(body, request.headers)
   if (!config) {
     const normalizedMode = mode.trim().toLowerCase()
     if (normalizedMode === 'generate') {
@@ -434,7 +429,7 @@ export async function writingStreamEndpoint(
     body = {}
   }
 
-  if (typeof body !== 'object' || body === null) body = {}
+  if (typeof body !== 'object') body = {}
 
   const content = body.content as string
   if (typeof content !== 'string' || !content.trim()) {
@@ -446,7 +441,7 @@ export async function writingStreamEndpoint(
   const { skillIds, instruction: skillInstruction } = await resolveSkillInstruction(body.skill_ids)
   const combinedInstruction = mergeSkillInstruction(instruction, skillInstruction)
 
-  const config = resolveProviderConfig(body)
+  const config = resolveProviderConfig(body, request.headers)
   if (!config) {
     return jsonResponse({ error: 'No LLM provider configured' }, 400)
   }

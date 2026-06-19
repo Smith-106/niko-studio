@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { User } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,7 +7,8 @@ import userEvent from '@testing-library/user-event'
 import { CharacterTab } from './CharacterTab'
 import { LocationTab } from './LocationTab'
 import { PlotTab } from './PlotTab'
-import type { KnowledgeItem, OperationStatus } from './KnowledgeTypes'
+import { PersistedEntityTab } from './PersistedEntityTab'
+import type { FieldConfig, KnowledgeItem, OperationStatus } from './KnowledgeTypes'
 import { createDefaultProjectWorkspaceContext } from '../../types/workspace'
 import { useAppStore } from '../../stores/appStore'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -25,42 +27,109 @@ const persistedGraph = vi.hoisted(() => ({
   locations: [] as PersistedEntity[],
   events: [] as PersistedEntity[],
   failEntityType: null as 'Character' | 'Location' | 'Event' | null,
+  graphDataErrorEntityType: null as 'Character' | 'Location' | 'Event' | null,
+  mergeGraphError: null as string | null,
+  deleteGraphError: null as string | null,
+  mergeReturnsEmpty: false,
 }))
 
-function extractBalancedObject(text: string, startIndex: number) {
+function extractBalancedBraces(text: string, startIndex: number) {
   let depth = 0
   let inString = false
-  let escaped = false
+  let stringChar = ''
 
   for (let index = startIndex; index < text.length; index += 1) {
     const char = text[index]!
-    if (escaped) {
-      escaped = false
+    if (inString) {
+      if (char === '\\') {
+        index += 1
+        continue
+      }
+      if (char === stringChar) {
+        inString = false
+      }
       continue
     }
-    if (char === '\\') {
-      escaped = true
+
+    if (char === "'" || char === '"') {
+      inString = true
+      stringChar = char
       continue
     }
-    if (char === '"') {
-      inString = !inString
-      continue
-    }
-    if (inString) continue
 
     if (char === '{') depth += 1
     if (char === '}') {
       depth -= 1
       if (depth === 0) {
         return {
-          json: text.slice(startIndex, index + 1),
+          text: text.slice(startIndex, index + 1),
           endIndex: index + 1,
         }
       }
     }
   }
 
-  throw new Error('Unable to parse balanced JSON object')
+  throw new Error('Unable to parse balanced braces')
+}
+
+function parseCypherProps(propsText: string): Record<string, unknown> {
+  // Parse Cypher property format: {key: 'value', key2: 'value2'} or {key: "value"}
+  const inner = propsText.slice(1, -1).trim()
+  if (!inner) return {}
+
+  const result: Record<string, unknown> = {}
+  let remaining = inner
+
+  while (remaining.length > 0) {
+    remaining = remaining.trimStart()
+    if (!remaining) break
+
+    // Parse key (identifier)
+    const keyMatch = /^(\w+)\s*:\s*/.exec(remaining)
+    if (!keyMatch) break
+    const key = keyMatch[1]
+    remaining = remaining.slice(keyMatch[0].length)
+
+    // Parse value (string literal or other)
+    remaining = remaining.trimStart()
+    if (remaining.startsWith("'") || remaining.startsWith('"')) {
+      const quote = remaining[0]!
+      let valueEnd = 1
+      while (valueEnd < remaining.length) {
+        if (remaining[valueEnd] === '\\') {
+          valueEnd += 2
+          continue
+        }
+        if (remaining[valueEnd] === quote) {
+          valueEnd += 1
+          break
+        }
+        valueEnd += 1
+      }
+      const raw = remaining.slice(1, valueEnd - 1)
+      result[key] = raw
+      remaining = remaining.slice(valueEnd)
+    } else {
+      // Non-string value (number, boolean, null)
+      const valueMatch = /^([^,}]+)/.exec(remaining)
+      if (valueMatch) {
+        const raw = valueMatch[1]!.trim()
+        if (raw === 'true') result[key] = true
+        else if (raw === 'false') result[key] = false
+        else if (raw === 'null') result[key] = null
+        else result[key] = Number(raw)
+        remaining = remaining.slice(valueMatch[0].length)
+      }
+    }
+
+    // Skip comma separator
+    remaining = remaining.trimStart()
+    if (remaining.startsWith(',')) {
+      remaining = remaining.slice(1)
+    }
+  }
+
+  return result
 }
 
 function parseMergeMutation(cypher: string) {
@@ -70,14 +139,22 @@ function parseMergeMutation(cypher: string) {
   }
 
   const entityType = header[1] as 'Character' | 'Location' | 'Event'
-  const matchObject = extractBalancedObject(cypher, header[0].length)
-  const setStart = cypher.indexOf('SET', matchObject.endIndex)
-  const setObject = extractBalancedObject(cypher, setStart + 4)
+  const matchObject = extractBalancedBraces(cypher, header[0].length)
+  // Handle both "SET n +=" and "SET {" styles
+  const setRegion = cypher.slice(matchObject.endIndex)
+  const nPlusAssignMatch = /SET\s+n\s*\+=\s*/.exec(setRegion)
+  const setStart = nPlusAssignMatch
+    ? cypher.indexOf(nPlusAssignMatch[0], matchObject.endIndex) + nPlusAssignMatch[0].length
+    : cypher.indexOf('SET', matchObject.endIndex) + 3
+
+  // Find the opening brace for SET props
+  const setBraceStart = cypher.indexOf('{', setStart - 1)
+  const setObject = extractBalancedBraces(cypher, setBraceStart)
 
   return {
     entityType,
-    matchProps: JSON.parse(matchObject.json) as Record<string, unknown>,
-    setProps: JSON.parse(setObject.json) as Record<string, unknown>,
+    matchProps: parseCypherProps(matchObject.text),
+    setProps: parseCypherProps(setObject.text),
   }
 }
 
@@ -124,13 +201,21 @@ vi.mock('../../api/client', () => ({
         existing.updated_at = now
       }
 
-      return { success: true, data: [{ n: existing }] }
+      if (persistedGraph.mergeGraphError) {
+        return { success: true, data: [{ error: persistedGraph.mergeGraphError }] }
+      }
+
+      return { success: true, data: persistedGraph.mergeReturnsEmpty ? [] : [{ n: existing }] }
     }
 
     if (cypher.includes('DETACH DELETE')) {
-      const entityMatch = /MATCH \(n:(\w+)\s+\{name:/.exec(cypher)
+      if (persistedGraph.deleteGraphError) {
+        return { success: true, data: [{ error: persistedGraph.deleteGraphError }] }
+      }
+
+      const entityMatch = /MATCH \(n:(\w+)\s+\{/.exec(cypher)
       const entityType = entityMatch?.[1] as 'Character' | 'Location' | 'Event' | undefined
-      const nameMatch = /name:\s*"([^"]+)"/.exec(cypher)
+      const nameMatch = /name:\s*['"]([^'"]+)['"]/.exec(cypher)
       const name = nameMatch?.[1]
 
       if (entityType && name) {
@@ -176,6 +261,9 @@ vi.mock('../../api/client', () => ({
       if (persistedGraph.failEntityType === 'Character') {
         return { success: false, error: 'graph unavailable', data: [] }
       }
+      if (persistedGraph.graphDataErrorEntityType === 'Character') {
+        return { success: true, data: [{ error: 'graph row error' }] }
+      }
       return { success: true, data: persistedGraph.characters.map((item) => ({ n: item })) }
     }
 
@@ -183,12 +271,18 @@ vi.mock('../../api/client', () => ({
       if (persistedGraph.failEntityType === 'Location') {
         return { success: false, error: 'graph unavailable', data: [] }
       }
+      if (persistedGraph.graphDataErrorEntityType === 'Location') {
+        return { success: true, data: [{ error: 'graph row error' }] }
+      }
       return { success: true, data: persistedGraph.locations.map((item) => ({ n: item })) }
     }
 
     if (cypher.includes('MATCH (n:Event)')) {
       if (persistedGraph.failEntityType === 'Event') {
         return { success: false, error: 'graph unavailable', data: [] }
+      }
+      if (persistedGraph.graphDataErrorEntityType === 'Event') {
+        return { success: true, data: [{ error: 'graph row error' }] }
       }
       return { success: true, data: persistedGraph.events.map((item) => ({ n: item })) }
     }
@@ -269,6 +363,47 @@ function PlotHarness() {
   )
 }
 
+function BareCharacterHarness({
+  initialItems = [],
+  selectedItem = null,
+  searchQuery = '',
+  extraFields,
+  itemKind,
+}: {
+  initialItems?: KnowledgeItem[]
+  selectedItem?: KnowledgeItem | null
+  searchQuery?: string
+  extraFields?: FieldConfig[]
+  itemKind?: string
+}) {
+  const [items, setItems] = useState<KnowledgeItem[]>(initialItems)
+  const [loading, setLoading] = useState(false)
+  const [currentSelectedItem, setCurrentSelectedItem] = useState<KnowledgeItem | null>(selectedItem)
+  const [status, setStatus] = useState<OperationStatus | null>(null)
+
+  return (
+    <>
+      {status && <div>{status.message}</div>}
+      <PersistedEntityTab
+        entityType="Character"
+        itemKind={itemKind}
+        itemLabel="Character"
+        itemIcon={User}
+        items={items}
+        onItemsChange={setItems}
+        loading={loading}
+        onLoadingChange={setLoading}
+        onItemClick={setCurrentSelectedItem}
+        selectedItemId={String(currentSelectedItem?.id ?? currentSelectedItem?.name ?? '')}
+        selectedItem={currentSelectedItem}
+        searchQuery={searchQuery}
+        onStatusChange={setStatus}
+        extraFields={extraFields}
+      />
+    </>
+  )
+}
+
 describe('persisted knowledge authoring tabs', () => {
   const originalConsoleError = console.error
 
@@ -278,6 +413,10 @@ describe('persisted knowledge authoring tabs', () => {
     persistedGraph.locations = []
     persistedGraph.events = []
     persistedGraph.failEntityType = null
+    persistedGraph.graphDataErrorEntityType = null
+    persistedGraph.mergeGraphError = null
+    persistedGraph.deleteGraphError = null
+    persistedGraph.mergeReturnsEmpty = false
     useAppStore.setState({
       backendStatus: false,
       currentWorkspace: createDefaultProjectWorkspaceContext(),
@@ -456,5 +595,110 @@ describe('persisted knowledge authoring tabs', () => {
 
     expect(await screen.findByLabelText('Chapter')).toBeInTheDocument()
     expect(screen.getByLabelText('Act')).toBeInTheDocument()
+  })
+
+  it('renders english editor copy and validates empty saves for direct character tabs', async () => {
+    const user = userEvent.setup()
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+
+    render(<BareCharacterHarness />)
+
+    expect(await screen.findByLabelText('Character name')).toBeInTheDocument()
+    expect(screen.getByLabelText('Character details')).toHaveAttribute(
+      'placeholder',
+      'Capture the key details, purpose, and writing notes for this character.',
+    )
+    expect(screen.getByText('No character entries exist for this workspace yet.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Add Character' }))
+
+    expect(screen.getByText('Enter character name')).toBeInTheDocument()
+  })
+
+  it('renders english plot copy for plot-specific placeholders', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+
+    render(<PlotHarness />)
+
+    expect(await screen.findByLabelText('Plots details')).toHaveAttribute(
+      'placeholder',
+      'Capture the turning point, stakes, and aftermath for this plot beat.',
+    )
+  })
+
+  it('reports row-level graph errors during load', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    persistedGraph.graphDataErrorEntityType = 'Character'
+
+    render(<CharacterHarness />)
+
+    expect(await screen.findByText('Failed to load characters. Please try again.')).toBeInTheDocument()
+  })
+
+  it('surfaces save failures after editing direct extra fields', async () => {
+    const user = userEvent.setup()
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    persistedGraph.mergeGraphError = 'merge blocked'
+
+    render(<BareCharacterHarness extraFields={[
+      { key: 'role', label: 'Role', type: 'text' },
+      { key: 'traits', label: 'Traits', type: 'textarea' },
+    ]} />)
+
+    await user.type(await screen.findByLabelText('Character name'), 'Nadia')
+    await user.type(screen.getByLabelText('Character details'), 'A precise witness.')
+    await user.type(screen.getByLabelText('Role'), 'Observer')
+    await user.type(screen.getByLabelText('Traits'), 'Calm and analytical')
+    await user.click(screen.getByRole('button', { name: 'Add Character' }))
+
+    expect(await screen.findByText('Failed to save character. Please try again.')).toBeInTheDocument()
+  })
+
+  it('falls back when merge responses omit saved rows and reports delete failures', async () => {
+    const user = userEvent.setup()
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    persistedGraph.mergeReturnsEmpty = true
+
+    render(<BareCharacterHarness />)
+
+    await user.type(await screen.findByLabelText('Character name'), 'Orphan')
+    await user.type(screen.getByLabelText('Character details'), 'Still persisted after an empty merge response.')
+    await user.click(screen.getByRole('button', { name: 'Add Character' }))
+
+    expect(await screen.findByText('Character saved to the current workspace.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save Character' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+
+    persistedGraph.deleteGraphError = 'delete blocked'
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(screen.getByText('Delete "Orphan"?')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(await screen.findByText('Error: delete blocked')).toBeInTheDocument()
+    expect(screen.getByText('Orphan')).toBeInTheDocument()
+  })
+
+  it('renders fallback titles and no-description copy for sparse graph items', async () => {
+    useSettingsStore.getState().updateSettings({ language: 'en' })
+    persistedGraph.characters = [{
+      id: '',
+      type: 'Character',
+      name: '',
+      title: 'Fallback title',
+      properties: {
+        workspaceId: 'default-project',
+        projectId: 'default-project',
+        itemKind: 'character',
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as unknown as PersistedEntity]
+
+    render(<CharacterHarness />)
+
+    expect(await screen.findByText('Fallback title')).toBeInTheDocument()
+    expect(screen.getByText('No description')).toBeInTheDocument()
   })
 })

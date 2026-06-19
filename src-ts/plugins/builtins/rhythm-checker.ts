@@ -18,7 +18,7 @@ export const rhythmChecker: WritingPlugin = {
     const variance = lengths.reduce((s, l) => s + Math.pow(l - avgLen, 2), 0) / lengths.length;
     const stdDev = Math.sqrt(variance);
 
-    const variationRatio = avgLen > 0 ? stdDev / avgLen : 0;
+    const variationRatio = stdDev / avgLen;
 
     const evidence: string[] = [];
     const suggestions: string[] = [];

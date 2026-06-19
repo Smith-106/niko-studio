@@ -6,6 +6,7 @@
 
 import { type ApiResponse, callApi } from './core'
 import type { ProjectWorkspaceContext } from './workspace'
+import { appendWorkspacePayload } from './workspace'
 
 // ============================================================
 // Story Bible types (mirrors src-ts/knowledge/entities/story-bible-types.ts)
@@ -136,11 +137,11 @@ export interface QCEnforcementResult {
 export async function sbGetEntities(
   novelId: string,
   type?: SbEntityType,
-  _workspace?: ProjectWorkspaceContext,
+  workspace?: ProjectWorkspaceContext,
 ): Promise<ApiResponse<{ entities: StoryBibleEntity[]; count: number; novelId: string; type: string }>> {
   const body: Record<string, string> = { novelId }
   if (type) body.type = type
-  return callApi('/story-bible/entities/list', 'POST', body as Record<string, unknown>)
+  return callApi('/story-bible/entities/list', 'POST', appendWorkspacePayload(body as Record<string, unknown>, workspace))
 }
 
 export async function sbGetEntity(
@@ -152,17 +153,17 @@ export async function sbGetEntity(
 
 export async function sbCreateEntity(
   entity: Partial<StoryBibleEntity> & { novelId: string; name: string; type: SbEntityType },
-  _workspace?: ProjectWorkspaceContext,
+  workspace?: ProjectWorkspaceContext,
 ): Promise<ApiResponse<{ entity: StoryBibleEntity }>> {
-  return callApi('/story-bible/entities', 'POST', entity as Record<string, unknown>)
+  return callApi('/story-bible/entities', 'POST', appendWorkspacePayload(entity as Record<string, unknown>, workspace))
 }
 
 export async function sbUpdateEntity(
   entityId: string,
   updates: Partial<StoryBibleEntity>,
-  _workspace?: ProjectWorkspaceContext,
+  workspace?: ProjectWorkspaceContext,
 ): Promise<ApiResponse<{ entity: StoryBibleEntity }>> {
-  return callApi(`/story-bible/entity/${entityId}`, 'PUT', updates as Record<string, unknown>)
+  return callApi(`/story-bible/entity/${entityId}`, 'PUT', appendWorkspacePayload(updates as Record<string, unknown>, workspace))
 }
 
 export async function sbDeleteEntity(
@@ -174,9 +175,9 @@ export async function sbDeleteEntity(
 
 export async function sbExtractFromManuscript(
   novelId: string,
-  _workspace?: ProjectWorkspaceContext,
+  workspace?: ProjectWorkspaceContext,
 ): Promise<ApiResponse<ExtractionResult>> {
-  return callApi('/story-bible/extract', 'POST', { novelId })
+  return callApi('/story-bible/extract', 'POST', appendWorkspacePayload({ novelId }, workspace))
 }
 
 export async function sbGetCompleteness(

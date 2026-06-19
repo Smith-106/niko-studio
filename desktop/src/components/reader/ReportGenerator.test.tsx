@@ -527,4 +527,55 @@ describe('ReportGenerator', () => {
     expect(markdown).toContain('- 反对: 无')
     expect(markdown).toContain('Critical issue 6')
   })
+
+  it('falls back to default consensus and derives dimensionSummaries from dimensionScores', async () => {
+    const onReportGenerated = vi.fn()
+
+    analyzeReaderMock.mockResolvedValueOnce({
+      success: true,
+      data: {
+        novelId: 'novel-fallback',
+        readerReactions: [],
+        editorialAnalysis: {
+          structuralIssues: [],
+          styleNotes: [],
+          pacingAssessment: '节奏分析完成',
+          recommendations: [],
+        },
+        dimensionScores: [
+          {
+            personaId: 'critic',
+            personaName: '评论家',
+            scores: [
+              { dimension: 'Plot', score: 0.72, weight: 0.5 },
+              { dimension: 'Style', score: 0.68, weight: 0.5 },
+            ],
+          },
+        ],
+        timestamp: '2024-01-01T00:00:00Z',
+      },
+    })
+
+    render(<ReportGenerator novelId="novel-fallback" onReportGenerated={onReportGenerated} />)
+
+    fireEvent.click(screen.getByRole('button', { name: '生成报告' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('读者模拟报告')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('节奏分析完成')).toBeInTheDocument()
+    expect(screen.getByText('维度分析')).toBeInTheDocument()
+
+    expect(onReportGenerated).toHaveBeenCalledWith(
+      expect.objectContaining({
+        overallAssessment: '节奏分析完成',
+        items: [],
+        dimensionSummaries: expect.objectContaining({
+          Plot: expect.objectContaining({ avgScore: 0.72 }),
+          Style: expect.objectContaining({ avgScore: 0.68 }),
+        }),
+      }),
+    )
+  })
 })

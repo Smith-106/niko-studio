@@ -229,12 +229,6 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
         </div>
       )}
 
-      {mode === 'cross' && hasCrossData && !crossLoading && !emotionalArc && !crossError && (
-        <div className="text-sm text-dark-text-muted py-6 text-center">
-          点击「重新分析」生成跨章节报告。
-        </div>
-      )}
-
       {mode === 'single' && loading && (
         <div className="flex items-center justify-center gap-2 py-8 text-dark-text-muted">
           <Loader2 size={20} className="animate-spin" />

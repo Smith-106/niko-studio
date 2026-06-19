@@ -33,11 +33,11 @@ export const createSkillsSlice: AppSlice<SkillsSlice> = (set) => ({
   refreshAvailableSkills: async () => {
     try {
       const response = await listSkills()
-      if (!response.success || !Array.isArray(response.data) || response.data.length === 0) {
+      if (!response.success || !response.data?.skills?.length) {
         return
       }
 
-      const nextSkills = response.data
+      const nextSkills = response.data.skills
         .map((skill) => (typeof skill?.id === 'string' && skill.id.trim() ? skill.id.trim() : ''))
         .filter(Boolean)
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { NarrativeBrainstorm, NARRATIVE_ROLES } from './narrative-brainstorm'
-import { AdversarialScorer } from './adversarial-scorer'
+import { NarrativeBrainstorm, type RoleAnalysis } from '../services/narrative-brainstorm'
+import { AdversarialScorer } from '../services/adversarial-scorer'
 
 describe('NarrativeBrainstorm', () => {
   const brainstorm = new NarrativeBrainstorm()
@@ -23,6 +23,71 @@ describe('NarrativeBrainstorm', () => {
     const review = brainstorm.crossReview(analyses)
     // 低质量文本应该产生一些缺口或冲突
     expect(review.gaps.length + review.conflicts.length).toBeGreaterThanOrEqual(0)
+  })
+
+  it('returns zero weighted score when a role has no scoring weights', () => {
+    const analyses = brainstorm.analyzeWithRoles('然而，秘密就在门后。', [
+      {
+        id: 'zero-weight',
+        name: 'Zero Weight',
+        focusDimensions: ['hook'],
+        scoringWeights: {},
+        behavioralTraits: [],
+      },
+    ])
+
+    expect(analyses).toEqual([
+      expect.objectContaining({
+        roleId: 'zero-weight',
+        roleName: 'Zero Weight',
+        weightedScore: 0,
+      }),
+    ])
+  })
+
+  it('detects concrete conflicts, synergies, and shared gaps from role findings', () => {
+    const analyses: RoleAnalysis[] = [
+      {
+        roleId: 'plot',
+        roleName: 'Plot',
+        weightedScore: 80,
+        findings: [
+          { dimension: 'pacing', score: 90 },
+          { dimension: 'hook', score: 85 },
+          { dimension: 'character', score: 20, issue: 'thin motivation' },
+        ],
+      },
+      {
+        roleId: 'editor',
+        roleName: 'Editor',
+        weightedScore: 62,
+        findings: [
+          { dimension: 'pacing', score: 50 },
+          { dimension: 'hook', score: 75 },
+          { dimension: 'character', score: 30, issue: 'flat arc' },
+        ],
+      },
+    ]
+
+    const review = brainstorm.crossReview(analyses)
+
+    expect(review.conflicts).toEqual([
+      expect.objectContaining({
+        roles: ['Plot', 'Editor'],
+        description: expect.stringContaining('pacing'),
+      }),
+    ])
+    expect(review.synergies).toEqual([
+      expect.objectContaining({
+        roles: ['Plot', 'Editor'],
+        description: expect.stringContaining('hook'),
+      }),
+    ])
+    expect(review.gaps).toEqual([
+      expect.objectContaining({
+        dimension: 'character',
+      }),
+    ])
   })
 })
 

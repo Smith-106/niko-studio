@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { ForeshadowTracker } from './foreshadow-tracker'
-import { NarrativeAnalyzer } from './narrative-analyzer'
-import { QualityGateLoop } from './quality-gate-loop'
-import { NarrativeBrainstorm, NARRATIVE_ROLES } from './narrative-brainstorm'
-import { AdversarialScorer } from './adversarial-scorer'
-import { NarrativeEntityMapper } from './mappers/narrative-entity-mapper'
-import { DimensionalMemoryMapper } from './mappers/dimensional-memory-mapper'
-import { NarrativeRelationMapper, NarrativeRelationType } from './mappers/narrative-relation-mapper'
-import { BridgeConflictResolver } from './sync/bridge-conflict-resolver'
-import { EntityType } from './graph/graph-manager'
-import { DimensionType } from './memory/sqlite-memory-store'
+import { ForeshadowTracker } from '../services/foreshadow-tracker'
+import { NarrativeAnalyzer } from '../services/narrative-analyzer'
+import { QualityGateLoop } from '../services/quality-gate-loop'
+import { NarrativeBrainstorm } from '../services/narrative-brainstorm'
+import { AdversarialScorer } from '../services/adversarial-scorer'
+import { NarrativeEntityMapper } from '../services/mappers/narrative-entity-mapper'
+import { DimensionalMemoryMapper } from '../services/mappers/dimensional-memory-mapper'
+import { NarrativeRelationMapper, NarrativeRelationType } from '../services/mappers/narrative-relation-mapper'
+import { BridgeConflictResolver } from '../services/sync/bridge-conflict-resolver'
+import { EntityType } from '../graph/graph-manager'
+import { DimensionType } from '../memory/six-dimensional-memory'
 
 /**
  * 端到端写作工作流测试
@@ -50,8 +50,8 @@ describe('端到端写作工作流', () => {
 
     // Step 6: 伏笔追踪
     const tracker = new ForeshadowTracker()
-    tracker.plant('f1', '神秘信件', 3, 50, 10)
-    tracker.plant('f2', '未兑现的承诺', 5, 30, 8)
+    tracker.plant('f1', 'char-1', '神秘信件', 3, 50, 10)
+    tracker.plant('f2', 'char-2', '未兑现的承诺', 5, 30, 8)
 
     // 当前第 25 章
     const alerts = tracker.getAlerts(25)

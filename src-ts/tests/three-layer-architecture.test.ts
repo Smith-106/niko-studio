@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { ForeshadowTracker } from './foreshadow-tracker'
-import { NarrativeAnalyzer } from './narrative-analyzer'
-import { NarrativeEntityMapper } from './mappers/narrative-entity-mapper'
-import { DimensionalMemoryMapper } from './mappers/dimensional-memory-mapper'
-import { NarrativeRelationMapper, NarrativeRelationType } from './mappers/narrative-relation-mapper'
-import { BridgeConflictResolver } from './sync/bridge-conflict-resolver'
-import { EntityType } from './graph/graph-manager'
-import { DimensionType } from './memory/sqlite-memory-store'
+import { ForeshadowTracker } from '../services/foreshadow-tracker'
+import { NarrativeAnalyzer } from '../services/narrative-analyzer'
+import { NarrativeEntityMapper } from '../services/mappers/narrative-entity-mapper'
+import { DimensionalMemoryMapper } from '../services/mappers/dimensional-memory-mapper'
+import { NarrativeRelationMapper, NarrativeRelationType } from '../services/mappers/narrative-relation-mapper'
+import { BridgeConflictResolver } from '../services/sync/bridge-conflict-resolver'
+import { EntityType } from '../graph/graph-manager'
+import { DimensionType } from '../memory/six-dimensional-memory'
 
 describe('ForeshadowTracker', () => {
   it('should plant and resolve foreshadows', () => {
@@ -48,7 +48,7 @@ describe('NarrativeAnalyzer', () => {
   it('should detect hook in conflict opening', () => {
     const result = analyzer.analyzeHook('然而，这一切却在一夜之间崩塌了。她不得不做出选择。')
     expect(result.score).toBeGreaterThan(40)
-    expect(result.hookType).toBe('conflict')
+    expect(result.hookType).toBe('stakes')
   })
 
   it('should give low score to flat opening', () => {

@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { NarrativeVisualizationTensionData } from '../../../api/narrative-visualization'
 import { TensionCurveView } from '../TensionCurveView'
@@ -261,6 +261,74 @@ describe('TensionCurveView', () => {
 
     const selectedCircle = container.querySelector('circle[r="7"]')
     expect(selectedCircle).toBeInTheDocument()
+  })
+
+  it('shows tooltip, hover styling, and selects a chapter from the chart hit area', () => {
+    const onSelectChapter = vi.fn()
+    const { container } = render(
+      <TensionCurveView
+        data={sampleTensionDataWithReaderState}
+        selectedChapterId={null}
+        onSelectChapter={onSelectChapter}
+      />,
+    )
+
+    const hitAreas = container.querySelectorAll('circle[r="16"][fill="transparent"]')
+    expect(hitAreas).toHaveLength(sampleTensionDataWithReaderState.points.length)
+
+    fireEvent.mouseEnter(hitAreas[1]!)
+
+    expect(container.querySelector('circle[r="8"][stroke="#7240dd"]')).toBeInTheDocument()
+    expect(container.querySelector('circle[r="6"][fill="#7240dd"]')).toBeInTheDocument()
+    expect(screen.getByText('点击节点定位编辑器')).toBeInTheDocument()
+
+    fireEvent.click(hitAreas[1]!)
+    expect(onSelectChapter).toHaveBeenCalledWith('ch-2')
+
+    fireEvent.mouseLeave(hitAreas[1]!)
+    expect(screen.queryByText('点击节点定位编辑器')).not.toBeInTheDocument()
+  })
+
+  it('calls onSelectChapter when a chapter is clicked in the text fallback list', () => {
+    const onSelectChapter = vi.fn()
+
+    render(
+      <TensionCurveView
+        data={sampleTensionDataWithReaderState}
+        selectedChapterId={null}
+        onSelectChapter={onSelectChapter}
+      />,
+    )
+
+    const fallback = screen.getByLabelText('Tension text fallback')
+    const buttons = within(fallback).getAllByRole('button')
+
+    fireEvent.click(buttons[1]!)
+
+    expect(onSelectChapter).toHaveBeenCalledWith('ch-2')
+  })
+
+  it('renders a non-empty shell when plotted points are absent and high-risk chapters are omitted', () => {
+    const pointlessData: NarrativeVisualizationTensionData = {
+      points: [],
+      deserts: [],
+      overallArcScore: 0,
+      summary: 'No plotted points',
+      empty: false,
+    }
+
+    const { container } = render(
+      <TensionCurveView
+        data={pointlessData}
+        selectedChapterId={null}
+        onSelectChapter={() => {}}
+      />,
+    )
+
+    expect(screen.getByText('No plotted points')).toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveAttribute('aria-label', 'Tension curve with 0 plotted chapters')
+    expect(container.querySelectorAll('circle[r="16"][fill="transparent"]')).toHaveLength(0)
+    expect(screen.queryByText('risk')).not.toBeInTheDocument()
   })
 
   it('renders SVG with correct viewBox dimensions', () => {

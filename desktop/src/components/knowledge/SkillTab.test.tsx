@@ -91,11 +91,13 @@ describe('SkillTab', () => {
 
     mockListSkills.mockResolvedValue({
       success: true,
-      data: [
-        { id: 'skill-1', name: 'Character Forge' },
-        { id: 'skill-2', name: 'Suspense Craft' },
-        { id: 'skill-3', name: 'Dialogue System' },
-      ],
+      data: {
+        skills: [
+          { id: 'skill-1', name: 'Character Forge' },
+          { id: 'skill-2', name: 'Suspense Craft' },
+          { id: 'skill-3', name: 'Dialogue System' },
+        ],
+      },
     })
     mockLoadSkill.mockResolvedValue({
       success: true,
@@ -126,6 +128,17 @@ describe('SkillTab', () => {
     expect(screen.getByText('Dialogue System')).toBeInTheDocument()
   })
 
+  it('falls back to the skill id when the API omits the display name', async () => {
+    mockListSkills.mockResolvedValue({
+      success: true,
+      data: { skills: [{ id: 'skill-id-only', name: '' }] },
+    })
+
+    render(<SkillTabHarness />)
+
+    expect(await screen.findByText('skill-id-only')).toBeInTheDocument()
+  })
+
   it('falls back to default skills when API fails', async () => {
     mockListSkills.mockResolvedValue({ success: false, data: null })
 
@@ -136,6 +149,18 @@ describe('SkillTab', () => {
     expect(screen.getByText('dialogue-system')).toBeInTheDocument()
   })
 
+  it('keeps loading resilient when listing skills throws', async () => {
+    mockListSkills.mockRejectedValue(new Error('skills unavailable'))
+
+    render(<SkillTabHarness />)
+
+    await waitFor(() => {
+      expect(mockListSkills).toHaveBeenCalled()
+    })
+
+    expect(screen.queryByText('Character Forge')).not.toBeInTheDocument()
+  })
+
   it('selects a skill when a skill card is clicked', async () => {
     const user = userEvent.setup()
     render(<SkillTabHarness />)
@@ -144,6 +169,22 @@ describe('SkillTab', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/当前技能：skill-1/)).toBeInTheDocument()
+    })
+  })
+
+  it('selects fallback skills by name when the list has no ids', async () => {
+    const user = userEvent.setup()
+    mockListSkills.mockResolvedValue({
+      success: false,
+      data: null,
+    })
+
+    render(<SkillTabHarness />)
+
+    await user.click(await screen.findByText('character-forge'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/当前技能：character-forge/)).toBeInTheDocument()
     })
   })
 
@@ -201,6 +242,33 @@ describe('SkillTab', () => {
     })
   })
 
+  it('clears match results when task match fails', async () => {
+    const user = userEvent.setup()
+    mockMatchSkills.mockResolvedValue({
+      success: false,
+      data: null,
+    })
+    render(<SkillTabHarness />)
+
+    await user.click(await screen.findByRole('button', { name: '任务匹配' }))
+
+    await waitFor(() => {
+      expect(mockMatchSkills).toHaveBeenCalled()
+    })
+    expect(screen.queryByText(/skill-1/)).not.toBeInTheDocument()
+  })
+
+  it('passes at most five trimmed keywords to task match when a search query is provided', async () => {
+    const user = userEvent.setup()
+    render(<SkillTabHarness searchQuery="  hero   arc  drama  pace world extra " />)
+
+    await user.click(await screen.findByRole('button', { name: '任务匹配' }))
+
+    await waitFor(() => {
+      expect(mockMatchSkills).toHaveBeenCalledWith(undefined, ['hero', 'arc', 'drama', 'pace', 'world'])
+    })
+  })
+
   it('loads skill chain and displays ordered steps', async () => {
     const user = userEvent.setup()
     render(<SkillTabHarness />)
@@ -213,6 +281,23 @@ describe('SkillTab', () => {
       expect(screen.getByText(/Step 1: skill-1/)).toBeInTheDocument()
       expect(screen.getByText(/Step 2: skill-2/)).toBeInTheDocument()
     })
+  })
+
+  it('clears the skill chain when loading recommendations fails', async () => {
+    const user = userEvent.setup()
+    mockGetSkillChain.mockResolvedValue({
+      success: false,
+      data: null,
+    })
+    render(<SkillTabHarness />)
+
+    await user.click(await screen.findByText('Character Forge'))
+    await user.click(screen.getByRole('button', { name: '推荐链路' }))
+
+    await waitFor(() => {
+      expect(mockGetSkillChain).toHaveBeenCalledWith('skill-1')
+    })
+    expect(screen.queryByText(/Step 1:/)).not.toBeInTheDocument()
   })
 
   it('filters skills based on searchQuery', async () => {
@@ -231,6 +316,104 @@ describe('SkillTab', () => {
     })
     expect(screen.getByRole('button', { name: /添加技能/ })).toBeInTheDocument()
   })
+
+  it('opens the create form from the empty-state add button', async () => {
+    const user = userEvent.setup()
+    render(<SkillTabHarness searchQuery="NonexistentSkill" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('暂无数据')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /添加技能/ }))
+
+    expect(screen.getByPlaceholderText('Skill name...')).toBeInTheDocument()
+  })
+
+  it('renders fallback card copy and reports an empty selection id when an item has no label fields', async () => {
+    const onSelectedSkillIdChange = vi.fn()
+
+    render(
+      <SkillTab
+        items={[{} as KnowledgeItem]}
+        onItemsChange={() => {}}
+        loading={false}
+        onLoadingChange={() => {}}
+        selectedSkillId=""
+        onSelectedSkillIdChange={onSelectedSkillIdChange}
+        searchQuery=""
+      />
+    )
+
+    expect(screen.getByText('knowledgeItemFallback')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('knowledgeItemFallback'))
+
+    expect(onSelectedSkillIdChange).toHaveBeenCalledWith('')
+  })
+
+  it('shows and clears stale delete confirmation after an external selection change', async () => {
+    const user = userEvent.setup()
+
+    function ExternalSelectionHarness() {
+      const [items, setItems] = useState<KnowledgeItem[]>([])
+      const [loading, setLoading] = useState(false)
+      const [selectedSkillId, setSelectedSkillId] = useState('')
+
+      return (
+        <>
+          <button type="button" onClick={() => setSelectedSkillId('skill-2')}>
+            switch selection
+          </button>
+          <SkillTab
+            items={items}
+            onItemsChange={setItems}
+            loading={loading}
+            onLoadingChange={setLoading}
+            selectedSkillId={selectedSkillId}
+            onSelectedSkillIdChange={setSelectedSkillId}
+            searchQuery=""
+          />
+        </>
+      )
+    }
+
+    render(<ExternalSelectionHarness />)
+
+    await user.click(await screen.findByText('Character Forge'))
+    await user.click(screen.getByRole('button', { name: 'delete skill' }))
+    await user.click(screen.getByRole('button', { name: 'switch selection' }))
+
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+    await user.click(cancelButton)
+
+    expect(screen.queryByRole('button', { name: 'confirm delete' })).not.toBeInTheDocument()
+  })
+
+  it('no-ops edit, delete, and chain actions when no skill is selected', async () => {
+    render(<SkillTabHarness />)
+
+    await screen.findByText('Character Forge')
+
+    const editButton = screen.getByRole('button', { name: 'edit skill' }) as HTMLButtonElement
+    const deleteButton = screen.getByRole('button', { name: 'delete skill' }) as HTMLButtonElement
+    const chainButton = screen.getByRole('button', { name: '推荐链路' }) as HTMLButtonElement
+
+    editButton.disabled = false
+    deleteButton.disabled = false
+    chainButton.disabled = false
+    editButton.removeAttribute('disabled')
+    deleteButton.removeAttribute('disabled')
+    chainButton.removeAttribute('disabled')
+
+    fireEvent.click(editButton)
+    fireEvent.click(deleteButton)
+    fireEvent.click(chainButton)
+
+    expect(mockLoadSkill).not.toHaveBeenCalled()
+    expect(mockDeleteSkill).not.toHaveBeenCalled()
+    expect(mockGetSkillChain).not.toHaveBeenCalled()
+  })
 })
 
 describe('SkillTab CRUD operations', () => {
@@ -245,10 +428,12 @@ describe('SkillTab CRUD operations', () => {
 
     mockListSkills.mockResolvedValue({
       success: true,
-      data: [
-        { id: 'skill-1', name: 'Character Forge' },
-        { id: 'skill-2', name: 'Suspense Craft' },
-      ],
+      data: {
+        skills: [
+          { id: 'skill-1', name: 'Character Forge' },
+          { id: 'skill-2', name: 'Suspense Craft' },
+        ],
+      },
     })
     mockLoadSkill.mockResolvedValue({
       success: true,
@@ -272,6 +457,33 @@ describe('SkillTab CRUD operations', () => {
 
     await waitFor(() => {
       expect(mockCreateSkill).toHaveBeenCalledWith('New Skill', expect.stringContaining('New Skill'))
+    })
+  })
+
+  it('keeps the draft create form open when the new skill name is blank', { timeout: 15_000 }, async () => {
+    const user = userEvent.setup()
+    render(<SkillTabHarness />)
+
+    await screen.findByText('Character Forge')
+    await user.click(screen.getByRole('button', { name: 'create skill' }))
+    await user.keyboard('{Enter}')
+
+    expect(mockCreateSkill).not.toHaveBeenCalled()
+    expect(screen.getByPlaceholderText('Skill name...')).toBeInTheDocument()
+  })
+
+  it('falls back to the typed name when createSkill returns no id', { timeout: 15_000 }, async () => {
+    const user = userEvent.setup()
+    mockCreateSkill.mockResolvedValue({ success: true, data: {} })
+    render(<SkillTabHarness />)
+
+    await screen.findByText('Character Forge')
+    await user.click(screen.getByRole('button', { name: 'create skill' }))
+    await user.type(screen.getByPlaceholderText('Skill name...'), 'Fallback Skill')
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText(/当前技能：Fallback Skill/)).toBeInTheDocument()
     })
   })
 

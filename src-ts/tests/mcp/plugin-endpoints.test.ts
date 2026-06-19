@@ -19,8 +19,7 @@ describe('Plugin MCP Endpoints', () => {
     const response = await pluginListEndpoint({ method: 'GET', url: '', headers: {}, body: {}, query: {}, params: {} } as any);
     expect(response.statusCode).toBe(200);
     const body = response.body as any;
-    expect(body.success).toBe(true);
-    expect(Array.isArray(body.data.plugins)).toBe(true);
+    expect(Array.isArray(body.plugins)).toBe(true);
   });
 
   it('returns 400 when text is missing for execute', async () => {
@@ -39,9 +38,8 @@ describe('Plugin MCP Endpoints', () => {
     );
     expect(response.statusCode).toBe(200);
     const body = response.body as any;
-    expect(body.success).toBe(true);
-    expect(body.data.results).toHaveLength(1);
-    expect(body.data.results[0].pluginId).toBe('builtin-rhythm-checker');
+    expect(body.results).toHaveLength(1);
+    expect(body.results[0].pluginId).toBe('builtin-rhythm-checker');
   });
 
   it('registers and executes a user plugin', async () => {
@@ -54,18 +52,43 @@ describe('Plugin MCP Endpoints', () => {
     );
     expect(regResponse.statusCode).toBe(200);
     const regBody = regResponse.body as any;
-    expect(regBody.success).toBe(true);
+    expect(regBody.id).toBe('test-user-plugin');
 
     const execResponse = await pluginExecuteEndpoint(
       mockRequest({ text: '这是一段测试文本，测试功能。', pluginId: 'test-user-plugin' }),
     );
     expect(execResponse.statusCode).toBe(200);
     const execBody = execResponse.body as any;
-    expect(execBody.data.results).toHaveLength(1);
-    expect(execBody.data.results[0].score).toBeGreaterThan(0);
-    expect(execBody.data.results[0].evidence.length).toBeGreaterThan(0);
+    expect(execBody.results).toHaveLength(1);
+    expect(execBody.results[0].score).toBeGreaterThan(0);
+    expect(execBody.results[0].evidence.length).toBeGreaterThan(0);
 
     pluginEngine.unregister('test-user-plugin');
+  });
+
+  it('skips invalid regex rules while still executing valid rules', async () => {
+    const regResponse = await pluginRegisterEndpoint(
+      mockRequest({
+        id: 'test-invalid-regex-plugin',
+        name: 'Test Invalid Regex Plugin',
+        rules: [
+          { keyword: '[', score: 10, evidence: 'should be skipped' },
+          { keyword: '测试', score: 1, evidence: '检测到{count}处测试' },
+        ],
+      }),
+    );
+    expect(regResponse.statusCode).toBe(200);
+
+    const execResponse = await pluginExecuteEndpoint(
+      mockRequest({ text: '测试文本里的测试命中。', pluginId: 'test-invalid-regex-plugin' }),
+    );
+    expect(execResponse.statusCode).toBe(200);
+    const execBody = execResponse.body as any;
+    expect(execBody.results).toHaveLength(1);
+    expect(execBody.results[0].score).toBeGreaterThan(0);
+    expect(execBody.results[0].evidence).toEqual(['检测到2处测试']);
+
+    pluginEngine.unregister('test-invalid-regex-plugin');
   });
 
   it('returns 400 for invalid register request', async () => {

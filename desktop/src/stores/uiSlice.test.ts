@@ -22,6 +22,16 @@ describe('uiSlice', () => {
     expect(useAppStore.getState().focusMode).toBe(false)
   })
 
+  it('sets editor dirty state directly', () => {
+    useAppStore.setState({ editorIsDirty: false })
+
+    useAppStore.getState().setEditorIsDirty(true)
+    expect(useAppStore.getState().editorIsDirty).toBe(true)
+
+    useAppStore.getState().setEditorIsDirty(false)
+    expect(useAppStore.getState().editorIsDirty).toBe(false)
+  })
+
   it('updates word metrics partially', () => {
     useAppStore.setState({ wordMetrics: { wordCount: 0, charCount: 0, readingTime: 0 } })
 
@@ -38,6 +48,25 @@ describe('uiSlice', () => {
       charCount: 500,
       readingTime: 1.5,
     })
+  })
+
+  it('toggles and sets sidebar and history panel visibility', () => {
+    useAppStore.setState({
+      sidebarExpanded: false,
+      historyPanelOpen: false,
+    })
+
+    useAppStore.getState().toggleSidebar()
+    expect(useAppStore.getState().sidebarExpanded).toBe(true)
+
+    useAppStore.getState().setSidebarExpanded(false)
+    expect(useAppStore.getState().sidebarExpanded).toBe(false)
+
+    useAppStore.getState().toggleHistoryPanel()
+    expect(useAppStore.getState().historyPanelOpen).toBe(true)
+
+    useAppStore.getState().setHistoryPanelOpen(false)
+    expect(useAppStore.getState().historyPanelOpen).toBe(false)
   })
 
   it('stores session intelligence visibility and summary independently', () => {

@@ -22,6 +22,20 @@ describe('detectNameConflicts', () => {
     const conflicts = detectNameConflicts(chapters)
     expect(conflicts.length).toBe(0)
   })
+
+  it('detects quoted similar names and ignores common capitalized filler words', () => {
+    const chapters: ChapterContent[] = [
+      { chapterNumber: 1, title: 'Ch1', content: '「张小三」说：The wind settled.' },
+      { chapterNumber: 2, title: 'Ch2', content: '张小山走进房间。' },
+    ]
+
+    const conflicts = detectNameConflicts(chapters)
+
+    expect(conflicts.some((conflict) =>
+      conflict.character.includes('张小三') && conflict.character.includes('张小山'),
+    )).toBe(true)
+    expect(conflicts.every((conflict) => !conflict.character.includes('The'))).toBe(true)
+  })
 })
 
 describe('detectUnresolvedThreads', () => {
@@ -47,6 +61,22 @@ describe('detectUnresolvedThreads', () => {
       expect(t.lastMentioned).toBeGreaterThan(0)
       expect(t.description).toBeTruthy()
     }
+  })
+
+  it('still records heuristic unresolved threads when only generic resolution language appears', () => {
+    const chapters: ChapterContent[] = [
+      { chapterNumber: 1, title: 'Ch1', content: '原来真相是这样，秘密是误会。' },
+      { chapterNumber: 2, title: 'Ch2', content: '谜底揭开后，众人散去。' },
+    ]
+
+    const threads = detectUnresolvedThreads(chapters)
+
+    expect(threads.length).toBeGreaterThan(0)
+    expect(threads).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ thread: '谜底' }),
+      ]),
+    )
   })
 })
 
@@ -112,6 +142,35 @@ describe('runCrossChapterConsistency', () => {
     ]
     const report = runCrossChapterConsistency(chapters)
     expect(report.timelineIssues).toEqual([])
+    expect(report.traitDrifts).toEqual([])
+  })
+
+  it('normalizes quoted names with trailing action characters before reporting trait drift', () => {
+    const chapters: ChapterContent[] = [
+      { chapterNumber: 1, title: 'Ch1', content: '「张三说」的语气很温柔。' },
+      { chapterNumber: 2, title: 'Ch2', content: '「张三说」的目光忽然变得冷酷。' },
+    ]
+
+    const report = runCrossChapterConsistency(chapters)
+
+    expect(report.traitDrifts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          character: '张三',
+          trait: 'personality',
+        }),
+      ]),
+    )
+  })
+
+  it('skips quoted names that normalize down to a single character after trimming verb suffixes', () => {
+    const chapters: ChapterContent[] = [
+      { chapterNumber: 1, title: 'Ch1', content: '「张笑了」显得温柔。' },
+      { chapterNumber: 2, title: 'Ch2', content: '「张笑了」又变得冷酷。' },
+    ]
+
+    const report = runCrossChapterConsistency(chapters)
+
     expect(report.traitDrifts).toEqual([])
   })
 })

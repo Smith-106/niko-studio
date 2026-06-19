@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { QualityGateLoop } from './quality-gate-loop'
-import { NarrativeAgent } from './narrative-agent'
-import { NarrativeEngine } from './narrative-engine'
-import { KnowledgeBridgeV2 } from './knowledge-bridge-v2'
+import { QualityGateLoop } from '../services/quality-gate-loop'
 
 describe('QualityGateLoop', () => {
   const gate = new QualityGateLoop()

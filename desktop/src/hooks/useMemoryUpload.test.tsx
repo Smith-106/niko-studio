@@ -284,6 +284,112 @@ describe('useMemoryUpload', () => {
     expect(result.current.uploadStatus?.message).toContain('Install mammoth in the src-ts runtime environment and retry the upload.')
   })
 
+  it('classifies unstructured prerequisite, format, service, and thrown errors', async () => {
+    const { result, rerender } = renderHook(
+      ({ uploadResult }: { uploadResult: unknown }) => {
+        uploadMemoryFileMock.mockReset()
+        if (uploadResult instanceof Error) {
+          uploadMemoryFileMock.mockRejectedValue(uploadResult)
+        } else {
+          uploadMemoryFileMock.mockResolvedValue(uploadResult)
+        }
+        return useMemoryUpload({
+          t: defaultT,
+          translate: defaultTranslate,
+          currentConversationId: 'conv-1',
+          createConversation: vi.fn(),
+          getCurrentConversationId: () => 'conv-1',
+        })
+      },
+      {
+        initialProps: {
+          uploadResult: {
+            success: false,
+            error: 'Install with: npm install pdf-parse',
+          },
+        },
+      },
+    )
+
+    await act(async () => {
+      await result.current.handleFileUpload(createChangeEvent([createFile('notes.pdf', 'pdf')]))
+    })
+    expect(result.current.uploadStatus?.errorCategory).toBe('prerequisite')
+    expect(result.current.uploadStatus?.message).toContain('Parser prerequisite error')
+
+    rerender({
+      uploadResult: {
+        success: false,
+        error: 'unsupported extension',
+      },
+    })
+    await act(async () => {
+      await result.current.handleFileUpload(createChangeEvent([createFile('notes.txt', 'text')]))
+    })
+    expect(result.current.uploadStatus?.errorCategory).toBe('format')
+    expect(result.current.uploadStatus?.message).toContain('Format error')
+
+    rerender({
+      uploadResult: {
+        success: false,
+        error: '',
+      },
+    })
+    await act(async () => {
+      await result.current.handleFileUpload(createChangeEvent([createFile('notes.txt', 'text')]))
+    })
+    expect(result.current.uploadStatus?.errorCategory).toBe('service')
+    expect(result.current.uploadStatus?.message).toBe('Service error')
+
+    rerender({ uploadResult: new Error('timeout while uploading') })
+    await act(async () => {
+      await result.current.handleFileUpload(createChangeEvent([createFile('notes.txt', 'text')]))
+    })
+    expect(result.current.uploadStatus?.errorCategory).toBe('network')
+    expect(result.current.uploadStatus?.message).toContain('timeout while uploading')
+  })
+
+  it('continues multi-file uploads after failed responses and thrown errors', async () => {
+    uploadMemoryFileMock
+      .mockResolvedValueOnce({ success: false, error: 'service unavailable' })
+      .mockRejectedValueOnce(new Error('network dropped'))
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'injected',
+          file_name: 'third.txt',
+          session_id: 'conv-1',
+          chunks: 2,
+          memory_ids: ['m3'],
+        },
+      })
+
+    const { result } = renderHook(() =>
+      useMemoryUpload({
+        t: defaultT,
+        translate: defaultTranslate,
+        currentConversationId: 'conv-1',
+        createConversation: vi.fn(),
+        getCurrentConversationId: () => 'conv-1',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleFileUpload(createChangeEvent([
+        createFile('first.txt', 'one'),
+        createFile('second.md', 'two'),
+        createFile('third.txt', 'three'),
+      ]))
+    })
+
+    expect(uploadMemoryFileMock).toHaveBeenCalledTimes(3)
+    expect(result.current.uploadStatus).toMatchObject({
+      stage: 'done',
+      type: 'success',
+      message: 'Complete: 1/3',
+    })
+  })
+
   it('creates conversation when currentConversationId is null', async () => {
     const createConversationMock = vi.fn()
     const getCurrentConversationIdMock = vi.fn(() => 'conv-new')

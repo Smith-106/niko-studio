@@ -24,7 +24,9 @@ export interface WritingHelperRequest {
   skill_ids?: string[]
   workspace?: ProjectWorkspaceContext
   detection_evasion_guard_enabled?: boolean
+  /** @deprecated Use X-LLM-API-Key header instead. Kept for backward compatibility. */
   api_key?: string
+  /** @deprecated Use X-LLM-Base-Url header instead. Kept for backward compatibility. */
   base_url?: string
   model?: string
   provider?: string
@@ -46,7 +48,9 @@ export interface StreamWritingHelperRequest {
   workspace?: ProjectWorkspaceContext
   model?: string
   provider?: string
+  /** @deprecated Use X-LLM-API-Key header instead. Kept for backward compatibility. */
   api_key?: string
+  /** @deprecated Use X-LLM-Base-Url header instead. Kept for backward compatibility. */
   base_url?: string
 }
 

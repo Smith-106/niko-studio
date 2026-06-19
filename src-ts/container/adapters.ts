@@ -307,10 +307,10 @@ export class GraphEngineAdapter implements IGraphEngine {
       // Use parameterized approach: first find the node by ID, then traverse
       const startNode = await this.getNode(startId);
       if (!startNode) return [];
-      const startName = (startNode as Record<string, unknown>).name ?? startId;
-      // Use searchEntitiesByName for safe querying instead of string interpolation
+      // Escape startId for safe Cypher string interpolation
+      const safeId = startId.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       return await this.engine.executeCypher(
-        `MATCH (n)-[r*1..${Math.min(depth ?? 3, 5)}]-(m) WHERE n.id = '${startId.replace(/[{}']/g, '')}' RETURN m, r`
+        `MATCH (n)-[r*1..${Math.min(depth ?? 3, 5)}]-(m) WHERE n.id = '${safeId}' RETURN m, r`
       );
     } catch {
       return [];
@@ -337,7 +337,7 @@ export class GraphEngineAdapter implements IGraphEngine {
     return this.engine.getRelationships(character, relationshipType, depth);
   }
 
-  async getForeshadows(status: string, chapter?: number | null): Promise<unknown[]> {
+  async getForeshadows(status?: string, chapter?: number | null): Promise<unknown[]> {
     return this.engine.getForeshadows(status, chapter);
   }
 
@@ -1144,7 +1144,11 @@ export class PhaseOrchestratorAdapter implements IPhaseOrchestrator {
     scratchDir?: string,
     artifacts?: ReadonlyArray<StateArtifact>,
   ) {
-    this._orchestrator = new PhaseOrchestrator(TeamPhase.planning, jsonlDir, relay);
+    const envPhase = process.env.NIKO_GATEWAY_INITIAL_PHASE;
+    const initialPhase = envPhase && envPhase in TeamPhase
+      ? TeamPhase[envPhase as keyof typeof TeamPhase]
+      : TeamPhase.planning;
+    this._orchestrator = new PhaseOrchestrator(initialPhase, jsonlDir, relay);
     this._scratchDir = scratchDir ?? null;
     this._artifacts = artifacts ?? [];
   }
@@ -1581,7 +1585,7 @@ export class FileSyncAdapterChain implements IFileSyncAdapter {
     if (sourceLower.startsWith('obsidian:') || targetLower.startsWith('obsidian:')) {
       return this.adapters.get('obsidian')!;
     }
-    if (sourceLower.startsWith('cloud:') || targetLower.startsWith('cloud:') || targetLower.startsWith('http')) {
+    if (sourceLower.startsWith('cloud:') || targetLower.startsWith('cloud:')) {
       return this.adapters.get('cloud')!;
     }
     if (sourceLower.startsWith('knowledge:') || targetLower.startsWith('knowledge:')) {

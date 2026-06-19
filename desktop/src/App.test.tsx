@@ -127,4 +127,24 @@ describe('App shell accessibility', () => {
     expect(window.location.hash).toBe('#app-main-content')
     expect(shell).toHaveAttribute('data-font-size', 'medium')
   })
+
+  it('keeps the current location when the skip-link target cannot be resolved', async () => {
+    appTestMocks.useOnboardingMock.mockReturnValue({
+      isFirstRun: false,
+      markDone: vi.fn(),
+      resetOnboarding: vi.fn(),
+    })
+    const user = userEvent.setup()
+    const getElementByIdSpy = vi.spyOn(document, 'getElementById').mockReturnValue(null)
+    window.history.replaceState(null, '', '#before-click')
+
+    render(<App />)
+
+    await user.click(screen.getByRole('link', { name: 'Skip to main content' }))
+
+    expect(window.location.hash).toBe('#before-click')
+    expect(screen.getByRole('main')).not.toHaveFocus()
+
+    getElementByIdSpy.mockRestore()
+  })
 })

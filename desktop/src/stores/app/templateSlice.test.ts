@@ -68,6 +68,16 @@ describe('templateSlice', () => {
       expect(store.templatesLoading).toBe(false)
     })
 
+    it('sets the generic error when load fails with a non-Error value', async () => {
+      mockListTemplates.mockRejectedValue('fs error')
+      const store = createStore()
+
+      await store.loadTemplates()
+
+      expect(store.templatesError).toBe('Failed to load templates')
+      expect(store.templatesLoading).toBe(false)
+    })
+
     it('passes category filter', async () => {
       mockListTemplates.mockResolvedValue([])
       const store = createStore()
@@ -104,6 +114,15 @@ describe('templateSlice', () => {
 
       expect(store.templatesError).toBe('write failed')
     })
+
+    it('sets the generic error when save fails with a non-Error value', async () => {
+      mockSaveTemplate.mockRejectedValue('write failed')
+      const store = createStore()
+
+      await store.saveAsTemplate(builtinTemplate)
+
+      expect(store.templatesError).toBe('Failed to save template')
+    })
   })
 
   describe('removeTemplate', () => {
@@ -117,6 +136,24 @@ describe('templateSlice', () => {
 
       expect(mockDeleteTemplate).toHaveBeenCalledWith('u1')
       expect(store.templates).toEqual([])
+    })
+
+    it('sets the generic error when remove fails with a non-Error value', async () => {
+      mockDeleteTemplate.mockRejectedValue('delete failed')
+      const store = createStore()
+
+      await store.removeTemplate('u1')
+
+      expect(store.templatesError).toBe('Failed to delete template')
+    })
+
+    it('sets the error message when remove fails with an Error', async () => {
+      mockDeleteTemplate.mockRejectedValue(new Error('delete exploded'))
+      const store = createStore()
+
+      await store.removeTemplate('u1')
+
+      expect(store.templatesError).toBe('delete exploded')
     })
   })
 

@@ -23,7 +23,7 @@ export function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: 
           </div>
           {(item.description || item.content) && (
             <div className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
-              {String(item.description || item.content || '')}
+              {String(item.description || item.content)}
             </div>
           )}
         </div>

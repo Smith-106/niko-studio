@@ -78,4 +78,22 @@ describe('Plot Templates', () => {
       expect(r.evidence.length).toBeGreaterThan(0);
     }
   });
+  it('falls back to a zero keyword hit rate when a pattern has no keywords', () => {
+    const originalKeywords = PLOT_PATTERNS[PlotPattern.QUEST].keywords;
+
+    PLOT_PATTERNS[PlotPattern.QUEST].keywords = [];
+    try {
+      const results = detectPlotPatterns('', { topK: 20, minConfidence: 0 });
+      const quest = results.find((item) => item.pattern === PlotPattern.QUEST);
+
+      expect(quest).toMatchObject({
+        pattern: PlotPattern.QUEST,
+        confidence: 0,
+        matchedStages: [],
+        evidence: [],
+      });
+    } finally {
+      PLOT_PATTERNS[PlotPattern.QUEST].keywords = originalKeywords;
+    }
+  });
 });

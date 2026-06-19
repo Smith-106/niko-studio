@@ -72,6 +72,22 @@ describe('workflowService', () => {
       const workflows = await loadWorkflows()
       expect(workflows.every((w) => w.isBuiltin)).toBe(true)
     })
+
+    it('ignores hidden and non-json files and falls back when directory reads fail', async () => {
+      mockFs.exists.mockResolvedValue(true)
+      mockFs.readDir.mockResolvedValueOnce([
+        { name: '.hidden.json' },
+        { name: 'notes.txt' },
+      ] as any)
+
+      const ignored = await loadWorkflows()
+      expect(ignored.every((w) => w.isBuiltin)).toBe(true)
+      expect(mockFs.readTextFile).not.toHaveBeenCalled()
+
+      mockFs.readDir.mockRejectedValueOnce(new Error('read dir failed'))
+      const fallback = await loadWorkflows()
+      expect(fallback.every((w) => w.isBuiltin)).toBe(true)
+    })
   })
 
   describe('getWorkflow', () => {
@@ -118,6 +134,22 @@ describe('workflowService', () => {
       }
       await expect(saveWorkflow(wf)).rejects.toThrow('Cannot save built-in')
     })
+
+    it('does not recreate an existing workflow directory and rejects builtin objects', async () => {
+      const wf = {
+        id: 'existing-dir', name: 'Existing', description: '', steps: [],
+        isBuiltin: false, createdAt: 'created', updatedAt: '',
+      }
+      mockFs.exists.mockResolvedValue(true)
+
+      await saveWorkflow(wf)
+
+      expect(mockFs.mkdir).not.toHaveBeenCalled()
+      const written = JSON.parse(mockFs.writeTextFile.mock.calls[0][1])
+      expect(written.createdAt).toBe('created')
+
+      await expect(saveWorkflow({ ...wf, isBuiltin: true })).rejects.toThrow('Cannot save built-in')
+    })
   })
 
   describe('deleteWorkflow', () => {
@@ -125,6 +157,12 @@ describe('workflowService', () => {
       mockFs.exists.mockResolvedValue(true)
       await deleteWorkflow('u1')
       expect(mockFs.remove).toHaveBeenCalledWith('workflows/u1.json')
+    })
+
+    it('does not remove a missing workflow file', async () => {
+      mockFs.exists.mockResolvedValue(false)
+      await deleteWorkflow('missing-user')
+      expect(mockFs.remove).not.toHaveBeenCalled()
     })
 
     it('rejects builtin- prefixed IDs', async () => {
@@ -230,6 +268,76 @@ describe('workflowService', () => {
       expect(mockAgentWrite).toHaveBeenCalledWith(
         expect.objectContaining({ content: expect.stringContaining('story bible content') }),
       )
+    })
+
+    it('uses empty agent output fallbacks and outline input source', async () => {
+      const wf = {
+        id: 'test-outline', name: 'Outline', description: '',
+        steps: [{ id: 's1', name: 'S', agentMode: 'writing' as const, prompt: 'write', inputSource: 'outline' as const, checkpoint: 'none' as const, enabled: true }],
+        isBuiltin: false, createdAt: '', updatedAt: '',
+      }
+      mockFs.readTextFile.mockResolvedValue(JSON.stringify(wf))
+      mockAgentWrite.mockResolvedValueOnce({ data: {} })
+
+      const execution = await executeWorkflow('test-outline', '', noInput, noInput, () => 'outline content')
+
+      expect(execution.status).toBe('completed')
+      expect(execution.stepResults[0]).toMatchObject({
+        input: 'outline content',
+        output: '',
+      })
+    })
+
+    it('uses JSON fallback for evaluation output and records non-Error step failures', async () => {
+      const evaluationWorkflow = {
+        id: 'test-evaluation', name: 'Evaluation', description: '',
+        steps: [{ id: 's1', name: 'S', agentMode: 'evaluation' as const, prompt: 'evaluate', inputSource: 'chapter_content' as const, checkpoint: 'none' as const, enabled: true }],
+        isBuiltin: false, createdAt: '', updatedAt: '',
+      }
+      mockFs.readTextFile.mockResolvedValueOnce(JSON.stringify(evaluationWorkflow))
+      mockCallAnalysisAgent.mockResolvedValueOnce({ data: { score: 88 } })
+
+      const evaluation = await executeWorkflow('test-evaluation', '', () => 'chapter', noInput, noInput)
+
+      expect(evaluation.status).toBe('completed')
+      expect(evaluation.stepResults[0].output).toBe('{"score":88}')
+
+      const failingWorkflow = {
+        ...evaluationWorkflow,
+        id: 'test-failing',
+        steps: [{ ...evaluationWorkflow.steps[0], agentMode: 'writing' as const }],
+      }
+      mockFs.readTextFile.mockResolvedValueOnce(JSON.stringify(failingWorkflow))
+      mockAgentWrite.mockRejectedValueOnce('plain failure')
+
+      const failed = await executeWorkflow('test-failing', '', noInput, noInput, noInput)
+
+      expect(failed.status).toBe('failed')
+      expect(failed.stepResults[0]).toMatchObject({
+        output: 'Step failed',
+        status: 'failed',
+      })
+    })
+
+    it('marks approval as failed when the paused workflow no longer exists', async () => {
+      mockFs.readTextFile.mockRejectedValue(new Error('gone'))
+      const result = await approveStep(
+        {
+          id: 'ex-1',
+          workflowId: 'missing-workflow',
+          chapterId: 'chapter',
+          status: 'paused',
+          currentStepIndex: 0,
+          stepResults: [],
+          startedAt: 'start',
+          completedAt: null,
+        },
+        noInput,
+        noInput,
+        noInput,
+      )
+
+      expect(result.status).toBe('failed')
     })
   })
 })

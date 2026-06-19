@@ -4,6 +4,7 @@ import {
   TimelineConsistencyChecker,
   TimelineConflictType,
   TimelineSeverity,
+  TimeRefType,
 } from '../../narrative/timeline-consistency-checker';
 
 describe('TimelineConsistencyChecker', () => {
@@ -144,6 +145,20 @@ describe('TimelineConsistencyChecker', () => {
     expect(report.globalTimeline).toHaveLength(0);
   });
 
+  it('covers async analyze for empty and non-empty input', async () => {
+    const checker = new TimelineConsistencyChecker();
+
+    const empty = await checker.analyze([], []);
+    const analyzed = await checker.analyze(
+      ['春天来了，故事开始。'],
+      [{ chapterNumber: 1, title: 'Async Spring' }],
+    );
+
+    expect(empty.summary).toBe('No chapters provided for analysis.');
+    expect(analyzed.chapterProfiles).toHaveLength(1);
+    expect(analyzed.summary).toBe('No timeline inconsistencies detected across chapters.');
+  });
+
   // ---------------------------------------------------------------
   // Report structure
   // ---------------------------------------------------------------
@@ -204,6 +219,67 @@ describe('TimelineConsistencyChecker', () => {
 
     // Should have multiple time references
     expect(report.chapterProfiles[0].timeReferences.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('extracts date years and reports unchanged ages across distant chapters', () => {
+    const checker = new TimelineConsistencyChecker();
+    const internals = checker as unknown as {
+      extractTimeReferences(content: string): Array<{
+        type: TimeRefType;
+        raw: string;
+        value: string;
+      }>;
+      inferYear(content: string, refs: Array<{ type: TimeRefType; raw: string }>): string | null;
+      detectAgeInconsistencies(profiles: Array<{
+        chapterNumber: number;
+        chapterTitle: string;
+        timeReferences: unknown[];
+        inferredSeason: string | null;
+        inferredYear: string | null;
+        inferredAge: string | null;
+        inferredTimeOfDay: string | null;
+        dayOffset: number | null;
+      }>): Array<{
+        type: TimelineConflictType;
+        severity: TimelineSeverity;
+        description: string;
+      }>;
+    };
+
+    const refs = internals.extractTimeReferences('2026年三月，线索浮现。');
+    expect(refs.some((ref) => ref.type === TimeRefType.DATE)).toBe(true);
+    expect(internals.inferYear('', refs)).toBe('2026');
+
+    const conflicts = internals.detectAgeInconsistencies([
+      {
+        chapterNumber: 1,
+        chapterTitle: 'Age one',
+        timeReferences: [],
+        inferredSeason: null,
+        inferredYear: null,
+        inferredAge: '30',
+        inferredTimeOfDay: null,
+        dayOffset: null,
+      },
+      {
+        chapterNumber: 4,
+        chapterTitle: 'Age still same',
+        timeReferences: [],
+        inferredSeason: null,
+        inferredYear: null,
+        inferredAge: '30',
+        inferredTimeOfDay: null,
+        dayOffset: null,
+      },
+    ]);
+
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        type: TimelineConflictType.AGE_INCONSISTENCY,
+        severity: TimelineSeverity.INFO,
+        description: expect.stringContaining('remained at 30'),
+      }),
+    ]);
   });
 
   // ---------------------------------------------------------------

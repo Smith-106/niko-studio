@@ -134,7 +134,7 @@ function EntityCard({
   editingField: EditingField | null
   onStartEdit: (entityId: string, field: string, value: string) => void
   onCancelEdit: () => void
-  onSaveEdit: () => void
+  onSaveEdit: (value: string) => void
   onDelete: (entityId: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -150,7 +150,7 @@ function EntityCard({
 
   const handleSave = useCallback(() => {
     if (editingField && editValue !== editingField.value) {
-      onSaveEdit()
+      onSaveEdit(editValue)
     } else {
       onCancelEdit()
     }
@@ -319,9 +319,9 @@ export function StoryBiblePanel({ novelId }: Props) {
   }, [loadEntities, loadCompleteness])
 
   // Inline edit save
-  const handleSaveEdit = useCallback(async () => {
+  const handleSaveEdit = useCallback(async (nextValue: string) => {
     if (!editingField) return
-    const { entityId, field, value } = editingField
+    const { entityId, field } = editingField
 
     // Parse array fields (comma-separated strings back to arrays)
     const arrayFields = new Set([
@@ -332,8 +332,8 @@ export function StoryBiblePanel({ novelId }: Props) {
 
     const updates: Record<string, unknown> = {
       [field]: arrayFields.has(field)
-        ? value.split(',').map(s => s.trim()).filter(Boolean)
-        : value,
+        ? nextValue.split(',').map(s => s.trim()).filter(Boolean)
+        : nextValue,
     }
 
     try {

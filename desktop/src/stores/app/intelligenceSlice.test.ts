@@ -72,6 +72,16 @@ describe('intelligenceSlice', () => {
       expect(store.analysisError).toBe('API failed')
     })
 
+    it('uses the generic failure message when a non-Error value is thrown', async () => {
+      mockAnalyzeProject.mockRejectedValue('plain failure')
+      const store = createStore()
+
+      await store.startAnalysis('p1', 'pacing', ['ch1'])
+
+      expect(store.isAnalyzing).toBe(false)
+      expect(store.analysisError).toBe('Analysis failed')
+    })
+
     it('calls analyzeProject with progress callback', async () => {
       mockAnalyzeProject.mockImplementation(
         async (_pid: string, _mod: string, _chapters: string[], _force: boolean, onProgress?: (p: number, t: number) => void) => {
@@ -97,6 +107,15 @@ describe('intelligenceSlice', () => {
       await store.loadCachedResult('p1', 'pacing')
 
       expect(store.analysisResults.pacing).toEqual(mockResult)
+    })
+
+    it('ignores cached entries whose result is null', async () => {
+      mockGetCachedAnalysis.mockResolvedValue({ result: null })
+      const store = createStore()
+
+      await store.loadCachedResult('p1', 'pacing')
+
+      expect(store.analysisResults.pacing).toBeNull()
     })
 
     it('does nothing when no cache', async () => {

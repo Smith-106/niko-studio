@@ -116,7 +116,12 @@ export async function fetchProviderModels(
         if (!trimmedApiKey) {
           return { success: false, error: buildModelFetchError(gatewayReason, 'api_key_required') }
         }
-        payload = await requestJson(`${normalizedBase}/v1beta/models?key=${encodeURIComponent(trimmedApiKey)}`)
+        // Use header instead of URL query parameter to avoid key exposure in logs/proxies
+        payload = await requestJson(`${normalizedBase}/v1beta/models`, {
+          headers: {
+            'X-Goog-Api-Key': trimmedApiKey,
+          },
+        })
         break
       }
       case 'anthropic': {

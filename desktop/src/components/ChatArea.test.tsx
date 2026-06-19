@@ -60,6 +60,7 @@ vi.mock('../api/client', () => ({
 
 import {
   agentRoute,
+  agentRevise,
   agentWrite,
   chat,
   chatStream,
@@ -74,6 +75,7 @@ import {
 const mockedChat = vi.mocked(chat)
 const mockedChatStream = vi.mocked(chatStream)
 const mockedAgentRoute = vi.mocked(agentRoute)
+const mockedAgentRevise = vi.mocked(agentRevise)
 const mockedAgentWrite = vi.mocked(agentWrite)
 const mockedCreateCheckpoint = vi.mocked(createCheckpoint)
 const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
@@ -148,6 +150,21 @@ function ControlledTemplateChatArea() {
   )
 }
 
+async function selectAssistantText(container: HTMLElement, selectedText: string) {
+  const selectionMock = vi.spyOn(window, 'getSelection')
+  selectionMock.mockReturnValue({ toString: () => selectedText } as Selection)
+
+  const markdownBody = container.querySelector('.markdown-body')
+  expect(markdownBody).not.toBeNull()
+  fireEvent.mouseUp(markdownBody!)
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: zh.inlineContinue })).toBeInTheDocument()
+  })
+
+  return selectionMock
+}
+
 describe('ChatArea P0 flows', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -166,6 +183,7 @@ describe('ChatArea P0 flows', () => {
         task_assignments: [],
       },
     })
+    mockedAgentRevise.mockResolvedValue({ success: true, data: { content: 'agent revise' } })
     mockedAgentWrite.mockResolvedValue({ success: true, data: { content: 'agent write', wordcount: 10 } })
     mockedPromoteProjectWikiCanonApi.mockResolvedValue({
       success: true,
@@ -237,6 +255,77 @@ describe('ChatArea P0 flows', () => {
       totalK: 16.4,
     })
     expect(latestUsage.percent).toBeCloseTo(3.1, 1)
+  })
+
+  it('derives context usage from a provider-scoped model id', async () => {
+    const onContextUsageChange = vi.fn()
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        primaryProvider: 'openai',
+        llmProviders: state.settings.llmProviders.map((provider) =>
+          provider.id === 'openai'
+            ? { ...provider, defaultModel: 'openai/gpt-4o-mini-latest' }
+            : provider,
+        ),
+      },
+    }))
+    setConversationWithAssistant('a'.repeat(4000))
+
+    render(<ChatArea onContextUsageChange={onContextUsageChange} />)
+
+    await waitFor(() => {
+      expect(onContextUsageChange).toHaveBeenCalled()
+    })
+
+    const latestUsage = onContextUsageChange.mock.calls[onContextUsageChange.mock.calls.length - 1]?.[0] as {
+      totalK: number
+    }
+
+    expect(latestUsage.totalK).toBe(128)
+  })
+
+  it('falls back to backend max token config when the model id is unknown', async () => {
+    const onContextUsageChange = vi.fn()
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        primaryProvider: 'openai',
+        defaultModel: 'custom/experimental-model',
+        llmProviders: state.settings.llmProviders.map((provider) =>
+          provider.id === 'openai'
+            ? { ...provider, defaultModel: '' }
+            : provider,
+        ),
+        backendConfig: {
+          ...state.settings.backendConfig,
+          config: {
+            ...state.settings.backendConfig.config,
+            agent: {
+              ...state.settings.backendConfig.config?.agent,
+              max_tokens_per_request: 64_000,
+            },
+          },
+        },
+      },
+    }))
+    setConversationWithAssistant('a'.repeat(1000))
+
+    render(<ChatArea onContextUsageChange={onContextUsageChange} />)
+
+    await waitFor(() => {
+      expect(onContextUsageChange).toHaveBeenCalled()
+    })
+
+    const latestUsage = onContextUsageChange.mock.calls[onContextUsageChange.mock.calls.length - 1]?.[0] as {
+      totalK: number
+    }
+
+    expect(latestUsage.totalK).toBe(64)
   })
 
   it('shows writing-first starter actions and primes the composer from the empty state', async () => {
@@ -788,6 +877,24 @@ describe('ChatArea P0 flows', () => {
     })
   })
 
+  it('shows no-go governance hint when stream emits a no-go decision', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('no-go 内容', 0)
+      callbacks.onDone?.({
+        status: 'completed',
+        decision: 'no_go',
+      })
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '触发 no-go{enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText(`${zh.streamGateNoGo} ${zh.streamGovernanceReviewReady}`)).toBeInTheDocument()
+    })
+  })
+
   it('shows reconnecting hint when connection enters reconnecting state', async () => {
     const { rerender } = render(<ChatArea connectionState="connected" />)
 
@@ -795,6 +902,37 @@ describe('ChatArea P0 flows', () => {
 
     await waitFor(() => {
       expect(screen.getByText(zh.streamReconnecting)).toBeInTheDocument()
+    })
+  })
+
+  it('shows reconnecting as the streaming status when the connection drops during an active stream', async () => {
+    let finishStream: (() => void) | null = null
+    mockedChatStream.mockImplementationOnce(async (_request, callbacks) => {
+      callbacks.onContent?.('持续流式内容', 0)
+      await new Promise<void>((resolve) => {
+        finishStream = () => {
+          callbacks.onDone?.({ status: 'completed', skills_used: [] })
+          resolve()
+        }
+      })
+    })
+
+    const { rerender } = render(<ChatArea connectionState="connected" />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '触发重连中的流式状态{enter}')
+
+    await screen.findByText('持续流式内容')
+
+    rerender(<ChatArea connectionState="reconnecting" />)
+
+    await waitFor(() => {
+      expect(screen.getAllByText(zh.streamReconnecting).length).toBeGreaterThan(0)
+    })
+
+    finishStream?.()
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: zh.cancel })).not.toBeInTheDocument()
     })
   })
 
@@ -889,6 +1027,55 @@ describe('ChatArea P0 flows', () => {
     expect(screen.getByRole('button', { name: zh.streamRestoreToBeforeSend })).toBeInTheDocument()
   })
 
+  it('retries the last failed send from the recovery banner', async () => {
+    mockedChatStream
+      .mockImplementationOnce(async (_request, callbacks) => {
+        callbacks.onError?.('stream failed')
+      })
+      .mockImplementationOnce(async (_request, callbacks) => {
+        callbacks.onContent?.('重试成功结果', 0)
+        callbacks.onDone?.({ status: 'completed', skills_used: [] })
+      })
+    mockedChat.mockResolvedValueOnce({ success: false, error: 'chat failed' })
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '需要重试的消息{enter}')
+
+    const retryButton = await screen.findByRole('button', { name: zh.streamRetryLastSend })
+    await userEvent.click(retryButton)
+
+    await waitFor(() => {
+      expect(mockedChatStream).toHaveBeenCalledTimes(2)
+      expect(screen.getByText('重试成功结果')).toBeInTheDocument()
+    })
+  })
+
+  it('copies the recover error detail to the clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onError?.('stream failed')
+    })
+    mockedChat.mockResolvedValueOnce({ success: false, error: 'chat failed' })
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '复制错误详情{enter}')
+
+    const copyButton = await screen.findByRole('button', { name: zh.streamCopyError })
+    await userEvent.click(copyButton)
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith('chat failed')
+      expect(screen.getByText((content) => content.includes(zh.streamErrorCopied))).toBeInTheDocument()
+    })
+  })
+
   it('shows inline actions after assistant selection and no action before selection', async () => {
     setConversationWithAssistant('这是可选中的 assistant 文本')
     const selectionMock = vi.spyOn(window, 'getSelection')
@@ -910,6 +1097,170 @@ describe('ChatArea P0 flows', () => {
     })
 
     selectionMock.mockRestore()
+  })
+
+  it('runs the agent context action and skips normal chat fallback', async () => {
+    const user = userEvent.setup()
+
+    render(<ChatArea />)
+
+    await user.click(screen.getAllByText(zh.modePresetAgentDiagnose)[0])
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '帮我提取上下文{enter}')
+
+    await waitFor(() => {
+      expect(mockedAgentGetContext).toHaveBeenCalledWith(
+        {
+          task: '帮我提取上下文',
+          workflow_level: 'L4',
+        },
+        expect.any(Array),
+      )
+      expect(screen.getByText((content) => content.includes(zh.chatAgentContextPrefix))).toBeInTheDocument()
+    })
+
+    expect(mockedChatStream).not.toHaveBeenCalled()
+    expect(mockedChat).not.toHaveBeenCalled()
+  })
+
+  it('runs inline continue with a custom prompt and clears the inline selection on success', async () => {
+    const user = userEvent.setup()
+    setConversationWithAssistant('这是可续写的 assistant 文本')
+    mockedAgentWrite.mockResolvedValueOnce({ success: true, data: { content: '续写结果', wordcount: 12 } })
+
+    const { container } = render(<ChatArea />)
+    const selectionMock = await selectAssistantText(container, '续写片段')
+
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await user.type(input, '请把这一幕写得更紧张')
+    await user.click(screen.getByRole('button', { name: zh.inlineContinue }))
+    await user.click(screen.getByRole('button', { name: zh.inlineRun }))
+
+    await waitFor(() => {
+      expect(mockedAgentWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          task: '请把这一幕写得更紧张',
+          scene_type: 'inline_continue',
+          workflow_level: 'L3',
+          selected_text: '续写片段',
+          selection_meta: { messageId: 'a1' },
+        }),
+        [],
+        undefined,
+        expect.objectContaining({
+          naturalness: 85,
+          readability: 80,
+          coherence: 80,
+          style_consistency: 78,
+        }),
+        expect.any(Object),
+      )
+      expect(screen.getByText('续写结果')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('button', { name: zh.inlineRun })).not.toBeInTheDocument()
+    selectionMock.mockRestore()
+  })
+
+  it('runs inline generate with the default prompt when the composer is empty', async () => {
+    const user = userEvent.setup()
+    setConversationWithAssistant('这是可生成的 assistant 文本')
+    mockedAgentWrite.mockResolvedValueOnce({ success: true, data: { content: '生成结果', wordcount: 9 } })
+
+    const { container } = render(<ChatArea />)
+    const selectionMock = await selectAssistantText(container, '生成片段')
+
+    await user.click(screen.getByRole('button', { name: zh.inlineGenerate }))
+    await user.click(screen.getByRole('button', { name: zh.inlineRun }))
+
+    await waitFor(() => {
+      expect(mockedAgentWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          task: `${zh.inlineGeneratePromptPrefix}\n生成片段`,
+          scene_type: 'inline_generate',
+          workflow_level: 'L3',
+          selected_text: '生成片段',
+          selection_meta: { messageId: 'a1' },
+        }),
+        [],
+        undefined,
+        expect.objectContaining({
+          humanization_preset: 'human_writing',
+          sentence_entropy_target: 60,
+          rhythm_variability_target: 60,
+        }),
+        expect.any(Object),
+      )
+      expect(screen.getByText('生成结果')).toBeInTheDocument()
+    })
+
+    selectionMock.mockRestore()
+  })
+
+  it('runs inline revise with the default revise instruction', async () => {
+    const user = userEvent.setup()
+    setConversationWithAssistant('这是可改写的 assistant 文本')
+    mockedAgentRevise.mockResolvedValueOnce({ success: true, data: { content: '改写结果' } })
+
+    const { container } = render(<ChatArea />)
+    const selectionMock = await selectAssistantText(container, '待改写段落')
+
+    await user.click(screen.getByRole('button', { name: zh.inlineRevise }))
+    await user.click(screen.getByRole('button', { name: zh.inlineRun }))
+
+    await waitFor(() => {
+      expect(mockedAgentRevise).toHaveBeenCalledWith(
+        '待改写段落',
+        {
+          instruction: zh.inlineReviseDefaultInstruction,
+          workflow_level: 'L3',
+          skills: [],
+        },
+        expect.objectContaining({
+          naturalness: 85,
+          readability: 80,
+          coherence: 80,
+          style_consistency: 78,
+        }),
+      )
+      expect(screen.getByText('改写结果')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('button', { name: zh.inlineRun })).not.toBeInTheDocument()
+    selectionMock.mockRestore()
+  })
+
+  it('surfaces inline action failures when the inline generate request throws', async () => {
+    const user = userEvent.setup()
+    setConversationWithAssistant('这是会失败的 assistant 文本')
+    mockedAgentWrite.mockRejectedValueOnce(new Error('inline write failed'))
+
+    const { container } = render(<ChatArea />)
+    const selectionMock = await selectAssistantText(container, '失败片段')
+
+    await user.click(screen.getByRole('button', { name: zh.inlineGenerate }))
+    await user.click(screen.getByRole('button', { name: zh.inlineRun }))
+
+    await waitFor(() => {
+      expect(screen.getByText(zh.inlineActionFailed)).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: zh.inlineRun })).toBeInTheDocument()
+
+    selectionMock.mockRestore()
+  })
+
+  it('shows a backend connection failure when checkpoint creation throws before send', async () => {
+    mockedCreateCheckpoint.mockRejectedValueOnce(new Error('checkpoint failed'))
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '触发后端连接失败{enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText(zh.backendConnectionFailed)).toBeInTheDocument()
+    })
+
+    expect(mockedChatStream).not.toHaveBeenCalled()
   })
 
   it('uploads txt file and injects chunks into memory context', async () => {

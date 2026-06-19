@@ -98,8 +98,6 @@ function tokenizeQuery(value: string): string[] {
 }
 
 function countOccurrences(haystack: string, needle: string): number {
-  if (!needle) return 0;
-
   let count = 0;
   let cursor = 0;
   while (cursor < haystack.length) {
@@ -306,8 +304,6 @@ function scoreProjectWikiPage(
   tokens: string[],
   excerptLength: number,
 ): ScoredProjectWikiPage | null {
-  if (page.frontmatter.canonAuthority !== 'canon-page') return null;
-
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery || tokens.length === 0) return null;
 

@@ -6,14 +6,18 @@ interface ShowTellLegendProps {
 }
 
 export const ShowTellLegend: React.FC<ShowTellLegendProps> = ({ result }) => {
-  const showPct = result ? Math.round((result.showTellRatio ?? 0) * 100) : null
-  const tellPct = result ? 100 - (showPct ?? 0) : null
+  if (!result) {
+    return (
+      <div className="flex items-center gap-3 text-[11px] text-dark-text-muted" />
+    )
+  }
+
+  const showPct = Math.round((result.showTellRatio ?? 0) * 100)
+  const tellPct = 100 - showPct
 
   return (
     <div className="flex items-center gap-3 text-[11px] text-dark-text-muted">
-      {showPct !== null && tellPct !== null && (
-        <span className="ml-1">比例：Show {showPct}% / Tell {tellPct}%</span>
-      )}
+      <span className="ml-1">比例：Show {showPct}% / Tell {tellPct}%</span>
     </div>
   )
 }

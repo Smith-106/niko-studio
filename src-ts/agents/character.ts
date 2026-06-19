@@ -12,6 +12,7 @@ import type { IAgentGraphEngine } from './base';
 import { LifecycleStage } from './lifecycle-hooks';
 import type { DynamicCharacterState } from '../narrative/character-depth';
 import { createEmptyDynamicState, mergeDynamicState } from '../narrative/character-depth';
+import { escapeCypherString } from '../utils/cypher-safety';
 
 const STM_CAPACITY = 20;
 
@@ -242,7 +243,7 @@ export class CharacterAgent extends BaseAgent {
     }
 
     const query = [
-      `MATCH (c:Character {name: '${name}'})`,
+      `MATCH (c:Character {name: '${escapeCypherString(name)}'})`,
       'OPTIONAL MATCH (c)-[r]->(other:Character)',
       'RETURN c, collect({type: type(r), target: other.name}) as relationships',
     ].join('\n');

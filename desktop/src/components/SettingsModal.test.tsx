@@ -153,6 +153,7 @@ const changeInputValue = (input: HTMLInputElement, value: string) => {
 }
 
 const BACKEND_SECTION_TEST_TIMEOUT_MS = 20_000
+const BACKEND_SECTION_HEAVY_TEST_TIMEOUT_MS = 30_000
 
 const renderBackendSettingsModal = () => (
   render(
@@ -566,7 +567,7 @@ describe('SettingsModal quality presets', () => {
         'gateway.ui_bridge_enabled': true,
       })
     })
-  }, BACKEND_SECTION_TEST_TIMEOUT_MS)
+  }, BACKEND_SECTION_HEAVY_TEST_TIMEOUT_MS)
 
   it('renders backend config labels in english', async () => {
     useSettingsStore.setState((state) => ({

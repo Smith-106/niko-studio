@@ -103,6 +103,26 @@ describe('wiki api', () => {
     })
   })
 
+  it('omits raw evidence payloads when none are supplied', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ available: true }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await promoteProjectWikiCanonApi({
+      title: 'Atlas Plot Note',
+      body: 'A concise plot note.',
+      promotedFrom: 'manual',
+    }, workspace)
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(String(init.body))
+
+    expect(body).not.toHaveProperty('raw_evidence')
+  })
+
   it('posts review list payloads with additive workspace semantics', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,

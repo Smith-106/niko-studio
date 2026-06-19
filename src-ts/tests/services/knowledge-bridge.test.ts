@@ -137,6 +137,15 @@ describe('NowledgeMemKnowledgeBridge', () => {
     await expect(bridge.store('key', 'value')).resolves.toBeUndefined();
   });
 
+  it('store returns early when bridge is unavailable', async () => {
+    const service = createMockNowledgeMemService(false);
+    const bridge = new NowledgeMemKnowledgeBridge(service);
+    await bridge.initialize();
+
+    await expect(bridge.store('key', 'value')).resolves.toBeUndefined();
+    expect(service.addMemory).not.toHaveBeenCalled();
+  });
+
   it('forwards addToLibrary to Nowledge Mem when available', async () => {
     const service = createMockNowledgeMemService(true);
     vi.mocked(service.addToLibrary).mockResolvedValue([
@@ -193,6 +202,103 @@ describe('NowledgeMemKnowledgeBridge', () => {
     const result = await bridge.searchLibrary('test');
     expect(result).toEqual([]);
     expect(service.searchLibrary).not.toHaveBeenCalled();
+  });
+
+  it('marks bridge unavailable when initialize status check throws', async () => {
+    const service = createMockNowledgeMemService(true);
+    vi.mocked(service.status).mockRejectedValue(new Error('offline'));
+    const bridge = new NowledgeMemKnowledgeBridge(service);
+
+    await expect(bridge.initialize()).resolves.toBeUndefined();
+    await expect(bridge.add({ content: 'test' })).resolves.toEqual({});
+    expect(service.addMemory).not.toHaveBeenCalled();
+  });
+
+  it('returns empty on searchLibrary error', async () => {
+    const service = createMockNowledgeMemService(true);
+    vi.mocked(service.searchLibrary).mockRejectedValue(new Error('search-fail'));
+    const bridge = new NowledgeMemKnowledgeBridge(service);
+    await bridge.initialize();
+
+    await expect(bridge.searchLibrary('test query', { limit: 3 })).resolves.toEqual([]);
+  });
+
+  it('syncs current temporal state and deletes superseded memories', async () => {
+    const service = createMockNowledgeMemService(true);
+    const bridge = new NowledgeMemKnowledgeBridge(service);
+    await bridge.initialize();
+
+    await expect(
+      bridge.temporalSync('entity-1', 'current content', ['old-1', 'old-2']),
+    ).resolves.toBeUndefined();
+
+    expect(service.addMemory).toHaveBeenCalledWith('current content', {
+      labels: ['temporal-current', 'entity-1'],
+      importance: 0.7,
+    });
+    expect(service.deleteMemory).toHaveBeenCalledTimes(2);
+    expect(service.deleteMemory).toHaveBeenNthCalledWith(1, 'old-1');
+    expect(service.deleteMemory).toHaveBeenNthCalledWith(2, 'old-2');
+  });
+
+  it('continues temporal sync when one superseded delete fails', async () => {
+    const service = createMockNowledgeMemService(true);
+    vi.mocked(service.deleteMemory)
+      .mockRejectedValueOnce(new Error('delete-fail'))
+      .mockResolvedValueOnce(true);
+    const bridge = new NowledgeMemKnowledgeBridge(service);
+    await bridge.initialize();
+
+    await expect(
+      bridge.temporalSync('entity-2', 'replacement content', ['old-a', 'old-b']),
+    ).resolves.toBeUndefined();
+
+    expect(service.deleteMemory).toHaveBeenCalledTimes(2);
+  });
+
+  it('degrades silently when the temporal current-state write fails', async () => {
+    const service = createMockNowledgeMemService(true);
+    vi.mocked(service.addMemory).mockRejectedValue(new Error('write-fail'));
+    const bridge = new NowledgeMemKnowledgeBridge(service);
+    await bridge.initialize();
+
+    await expect(
+      bridge.temporalSync('entity-3', 'replacement content', ['old-a']),
+    ).resolves.toBeUndefined();
+
+    expect(service.deleteMemory).not.toHaveBeenCalled();
+  });
+
+  it('returns early from temporal sync when bridge is unavailable', async () => {
+    const service = createMockNowledgeMemService(false);
+    const bridge = new NowledgeMemKnowledgeBridge(service);
+    await bridge.initialize();
+
+    await expect(
+      bridge.temporalSync('entity-4', 'replacement content', ['old-a']),
+    ).resolves.toBeUndefined();
+
+    expect(service.addMemory).not.toHaveBeenCalled();
+    expect(service.deleteMemory).not.toHaveBeenCalled();
+  });
+
+  it('filters superseded memories from Nowledge Mem results', () => {
+    const service = createMockNowledgeMemService(true);
+    const bridge = new NowledgeMemKnowledgeBridge(service);
+
+    expect(
+      bridge.filterSuperseded(
+        [
+          { id: 'keep-1', labels: ['current'] },
+          { id: 'drop-1', labels: ['superseded'] },
+          { id: 'keep-2' },
+        ],
+        new Set(['drop-1']),
+      ),
+    ).toEqual([
+      { id: 'keep-1', labels: ['current'] },
+      { id: 'keep-2' },
+    ]);
   });
 });
 

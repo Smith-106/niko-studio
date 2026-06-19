@@ -129,9 +129,12 @@ describe('PersonaDefinition', () => {
         name: 'Custom Critic',
         parameters: {
           plotWeight: 0.8,
+          characterWeight: 0.5,
           styleWeight: 0.9,
+          pacingWeight: 0.5,
           focusAreas: ['originality', 'pacing'],
           biases: ['prefers complex plots'],
+          toleranceThreshold: 0.5,
           aiFlavorSensitivity: 0.85,
           ageGroup: 'adult',
           genrePreference: 'suspense',

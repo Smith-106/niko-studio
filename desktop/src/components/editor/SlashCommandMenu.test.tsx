@@ -133,6 +133,21 @@ describe('SlashCommandMenu', () => {
     )
   })
 
+  it('adds the default vertical offset when the menu y position is 0', () => {
+    const { container } = render(
+      <SlashCommandMenu
+        query=""
+        position={{ x: 12, y: 0 }}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    const wrapper = container.firstChild as HTMLElement
+    expect(wrapper.style.left).toBe('12px')
+    expect(wrapper.style.top).toBe('8px')
+  })
+
   it('highlights the first item by default', () => {
     render(
       <SlashCommandMenu

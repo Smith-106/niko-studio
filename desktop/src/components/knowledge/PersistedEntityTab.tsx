@@ -10,9 +10,11 @@ import type { FieldConfig, KnowledgeItem, OperationStatus } from './KnowledgeTyp
 import {
   buildGraphDeleteMutation,
   buildGraphMergeMutation,
+  escapeCypherString,
   filterWorkspaceKnowledgeItems,
   readGraphMutationError,
   toGraphItems,
+  validateEntityType,
   WORKSPACE_KNOWLEDGE_CHANGED_EVENT,
 } from './knowledgeUtils'
 
@@ -108,6 +110,7 @@ export function PersistedEntityTab({
     onLoadingChange(true)
     onStatusChange(null)
     try {
+      validateEntityType(entityType)
       const response = await queryGraph(`MATCH (n:${entityType}) RETURN n LIMIT 100`, {
         workspace: currentWorkspace,
       })
@@ -184,7 +187,7 @@ export function PersistedEntityTab({
       // Fix rename: if name changed, update via MATCH+SET first
       if (matchName && matchName !== name) {
         const wid = matchWorkspaceId || currentWorkspace.identity.workspaceId
-        const renameQuery = `MATCH (n:${entityType} {name: ${JSON.stringify(matchName)}, workspaceId: ${JSON.stringify(wid)}}) SET n.name = ${JSON.stringify(name)} RETURN n`
+        const renameQuery = `MATCH (n:${entityType} {name: '${escapeCypherString(matchName)}', workspaceId: '${escapeCypherString(wid)}'}) SET n.name = '${escapeCypherString(name)}' RETURN n`
         await queryGraph(renameQuery, { workspace: currentWorkspace })
       }
 

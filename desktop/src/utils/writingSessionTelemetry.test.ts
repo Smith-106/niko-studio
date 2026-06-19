@@ -23,6 +23,37 @@ describe('writingSessionTelemetry', () => {
     expect(updated.keywordFocus).toEqual(['冲突', '匿名信'])
   })
 
+  it('keeps previous optional fields and increments each supported event counter', () => {
+    const telemetry = {
+      ...createWritingSessionTelemetry('session-optional', 'chapter-stable'),
+      characterFocus: ['existing-character'],
+      keywordFocus: ['existing-keyword'],
+    }
+
+    const first = applyTelemetryEvent(telemetry, {
+      type: 'history_open',
+      timestamp: telemetry.startedAt,
+      characterFocus: [],
+      keywordFocus: [],
+    })
+    const second = applyTelemetryEvent(first, {
+      type: 'rewrite',
+      timestamp: telemetry.startedAt,
+    })
+    const third = applyTelemetryEvent(second, {
+      type: 'jump_edit',
+      timestamp: telemetry.startedAt,
+    })
+
+    expect(third.chapterId).toBe('chapter-stable')
+    expect(third.historyPanelOpenCount).toBe(1)
+    expect(third.rewriteCount).toBe(1)
+    expect(third.jumpEditCount).toBe(1)
+    expect(third.saveCount).toBe(0)
+    expect(third.characterFocus).toEqual(['existing-character'])
+    expect(third.keywordFocus).toEqual(['existing-keyword'])
+  })
+
   it('produces advisory insights from telemetry', () => {
     const telemetry = {
       ...createWritingSessionTelemetry('session-2', 'chapter-8'),

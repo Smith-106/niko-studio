@@ -467,3 +467,10 @@ function extractProviderModels(serviceConfig: unknown): Record<string, string[]>
 
   return providerModels;
 }
+
+export const __test__ = {
+  normalizeErrorText,
+  inferDependencyName,
+  buildGatewayDiagnostic,
+  extractProviderModels,
+};

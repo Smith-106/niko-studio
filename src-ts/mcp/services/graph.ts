@@ -6,6 +6,7 @@
  */
 
 import { getGraphEngine } from '../engine';
+import { validateEntityType } from '../../utils/cypher-safety.js';
 
 // ---------------------------------------------------------------
 // Engine accessor
@@ -32,7 +33,7 @@ interface GraphEngine {
     scope?: GraphReadScope | null
   ): Promise<unknown[]>;
   getForeshadows(
-    status: string,
+    status?: string,
     chapter?: number | null,
     scope?: GraphReadScope | null
   ): Promise<unknown[]>;
@@ -107,13 +108,13 @@ export async function graphGetRelationships(
 }
 
 export async function graphGetForeshadows(
-  status = 'pending',
+  status?: string | null,
   chapter?: number | null,
   scope?: GraphReadScope | null
 ): Promise<unknown[]> {
   const engine = getEngine();
   if (!engine) return [];
-  return scope ? engine.getForeshadows(status, chapter, scope) : engine.getForeshadows(status, chapter);
+  return scope ? engine.getForeshadows(status ?? undefined, chapter, scope) : engine.getForeshadows(status ?? undefined, chapter);
 }
 
 export async function graphAddEntity(
@@ -121,6 +122,7 @@ export async function graphAddEntity(
   name: string,
   properties?: Record<string, unknown> | null
 ): Promise<Record<string, unknown>> {
+  validateEntityType(entityType);
   const engine = getEngine();
   if (!engine) return { error: 'Graph engine unavailable' };
   return engine.createEntity(entityType, name, properties ?? {});

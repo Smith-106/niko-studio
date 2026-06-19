@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -44,6 +44,7 @@ describe('IndexingService', () => {
 
   afterEach(async () => {
     try { svc?.close(); } catch { /* ignore */ }
+    vi.restoreAllMocks();
     await rm(workspace, { recursive: true, force: true });
   });
 
@@ -170,5 +171,33 @@ describe('IndexingService', () => {
 
     const results = svc.search('anything');
     expect(results).toEqual([]);
+  });
+
+  it('removes closed services from the exit-shutdown registry', () => {
+    svc = new IndexingService(dbPath);
+    svc.close();
+
+    expect(() => svc.close()).not.toThrow();
+  });
+
+  it('registers an exit shutdown hook for live service instances', async () => {
+    const registered: Array<() => void> = [];
+    const processOnSpy = vi.spyOn(process, 'on').mockImplementation((event, listener) => {
+      if (event === 'exit') {
+        registered.push(listener as () => void);
+      }
+      return process;
+    });
+
+    vi.resetModules();
+    const module = await import('../../services/indexing-service');
+    const hooked = new module.IndexingService(join(workspace, 'hooked-index.db'));
+
+    expect(registered).toHaveLength(1);
+
+    registered[0]();
+
+    expect(() => hooked.close()).not.toThrow();
+    processOnSpy.mockRestore();
   });
 });

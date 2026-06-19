@@ -5,7 +5,7 @@ import { SectionHeader } from './SectionHeader';
 interface PluginResult {
   score: number;
   maxScore: number;
-  evidence: string[];
+  evidence: string;
   suggestions: string[];
 }
 
@@ -14,7 +14,7 @@ interface PluginInfo {
   name: string;
   version: string;
   description: string;
-  dimension: string;
+  dimension?: string;
 }
 
 interface PluginPanelProps {
@@ -109,9 +109,9 @@ export const PluginPanel: React.FC<PluginPanelProps> = ({ text }) => {
                     {result.score}/{result.maxScore}
                   </span>
                 </div>
-                {result.evidence.map((e: string, i: number) => (
-                  <div key={i} className="text-xs text-dark-text pl-2 border-l-2 border-dark-border mb-0.5">{e}</div>
-                ))}
+                {result.evidence && (
+                  <div className="text-xs text-dark-text pl-2 border-l-2 border-dark-border mb-0.5">{result.evidence}</div>
+                )}
                 {result.suggestions.map((s: string, i: number) => (
                   <div key={i} className="text-xs text-dark-text bg-dark-surface-sunken rounded px-2 py-0.5 mt-0.5">{s}</div>
                 ))}

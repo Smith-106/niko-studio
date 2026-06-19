@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { AgentType } from '../../agents/base.js';
 import { Level3Standard } from '../../workflow/levels/level3-standard';
 
 describe('workflow/level3-standard', () => {
@@ -149,5 +150,49 @@ describe('workflow/level3-standard', () => {
         plan_phases: [{ output: 'done' }],
       } as never).valid,
     ).toBe(true);
+  });
+
+  it('resolves agents through the container getter when explicit dependencies are absent', () => {
+    const architect = {
+      run: vi.fn().mockReturnValue({
+        phases: Array.from({ length: 5 }, (_, index) => ({
+          phase: index + 1,
+          output: `phase-${index + 1}`,
+        })),
+        plan: {
+          steps: ['step-1'],
+        },
+      }),
+    };
+    const writer = {
+      run: vi.fn().mockReturnValue({ content: '容器草稿' }),
+    };
+    const critic = {
+      run: vi.fn().mockReturnValue({
+        score: 85,
+        decision: 'APPROVED',
+        feedback: '',
+      }),
+    };
+    const getAgent = vi
+      .fn()
+      .mockImplementation((type: AgentType) => {
+        if (type === AgentType.ARCHITECT) return architect;
+        if (type === AgentType.WRITER) return writer;
+        return critic;
+      });
+    const standard = new Level3Standard({
+      container: { getAgent } as never,
+    });
+
+    const result = standard.execute({
+      user_request: '通过容器解析代理',
+      errors: [],
+    } as never) as Record<string, unknown>;
+
+    expect(result.decision).toBe('APPROVED');
+    expect(getAgent).toHaveBeenCalledWith(AgentType.ARCHITECT);
+    expect(getAgent).toHaveBeenCalledWith(AgentType.WRITER);
+    expect(getAgent).toHaveBeenCalledWith(AgentType.CRITIC);
   });
 });

@@ -1,17 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 import { useAppStore } from '../stores/appStore'
 import { HistoryPanel } from './HistoryPanel'
 
+const listSnapshotsMock = vi.hoisted(() => vi.fn())
+const diffSnapshotsMock = vi.hoisted(() => vi.fn())
+const restoreSnapshotMock = vi.hoisted(() => vi.fn())
+
 vi.mock('../services/versionService', () => ({
-  listSnapshots: vi.fn(() => Promise.resolve({ snapshots: [] })),
-  diffSnapshots: vi.fn(() => Promise.resolve([])),
-  restoreSnapshot: vi.fn(() => Promise.resolve()),
+  listSnapshots: listSnapshotsMock,
+  diffSnapshots: diffSnapshotsMock,
+  restoreSnapshot: restoreSnapshotMock,
 }))
 
 describe('HistoryPanel session intelligence', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
+    listSnapshotsMock.mockResolvedValue({ snapshots: [] })
+    diffSnapshotsMock.mockResolvedValue([])
+    restoreSnapshotMock.mockResolvedValue(undefined)
     useAppStore.setState({
       currentProjectId: 'project-1',
       currentChapterId: 'chapter-1',
@@ -40,5 +48,45 @@ describe('HistoryPanel session intelligence', () => {
     const checkboxes = screen.getAllByRole('checkbox')
     fireEvent.click(checkboxes[0]!)
     expect(useAppStore.getState().sessionIntelligenceEnabled).toBe(false)
+  })
+
+  it('loads snapshots and compares two selected versions in the diff view', async () => {
+    listSnapshotsMock.mockResolvedValue({
+      snapshots: [
+        {
+          id: 'snap-a',
+          timestamp: '2026-06-03T00:00:00.000Z',
+          label: 'Draft A',
+          fileSize: 1024,
+        },
+        {
+          id: 'snap-b',
+          timestamp: '2026-06-03T00:05:00.000Z',
+          label: 'Draft B',
+          fileSize: 2048,
+        },
+      ],
+    })
+    diffSnapshotsMock.mockResolvedValue([
+      {
+        type: 'added',
+        lineNumber: 7,
+        content: 'Added line',
+      },
+    ])
+
+    render(<HistoryPanel />)
+
+    expect(await screen.findByText('Draft A')).toBeInTheDocument()
+    expect(screen.getByText('Draft B')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Draft A'))
+    fireEvent.click(screen.getByText('Draft B'))
+    fireEvent.click(screen.getByRole('button', { name: 'Compare selected' }))
+
+    await waitFor(() => {
+      expect(diffSnapshotsMock).toHaveBeenCalledWith('project-1', 'chapter-1', 'snap-a', 'snap-b')
+    })
+    expect(await screen.findByText('Added line')).toBeInTheDocument()
   })
 })

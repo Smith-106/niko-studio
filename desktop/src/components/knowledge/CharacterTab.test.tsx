@@ -28,36 +28,82 @@ const knowledgeApiMocks = vi.hoisted(() => ({
   getCharacterRelationships: vi.fn(),
 }))
 
-function extractBalancedObject(text: string, startIndex: number) {
+function extractBalancedBraces(text: string, startIndex: number) {
   let depth = 0
   let inString = false
-  let escaped = false
+  let stringChar = ''
 
   for (let index = startIndex; index < text.length; index += 1) {
     const char = text[index]!
-    if (escaped) { escaped = false; continue }
-    if (char === '\\') { escaped = true; continue }
-    if (char === '"') { inString = !inString; continue }
-    if (inString) continue
+    if (inString) {
+      if (char === '\\') { index += 1; continue }
+      if (char === stringChar) { inString = false }
+      continue
+    }
+    if (char === "'" || char === '"') { inString = true; stringChar = char; continue }
     if (char === '{') depth += 1
     if (char === '}') {
       depth -= 1
-      if (depth === 0) return { json: text.slice(startIndex, index + 1), endIndex: index + 1 }
+      if (depth === 0) return { text: text.slice(startIndex, index + 1), endIndex: index + 1 }
     }
   }
-  throw new Error('Unable to parse balanced JSON object')
+  throw new Error('Unable to parse balanced braces')
+}
+
+function parseCypherProps(propsText: string): Record<string, unknown> {
+  const inner = propsText.slice(1, -1).trim()
+  if (!inner) return {}
+  const result: Record<string, unknown> = {}
+  let remaining = inner
+  while (remaining.length > 0) {
+    remaining = remaining.trimStart()
+    if (!remaining) break
+    const keyMatch = /^(\w+)\s*:\s*/.exec(remaining)
+    if (!keyMatch) break
+    const key = keyMatch[1]
+    remaining = remaining.slice(keyMatch[0].length).trimStart()
+    if (remaining.startsWith("'") || remaining.startsWith('"')) {
+      const quote = remaining[0]!
+      let valueEnd = 1
+      while (valueEnd < remaining.length) {
+        if (remaining[valueEnd] === '\\') { valueEnd += 2; continue }
+        if (remaining[valueEnd] === quote) { valueEnd += 1; break }
+        valueEnd += 1
+      }
+      result[key] = remaining.slice(1, valueEnd - 1)
+      remaining = remaining.slice(valueEnd)
+    } else {
+      const valueMatch = /^([^,}]+)/.exec(remaining)
+      if (valueMatch) {
+        const raw = valueMatch[1]!.trim()
+        if (raw === 'true') result[key] = true
+        else if (raw === 'false') result[key] = false
+        else if (raw === 'null') result[key] = null
+        else result[key] = Number(raw)
+        remaining = remaining.slice(valueMatch[0].length)
+      }
+    }
+    remaining = remaining.trimStart()
+    if (remaining.startsWith(',')) remaining = remaining.slice(1)
+  }
+  return result
 }
 
 function parseMergeMutation(cypher: string) {
   const header = /^MERGE\s*\(n:(\w+)\s*/.exec(cypher)
   if (!header) throw new Error(`Unexpected mutation: ${cypher}`)
-  const matchObject = extractBalancedObject(cypher, header[0].length)
-  const setStart = cypher.indexOf('SET', matchObject.endIndex)
-  const setObject = extractBalancedObject(cypher, setStart + 4)
+  const matchObject = extractBalancedBraces(cypher, header[0].length)
+  const setRegion = cypher.slice(matchObject.endIndex)
+  const nPlusAssignMatch = /SET\s+n\s*\+=\s*/.exec(setRegion)
+  const setStart = nPlusAssignMatch
+    ? cypher.indexOf(nPlusAssignMatch[0], matchObject.endIndex) + nPlusAssignMatch[0].length
+    : cypher.indexOf('SET', matchObject.endIndex) + 3
+  const setBraceStart = cypher.indexOf('{', setStart - 1)
+  const setObject = extractBalancedBraces(cypher, setBraceStart)
   return {
     entityType: header[1],
-    matchProps: JSON.parse(matchObject.json) as Record<string, unknown>,
-    setProps: JSON.parse(setObject.json) as Record<string, unknown>,
+    matchProps: parseCypherProps(matchObject.text),
+    setProps: parseCypherProps(setObject.text),
   }
 }
 
@@ -314,14 +360,12 @@ describe('CharacterTab', () => {
     knowledgeApiMocks.getCharacterProfile.mockResolvedValue({
       success: true,
       data: {
-        data: {
           id: 'profile-1',
           name: 'Alice',
           role: '主角',
           five_dimension_score: {
             depth_level: 'A',
           },
-        },
       },
     })
 

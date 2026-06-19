@@ -65,10 +65,32 @@ function resolveGraphScope(body: Record<string, unknown>): GraphReadScope | null
   };
 }
 
+/**
+ * Patterns that indicate destructive or schema-modifying Cypher operations.
+ * These are blocked at the /graph/query endpoint for safety.
+ */
+const BLOCKED_CYPHER_PATTERNS = [
+  /\bDETACH\s+DELETE\b/i,
+  /\bDROP\b/i,
+  /\bCREATE\s+(?:CONSTRAINT|INDEX)/i,
+  /\bREMOVE\s+[a-zA-Z_]+:/i,  // REMOVE n:Label (removes label, not property)
+] as const;
+
+function isCypherSafe(cypher: string): boolean {
+  return !BLOCKED_CYPHER_PATTERNS.some(p => p.test(cypher));
+}
+
 export async function graphQueryEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const cypher = (body.cypher as string) ?? '';
+  if (cypher.trim() && !isCypherSafe(cypher)) {
+    return jsonResponse(
+      { error: 'Cypher query contains blocked patterns (DETACH DELETE, DROP, CREATE CONSTRAINT/INDEX, REMOVE label). Only read-only queries are allowed.' },
+      403,
+    );
+  }
   const scope = resolveGraphScope(body);
-  const result = await graphQuery((body.cypher as string) ?? '', scope);
+  const result = await graphQuery(cypher, scope);
   return jsonResponse(result);
 }
 
@@ -87,8 +109,9 @@ export async function graphCharacterEndpoint(request: HttpRequest): Promise<Http
 export async function graphForeshadowsEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const scope = resolveGraphScope(body);
+  const status = body.status as string | undefined;
   const result = await graphGetForeshadows(
-    (body.status as string) ?? 'pending',
+    status ?? undefined,
     body.chapter as number | undefined,
     scope
   );
@@ -105,6 +128,7 @@ export async function foreshadowPlantEndpoint(request: HttpRequest): Promise<Htt
   if (!description.trim()) {
     return jsonResponse({ error: 'description is required' }, 400);
   }
+  const scope = resolveGraphScope(body);
   const properties: Record<string, unknown> = {
     description,
     state: 'planted',
@@ -113,16 +137,33 @@ export async function foreshadowPlantEndpoint(request: HttpRequest): Promise<Htt
     ...(body.scene_id ? { scene_id: body.scene_id } : {}),
     ...(Array.isArray(body.tags) ? { tags: body.tags } : {}),
     ...(body.metadata && typeof body.metadata === 'object' ? { metadata: body.metadata } : {}),
+    ...(scope?.workspaceId ? { workspaceId: scope.workspaceId } : {}),
+    ...(scope?.projectId ? { projectId: scope.projectId } : {}),
   };
-  const result = await graphAddEntity('foreshadow', `foreshadow-${Date.now()}`, properties);
-  return jsonResponse(result);
+  const result = await graphAddEntity('Foreshadow', `foreshadow-${Date.now()}`, properties);
+  const entityId = (result && typeof result === 'object' && 'id' in result) ? String(result.id) : `foreshadow-${Date.now()}`;
+  return jsonResponse({
+    id: entityId,
+    description,
+    state: 'planted',
+    planted_at: String(properties.planted_at),
+    planted_time: String(properties.planted_at),
+    hints: [],
+    harvested_at: null,
+    harvested_time: null,
+    importance: Number(properties.importance ?? 1),
+    tags: Array.isArray(properties.tags) ? properties.tags : [],
+    metadata: (properties.metadata && typeof properties.metadata === 'object') ? properties.metadata as Record<string, unknown> : {},
+  });
 }
 
-export async function foreshadowStatsEndpoint(_request: HttpRequest): Promise<HttpResponse> {
+export async function foreshadowStatsEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = (parseBody(request) ?? {}) as Record<string, unknown>;
+  const scope = resolveGraphScope(body);
   const [planted, hinted, harvested] = await Promise.all([
-    graphGetForeshadows('planted'),
-    graphGetForeshadows('hinted'),
-    graphGetForeshadows('harvested'),
+    graphGetForeshadows('planted', undefined, scope),
+    graphGetForeshadows('hinted', undefined, scope),
+    graphGetForeshadows('harvested', undefined, scope),
   ]);
   const plantedArr = Array.isArray(planted) ? planted : [];
   const hintedArr = Array.isArray(hinted) ? hinted : [];
@@ -150,19 +191,20 @@ export async function characterProfileEndpoint(request: HttpRequest): Promise<Ht
   }
   const scope = resolveGraphScope(body);
   const characterData = await graphGetCharacter(name, true, false, scope);
-  const data = characterData && typeof characterData === 'object' ? characterData : {};
+  const data = characterData && typeof characterData === 'object' ? characterData as Record<string, unknown> : {};
+  const props = (data.properties && typeof data.properties === 'object') ? data.properties as Record<string, unknown> : {};
   return jsonResponse({
-    id: String((data as Record<string, unknown>).id ?? `char-${name}`),
+    id: String(data.id ?? `char-${name}`),
     name,
-    role: String((data as Record<string, unknown>).role ?? 'unknown'),
-    personality: (data as Record<string, unknown>).personality ?? {},
-    background: (data as Record<string, unknown>).background ?? {},
-    motivation: (data as Record<string, unknown>).motivation ?? {},
-    relationships: (data as Record<string, unknown>).relationships ?? {},
-    growth: (data as Record<string, unknown>).growth ?? {},
-    five_dimension_score: (data as Record<string, unknown>).five_dimension_score ?? {},
-    created_at: String((data as Record<string, unknown>).created_at ?? new Date().toISOString()),
-    updated_at: String((data as Record<string, unknown>).updated_at ?? new Date().toISOString()),
+    role: String(props.role ?? 'unknown'),
+    personality: props.personality ?? {},
+    background: props.background ?? {},
+    motivation: props.motivation ?? {},
+    relationships: props.relationships ?? {},
+    growth: props.growth ?? {},
+    five_dimension_score: props.five_dimension_score ?? {},
+    created_at: String(data.created_at ?? new Date().toISOString()),
+    updated_at: String(data.updated_at ?? new Date().toISOString()),
   });
 }
 
@@ -176,7 +218,8 @@ export async function characterDepthEndpoint(request: HttpRequest): Promise<Http
   const scope = resolveGraphScope(body);
   const characterData = await graphGetCharacter(name, true, false, scope);
   const data = characterData && typeof characterData === 'object' ? characterData as Record<string, unknown> : {};
-  const dimensionScores = (data as Record<string, unknown>).five_dimension_score ?? {};
+  const props = (data.properties && typeof data.properties === 'object') ? data.properties as Record<string, unknown> : {};
+  const dimensionScores = props.five_dimension_score ?? {};
   const scores = dimensionScores && typeof dimensionScores === 'object'
     ? dimensionScores as Record<string, number>
     : {};

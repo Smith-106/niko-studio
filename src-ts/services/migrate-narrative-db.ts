@@ -101,8 +101,9 @@ export function migrateToNarrativeDB(dataDir: string): { success: boolean; table
 
     // 从旧 memory.db 迁移数据
     if (fs.existsSync(memoryPath)) {
+      let memDb: Database.Database | null = null
       try {
-        const memDb = new Database(memoryPath, { readonly: true })
+        memDb = new Database(memoryPath, { readonly: true })
         const tables = memDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{ name: string }>
         for (const t of tables) {
           if (t.name.startsWith('memories')) {
@@ -116,16 +117,18 @@ export function migrateToNarrativeDB(dataDir: string): { success: boolean; table
             result.tables.push(`memories (${rows.length} rows)`)
           }
         }
-        memDb.close()
       } catch (err) {
         result.errors.push(`memory.db migration: ${err}`)
+      } finally {
+        memDb?.close()
       }
     }
 
     // 从旧 graph.db 迁移数据
     if (fs.existsSync(graphPath)) {
+      let graphDb: Database.Database | null = null
       try {
-        const graphDb = new Database(graphPath, { readonly: true })
+        graphDb = new Database(graphPath, { readonly: true })
         // 迁移实体
         const entityRows = graphDb.prepare('SELECT * FROM entities').all() as any[]
         const insertEntity = narrative.prepare(
@@ -146,9 +149,10 @@ export function migrateToNarrativeDB(dataDir: string): { success: boolean; table
         }
         result.tables.push(`relations (${relationRows.length} rows)`)
 
-        graphDb.close()
       } catch (err) {
         result.errors.push(`graph.db migration: ${err}`)
+      } finally {
+        graphDb?.close()
       }
     }
 

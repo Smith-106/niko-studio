@@ -8,6 +8,7 @@
  */
 
 import { BaseAgent } from './base';
+import { escapeCypherString } from '../utils/cypher-safety';
 import type { IAgentGraphEngine, IAgentMemoryEngine } from './base';
 import type { WorldviewSetting } from '../narrative/worldview-extractor.js';
 
@@ -236,7 +237,7 @@ export class WorldbuildingAgent extends BaseAgent {
     if (!this._graphEngine?.query) return null;
 
     const query = [
-      `MATCH (l:Location {name: '${location}'})`,
+      `MATCH (l:Location {name: '${escapeCypherString(location)}'})`,
       'OPTIONAL MATCH (l)-[:NEAR]->(nearby:Location)',
       'OPTIONAL MATCH (c:Character)-[:LIVES_IN]->(l)',
       'RETURN l, collect(DISTINCT nearby.name) as nearby, collect(DISTINCT c.name) as inhabitants',

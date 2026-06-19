@@ -31,15 +31,15 @@ describe('graph/graph-engine', () => {
       await engine.createEntity('Character', 'Alicia', { role: 'ally' });
       await engine.createEntity('Character', 'Bob', { role: 'rival' });
       await engine.createEntity('Foreshadow', 'Broken Seal', {
-        status: 'pending',
+        state: 'pending',
         planted_chapter: 2,
       });
       await engine.createEntity('Foreshadow', 'Late Bell', {
-        status: 'pending',
+        state: 'pending',
         planted_chapter: 5,
       });
       await engine.createEntity('Foreshadow', 'Closed Loop', {
-        status: 'resolved',
+        state: 'resolved',
         planted_chapter: 1,
       });
 
@@ -80,7 +80,7 @@ describe('graph/graph-engine', () => {
       expect(foreshadows).toHaveLength(1);
       expect(foreshadows[0]).toMatchObject({
         name: 'Broken Seal',
-        properties: { status: 'pending', planted_chapter: 2 },
+        properties: { state: 'pending', planted_chapter: 2 },
       });
       expect(updated).toMatchObject({
         status: 'updated',

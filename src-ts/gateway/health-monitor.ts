@@ -239,7 +239,7 @@ export class MCPHealthMonitorImpl implements IMCPHealthMonitor {
     if (wasDegraded) {
       this.eventBus.publish('mcp:provider-recovered', {
         name: providerName,
-        previousStatus: prev?.status ?? 'unknown',
+        previousStatus: prev!.status,
         responseTimeMs,
       });
       _log.info('Provider recovered', { name: providerName, responseTimeMs });

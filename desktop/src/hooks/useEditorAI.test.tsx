@@ -7,8 +7,10 @@ vi.mock('../api/client', () => ({
 }))
 
 import { streamWritingHelper } from '../api/client'
+import * as streamToEditor from '../components/editor/streamToEditor'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
+import * as editorAIPromptPolicy from './editorAIPromptPolicy'
 import { buildEditorAIPayload, type BuildEditorAIPayloadOptions } from './editorAIPromptPolicy'
 import { useEditorAI } from './useEditorAI'
 
@@ -228,6 +230,46 @@ describe('useEditorAI', () => {
     expect(result.current.isGenerating).toBe(false)
   })
 
+  it('swallows late rejected stream errors after rewrite cancellation once the controller is attached', async () => {
+    const originalContent = 'Before target after'
+    const editor = createEditorWithSelection(originalContent, 'target')
+    const deferred = createDeferred<void>()
+    let streamSignal: AbortSignal | undefined
+
+    mockStreamWritingHelper.mockImplementation(async (_payload, _callbacks, options) => {
+      streamSignal = options?.signal
+      await deferred.promise
+      throw new Error('late abort failure')
+    })
+
+    const { result } = renderEditorAI(editor)
+
+    let rewritePromise!: Promise<void>
+    await act(async () => {
+      rewritePromise = result.current.runRequest({ action: 'rewrite', variant: 'formal' })
+      await Promise.resolve()
+    })
+
+    expect(streamSignal).toBeDefined()
+    expect(streamSignal?.aborted).toBe(false)
+
+    act(() => {
+      result.current.cancel()
+    })
+
+    expect(streamSignal?.aborted).toBe(true)
+
+    deferred.resolve()
+
+    await act(async () => {
+      await rewritePromise
+    })
+
+    expect(editor.getText()).toBe(originalContent)
+    expect(result.current.errorMessage).toBeNull()
+    expect(result.current.isGenerating).toBe(false)
+  })
+
   it('ignores overlapping requests from a different owner while a stream is active', async () => {
     const editor = new FakeEditor('Before after')
     editor.setSelection('Before '.length)
@@ -284,6 +326,7 @@ describe('useEditorAI', () => {
             'abort',
             () => {
               callbacks.onContent('stale', 0)
+              callbacks.onError('stale error')
               callbacks.onDone()
               resolve()
             },
@@ -316,6 +359,7 @@ describe('useEditorAI', () => {
     expect(mockStreamWritingHelper).toHaveBeenCalledTimes(2)
     expect(editor.getText()).toBe('Seed...fresh')
     expect(editor.getText()).not.toContain('stale')
+    expect(result.current.errorMessage).toBeNull()
     expect(result.current.isGenerating).toBe(false)
   })
 
@@ -516,5 +560,272 @@ describe('useEditorAI', () => {
 
     expect(editor.getText()).toBe(originalContent)
     expect(result.current.errorMessage).toBe('stream failed')
+  })
+
+  it('reports a missing provider in English and clears the error on demand', async () => {
+    useSettingsStore.getState().updateProvider('openai', { enabled: false, apiKey: '' })
+
+    const editor = new FakeEditor('Before after')
+    const onApiKeyMissing = vi.fn()
+    const { result } = renderHook(() =>
+      useEditorAI({
+        editor: editor as unknown as Editor,
+        language: 'en',
+        onApiKeyMissing,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.runRequest({ action: 'generate' })
+    })
+
+    expect(onApiKeyMissing).toHaveBeenCalledTimes(1)
+    expect(mockStreamWritingHelper).not.toHaveBeenCalled()
+    expect(result.current.errorMessage).toBe('Please configure AI provider first')
+
+    act(() => {
+      result.current.clearError()
+    })
+
+    expect(result.current.errorMessage).toBeNull()
+  })
+
+  it('rethrows beforeRequestStart errors and releases the pending request lock', async () => {
+    const editor = new FakeEditor('Before after')
+    editor.setSelection('Before '.length)
+    mockStreamWritingHelper.mockImplementation(async (_payload, callbacks) => {
+      callbacks.onDone()
+    })
+
+    const { result } = renderEditorAI(editor)
+    let thrown: unknown
+
+    await act(async () => {
+      try {
+        await result.current.runRequest(
+          { action: 'generate' },
+          {
+            beforeRequestStart: () => {
+              throw new Error('preflight failed')
+            },
+          },
+        )
+      } catch (error) {
+        thrown = error
+      }
+    })
+
+    expect(thrown).toBeInstanceOf(Error)
+    expect((thrown as Error).message).toBe('preflight failed')
+    expect(result.current.isGenerating).toBe(false)
+    expect(mockStreamWritingHelper).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await result.current.runRequest({ action: 'continue' })
+    })
+
+    expect(mockStreamWritingHelper).toHaveBeenCalledTimes(1)
+    expect(result.current.isGenerating).toBe(false)
+  })
+
+  it('ignores stale pending-request releases after beforeRequestStart reenters and then throws', async () => {
+    const editor = new FakeEditor('Seed')
+    editor.setSelection('Seed'.length)
+    let followupRequest: Promise<void> | null = null
+
+    mockStreamWritingHelper.mockImplementation(async (_payload, callbacks) => {
+      callbacks.onDone()
+    })
+
+    const { result } = renderEditorAI(editor)
+    let thrown: unknown
+
+    await act(async () => {
+      try {
+        await result.current.runRequest(
+          { action: 'generate' },
+          {
+            owner: 'slash',
+            allowRestart: true,
+            beforeRequestStart: () => {
+              followupRequest = result.current.runRequest(
+                { action: 'continue' },
+                { owner: 'slash', allowRestart: true },
+              )
+              throw new Error('preflight failed after restart')
+            },
+          },
+        )
+      } catch (error) {
+        thrown = error
+      }
+
+      await followupRequest
+    })
+
+    expect(thrown).toBeInstanceOf(Error)
+    expect((thrown as Error).message).toBe('preflight failed after restart')
+    expect(mockStreamWritingHelper).toHaveBeenCalledTimes(1)
+    expect(editor.getText()).toBe('Seed...')
+    expect(result.current.isGenerating).toBe(false)
+    expect(result.current.errorMessage).toBeNull()
+  })
+
+  it('skips rewrite requests when the current selection is blank', async () => {
+    const editor = new FakeEditor('Before after')
+    editor.setSelection('Before '.length, 'Before '.length)
+
+    const { result } = renderEditorAI(editor)
+
+    await act(async () => {
+      await result.current.runRequest({ action: 'rewrite', variant: 'formal' })
+    })
+
+    expect(mockStreamWritingHelper).not.toHaveBeenCalled()
+    expect(editor.getText()).toBe('Before after')
+    expect(result.current.isGenerating).toBe(false)
+    expect(result.current.errorMessage).toBeNull()
+  })
+
+  it('restarts a pending request before the stream controller is created when the same owner reenters', async () => {
+    const editor = new FakeEditor('Seed')
+    editor.setSelection('Seed'.length)
+    let followupRequest: Promise<void> | null = null
+
+    mockStreamWritingHelper.mockImplementation(async (_payload, callbacks) => {
+      callbacks.onContent('fresh', 0)
+      callbacks.onDone()
+    })
+
+    const { result } = renderEditorAI(editor)
+
+    const firstRequest = result.current.runRequest(
+      { action: 'generate' },
+      {
+        owner: 'slash',
+        allowRestart: true,
+        beforeRequestStart: () => {
+          followupRequest = result.current.runRequest(
+            { action: 'continue' },
+            { owner: 'slash', allowRestart: true },
+          )
+        },
+      },
+    )
+
+    await act(async () => {
+      await firstRequest
+      await followupRequest
+    })
+
+    expect(mockStreamWritingHelper).toHaveBeenCalledTimes(1)
+    expect(editor.getText()).toBe('Seed...fresh')
+    expect(result.current.isGenerating).toBe(false)
+  })
+
+  it('releases the pending request when no loading placeholder can be inserted', async () => {
+    const editor = new FakeEditor('Before after')
+    editor.setSelection('Before '.length)
+    const insertLoadingIndicatorSpy = vi
+      .spyOn(streamToEditor, 'insertLoadingIndicator')
+      .mockReturnValueOnce(null)
+
+    const { result } = renderEditorAI(editor)
+
+    await act(async () => {
+      await result.current.runRequest({ action: 'generate' })
+    })
+
+    expect(insertLoadingIndicatorSpy).toHaveBeenCalledTimes(1)
+    expect(mockStreamWritingHelper).not.toHaveBeenCalled()
+    expect(editor.getText()).toBe('Before after')
+    expect(result.current.isGenerating).toBe(false)
+    expect(result.current.errorMessage).toBeNull()
+  })
+
+  it('bails out when a pending request becomes stale before callStream starts', async () => {
+    const editor = new FakeEditor('Seed')
+    editor.setSelection('Seed'.length)
+    const originalBuild = editorAIPromptPolicy.buildEditorAIPayload
+    let followupRequest: Promise<void> | null = null
+    let reentered = false
+
+    mockStreamWritingHelper.mockImplementation(async (_payload, callbacks) => {
+      callbacks.onDone()
+    })
+
+    const { result } = renderEditorAI(editor)
+    const payloadSpy = vi
+      .spyOn(editorAIPromptPolicy, 'buildEditorAIPayload')
+      .mockImplementation((options) => {
+        if (!reentered && options.request.action === 'generate') {
+          reentered = true
+          followupRequest = result.current.runRequest(
+            { action: 'continue' },
+            { owner: 'slash', allowRestart: true },
+          )
+        }
+        return originalBuild(options)
+      })
+
+    await act(async () => {
+      await result.current.runRequest(
+        { action: 'generate' },
+        { owner: 'slash', allowRestart: true },
+      )
+      await followupRequest
+    })
+
+    payloadSpy.mockRestore()
+
+    expect(mockStreamWritingHelper).toHaveBeenCalledTimes(1)
+    expect(editor.getText()).toBe('Seed...')
+    expect(result.current.isGenerating).toBe(false)
+  })
+
+  it('surfaces thrown stream errors and removes the loading placeholder for generate requests', async () => {
+    const originalContent = 'Before after'
+    const editor = new FakeEditor(originalContent)
+    editor.setSelection('Before '.length)
+    mockStreamWritingHelper.mockRejectedValue(new Error('request blew up'))
+
+    const { result } = renderHook(() =>
+      useEditorAI({
+        editor: editor as unknown as Editor,
+        language: 'zh',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.generateAtCursor()
+    })
+
+    expect(mockStreamWritingHelper).toHaveBeenCalledTimes(1)
+    expect(editor.getText()).toBe(originalContent)
+    expect(result.current.errorMessage).toBe('request blew up')
+    expect(result.current.isGenerating).toBe(false)
+  })
+
+  it('treats wrapper methods and cancel as no-ops when the editor is unavailable', async () => {
+    const { result } = renderHook(() =>
+      useEditorAI({
+        editor: null,
+        language: 'zh',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.generateAtCursor('full-article')
+      await result.current.rewriteSelection('formal')
+      await result.current.continueWriting()
+    })
+
+    act(() => {
+      result.current.cancel()
+    })
+
+    expect(mockStreamWritingHelper).not.toHaveBeenCalled()
+    expect(result.current.isGenerating).toBe(false)
+    expect(result.current.errorMessage).toBeNull()
   })
 })

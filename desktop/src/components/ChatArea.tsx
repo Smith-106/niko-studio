@@ -528,10 +528,6 @@ export function ChatArea({
       maybeShowGateHint,
       onStreamPhase: setStreamPhase,
       onRecoverStatus: (status) => {
-        if (!status) {
-          setRecoverStatus(null)
-          return
-        }
         setRecoverStatus((prev) => {
           if (
             prev?.type === 'success'
@@ -585,10 +581,6 @@ export function ChatArea({
 
     try {
       if (inlineAction === 'revise') {
-        if (!selectedText) {
-          setRecoverError(t.inlineNeedSelection)
-          return
-        }
         const reviseResult = await agentRevise(selectedText, {
           instruction: promptText || t.inlineReviseDefaultInstruction,
           workflow_level: workflowLevel,

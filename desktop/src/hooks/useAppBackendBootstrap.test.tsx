@@ -24,11 +24,18 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useAppBackendBootstrap } from './useAppBackendBootstrap'
 
 describe('useAppBackendBootstrap', () => {
+  const originalConsoleError = console.error
+
   beforeEach(() => {
     vi.clearAllMocks()
+    console.error = vi.fn()
     vi.mocked(getRuntimeGatewayBase).mockResolvedValue('http://127.0.0.1:8000')
     vi.mocked(syncGatewayBaseOverride).mockResolvedValue(undefined)
     vi.mocked(startTauriBackend).mockResolvedValue('Gateway ready')
+  })
+
+  afterEach(() => {
+    console.error = originalConsoleError
   })
 
   it('does not call startTauriBackend or syncGatewayBaseOverride in non-Tauri runtime', () => {
@@ -104,6 +111,59 @@ describe('useAppBackendBootstrap', () => {
 
     await waitFor(() => {
       expect(updateSettings).toHaveBeenCalledWith({ apiBaseUrl: 'http://127.0.0.1:5389' })
+    })
+  })
+
+  it('does not rewrite persisted gateway base when runtime resolves a non-loopback host alias', async () => {
+    const updateSettings = vi.fn()
+    vi.mocked(isTauriRuntime).mockReturnValue(true)
+    vi.mocked(getRuntimeGatewayBase).mockResolvedValue('http://localhost:5389')
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      settings: { apiBaseUrl: 'http://127.0.0.1:8000' },
+      updateSettings,
+    } as unknown as ReturnType<typeof useSettingsStore.getState>)
+
+    renderHook(() => useAppBackendBootstrap())
+
+    await waitFor(() => {
+      expect(getRuntimeGatewayBase).toHaveBeenCalledTimes(1)
+      expect(updateSettings).not.toHaveBeenCalled()
+    })
+  })
+
+  it('reports bootstrap failures through console.error and the optional callback', async () => {
+    const onError = vi.fn()
+    vi.mocked(isTauriRuntime).mockReturnValue(true)
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      settings: { apiBaseUrl: 'http://127.0.0.1:8000' },
+      updateSettings: vi.fn(),
+    } as unknown as ReturnType<typeof useSettingsStore.getState>)
+    vi.mocked(startTauriBackend).mockRejectedValue(new Error('gateway boot failed'))
+
+    renderHook(() => useAppBackendBootstrap(onError))
+
+    await waitFor(() => {
+      expect(console.error).toHaveBeenCalledWith(
+        '[useAppBackendBootstrap] Backend bootstrap failed:',
+        expect.any(Error),
+      )
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('gateway boot failed'))
+    })
+  })
+
+  it('stringifies non-Error bootstrap failures before notifying the caller', async () => {
+    const onError = vi.fn()
+    vi.mocked(isTauriRuntime).mockReturnValue(true)
+    vi.mocked(useSettingsStore.getState).mockReturnValue({
+      settings: { apiBaseUrl: 'http://127.0.0.1:8000' },
+      updateSettings: vi.fn(),
+    } as unknown as ReturnType<typeof useSettingsStore.getState>)
+    vi.mocked(startTauriBackend).mockRejectedValue('plain failure')
+
+    renderHook(() => useAppBackendBootstrap(onError))
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('plain failure'))
     })
   })
 })

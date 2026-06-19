@@ -1,9 +1,40 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const useWriterWorkspaceSummaryMock = vi.hoisted(() => vi.fn())
+const useSettingsStoreMock = vi.hoisted(() => vi.fn())
+
+vi.mock('../hooks/useWriterWorkspaceSummary', () => ({
+  useWriterWorkspaceSummary: useWriterWorkspaceSummaryMock,
+}))
+
+vi.mock('../stores/settingsStore', () => ({
+  useSettingsStore: useSettingsStoreMock,
+}))
 
 import { AppContextFooter } from './AppContextFooter'
 
+const defaultWorkspaceSummary = {
+  meaningfulWorkspace: null,
+  hasMeaningfulScope: false,
+  projectLabel: 'default-project',
+  chapterLabel: null,
+  storyBibleLabel: null,
+  focusLabel: null,
+  workspaceLabel: null,
+  workflowLabel: null,
+  scopeChips: [],
+}
+
 describe('AppContextFooter', () => {
+  beforeEach(() => {
+    useWriterWorkspaceSummaryMock.mockReturnValue({ ...defaultWorkspaceSummary })
+    useSettingsStoreMock.mockImplementation(
+      (selector: (state: { settings: { defaultWorkflowLevel: string } }) => unknown) =>
+        selector({ settings: { defaultWorkflowLevel: 'L3' } }),
+    )
+  })
+
   it('does not render when the estimated context text is empty', () => {
     const { container } = render(<AppContextFooter contextEstimatedText="" />)
 
@@ -52,5 +83,43 @@ describe('AppContextFooter', () => {
     render(<AppContextFooter contextEstimatedText="" wordCount={100} readingTime={0} />)
     expect(screen.getByText('100 字')).toBeVisible()
     expect(screen.queryByText(/分钟阅读/)).not.toBeInTheDocument()
+  })
+
+  it('renders the chapter label and warning styling when workspace context is available', () => {
+    useWriterWorkspaceSummaryMock.mockReturnValue({
+      ...defaultWorkspaceSummary,
+      chapterLabel: 'Chapter 7',
+    })
+
+    const { container } = render(
+      <AppContextFooter contextEstimatedText="" contextPercent={75} />,
+    )
+
+    const footer = container.firstElementChild as HTMLElement
+
+    expect(screen.getByText('Chapter 7')).toBeVisible()
+    expect(screen.getByText('L3')).toBeVisible()
+    expect(footer.className).toContain('border-amber-300')
+  })
+
+  it('falls back to the project label and critical styling for non-default projects', () => {
+    useWriterWorkspaceSummaryMock.mockReturnValue({
+      ...defaultWorkspaceSummary,
+      projectLabel: 'novel-workspace',
+    })
+    useSettingsStoreMock.mockImplementation(
+      (selector: (state: { settings: { defaultWorkflowLevel: string } }) => unknown) =>
+        selector({ settings: { defaultWorkflowLevel: 'L5' } }),
+    )
+
+    const { container } = render(
+      <AppContextFooter contextEstimatedText="" contextPercent={95} />,
+    )
+
+    const footer = container.firstElementChild as HTMLElement
+
+    expect(screen.getByText('novel-workspace')).toBeVisible()
+    expect(screen.getByText('L5')).toBeVisible()
+    expect(footer.className).toContain('border-red-300')
   })
 })

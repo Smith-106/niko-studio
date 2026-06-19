@@ -116,23 +116,6 @@ function maskSecrets(configDict: Record<string, unknown>): Record<string, unknow
   return result;
 }
 
-function setNestedValue(
-  configDict: Record<string, unknown>,
-  key: string,
-  value: unknown
-): boolean {
-  const parts = key.split('.');
-  if (parts.length !== 2) return false;
-
-  const [section, field] = parts;
-  const sectionData = configDict[section] as Record<string, unknown> | undefined;
-  if (!sectionData) return false;
-  if (!(field in sectionData)) return false;
-
-  sectionData[field] = value;
-  return true;
-}
-
 // ---------------------------------------------------------------
 // Config accessor interface (to be wired)
 // ---------------------------------------------------------------

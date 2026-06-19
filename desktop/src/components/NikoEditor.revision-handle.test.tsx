@@ -382,6 +382,31 @@ describe('NikoEditor revision handle seam', () => {
     vi.useRealTimers()
   })
 
+  it('exposes inert imperative defaults before the editor instance is ready', async () => {
+    useEditorMock.mockImplementation((config) => {
+      latestEditorConfig = config
+      return null
+    })
+    const forwardedRef = createRef<NikoEditorHandle>()
+
+    render(<NikoEditor ref={forwardedRef} onOpenWritingHelper={vi.fn()} />)
+
+    await waitFor(() => {
+      expect(forwardedRef.current).not.toBeNull()
+    })
+
+    const handle = forwardedRef.current
+    expect(getEditorHandle()).toBeNull()
+    expect(handle?.getSelectedText()).toBe('')
+    expect(handle?.getJSON()).toEqual({ type: 'doc', content: [] })
+    expect(handle?.captureSelectionSnapshot()).toBeNull()
+    expect(handle?.replaceSelectionSnapshot({ from: 0, to: 0, text: '' }, 'rewrite')).toBe(false)
+    expect(handle?.insertBelowSelectionSnapshot({ from: 0, to: 0, text: '' }, 'alternative')).toBe(false)
+    expect(handle?.undoLastRevisionApply()).toBe(false)
+    expect(() => handle?.insertText('draft')).not.toThrow()
+    expect(() => handle?.triggerAIContinue()).not.toThrow()
+  })
+
   it('registers the live editorHandle seam for capture, replace, insert-below, and undo', async () => {
     const editor = createEditorWithSelection('Before target after', 'target')
     useEditorMock.mockImplementation((config) => {
@@ -414,6 +439,9 @@ describe('NikoEditor revision handle seam', () => {
       triggerAIContinue: expect.any(Function),
       isGenerating: false,
     })
+    expect(handle?.getSelectedText()).toBe('target')
+    expect(handle?.getJSON()).toEqual({ type: 'doc', content: [] })
+    expect(handle?.undoLastRevisionApply()).toBe(false)
 
     const snapshot = handle?.captureSelectionSnapshot()
     expect(snapshot).toEqual({
@@ -421,18 +449,36 @@ describe('NikoEditor revision handle seam', () => {
       to: 13,
       text: 'target',
     })
+    expect(
+      handle?.replaceSelectionSnapshot({ from: 7, to: 13, text: 'mismatch' }, 'rewrite'),
+    ).toBe(false)
+    expect(
+      handle?.insertBelowSelectionSnapshot({ from: 7, to: 13, text: 'mismatch' }, 'alternative'),
+    ).toBe(false)
+
+    editor.setSelection(editor.getText().length, editor.getText().length)
+    handle?.insertText('!')
+    expect(editor.getText()).toBe('Before target after!')
+    editor.setSelection(7, 13)
 
     expect(handle?.replaceSelectionSnapshot(snapshot!, 'rewrite')).toBe(true)
-    expect(editor.getText()).toBe('Before rewrite after')
+    expect(editor.getText()).toBe('Before rewrite after!')
 
     expect(handle?.undoLastRevisionApply()).toBe(true)
-    expect(editor.getText()).toBe('Before target after')
+    expect(editor.getText()).toBe('Before target after!')
 
     expect(handle?.insertBelowSelectionSnapshot(snapshot!, 'alternative')).toBe(true)
-    expect(editor.getText()).toBe('Before target\n\nalternative after')
+    expect(editor.getText()).toBe('Before target\n\nalternative after!')
 
     expect(handle?.undoLastRevisionApply()).toBe(true)
-    expect(editor.getText()).toBe('Before target after')
+    expect(editor.getText()).toBe('Before target after!')
+
+    expect(handle?.replaceSelectionSnapshot(snapshot!, 'rewrite')).toBe(true)
+    ;(editor as unknown as { content: string }).content = 'Before drift after!'
+    expect(handle?.undoLastRevisionApply()).toBe(false)
+
+    editor.setSelection(7, 7)
+    expect(handle?.captureSelectionSnapshot()).toBeNull()
 
     unmount()
 

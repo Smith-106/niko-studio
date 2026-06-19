@@ -28,27 +28,24 @@ describe('detectPatterns', () => {
   it('calls /analysis/patterns with category', async () => {
     callApiMock.mockResolvedValue({
       success: true,
-      data: {
-        success: true,
-        data: [
-          {
-            id: 'p1',
-            name: 'Recurring Motif',
-            category: 'symbolism',
-            occurrences: [{ entityId: 'e1', entityName: 'mirror', confidence: 0.9, context: 'Ch3' }],
-            confidence: 0.9,
-            avgSimilarity: 0.85,
-          },
-        ],
-      },
+      data: [
+        {
+          id: 'p1',
+          name: 'Recurring Motif',
+          category: 'symbolism',
+          occurrences: [{ entityId: 'e1', entityName: 'mirror', confidence: 0.9, context: 'Ch3' }],
+          confidence: 0.9,
+          avgSimilarity: 0.85,
+        },
+      ],
     })
 
     const result = await detectPatterns('symbolism')
 
     expect(callApiMock).toHaveBeenCalledWith('/analysis/patterns', 'POST', { category: 'symbolism' })
     expect(result.success).toBe(true)
-    expect(result.data!.data).toHaveLength(1)
-    expect(result.data!.data[0].name).toBe('Recurring Motif')
+    expect(result.data!).toHaveLength(1)
+    expect(result.data![0].name).toBe('Recurring Motif')
   })
 
   it('propagates API errors', async () => {
@@ -71,23 +68,20 @@ describe('clusterSessions', () => {
   it('calls /analysis/sessions with session list', async () => {
     callApiMock.mockResolvedValue({
       success: true,
-      data: {
-        success: true,
-        data: [
-          {
-            id: 'c1',
-            name: 'Theme Group A',
-            description: 'Sessions about redemption',
-            intent: null,
-            status: 'active',
-            createdAt: '2026-01-01T00:00:00Z',
-            updatedAt: '2026-01-02T00:00:00Z',
-            members: [
-              { clusterId: 'c1', sessionId: 's1', sessionType: 'chapter', relevanceScore: 0.92, addedAt: '2026-01-01T00:00:00Z' },
-            ],
-          },
-        ],
-      },
+      data: [
+        {
+          id: 'c1',
+          name: 'Theme Group A',
+          description: 'Sessions about redemption',
+          intent: null,
+          status: 'active',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-02T00:00:00Z',
+          members: [
+            { clusterId: 'c1', sessionId: 's1', sessionType: 'chapter', relevanceScore: 0.92, addedAt: '2026-01-01T00:00:00Z' },
+          ],
+        },
+      ],
     })
 
     const sessions = [
@@ -99,8 +93,8 @@ describe('clusterSessions', () => {
 
     expect(callApiMock).toHaveBeenCalledWith('/analysis/sessions', 'POST', { sessions })
     expect(result.success).toBe(true)
-    expect(result.data!.data).toHaveLength(1)
-    expect(result.data!.data[0].members).toHaveLength(1)
+    expect(result.data!).toHaveLength(1)
+    expect(result.data![0].members).toHaveLength(1)
   })
 
   it('handles empty session list', async () => {

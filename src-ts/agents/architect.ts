@@ -501,8 +501,8 @@ export class ArchitectAgent {
         visual: genre === '悬疑' ? '阴影、封闭空间、细微动作' : '明确场景锚点',
         sound: '突兀声响、对话停顿、环境噪声',
       },
-      plot_beat: hooks[Math.min(index, hooks.length - 1)] ?? hooks[0],
-      hook: hooks[Math.min(index, hooks.length - 1)] ?? hooks[0],
+      plot_beat: hooks[Math.min(index, hooks.length - 1)],
+      hook: hooks[Math.min(index, hooks.length - 1)],
       foreshadows_to_plant: index === 0 ? ['异常细节'] : [],
       foreshadows_to_harvest: index >= sceneCount - 2 ? ['异常细节'] : [],
     }));

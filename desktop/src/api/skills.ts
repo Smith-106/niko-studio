@@ -2,7 +2,7 @@ import { type ApiResponse, callApi } from './core'
 
 // ============ Skills API ============
 
-export async function listSkills(category?: string): Promise<ApiResponse<Array<{ id: string; name: string }>>> {
+export async function listSkills(category?: string): Promise<ApiResponse<{ skills: Array<{ id: string; name: string }> }>> {
   const endpoint = category ? `/skills/list?category=${category}` : '/skills/list'
   return callApi(endpoint, 'GET')
 }

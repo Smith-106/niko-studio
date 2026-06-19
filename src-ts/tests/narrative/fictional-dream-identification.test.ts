@@ -70,4 +70,118 @@ describe('narrative/fictional_dream/identification', () => {
       effectiveness: 0.82,
     });
   });
+
+  it('falls back to the empty godfather contract when llm returns a non-object payload', async () => {
+    const llm = {
+      generateJson: vi.fn(async () => 'invalid-payload'),
+    };
+    const builder = new IdentificationBuilder(llm);
+
+    const result = await builder.analyze(
+      '她决心离开这里，但没有任何崇高价值绑定。',
+      undefined,
+      0,
+    );
+
+    expect(result.godfatherTechnique).toMatchObject({
+      isDetected: false,
+      moralFlaw: null,
+      nobleGoal: null,
+      sympathyTransferPath: null,
+      effectiveness: 0,
+    });
+  });
+
+  it('infers godfather detection from effectiveness even without explicit boolean fields', async () => {
+    const llm = {
+      generateJson: vi.fn(async () => ({
+        detected: false,
+        score: 0.6,
+        moral_flaw: 1,
+        noble_goal: 2,
+        sympathy_transfer_path: 3,
+      })),
+    };
+    const builder = new IdentificationBuilder(llm);
+
+    const result = await builder.analyze(
+      '她必须保护同伴并继续前进。',
+      undefined,
+      20,
+    );
+
+    expect(result.godfatherTechnique).toMatchObject({
+      isDetected: true,
+      moralFlaw: null,
+      nobleGoal: null,
+      sympathyTransferPath: null,
+      effectiveness: 0.6,
+    });
+  });
+
+  it('infers godfather detection from sympathy transfer path when score normalization falls back', async () => {
+    const llm = {
+      generateJson: vi.fn(async () => ({
+        detected: false,
+        score: 'not-a-number',
+        sympathy_transfer_path: '通过受害者视角转移同情',
+      })),
+    };
+    const builder = new IdentificationBuilder(llm);
+
+    const result = await builder.analyze(
+      '她必须保护同伴并继续前进。',
+      undefined,
+      20,
+    );
+
+    expect(result.godfatherTechnique).toMatchObject({
+      isDetected: true,
+      moralFlaw: null,
+      nobleGoal: null,
+      sympathyTransferPath: '通过受害者视角转移同情',
+      effectiveness: 0,
+    });
+  });
+
+  it('uses average goal worthiness and low-score suggestions when no noble value binding is detected', async () => {
+    const builder = new IdentificationBuilder();
+
+    const result = await builder.analyze(
+      '她必须离开这里。',
+      undefined,
+      0,
+    );
+
+    expect(result.goalWorthiness).toBe(0.5);
+    expect(result.godfatherTechnique.isDetected).toBe(false);
+    expect(result.suggestions.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('normalizes whitespace-only llm strings to null', async () => {
+    const llm = {
+      generateJson: vi.fn(async () => ({
+        detected: false,
+        moral_flaw: '   ',
+        noble_goal: ' ',
+        sympathy_transfer_path: '\n\t',
+        effectiveness: 0,
+      })),
+    };
+    const builder = new IdentificationBuilder(llm);
+
+    const result = await builder.analyze(
+      '她必须继续前进。',
+      undefined,
+      0,
+    );
+
+    expect(result.godfatherTechnique).toMatchObject({
+      isDetected: false,
+      moralFlaw: null,
+      nobleGoal: null,
+      sympathyTransferPath: null,
+      effectiveness: 0,
+    });
+  });
 });

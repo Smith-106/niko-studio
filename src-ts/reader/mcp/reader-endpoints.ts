@@ -152,6 +152,7 @@ function getConsensusEngine(): ConsensusEngine {
 export interface AnalyzeRequest {
   novelId: string;
   personaIds?: string[]; // defaults to all presets
+  text?: string; // optional override for testing / future callers
 }
 
 export interface CreatePersonaRequest {
@@ -250,9 +251,6 @@ loadCustomPersonas().then((loaded) => {
   for (const [id, persona] of loaded) {
     customPersonaStore.set(id, persona);
   }
-}).catch((exc: unknown) => {
-  const message = exc instanceof Error ? exc.message : String(exc);
-  _log.warn('Failed to initialize custom persona store from file', { error: message });
 });
 
 // Feedback aggregate store: personaId -> dimension -> FeedbackAggregate
@@ -397,9 +395,9 @@ export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpRespo
   try {
     const personas = resolvePersonas(personaIds);
 
-    // TODO: Fetch manuscript text from persistent storage
-    // For now, use empty placeholder text
-    const manuscriptText = '';
+    // Use provided text for analysis, otherwise fall back to empty placeholder
+    // (production callers will fetch manuscript text from persistent storage).
+    const manuscriptText = (body.text as string | undefined) ?? '';
 
     // Handle empty text gracefully — return empty consensus report
     if (!manuscriptText || manuscriptText.trim().length === 0) {
@@ -840,7 +838,7 @@ function adjustPersonaWeights(
     };
   }
 
-  const currentWeight = persona.parameters[paramKey] ?? 0.5;
+  const currentWeight = (persona.parameters[paramKey] as number | undefined) ?? 0.5;
   let newWeight = currentWeight;
 
   // Decision logic: accept vs reject

@@ -67,7 +67,7 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
   useEffect(() => {
     if (activeTab !== 'writing_craft') return
     if (!currentProjectId || chapters.length < 2) {
-      setChapterPayloads([])
+      setChapterPayloads((current) => (current.length === 0 ? current : []))
       return
     }
 

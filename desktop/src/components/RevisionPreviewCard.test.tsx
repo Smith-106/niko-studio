@@ -96,6 +96,47 @@ describe('RevisionPreviewCard', () => {
     expect(diffContent.textContent).toContain('Modified line two.')
   })
 
+  it('renders the no-differences state when the texts match', async () => {
+    const user = userEvent.setup()
+    render(
+      <RevisionPreviewCard
+        {...defaultProps}
+        sourceText="Unchanged line"
+        candidateText="Unchanged line"
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Show diff' }))
+
+    expect(screen.getByText('No differences detected')).toBeInTheDocument()
+  })
+
+  it('falls back to the simple diff strategy for large inputs', async () => {
+    const user = userEvent.setup()
+    const sourceLines = Array.from({ length: 501 }, (_, index) =>
+      index === 250 ? 'middle original' : `shared line ${index}`,
+    )
+    const candidateLines = Array.from({ length: 501 }, (_, index) =>
+      index === 250 ? 'middle revised' : `shared line ${index}`,
+    )
+
+    render(
+      <RevisionPreviewCard
+        {...defaultProps}
+        sourceText={sourceLines.join('\n')}
+        candidateText={candidateLines.join('\n')}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Show diff' }))
+
+    const diffContainer = screen.getByText('Diff').closest('.rounded-lg')!
+    const diffContent = diffContainer.querySelector('pre')!
+    expect(diffContent.textContent).toContain('shared line 0')
+    expect(diffContent.textContent).toContain('middle original')
+    expect(diffContent.textContent).toContain('middle revised')
+  })
+
   it('shows confirmation dialog when confirmRollback is enabled', async () => {
     const user = userEvent.setup()
     render(
@@ -190,6 +231,38 @@ describe('RevisionPreviewCard', () => {
     expect(screen.getByText('Integrity warnings:')).toBeInTheDocument()
     expect(screen.getByText('Source text is empty')).toBeInTheDocument()
     expect(screen.getByText('Candidate text is empty')).toBeInTheDocument()
+  })
+
+  it('shows an integrity warning when the candidate is much longer than the source', async () => {
+    const user = userEvent.setup()
+    render(
+      <RevisionPreviewCard
+        {...defaultProps}
+        sourceText="short text"
+        candidateText={'expanded '.repeat(30).trim()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+
+    expect(screen.getByText('Integrity warnings:')).toBeInTheDocument()
+    expect(screen.getByText(/Candidate is .*x longer than source/)).toBeInTheDocument()
+  })
+
+  it('shows an integrity warning when the candidate is severely truncated', async () => {
+    const user = userEvent.setup()
+    render(
+      <RevisionPreviewCard
+        {...defaultProps}
+        sourceText={'This is a much longer source passage that should trigger truncation detection. '.repeat(2)}
+        candidateText="tiny"
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+
+    expect(screen.getByText('Integrity warnings:')).toBeInTheDocument()
+    expect(screen.getByText(/Candidate is .* shorter than source/)).toBeInTheDocument()
   })
 
   it('calls onIntegrityCheck before rollback and blocks if it returns false', async () => {

@@ -208,6 +208,70 @@ describe('settingsStore prompt template library', () => {
     expect(library.variablePresets['tpl-test-1']).toEqual({ name: 'Niko' })
   })
 
+  it('filters enabled providers with api keys and resolves the primary provider', () => {
+    const store = useSettingsStore.getState()
+
+    store.updateSettings({ primaryProvider: 'openai' })
+    store.updateProvider('anthropic', { enabled: true, apiKey: '' })
+    store.updateProvider('openai', { enabled: true, apiKey: 'sk-openai' })
+    store.updateProvider('google', { enabled: false, apiKey: 'sk-google' })
+
+    expect(useSettingsStore.getState().getEnabledProviders().map((provider) => provider.id)).toEqual(['openai'])
+    expect(useSettingsStore.getState().getPrimaryProvider()?.id).toBe('openai')
+  })
+
+  it('replaces templates with matching ids and updates template fields in place', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-06-03T14:00:00.000Z'))
+      const store = useSettingsStore.getState()
+
+      store.addTemplate(templateFixture('tpl-edit'))
+
+      vi.setSystemTime(new Date('2026-06-03T14:05:00.000Z'))
+      store.addTemplate({
+        ...templateFixture('tpl-edit'),
+        title: '妯℃澘-鏇存柊',
+        content: 'updated {name}',
+      })
+
+      store.updateTemplate('tpl-edit', {
+        title: '妯℃澘-缁堢増',
+        content: 'final {name}',
+        isFavorite: true,
+      })
+
+      const library = useSettingsStore.getState().settings.promptTemplateLibrary!
+      const templates = library.templates.filter((item) => item.id === 'tpl-edit')
+
+      expect(templates).toHaveLength(1)
+      expect(templates[0]).toMatchObject({
+        id: 'tpl-edit',
+        title: '妯℃澘-缁堢増',
+        content: 'final {name}',
+        isFavorite: true,
+      })
+      expect(templates[0].updatedAt).toBe('2026-06-03T14:05:00.000Z')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('deletes templates and clears associated recent ids and variable presets', () => {
+    const store = useSettingsStore.getState()
+
+    store.addTemplate(templateFixture('tpl-remove'))
+    store.recordTemplateUsage('tpl-remove')
+    store.setTemplateVariablePreset('tpl-remove', 'name', 'Atlas')
+
+    store.deleteTemplate('tpl-remove')
+
+    const library = useSettingsStore.getState().settings.promptTemplateLibrary!
+    expect(library.templates.find((item) => item.id === 'tpl-remove')).toBeUndefined()
+    expect(library.recentTemplateIds).not.toContain('tpl-remove')
+    expect(library.variablePresets).not.toHaveProperty('tpl-remove')
+  })
+
   it('supports writing helper legacy polish toggle setting', () => {
     localStorage.clear()
     const store = useSettingsStore.getState()

@@ -126,6 +126,24 @@ describe('reader/ai-flavor-detector', () => {
     expect(longResult.confidence).toBeGreaterThan(shortResult.confidence);
   });
 
+  it('returns low-AI fallback suggestion when no indicators are detected', () => {
+    // Text designed to avoid all AI detectors:
+    // - No AI template expressions
+    // - Paragraphs of wildly different lengths (no style drift)
+    // - Balanced sensory words (all 5 senses, visual not dominant)
+    // - No repetitive sentence starts or phrases
+    // - No generic transition words (and, but, so, however, etc.)
+    const para1 = 'Warm sunlight touched her shoulders. James walked through the fragrant garden. Birds sang softly in the trees. Sweet honey lingered on her tongue. Fresh grass scent filled the air. Maria glanced at colorful flowers. A gentle stream flowed nearby. Rough bark pressed against her palm. Thunder rolled across distant hills. Spicy cinnamon filled the kitchen. Fresh bread came straight from oven. Cool breeze carried rain scent. Smooth stones felt cold underfoot. Dark clouds gathered overhead. Lightning flashed across sky. The warm fire inside beckoned. Laughter echoed from within. Hot chocolate tasted wonderful. The smooth door handle felt cool. Earthy aroma of wet soil rose up.';
+    const para2 = 'She looked at painting.';
+    const para3 = 'Nearby, a musician whispered gentle melody.';
+    const text = [para1, para2, para3].join('\n\n');
+
+    const result = detectAIFlavor(text);
+
+    // When no indicators are detected, the fallback suggestion should be present
+    expect(result.suggestions).toContain('文本 AI 味较低，保持当前的写作风格');
+  });
+
   it('factory function returns working detector', () => {
     const detector = createAIFlavorDetector();
     const result = detector.detect('值得注意的是，这是测试。');

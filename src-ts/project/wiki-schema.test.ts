@@ -97,4 +97,14 @@ describe('project wiki schema', () => {
       '---',
     ].join('\n'));
   });
+
+  it('uses the last normalized slug segment as fallback title', () => {
+    const frontmatter = createProjectWikiPageFrontmatter({
+      workspaceId: 'Atlas Project',
+      title: '   ',
+      slug: 'characters/final-title',
+    });
+
+    expect(frontmatter.title).toBe('final-title');
+  });
 });

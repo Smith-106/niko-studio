@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useExportHistory } from './useExportHistory'
 
 describe('useExportHistory', () => {
   beforeEach(() => {
     localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('returns empty history initially', () => {
@@ -70,5 +74,44 @@ describe('useExportHistory', () => {
     expect(raw).toBeTruthy()
     const parsed = JSON.parse(raw!)
     expect(parsed[0].format).toBe('pdf')
+  })
+
+  it('falls back to an empty history when persisted data is invalid', () => {
+    localStorage.setItem('niko.export-history-v1', '{invalid-json')
+
+    const { result } = renderHook(() => useExportHistory())
+
+    expect(result.current.history).toEqual([])
+  })
+
+  it('falls back to an empty history when storage reads throw', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('storage unavailable')
+    })
+
+    const { result } = renderHook(() => useExportHistory())
+
+    expect(result.current.history).toEqual([])
+  })
+
+  it('keeps in-memory history updates when persistence writes fail', () => {
+    const { result } = renderHook(() => useExportHistory())
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded')
+    })
+
+    expect(() => {
+      act(() => {
+        result.current.recordExport('docx', 'Draft Export', 1200)
+      })
+    }).not.toThrow()
+
+    expect(result.current.history).toHaveLength(1)
+    expect(result.current.history[0]).toMatchObject({
+      format: 'docx',
+      title: 'Draft Export',
+      wordCount: 1200,
+    })
   })
 })

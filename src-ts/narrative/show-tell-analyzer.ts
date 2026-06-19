@@ -81,10 +81,6 @@ const SENSORY_KEYS: Array<Exclude<keyof SensoryCoverage, 'overall'>> = [
   'gustatory',
 ];
 
-function isSenseKey(key: string): key is Exclude<keyof SensoryCoverage, 'overall'> {
-  return (SENSORY_KEYS as string[]).includes(key);
-}
-
 function getSensePatterns(key: Exclude<keyof SensoryCoverage, 'overall'>): string[] {
   return SENSORY_PATTERNS[key];
 }

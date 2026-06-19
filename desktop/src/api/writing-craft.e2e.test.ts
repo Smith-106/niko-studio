@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 const nodeMajor = Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10)
-const shouldRunGatewayE2E = nodeMajor > 0 && nodeMajor < 24
+const shouldRunGatewayE2E = nodeMajor > 0 && nodeMajor < 25
 
 const e2e = it.runIf(shouldRunGatewayE2E)
 const e2eDescribe = describe.runIf(shouldRunGatewayE2E)
@@ -15,7 +15,7 @@ void e2e
 
 if (!shouldRunGatewayE2E) {
   // Avoid hard-failing unit test runs when the local Node runtime is incompatible with the gateway boot path.
-  // E2E coverage still exists and can be executed under supported Node versions.
+  // E2E coverage runs on Node 20-24 and can be executed under supported Node versions.
 }
 
 import { spawn, spawnSync, type ChildProcessByStdio } from 'node:child_process'
@@ -110,6 +110,7 @@ e2eBeforeAll(async () => {
       env: {
         ...process.env,
         NIKO_GATEWAY_RUNTIME: 'node',
+        NIKO_GATEWAY_INITIAL_PHASE: 'complete',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     },

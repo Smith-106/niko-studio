@@ -104,10 +104,12 @@ function validateInput(input: ValidationInput): { valid: boolean; error?: string
 
 /**
  * Run basic quality checks on text.
- * TODO: Integrate with actual CAS (Craft Analysis Services) for real constraint evaluation.
  * Currently provides a structural placeholder with basic heuristics.
+ * Integration with Craft Analysis Services (CAS) is planned for a future release.
  */
 function runQualityCheck(text: string, _mode: string): HardConstraintReport {
+  _log.info('Running heuristic quality checks — CAS integration pending');
+
   const violations: HardConstraintViolation[] = [];
   const dimensionResults: HardConstraintResult[] = [];
 

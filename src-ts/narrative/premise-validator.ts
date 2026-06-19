@@ -483,7 +483,7 @@ export function assessOutlineQuality(outlineText: string): OutlineAssessment {
     .filter((d) => d.score < DIMENSION_THRESHOLDS[d.dimension].threshold)
     .map((d) => ({
       dimension: d.dimension,
-      suggestion: d.suggestions[0] ?? `提升 ${d.label}`,
+      suggestion: d.suggestions[0]!,
       priority: d.score < DIMENSION_THRESHOLDS[d.dimension].threshold / 2 ? 'high' as const
         : d.score < DIMENSION_THRESHOLDS[d.dimension].threshold * 0.8 ? 'medium' as const
         : 'low' as const,

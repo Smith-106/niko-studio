@@ -40,31 +40,16 @@ function buildInstruction(
   customInstruction: string,
   language: Language,
 ): string {
-  if (preset === 'custom') {
-    return customInstruction.trim()
+  const builders: Record<OptimizerPreset, (language: Language) => string> = {
+    custom: () => customInstruction.trim(),
+    humanize: buildHumanizeInstruction,
+    aiGuide: buildAiGuideInstruction,
+    characterNarrative: buildCharacterNarrativeInstruction,
+    literaryPolish: buildLiteraryPolishInstruction,
+    academicPaper: buildAcademicPaperInstruction,
   }
 
-  if (preset === 'humanize') {
-    return buildHumanizeInstruction(language)
-  }
-
-  if (preset === 'aiGuide') {
-    return buildAiGuideInstruction(language)
-  }
-
-  if (preset === 'characterNarrative') {
-    return buildCharacterNarrativeInstruction(language)
-  }
-
-  if (preset === 'literaryPolish') {
-    return buildLiteraryPolishInstruction(language)
-  }
-
-  if (preset === 'academicPaper') {
-    return buildAcademicPaperInstruction(language)
-  }
-
-  return customInstruction.trim()
+  return builders[preset](language)
 }
 
 // ── Preset instruction builders ─────────────────────────────────
@@ -475,11 +460,6 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
 
     if (!value.trim()) {
       setContentSource('empty')
-      return
-    }
-
-    if (contentSource === 'selection' && value === selectionSeed) {
-      setContentSource('selection')
       return
     }
 

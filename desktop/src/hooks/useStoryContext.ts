@@ -17,7 +17,7 @@ interface CachedStoryContext {
   data: StoryContext
 }
 
-function extractItemSummary(item: Record<string, unknown>): string {
+export function extractItemSummary(item: Record<string, unknown>): string {
   const name = String(item.name ?? item.title ?? '')
   const desc = String(item.description ?? item.role ?? item.content ?? item.summary ?? '')
   return name ? (desc ? `${name}: ${desc}` : name) : ''
@@ -155,10 +155,6 @@ export function useStoryContext() {
     loadStoryContext(currentWorkspace)
       .then(data => {
         cacheRef.current = { workspaceId, data }
-      })
-      .catch(() => {
-        // Cache empty context on failure
-        cacheRef.current = { workspaceId, data: buildEmptyContext() }
       })
       .finally(() => {
         loadingRef.current = false

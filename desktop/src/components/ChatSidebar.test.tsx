@@ -4,6 +4,8 @@ import { ChatSidebar } from './ChatSidebar'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 
+const useResizablePanelMock = vi.hoisted(() => vi.fn())
+
 vi.mock('./ChatArea', () => ({
   ChatArea: (props: Record<string, unknown>) => (
     <div data-testid="chat-area">
@@ -93,6 +95,10 @@ vi.mock('../api/client', () => ({
   uploadMemoryFile: vi.fn(),
 }))
 
+vi.mock('../hooks/useResizablePanel', () => ({
+  useResizablePanel: (options: unknown) => useResizablePanelMock(options),
+}))
+
 describe('ChatSidebar', () => {
   const defaultChatAreaProps = {
     onContextUsageChange: undefined,
@@ -101,6 +107,12 @@ describe('ChatSidebar', () => {
 
   beforeEach(() => {
     localStorage.clear()
+    useResizablePanelMock.mockReturnValue({
+      width: 320,
+      isResizing: false,
+      startResize: vi.fn(),
+      resetWidth: vi.fn(),
+    })
     useSettingsStore.getState().resetSettings()
     useSettingsStore.setState((state) => ({
       ...state,
@@ -194,5 +206,25 @@ describe('ChatSidebar', () => {
     const aside = container.querySelector('aside')
     expect(aside?.className).toContain('shadow-')
     expect(aside?.className).toContain('relative')
+  })
+
+  it('drops transition classes while the resize interaction is active', () => {
+    useResizablePanelMock.mockReturnValueOnce({
+      width: 360,
+      isResizing: true,
+      startResize: vi.fn(),
+      resetWidth: vi.fn(),
+    })
+
+    const { container } = render(
+      <ChatSidebar
+        chatAreaProps={defaultChatAreaProps}
+        chatSidebarCollapsed={false}
+      />,
+    )
+
+    const aside = container.querySelector('aside')
+    expect(aside?.className).not.toContain('transition-all')
+    expect(aside?.className).not.toContain('duration-300')
   })
 })

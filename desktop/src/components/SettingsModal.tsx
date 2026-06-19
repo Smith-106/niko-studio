@@ -225,12 +225,6 @@ export function SettingsModal({
 
   const buildSaveMessage = (result: SettingsSaveResult) => {
     const stages = getSaveStageSummary(result)
-    if (result.status === 'success') {
-      return {
-        type: 'success' as const,
-        text: t.settingsSaveSuccess,
-      }
-    }
     if (result.status === 'partial') {
       return {
         type: 'warning' as const,
@@ -1646,11 +1640,9 @@ export function SettingsModal({
             {saveMessage && (
               <span
                 className={`text-xs ${
-                  saveMessage.type === 'success'
-                    ? 'text-green-600'
-                    : saveMessage.type === 'warning'
-                      ? 'text-amber-600'
-                      : 'text-red-600'
+                  saveMessage.type === 'warning'
+                    ? 'text-amber-600'
+                    : 'text-red-600'
                 }`}
               >
                 {saveMessage.text}

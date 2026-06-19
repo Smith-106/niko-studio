@@ -46,12 +46,9 @@ function _utcNowIso(): string {
 }
 
 function _parseIsoDatetime(raw: string): Date {
-  const text = (raw ?? '').trim();
-  if (!text) throw new Error('empty datetime');
-
-  const parsed = new Date(text);
+  const parsed = new Date(raw);
   if (isNaN(parsed.getTime())) {
-    throw new Error(`invalid datetime: ${text}`);
+    throw new Error(`invalid datetime: ${raw}`);
   }
   return parsed;
 }
@@ -198,9 +195,7 @@ export function refreshProjectTechMetadata(
   }
 
   const dir = path.dirname(projectTechPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     projectTechPath,
     JSON.stringify(payload, null, 2) + '\n',

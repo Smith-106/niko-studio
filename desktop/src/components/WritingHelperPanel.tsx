@@ -555,14 +555,10 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   }
 
   const handleReplaceSelection = () => {
-    if (!result?.processedText) {
-      return
-    }
-
     const message = applyRevisionCandidateToEditor({
-      sourceText: result.sourceText ?? '',
-      candidateText: result.processedText,
-      selectionSnapshot: result.selectionSnapshot ?? null,
+      sourceText: result?.sourceText ?? '',
+      candidateText: result?.processedText ?? '',
+      selectionSnapshot: result?.selectionSnapshot ?? null,
     }, revisionCopy)
     if (message) {
       setApplyMessage(message)
@@ -570,14 +566,10 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   }
 
   const handleInsertAlternative = () => {
-    if (!result?.processedText) {
-      return
-    }
-
     const message = insertRevisionAlternativeToEditor({
-      sourceText: result.sourceText ?? '',
-      candidateText: result.processedText,
-      selectionSnapshot: result.selectionSnapshot ?? null,
+      sourceText: result?.sourceText ?? '',
+      candidateText: result?.processedText ?? '',
+      selectionSnapshot: result?.selectionSnapshot ?? null,
     }, revisionCopy)
     if (message) {
       setApplyMessage(message)
