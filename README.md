@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 11.0.2 (Platform Edition)
+> **Version**: 11.0.3 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -37,6 +37,12 @@ Deprecated release surface (removed)
 
 ## Current Release Snapshot
 
+### v11.0.3 (2026-06-20)
+
+- 修复 smoke 测试 sidecar 进程残留导致 NSIS 安装报 "Error opening file for writing"
+- terminate() 改用 taskkill /T 杀进程树，防止 sidecar node.exe 子进程残留锁定文件
+- silent_install() 安装前自动清理残留 sidecar 进程和旧安装目录
+
 ### v11.0.2 (2026-06-20)
 
 - 新手引导系统：首次启动自动检测配置状态，引导用户完成 LLM 提供商设置和模板选择
@@ -51,8 +57,8 @@ Deprecated release surface (removed)
 
 ---
 
-- Current release tag: `v11.0.2`
-- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v11.0.2`
+- Current release tag: `v11.0.3`
+- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v11.0.3`
 - Current local sign-off status: `GO` on current HEAD
 
 如果你只想下载当前正式发布版，直接进入 GitHub Releases 页面获取 Windows 安装包。
@@ -354,4 +360,4 @@ Built on concepts from:
 
 ---
 
-*Version 11.0.2 Platform Edition | Updated: 2026-06-20*
+*Version 11.0.3 Platform Edition | Updated: 2026-06-20*

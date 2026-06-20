@@ -2,7 +2,7 @@
 # This file supports hot-reload - changes apply automatically
 
 app_name: niko-studio
-version: "11.0.2"
+version: "11.0.3"
 debug: false
 env: development
 data_dir: .writing
