@@ -143,7 +143,50 @@ Tauri Shell
 
 ## 4. Root Cause Diagnosis
 
-（待诊断）
+### Critical Findings 根因
+
+| ID | Root Cause | Hypothesis | Result | Fix Approach |
+|----|-----------|------------|--------|-------------|
+| C1 | resolve_base_uncached 串行 health probe，3 次 2s 超时叠加 | 并发探测可将 6s+ 降至 ~2s | CONFIRMED | `tokio::join!` 并发 3 次 is_gateway_healthy |
+| C2 | TcpListener::bind("0") 后 listener 未 drop | sidecar 绑定同端口时竞争 | CONFIRMED | port = listener.local_addr().port(); drop(listener); |
+| C3 | localhost-only guard 已实现但请求处理未集成 | 开发者实现了配置解析但忘记在 handler 中添加检查 | CONFIRMED | 在 createGatewayRequestHandler 顶部加 localhost 检查 |
+| C4 | 手动 DI 模式 set*() 替代构造器注入 | 历史渐进：初始单模块 → 拆分时用 set* 保持兼容 | CONFIRMED — DEFERRED | 重构为 GatewayContext（高成本，defer 到架构专项） |
+| C5 | container/gateway-control-plane.ts re-export 未实现 shutdown | 迁移时只写了 log 占位，未接入 ServiceContainer.shutdown() | CONFIRMED | 实现 shutdownGatewayControlPlane 调用 container.shutdown() |
+
+### High Findings 根因分类
+
+| Category | Count | Root Cause Pattern |
+|----------|-------|--------------------|
+| 性能串行 | 5 | 初始化/探测串行执行，可并发 |
+| 安全缺失 | 6 | 认证/授权层完全缺失 |
+| 类型安全 | 3 | `as unknown as` 绕过、Parameters<> 推导 |
+| 资源泄漏 | 4 | socket/timer/connection 未清理 |
+| 可观测性 | 8 | 缺 metric/log/trace 的 8 处关键路径 |
+| 代码复杂度 | 2 | 30+ if 分支和 ~15 圈复杂度 |
+
+### 修复优先级（有把握才改）
+
+**立即修复（高把握）:**
+1. C2 — drop(listener) — 1 行修改
+2. C5 — shutdownGatewayControlPlane 实现 — 小范围改动
+3. C3 — localhost-only middleware — 小范围改动
+4. C1 — 并发 health probe + 共享 reqwest::Client — 中范围
+5. H1 — 共享 reqwest::Client — 与 C1 合并
+6. H5 — CORS origins 缓存 — 小范围改动
+7. H25 — 500 响应含 requestId — 1 行修改
+8. H20 — headersSent 检查 — 3 行修改
+9. H16 — unhandledRejection handler — 5 行修改
+10. Rate limiter stop on shutdown — 小范围改动
+11. WS upgrade 非 /ws/events 路径 socket.destroy() — 2 行修改
+
+**DEFERRED（需架构决策）:**
+- C4 — set*() → GatewayContext DI 重构
+- H12 — gateway-state.ts god module 拆分
+- H13 — `as unknown as` 消除
+- H14 — MCP↔container 层违规
+- H6 — 默认 host 改为 127.0.0.1（破坏性变更）
+- H18 — ServiceContainer initialized 标记逻辑
+- 安全认证层（H8-H11）— 需设计认证方案
 
 ## 5. Fix & Verification
 
