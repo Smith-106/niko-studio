@@ -148,7 +148,55 @@
 
 ## 8. Discoveries & Decisions
 
-（待分类）
+### 泛化扫描命中分类
+
+**已修复（本次 session）:**
+| EG/Hit | File | Classification | Action |
+|--------|------|----------------|--------|
+| EG-17 | gateway-bootstrap.ts | bug → FIXED | listen() error 事件 |
+| EG-08 | gateway_runtime.rs | bug → FIXED | OpenProcess PID 轮询 |
+| EG-21 | config/index.ts | bug → FIXED | Number.isFinite guard |
+| EG-23 | config/index.ts | bug → FIXED | parseIntSafe() |
+| EG-15 | config/index.ts | bug → FIXED | try-catch |
+
+**安全（已有防护）:**
+| Hit | File | Classification | Action |
+|-----|------|----------------|--------|
+| mcp/config.ts:152 | parseInt + isNaN fallback | safe | skip |
+| mcp/config.ts:229,243,279 | parseInt + isNaN fallback | safe | skip |
+| mcp/contract.ts:242 | safeInt() NaN guard | safe | skip |
+| knowledge/config.ts:286-292 | ?? 'default' 确保 parseInt 输入合法 | safe | skip |
+| reranker/factory.ts:117 | 同上 | safe | skip |
+| nowledge-mem-adapter.ts:67 | node:child_process spawn + on('close') | safe | skip |
+| graph-manager.ts:272,298 | 解析已知格式输入 | safe | skip |
+| graph-engine.ts:809,946 | 同上 | safe | skip |
+| ConsensusEngine 除零 | 已有 length===0 guard | safe | skip |
+| readRequestBody 无超时 | 已有 30s 超时 + 10MB limit | safe | skip |
+
+**低风险（CLI 命令文件操作，失败可接受）:**
+| Hit | File | Classification | Action |
+|-----|------|----------------|--------|
+| cli/commands.ts:50,56 | mkdirSync init 命令 | risk | skip — CLI 用户看到错误信息 |
+| cli/commands.ts:61 | writeFileSync init 命令 | risk | skip — 同上 |
+| cli/commands.ts:261,268 | /save /export 命令 | safe | skip — 用户命令 |
+| cli/commands.ts:362,397 | 导出命令 | safe | skip — 同上 |
+
+**中风险（需关注但非崩溃级）:**
+| Hit | File | Classification | Action |
+|-----|------|----------------|--------|
+| unified-memory.ts:752 _initSchema | _db.exec 无 try-catch | risk | decision: deferred — db 构造成功后 exec 极少失败 |
+| workflow/sqlite-workflow-state-store.ts:36 _initSchema | 同上 | risk | decision: deferred |
+| mcp-servers/memory-mcp.ts:98 _initSchema | 同上 | risk | decision: deferred |
+| analysis/writing-session-cluster.ts:114 _initSchema | 同上 | risk | decision: deferred |
+| graph/graph-engine.ts:190 _initSchema | 同上 | risk | decision: deferred |
+
+### 决策记录
+
+| ID | Question | Resolution | Rationale |
+|----|----------|-----------|-----------|
+| D1 | _initSchema 类 try-catch 是否需要修复？ | deferred | SQLite db 构造成功后 exec CREATE TABLE IF NOT EXISTS 极少失败；加 try-catch 可能隐藏真正问题（权限/磁盘空间），defer 到后续专项 |
+| D2 | CLI 命令中 writeFileSync 无 try-catch？ | skip | CLI 命令失败时用户看到完整 Node.js 异常栈，可诊断；非静默失败 |
+| D3 | test 代码中 listen(0) 无 error 事件？ | skip | 测试使用 OS 分配端口（port 0），冲突概率为零 |
 
 ## 9. Learnings
 
