@@ -35,37 +35,56 @@
 
 ## 4. Hypotheses & Testing
 
-### H1 [HIGH] — listen() 无 error 事件监听，端口占用时进程挂起
+### H1 [HIGH] ✅ CONFIRMED — listen() 无 error 事件监听，端口占用时进程挂起
 - 证据: gateway-bootstrap.ts:46-50 `listen()` 函数从不 reject，未监听 server 'error' 事件
-- 测试: 模拟端口占用场景，验证 listen() 是否挂起
+- 测试: 代码审查确认 `listen()` 仅监听 `listening` 事件，无 `error` 处理
+- 修复: 添加 `server.on('error', ...)` 监听，EADDRINUSE 时 reject
 
-### H2 [HIGH] — gateway_runtime.rs kill() 未 wait()，Windows 端口释放延迟
-- 证据: gateway_runtime.rs:384 `stop_child_best_effort` 调用 `kill()` 但未 `wait()`
-- 测试: 检查 sidecar 进程在 kill 后是否真正退出
+### H2 [HIGH] ✅ CONFIRMED — gateway_runtime.rs kill() 后进程未真正退出，Windows 端口释放延迟
+- 证据: gateway_runtime.rs:384 `stop_child_best_effort` 调用 `kill()` 但 `CommandChild` 无 `wait()` 方法
+- 测试: Rust 编译验证 `child.wait()` 报错 E0599，确认 API 缺失
+- 修复: kill 后用 `OpenProcess(SYNCHRONIZE)` 轮询 PID 确保进程退出（3s 超时）
 
-### H3 [HIGH] — NaN port 通过 validateConfig 校验
-- 证据: config/index.ts:658 `parseInt(env.NIKO_GATEWAY_PORT)` 产生 NaN，validateConfig 中 `NaN < 1` 和 `NaN > 65535` 都是 false
-- 测试: 设置 NIKO_GATEWAY_PORT=abc，验证是否通过校验
+### H3 [HIGH] ✅ CONFIRMED — NaN port 通过 validateConfig 校验
+- 证据: config/index.ts `parseInt(env.NIKO_GATEWAY_PORT)` 产生 NaN，`NaN < 1` 和 `NaN > 65535` 都是 false
+- 测试: 代码审查确认 `Number.isFinite(NaN) === false`
+- 修复: `validateConfig()` 用 `!Number.isFinite(port) || port < 1 || port > 65535`；`parseIntSafe()` 替代所有 `parseInt()`
 
-### H4 [MEDIUM] — createDefaultConfigFile 无 try-catch
+### H4 [MEDIUM] ✅ CONFIRMED — createDefaultConfigFile 无 try-catch
 - 证据: config/index.ts:570-571 `fs.writeFileSync` 直接调用
-- 测试: 只读目录下验证
+- 修复: 包裹 try-catch，失败时 `log.warn()` 而非 crash
 
-### H5 [MEDIUM] — CoreMemoryStore 构造函数 _initSchema 无 try-catch
+### H5 [MEDIUM] ⏸ DEFERRED — CoreMemoryStore 构造函数 _initSchema 无 try-catch
 - 证据: core-memory-store.ts:194 直接调用
-- 测试: 验证不可写路径下的行为
+- 决策: 推迟到 S_DISCOVER 阶段与同类问题统一处理
 
 ## 5. Root Cause
 
 启动链中存在 3 类根因导致"运行出错"：
 
-1. **静默失败**（最难诊断）— listen() 挂起、kill() 未 wait、NaN 通过校验
-2. **未捕获异常**（最易崩溃）— createDefaultConfigFile、_initSchema、bindWorkflowRuntimeProvider
-3. **降级无通知**（用户体验差）— onError 可选、Mutex poison 无日志、global config 解析失败静默
+1. **静默失败**（最难诊断）— listen() 挂起、kill() 未 wait、NaN 通过校验 → ✅ 已修复
+2. **未捕获异常**（最易崩溃）— createDefaultConfigFile → ✅ 已修复；_initSchema → 待泛化处理
+3. **降级无通知**（用户体验差）— onError 可选、Mutex poison 无日志、global config 解析失败静默 → 待泛化扫描
+
+根因确认：**Tauri `CommandChild` API 缺失 + Node.js `listen()` 错误传播缺失 + `parseInt` NaN 语义陷阱** 三者叠加导致启动链在异常条件下静默挂起或崩溃，用户无法诊断。
 
 ## 6. Fix & Confirmation
 
-（待修复验证）
+### 已修复（5 项）
+
+| EG | 文件 | 修复 | 验证 |
+|----|------|------|------|
+| EG-17 | gateway-bootstrap.ts | `listen()` 添加 server error 事件 + EADDRINUSE reject | TS 编译 ✅ + 8 tests passed |
+| EG-08 | gateway_runtime.rs | kill() 后 OpenProcess 轮询 PID 确保进程退出 | Rust cargo check ✅ |
+| EG-21 | config/index.ts | `!Number.isFinite(port)` 替代 NaN 比较 | TS 编译 ✅ |
+| EG-23 | config/index.ts | `parseIntSafe()` 替代 6 处 `parseInt()` | TS 编译 ✅ |
+| EG-15 | config/index.ts | `createDefaultConfigFile()` 包裹 try-catch | TS 编译 ✅ |
+
+### 验证结果
+- TypeScript `tsc --noEmit`: ✅ 零错误
+- Rust `cargo check`: ✅ 编译通过（3 个预存警告，无新增）
+- Unit tests (gateway-bootstrap + config): ✅ 8/8 passed
+- Python smoke script tests: ✅ passed
 
 ## 7. Generalization
 
