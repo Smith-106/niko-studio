@@ -274,7 +274,60 @@ Tauri Shell
 
 ## 7. Discoveries
 
-（待分类）
+### Finding 分类（94 项总）
+
+**已修复（11 项）**: C2, C5, C1+H1, C3, H5, H16, H25, H20, Rate limiter stop, WS upgrade, Bootstrap shutdown
+
+**安全 — 需设计认证方案（6 项，创建 issue）:**
+| ID | Title | Action |
+|----|-------|--------|
+| H8 | Config endpoint 可修改 localhost-only guard | issue: 移除 localhost-only/modifiable fields |
+| H9 | Secret endpoint 无认证走 HTTP | issue: 添加认证中间件 |
+| H10 | WebSocket relay 无认证无 origin 校验 | issue: 添加 origin + token 验证 |
+| H11 | Admin endpoints 无认证 | issue: 添加管理端口认证 |
+| H7 | CORS wildcard 反射 Origin | issue: dev 模式枚举具体 origin |
+| H6 | 默认 host 0.0.0.0 | issue: 改为 127.0.0.1 + 文档 |
+
+**架构 — defer 到架构专项（5 项）:**
+| ID | Title | Action |
+|----|-------|--------|
+| C4 | set*() 全局可变状态 | deferred: 需 GatewayContext DI 重构 |
+| H12 | gateway-state.ts god module | deferred: 拆分需架构决策 |
+| H13 | `as unknown as` 类型绕过 | deferred: 需接口对齐 |
+| H14 | MCP↔container 层违规 | deferred: 需 protocols 层 |
+| H18 | ServiceContainer initialized 标记 | deferred: 需 per-service 重试设计 |
+
+**可观测性 — 可独立修复（8 项，低优先级）:**
+| ID | Title | Action |
+|----|-------|--------|
+| H21 | 无启动耗时 metric | skip: 建议后续版本添加 |
+| H22 | health-poll loop 无诊断日志 | skip: 低优先级 |
+| H23 | sidecar 终止仅 frontend | skip: 低优先级 |
+| H24 | requestId 非唯一 | skip: 低优先级 |
+| H27 | Metrics map 500 key 全清 | skip: 低优先级 |
+| H28 | 无 prewarm 失败标记 | skip: 低优先级 |
+| M1-M7 | 各种 metric/log 缺失 | skip: 低优先级 |
+
+**可靠性 — 部分可修（4 项）:**
+| ID | Title | Action |
+|----|-------|--------|
+| H15 | prewarm 失败丢弃健康服务 | deferred: 需 per-service 标记 |
+| H17 | WS close+terminate 竞争 | deferred: 低优先级 |
+| H19 | readRequestBody 超时未 destroy socket | deferred: 低优先级 |
+| H26 | health 返回 200 即使 degraded | issue: 改为 503 |
+
+**可维护性 — 记录但暂不修（17 项 low/medium）:**
+全部 skip — 代码风格/文档/命名问题，不影响运行质量
+
+### 决策记录
+
+| ID | Question | Resolution | Rationale |
+|----|----------|-----------|-----------|
+| D1 | 安全认证层如何设计？ | issue | 需专项设计：API key / JWT / Tauri IPC token |
+| D2 | 默认 host 改 127.0.0.1？ | issue | 破坏性变更，需版本规划 |
+| D3 | C4 set*() 重构？ | deferred | 高成本，需排期 |
+| D4 | Metrics map 全清换 LRU？ | skip | 低优先级，当前 500 key cap 对桌面场景足够 |
+| D5 | gateway-state.ts 拆分？ | deferred | 需架构决策，影响面大 |
 
 ## 8. Improvement Metrics
 
