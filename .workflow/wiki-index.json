@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": 1781866899303,
+  "generatedAt": 1781954201427,
   "entries": [
     {
       "id": "roadmap-roadmap",
@@ -37,8 +37,8 @@
         "nuxt"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -68,8 +68,8 @@
         "priority"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -93,8 +93,8 @@
         "dependency-chain"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -118,8 +118,8 @@
         "APP_VERSION"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -143,8 +143,8 @@
         "sidecar"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -168,8 +168,8 @@
         "release"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -194,8 +194,8 @@
         "backend"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -220,8 +220,8 @@
         "separation"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -246,8 +246,8 @@
         "opt-in"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -273,8 +273,8 @@
         "reuse"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -299,8 +299,8 @@
         "guides"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -324,8 +324,8 @@
         "runtime-safety"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -349,8 +349,8 @@
         "test-environment"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -374,8 +374,8 @@
         "enhance-not-rebuild"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -399,8 +399,8 @@
         "knowledge-engine"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -424,8 +424,8 @@
         "context-pipeline"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -449,8 +449,8 @@
         "dual-engine"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -474,8 +474,8 @@
         "integration-surface"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -500,8 +500,8 @@
         "llm"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -525,8 +525,8 @@
         "adapter-pattern"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -549,8 +549,8 @@
         "optional-module"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -574,8 +574,8 @@
         "workspace-scoped"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -599,8 +599,8 @@
         "parallel-implementation"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -625,8 +625,8 @@
         "wiki"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -650,8 +650,8 @@
         "backward-compatibility"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -676,8 +676,8 @@
         "typed-contracts"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -701,8 +701,8 @@
         "interface-contract"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -726,8 +726,8 @@
         "graceful-degradation"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -752,8 +752,8 @@
         "extend-not-create"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -779,8 +779,8 @@
         "cypher"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -805,8 +805,111 @@
         "reader-simulation"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:56.189Z",
-      "updated": "2026-06-18T15:09:33.292Z",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-031",
+      "type": "spec",
+      "title": "Anti-AI-flavor 采用独立 detector 层",
+      "summary": "不扩展 QualityDimension 枚举，保持独立 detector 避免破坏现有 9 维度分析契约",
+      "tags": [
+        "Anti-AI-flavor",
+        "独立检测器",
+        "QualityDimension",
+        "架构约束"
+      ],
+      "status": "active",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-032",
+      "type": "spec",
+      "title": "De-AI rewrite 复用 IRevisionService.revise",
+      "summary": "通过 IRevisionService.revise 注入 anti-ai/style-shift qualityGoals，保持 reader 模块只读分析职责",
+      "tags": [
+        "De-AI",
+        "RevisionService",
+        "复用",
+        "注入"
+      ],
+      "status": "active",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-033",
+      "type": "spec",
+      "title": "前后端 ConsensusReport 统一",
+      "summary": "前端删除本地聚合逻辑，统一消费后端 ConsensusReport",
+      "tags": [
+        "ConsensusReport",
+        "前后端契约",
+        "OverlayMarker",
+        "统一"
+      ],
+      "status": "active",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-034",
+      "type": "spec",
+      "title": "自定义画像持久化 .niko-studio/reader-personas.json",
+      "summary": "自定义画像持久化到 JSON 文件，进程重启不丢失",
+      "tags": [
+        "画像持久化",
+        "JSON",
+        "reader-personas"
+      ],
+      "status": "active",
+      "created": "2026-06-19T16:10:02.935Z",
+      "updated": "2026-06-19T16:10:02.939Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -833,8 +936,8 @@
         "pattern"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -863,8 +966,8 @@
         "代码搜索"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -888,8 +991,8 @@
         "backward-compat"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -913,8 +1016,8 @@
         "aggregator-pattern"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -938,8 +1041,8 @@
         "catalog-loader"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -963,8 +1066,8 @@
         "keyword-first"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -988,8 +1091,8 @@
         "four-layer"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1014,8 +1117,8 @@
         "singleton"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1039,8 +1142,8 @@
         "frontend-only"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1065,8 +1168,8 @@
         "desktop-api"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1090,8 +1193,8 @@
         "cache-invalidation"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1115,8 +1218,8 @@
         "public-API"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1141,8 +1244,8 @@
         "chapter-switching"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1167,8 +1270,8 @@
         "gating"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1193,8 +1296,8 @@
         "interface"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1220,8 +1323,8 @@
         "vitest"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1247,8 +1350,8 @@
         "test"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1274,8 +1377,35 @@
         "anti-pattern"
       ],
       "status": "active",
-      "created": "2026-06-17T19:50:48.113Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
+      "scope": "project",
+      "category": "coding",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-018",
+      "type": "spec",
+      "title": "前端新建 reader.ts API 层复用 callApi/ApiResponse 模式",
+      "summary": "消除裸 fetch，统一前端 reader API 调用",
+      "tags": [
+        "API层",
+        "reader",
+        "callApi",
+        "ApiResponse",
+        "前端封装"
+      ],
+      "status": "active",
+      "created": "2026-06-19T16:10:07.318Z",
+      "updated": "2026-06-19T16:10:07.325Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1782,8 +1912,8 @@
         "ruff"
       ],
       "status": "active",
-      "created": "2026-06-13T15:46:45.688Z",
-      "updated": "2026-06-18T15:09:33.294Z",
+      "created": "2026-06-19T16:10:10.711Z",
+      "updated": "2026-06-19T16:10:10.711Z",
       "scope": "project",
       "category": "review",
       "specCategory": null,
@@ -1814,8 +1944,8 @@
         "cliffhanger"
       ],
       "status": "active",
-      "created": "2026-06-13T15:46:45.688Z",
-      "updated": "2026-06-18T15:09:33.294Z",
+      "created": "2026-06-19T16:10:10.711Z",
+      "updated": "2026-06-19T16:10:10.711Z",
       "scope": "project",
       "category": "quality",
       "specCategory": null,
@@ -1840,8 +1970,34 @@
         "gap"
       ],
       "status": "active",
-      "created": "2026-06-13T15:46:45.688Z",
-      "updated": "2026-06-18T15:09:33.294Z",
+      "created": "2026-06-19T16:10:10.711Z",
+      "updated": "2026-06-19T16:10:10.711Z",
+      "scope": "project",
+      "category": "quality",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:quality-rules",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/quality-rules.md"
+      }
+    },
+    {
+      "id": "spec:project:quality-rules-003",
+      "type": "spec",
+      "title": "console.log 统一替换为 logger 或删除",
+      "summary": "遵循 Fix Don't Hide 原则，console.log 必须替换为 logger 或删除",
+      "tags": [
+        "console.log",
+        "logger",
+        "替换",
+        "清理"
+      ],
+      "status": "active",
+      "created": "2026-06-19T16:10:10.711Z",
+      "updated": "2026-06-19T16:10:10.711Z",
       "scope": "project",
       "category": "quality",
       "specCategory": null,
@@ -2821,6 +2977,27 @@
       "source": {
         "kind": "file",
         "path": "scratch/20260619-test-P1-reader-simulation-anti-ai-flavor/uat.md"
+      }
+    },
+    {
+      "id": "scratch-20260620-debug-odyssey-nsis-install-file-lock-understanding",
+      "type": "note",
+      "title": "Debug Odyssey: NSIS 安装 + 运行时零错误",
+      "summary": "## 1. Issue & Scope",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T10:15:54.059Z",
+      "updated": "2026-06-20T10:15:54.066Z",
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260620-debug-odyssey-nsis-install-file-lock/understanding.md"
       }
     },
     {
@@ -4251,6 +4428,406 @@
         "kind": "virtual",
         "path": "issues/issues.jsonl",
         "line": 65
+      }
+    },
+    {
+      "id": "issue-ISS-20260619-001",
+      "type": "issue",
+      "title": "desktop esbuild 低危漏洞需等待 Vite 升级",
+      "summary": "npm audit --audit-level=high 通过，但 esbuild 0.27.3-0.28.0 仍存在低危漏洞 (GHSA-g7r4-m6w7-qqqr)。该漏洞仅在 Windows 开发服务器路径触发，不影响生产运行时。Vite 7.3.5 锁定 esbuild ^0.27.0，修复需 Vite 版本升级或显式覆盖并充分验证构建/测试。",
+      "tags": [
+        "low"
+      ],
+      "status": "draft",
+      "created": "2026-06-19T11:35:00Z",
+      "updated": "2026-06-19T11:35:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260619-001",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 66
+      }
+    },
+    {
+      "id": "issue-ISS-20260619-002",
+      "type": "issue",
+      "title": "src-ts esbuild 低危漏洞需等待 Vite 升级",
+      "summary": "npm audit --audit-level=high 通过，但 esbuild 0.27.3-0.28.0 仍存在低危漏洞 (GHSA-g7r4-m6w7-qqqr)。该漏洞仅在 Windows 开发服务器路径触发，不影响生产运行时。Vitest/Vite 7.3.5 锁定 esbuild ^0.27.0，修复需 Vite 版本升级或显式覆盖并充分验证构建/测试。",
+      "tags": [
+        "low"
+      ],
+      "status": "draft",
+      "created": "2026-06-19T11:35:00Z",
+      "updated": "2026-06-19T11:35:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260619-002",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 67
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-001",
+      "type": "issue",
+      "title": "ConsensusEngine calculateDimensionSummaries 除零风险 (CORR-003)",
+      "summary": "scores.length 可能为 0，导致 NaN 传播到整个共识计算。UAT 标记为 accepted_risk。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-001",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 68
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-002",
+      "type": "issue",
+      "title": "RevisionService LLM 调用缺 HTTPS 协议校验与超时 (SEC-003)",
+      "summary": "RevisionService 对 LLM endpoint 的 fetch 调用未校验 HTTPS 协议，无请求超时。API key 可能泄漏到攻击者控制的 endpoint。UAT 标记为 accepted_risk。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-002",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 69
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-003",
+      "type": "issue",
+      "title": "AI_TEMPLATE_PATTERNS 重复条目膨胀匹配计数 (CORR-002)",
+      "summary": "ai-flavor-detector.ts 中多个中文模板模式重复定义，导致匹配计数膨胀",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-003",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 70
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-004",
+      "type": "issue",
+      "title": "/reader/feedback modify 操作不触发权重调整 (CORR-004)",
+      "summary": "'ignore' 增加 'modify' 计数器但权重调整逻辑仅比较 accept vs reject，modify 被丢弃。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-004",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 71
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-005",
+      "type": "issue",
+      "title": "DetailPanel 按 description 字符串匹配 OverlayMarker (CORR-005)",
+      "summary": "DetailPanel 通过精确 description 字符串匹配 OverlayMarker 与 ConsensusItem，截断或合并时匹配失败。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-005",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 72
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-006",
+      "type": "issue",
+      "title": "RevisionService weak points 仅基于原始文本 (CORR-006)",
+      "summary": "Weak points 从基线分析推导，迭代使用过时反馈。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-006",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 73
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-007",
+      "type": "issue",
+      "title": "reader endpoints 无文本长度限制 (SEC-001)",
+      "summary": "Endpoints 接受任意长度文本，无大小校验。大 payload 可导致 DoS。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-007",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 74
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-008",
+      "type": "issue",
+      "title": "NIKO_WORKFLOW_WORKSPACE 环境变量未校验路径穿越 (SEC-002)",
+      "summary": "环境变量 NIKO_WORKFLOW_WORKSPACE 被 trim 但未验证，path traversal 可能。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-008",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 75
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-009",
+      "type": "issue",
+      "title": "persona weight 参数未校验 NaN/Infinity/越界 (SEC-004)",
+      "summary": "Weight 字段接受 NaN、Infinity 和越界值，畸形参数破坏分析。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-009",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 76
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-010",
+      "type": "issue",
+      "title": "ReportGenerator 直接导入后端 ConsensusEngine 类型 (ARCH-001)",
+      "summary": "ReportGenerator 导入 ../../../../src-ts/reader/ConsensusEngine 类型，破坏前后端分离。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-010",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 77
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-011",
+      "type": "issue",
+      "title": "reader-endpoints 多个手动单例 + 模块级可变状态 (ARCH-002)",
+      "summary": "多个 lazy singleton 实例通过模块级可变状态管理，测试困难和状态泄漏。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-011",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 78
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-012",
+      "type": "issue",
+      "title": "DIMENSION_TO_PARAM 12 条映射冗余 (MAINT-001)",
+      "summary": "4 个维度使用 3 种命名约定产生 12 条映射，维护负担和不一致风险。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-012",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 79
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-013",
+      "type": "issue",
+      "title": "AI 模板模式在 detector 和 revision-service 间重复且已分化 (MAINT-002)",
+      "summary": "ai-flavor-detector.ts 和 revision-service.ts 各自定义 AI 模板模式列表，已产生分化。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-013",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 80
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-014",
+      "type": "issue",
+      "title": "ReportGenerator dimensionSummaries fallback 覆盖 avgScore (MAINT-005)",
+      "summary": "Fallback 路径用最后一个 persona 的 score 覆盖 avgScore，而非计算平均值。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-014",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 81
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-015",
+      "type": "issue",
+      "title": "RevisionService 动态 import .js 扩展名绕过类型检查 (ARCH-003)",
+      "summary": "Dynamic import '../mcp/services/critic.js' 绕过类型检查，构建输出变化可能导致运行时失败。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:00:00Z",
+      "updated": "2026-06-20T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-015",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 82
+      }
+    },
+    {
+      "id": "issue-ISS-20260620-016",
+      "type": "issue",
+      "title": "Co-Writing engine context builder 未接入持久化存储",
+      "summary": "cowriting-endpoints.ts buildAutoModeInput 和 buildGuidedModeInput 当前返回空数据，注释标注 TODO: Wire to persistent storage once available。Co-Writing 引擎无法获取真实稿件文本和 Story Bible 数据。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T14:00:00Z",
+      "updated": "2026-06-20T14:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260620-016",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 83
       }
     }
   ]
