@@ -88,7 +88,63 @@
 
 ## 7. Generalization
 
-（待泛化扫描）
+### 提取的 Patterns（3 层）
+
+| ID | Layer | Signature | Description | Risk | Fix Template |
+|----|-------|-----------|-------------|------|-------------|
+| P1 | Syntax | `parseInt(\w+, 10)` 无 `Number.isFinite` 校验 | `parseInt` 返回 NaN/Infinity 时无声通过后续数值比较 | HIGH | `parseIntSafe()` 或 `!Number.isFinite()` guard |
+| P2 | Semantic | `kill()` 后无退出确认 | 进程 kill 后未等待退出，端口/资源未释放 | HIGH | kill 后轮询 PID / 监听 close 事件 / wait() |
+| P3 | Structural | `fs.writeFileSync` / `mkdirSync` 无 try-catch | 同步文件操作在不可写路径下抛未捕获异常 | MEDIUM | 包裹 try-catch + log.warn fallback |
+
+### 代码库扫描命中
+
+#### P1 — parseInt 无 NaN guard（环境变量 / 配置解析路径）
+
+| File | Line | Risk | Note |
+|------|------|------|------|
+| src-ts/mcp/config.ts | 152 | LOW | 已有 `Number.isNaN` fallback |
+| src-ts/mcp/config.ts | 229 | LOW | 已有 `Number.isNaN` fallback |
+| src-ts/mcp/config.ts | 243-244 | LOW | 后续逻辑有 fallback |
+| src-ts/mcp/config.ts | 279 | LOW | 已有 `Number.isNaN` fallback |
+| src-ts/mcp/contract.ts | 242 | LOW | `safeInt()` 已有 NaN 检查 |
+| src-ts/mcp/gateway-bootstrap.ts | 114 | FIXED | ✅ `Number.isFinite(parsed)` |
+| src-ts/config/index.ts | 多处 | FIXED | ✅ `parseIntSafe()` |
+| src-ts/knowledge/config.ts | 286-292 | LOW | 使用 `?? 'default'` 确保 parseInt 输入合法 |
+| src-ts/services/reranker/factory.ts | 117 | LOW | 同上 |
+| src-ts/workflow/project-tech.ts | 287 | LOW | 有 fallback 逻辑 |
+| src-ts/graph/graph-manager.ts | 272, 298 | LOW | 解析已知格式输入，非环境变量 |
+| src-ts/graph/graph-engine.ts | 809, 946 | LOW | 同上 |
+
+**结论**: P1 在配置/环境变量路径已全部修复或已有 fallback；业务逻辑中的 parseInt 输入为已知格式（数字匹配），风险 LOW。
+
+#### P2 — kill() 后无退出确认
+
+| File | Line | Risk | Note |
+|------|------|------|------|
+| desktop/src-tauri/src/gateway_runtime.rs | 433 | FIXED | ✅ OpenProcess 轮询 |
+| src-ts/services/nowledge-mem-adapter.ts | 67 | SAFE | 使用 `node:child_process` spawn，有 `on('close')` 处理 |
+
+**结论**: P2 仅 2 处命中，1 处已修复，1 处安全。
+
+#### P3 — writeFileSync / mkdirSync 无 try-catch
+
+| File | Line | Risk | Note |
+|------|------|------|------|
+| src-ts/config/index.ts | createDefaultConfigFile | FIXED | ✅ try-catch + log.warn |
+| src-ts/cli/commands.ts | 50, 56 | MEDIUM | CLI init 命令，失败时异常可接受（用户看到错误） |
+| src-ts/cli/commands.ts | 61 | MEDIUM | 同上 |
+| src-ts/cli/commands.ts | 261, 268 | LOW | /save /export 用户命令，失败抛异常可接受 |
+| src-ts/cli/commands.ts | 362, 397 | LOW | 同上，导出命令 |
+
+**结论**: P3 在 config 核心路径已修复；CLI 命令中文件操作失败可接受（用户得到明确错误信息）。
+
+### 泛化统计
+
+- Patterns extracted: 3
+- Total hits: 21
+- Cross-layer confirmed: 0 (P1/P2/P3 各自独立)
+- Regression risks: 0
+- Deepening triggered: no (no module ≥3 high-risk hits)
 
 ## 8. Discoveries & Decisions
 
