@@ -74,7 +74,7 @@ export class NarrativeEngine {
   async addEntity(type: EntityType, props: Omit<NarrativeEntityInput, 'type'>): Promise<string> {
     const id = await this.graphManager.addEntity(type, props.name, props.description, props)
     // 异步推送到知识层
-    this.bridge.pushEntity(id, { type, ...props }).catch((e) => { _log.warn('Failed to push entity to knowledge layer:', e) })
+    this.bridge.pushEntity(id, { type, ...props }).catch((e: unknown) => { _log.warn('Failed to push entity to knowledge layer:', { error: e instanceof Error ? e.message : String(e) }) })
     return id
   }
 
@@ -102,7 +102,7 @@ export class NarrativeEngine {
   async addNarrativeMemory(dimension: DimensionType, content: string, opts?: { entityId?: string; importance?: number; chapter?: number }): Promise<string> {
     const id = await this.memoryStore.addMemory(dimension, content, opts)
     // 异步推送到知识层
-    this.bridge.pushMemory(id, { dimension, content, ...opts }).catch((e) => { _log.warn('Failed to push memory to knowledge layer:', e) })
+    this.bridge.pushMemory(id, { dimension, content, ...opts }).catch((e: unknown) => { _log.warn('Failed to push memory to knowledge layer:', { error: e instanceof Error ? e.message : String(e) }) })
     return id
   }
 
@@ -116,7 +116,7 @@ export class NarrativeEngine {
     const id = crypto.randomUUID()
     this.foreshadowTracker.plant(id, fromEntityId, hint, chapter, opts?.maxDistance, opts?.reminderThreshold)
     if (this.graphManager) {
-      await this.graphManager.addRelation(fromEntityId, id, NarrativeRelationType.FORESHADOWS).catch((e) => { _log.warn('Failed to add foreshadow relation:', e) })
+      await this.graphManager.addRelation(fromEntityId, id, NarrativeRelationType.FORESHADOWS).catch((e: unknown) => { _log.warn('Failed to add foreshadow relation:', { error: e instanceof Error ? e.message : String(e) }) })
     }
     return id
   }
