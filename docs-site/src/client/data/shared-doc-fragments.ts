@@ -12,14 +12,23 @@ export const outputFieldGlossaryMiniSection = `
 
 export const releaseSnapshotMiniSection = `
 <h2>当前发布快照</h2>
-<p><strong>当前推荐版本：</strong><code>v10.0.0</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v10.0.0">Niko-Studio v10.0.0</a>。</p>
+<p><strong>当前推荐版本：</strong><code>v11.0.2</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v11.0.2">Niko-Studio v11.0.2</a>。</p>
 <table>
   <thead><tr><th>版本</th><th>日期</th><th>核心更新</th></tr></thead>
   <tbody>
-    <tr><td><code>v10.0.0</code></td><td>2026-05-28</td><td>新手引导系统、模板管理增强、跨章节 AI 上下文、编辑器状态持久化、localStorage 防抖写入</td></tr>
-    <tr><td><code>v9.27.0</code></td><td>2026-05-26</td><td>知识图谱 + AI 辅助写作 + 工作流引擎</td></tr>
+    <tr><td><code>v11.0.2</code></td><td>2026-06-20</td><td>Story Bible、AI 共创引擎、读者模拟 (M26)、去 AI 味重写、A/B 版本对比</td></tr>
+    <tr><td><code>v11.0.0</code></td><td>2026-05-30</td><td>写作工具新能力三模块、测试覆盖加固</td></tr>
+    <tr><td><code>v10.0.0</code></td><td>2026-05-28</td><td>新手引导系统、模板管理增强、跨章节 AI 上下文</td></tr>
   </tbody>
 </table>
+<h2>v11.0.2 变更日志</h2>
+<ul>
+  <li><strong>Story Bible</strong> — 实体 CRUD、从稿件自动提取、完整性评分</li>
+  <li><strong>AI 共创引擎</strong> — 自动/引导式共创生成、创意模式与预设</li>
+  <li><strong>Reader Simulation (M26)</strong> — 多画像阅读模拟、AI 味检测、去 AI 味重写、反馈权重调整、A/B 版本对比</li>
+  <li><strong>代码质量加固</strong> — 空 catch 修复、fire-and-forget 调用修复、setInterval.unref 防进程阻塞</li>
+  <li><strong>测试覆盖</strong> — src-ts 99.93% 分支覆盖，desktop 98.36% 分支覆盖，9,352 测试用例</li>
+</ul>
 <h2>v10.0.0 变更日志</h2>
 <ul>
   <li><strong>新手引导系统</strong> — 首次启动自动检测配置状态，引导用户完成 LLM 提供商设置和模板选择</li>
@@ -27,15 +36,11 @@ export const releaseSnapshotMiniSection = `
   <li><strong>跨章节 AI 上下文</strong> — 写作助手自动携带前 N 章节摘要作为上下文，提升长篇连贯性</li>
   <li><strong>编辑器状态持久化</strong> — 自动保存编辑器滚动位置、光标位置和折叠状态</li>
   <li><strong>localStorage 防抖写入</strong> — 减少频繁 JSON.stringify + 写盘，修复 removeItem/setItem 竞态条件</li>
-  <li><strong>jsdom 测试兼容</strong> — debounce 定时器增加 localStorage 存在性守卫</li>
-  <li><strong>E2E 写作流验证</strong> — 完整的稿件创建→编辑→AI 辅助→导出链路测试覆盖</li>
-  <li><strong>UI/UX 打磨</strong> — 设置面板布局优化、模板选择交互改进、加载状态反馈增强</li>
-  <li><strong>版本同步</strong> — desktop/package.json、Cargo.toml、tauri.conf.json 版本号统一至 10.0.0</li>
 </ul>
 <h2>当前交付状态</h2>
 <ul>
   <li>Current-head local sign-off：<strong>GO</strong></li>
-  <li>GitHub release tag：<code>v10.0.0</code></li>
+  <li>GitHub release tag：<code>v11.0.2</code></li>
 </ul>
 `;
 

@@ -38,6 +38,7 @@ const baseApiContent: Record<string, string> = {
     <tr><td>Agent</td><td><code>POST /agent/route</code>、<code>POST /agent/write</code></td><td>路由、写作、修订。</td></tr>
     <tr><td>Workflow</td><td><code>POST /workflow/plan</code>、<code>POST /workflow/execute</code></td><td>规划、执行、生命周期。</td></tr>
     <tr><td>Learning</td><td><code>POST /learning/import</code>、<code>POST /learning/style-feedback</code>、<code>POST /learning/reading-extract</code></td><td>导入学习、风格进化、阅读学习。</td></tr>
+    <tr><td>Reader</td><td><code>POST /reader/analyze</code>、<code>POST /reader/ai-flavor</code>、<code>POST /reader/de-ai</code>、<code>POST /reader/compare</code></td><td>阅读模拟、AI味检测、去AI重写、A/B对比。</td></tr>
   </tbody>
 </table>
 <h2>请求示例</h2>
@@ -501,10 +502,100 @@ GET  /learning/status</code></pre>
   <li>阅读提取跳过内容：确认 reading-session 的 currentChapter 是否已推进到目标章节。</li>
 </ol>
   `,
+  'reader-api': `
+<h2>Reader Simulation API</h2>
+<p>Reader Simulation API 提供多画像阅读模拟、AI 味检测、去 AI 味重写、分析反馈与 A/B 版本对比能力，帮助作者从读者视角理解文本效果。</p>
+<pre><code>POST /reader/analyze
+POST /reader/ai-flavor
+POST /reader/de-ai
+POST /reader/feedback
+POST /reader/compare
+GET  /reader/personas
+POST /reader/personas/custom
+POST /reader/overlay</code></pre>
+<pre><code>flowchart TD
+  Analyze[/reader/analyze] --> DualEngine[Dual Engine]
+  DualEngine --> Reader[Reader Simulation]
+  DualEngine --> Editor[Editor Analysis]
+  Reader --> Consensus[Consensus Engine]
+  Consensus --> Report[Consensus Report]
+  AIFlavor[/reader/ai-flavor] --> Detector[AI Flavor Detector]
+  DeAI[/reader/de-ai] --> Detector2[AI Flavor Detector]
+  Detector2 --> Revision[Revision Service]
+  Compare[/reader/compare] --> DualA[Version A Analysis]
+  Compare --> DualB[Version B Analysis]
+  DualA --> ConsensusA[Consensus A]
+  DualB --> ConsensusB[Consensus B]
+  ConsensusA --> CompareEngine[Comparison Engine]
+  ConsensusB --> CompareEngine
+  Feedback[/reader/feedback] --> WeightAdjust[Weight Adjustment]
+  WeightAdjust --> Persona[Persona Parameters]</code></pre>
+<h2>六项能力</h2>
+<table>
+  <thead><tr><th>端点</th><th>方法</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td><code>/reader/analyze</code></td><td>POST</td><td>多画像阅读模拟与共识报告。</td></tr>
+    <tr><td><code>/reader/ai-flavor</code></td><td>POST</td><td>规则引擎检测 AI 生成痕迹。</td></tr>
+    <tr><td><code>/reader/de-ai</code></td><td>POST</td><td>去 AI 味重写，集成 RevisionService。</td></tr>
+    <tr><td><code>/reader/feedback</code></td><td>POST</td><td>分析反馈与画像权重调整。</td></tr>
+    <tr><td><code>/reader/compare</code></td><td>POST</td><td>A/B 版本对比与胜者判定。</td></tr>
+    <tr><td><code>/reader/personas</code></td><td>GET</td><td>预设与自定义画像管理。</td></tr>
+  </tbody>
+</table>
+<h2>阅读模拟</h2>
+<p>阅读模拟使用 Dual Engine（读者引擎 + 编辑引擎）从多个画像视角分析文本，然后通过 Consensus Engine 生成共识报告。</p>
+<pre><code>POST /reader/analyze
+{
+  "novelId": "novel-001",
+  "personaIds": ["casual-reader", "genre-expert"],
+  "text": "章节正文..."
+}</code></pre>
+<h2>AI 味检测</h2>
+<p>规则引擎检测文本中的 AI 生成模式，返回分数、指标、证据和改进建议。</p>
+<pre><code>POST /reader/ai-flavor
+{
+  "novelId": "novel-001",
+  "text": "待检测文本..."
+}</code></pre>
+<h2>去 AI 味重写</h2>
+<p>先检测 AI 味，再调用 RevisionService 进行多轮修订，返回重写文本和改进指标。</p>
+<pre><code>POST /reader/de-ai
+{
+  "novelId": "novel-001",
+  "text": "需要去 AI 味的文本...",
+  "mode": "de-ai"
+}</code></pre>
+<h2>A/B 版本对比</h2>
+<p>同时分析两个版本，生成各自共识报告并比较，返回逐维度胜者和总胜者。</p>
+<pre><code>POST /reader/compare
+{
+  "novelId": "novel-001",
+  "versionA": { "text": "版本 A 文本...", "label": "原始版本" },
+  "versionB": { "text": "版本 B 文本...", "label": "修订版本" },
+  "personaIds": ["casual-reader"]
+}</code></pre>
+<h2>分析反馈</h2>
+<p>提交对分析结果的反馈（helpful/not_helpful/ignore），当阈值达到时自动调整画像权重。</p>
+<pre><code>POST /reader/feedback
+{
+  "novelId": "novel-001",
+  "personaId": "casual-reader",
+  "feedbackId": "fb-001",
+  "action": "helpful",
+  "dimension": "plotCoherence"
+}</code></pre>
+<h2>故障路径</h2>
+<ol>
+  <li>分析返回空结果：确认 text 参数非空且 novelId 已设置。</li>
+  <li>AI 味分数异常高：检查文本是否包含模板化表达、重复结构或过渡词。</li>
+  <li>去 AI 重写无变化：可能是文本本身 AI 味低或 RevisionService 配置需要调整。</li>
+  <li>画像权重未调整：需积累足够反馈达到阈值（默认 5 条）。</li>
+</ol>
+  `,
 };
 
 export const apiContent = appendSectionToPages(
   baseApiContent,
-  ['writing-api', 'graph-api', 'critic-api', 'agent-api', 'wiki-api', 'workflow-api', 'workspace-api', 'learning-api'],
+  ['writing-api', 'graph-api', 'critic-api', 'agent-api', 'wiki-api', 'workflow-api', 'workspace-api', 'learning-api', 'reader-api'],
   outputFieldGlossaryMiniSection
 );

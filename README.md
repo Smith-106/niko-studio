@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 11.0.0 (Platform Edition)
+> **Version**: 11.0.2 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -37,7 +37,7 @@ Deprecated release surface (removed)
 
 ## Current Release Snapshot
 
-### v10.0.0 (2026-05-28)
+### v11.0.2 (2026-06-20)
 
 - 新手引导系统：首次启动自动检测配置状态，引导用户完成 LLM 提供商设置和模板选择
 - 模板管理增强：支持模板收藏、最近使用记录、变量预设持久化
@@ -51,8 +51,8 @@ Deprecated release surface (removed)
 
 ---
 
-- Current release tag: `v10.0.0`
-- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v10.0.0`
+- Current release tag: `v11.0.2`
+- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v11.0.2`
 - Current local sign-off status: `GO` on current HEAD
 
 如果你只想下载当前正式发布版，直接进入 GitHub Releases 页面获取 Windows 安装包。
@@ -354,4 +354,4 @@ Built on concepts from:
 
 ---
 
-*Version 10.0.0 Platform Edition | Updated: 2026-05-28*
+*Version 11.0.2 Platform Edition | Updated: 2026-06-20*

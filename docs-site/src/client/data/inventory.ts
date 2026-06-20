@@ -103,6 +103,12 @@ export const categories: Category[] = [
     description: 'MCP 端点、Gateway API、服务接口文档',
     icon: '📡',
   },
+  {
+    id: 'reader',
+    name: '读者模拟',
+    description: '多画像阅读模拟、AI味检测、去AI重写、A/B版本对比',
+    icon: '📖',
+  },
 ];
 
 export const docPages: DocPage[] = [
@@ -326,6 +332,7 @@ export const docPages: DocPage[] = [
   { id: 'plugin-api', title: '插件 API', category: 'api', description: '插件注册和执行端点', slug: 'plugin-api' },
   { id: 'workspace-api', title: 'Workspace API', category: 'api', description: '项目工作空间上下文', slug: 'workspace-api' },
   { id: 'learning-api', title: '学习 API', category: 'api', description: '导入学习、自进化写作和阅读学习端点', slug: 'learning-api' },
+  { id: 'reader-api', title: 'Reader Simulation API', category: 'api', description: '多画像阅读模拟、AI味检测、去AI重写、A/B对比', slug: 'reader-api' },
 ];
 
 export function getPagesByCategory(categoryId: string): DocPage[] {
