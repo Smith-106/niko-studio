@@ -26,6 +26,7 @@ import {
   setWorkflowEngineRuntimeProvider,
   type IWorkflowEngineRuntime,
 } from '../container/workflow-runtime-provider';
+import { invalidateCorsCache } from '../mcp/gateway-http-adapter';
 import { createLogger } from '../logger/index.js';
 
 const log = createLogger('control-plane');
@@ -53,6 +54,7 @@ let activeUiBridgeConfigManager: ConfigManager | null = null;
 
 function syncUiBridgeRuntime(): void {
   setUiBridgeEnabled(resolveUiBridgeEnabled());
+  invalidateCorsCache();
 }
 
 function bindUiBridgeConfigRuntime(configManager: ConfigManager): void {
@@ -123,4 +125,27 @@ export async function prewarmGatewayControlPlane(container: ServiceContainer): P
     // Expose degraded state via health endpoint so the frontend can detect it
     setGatewayDeps(buildGatewayDeps(container, createGatewayRuntimeState()));
   }
+}
+
+/**
+ * Gracefully shut down all control plane services.
+ *
+ * Flushes the WorkflowEngine, shuts down the ServiceContainer, and resets
+ * global mutable state set by the set*() functions during initialization.
+ */
+export async function shutdownGatewayControlPlane(container?: ServiceContainer): Promise<void> {
+  const c = container ?? getContainer();
+  try {
+    await c.shutdown();
+    log.info('ServiceContainer shutdown complete');
+  } catch (error) {
+    log.error('Error during ServiceContainer shutdown', { error: String(error) });
+  }
+
+  // Reset global mutable state to prevent stale references after shutdown
+  setGatewayDeps(null as unknown as Parameters<typeof setGatewayDeps>[0]);
+  setConfigAccess(null as unknown as Parameters<typeof setConfigAccess>[0]);
+  setLlmAvailabilityProbe(null);
+
+  log.info('Control plane shutdown complete');
 }

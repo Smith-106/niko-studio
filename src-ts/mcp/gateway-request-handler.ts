@@ -13,11 +13,17 @@ import {
 } from './gateway-http-adapter';
 import { matchGatewayRoute } from './routes';
 import { InMemoryRateLimiter } from './rate-limiter';
+import { resolveLocalhostOnlyEnabled, resolveLocalhostOnlyExemptPaths } from './config';
 import { createLogger } from '../logger';
 
 const log = createLogger('gateway');
 const rateLimiter = new InMemoryRateLimiter(60);
 rateLimiter.start();
+
+/** Stop the rate limiter's cleanup timer (call during shutdown). */
+export function stopRateLimiter(): void {
+  rateLimiter.stop();
+}
 
 const DEFAULT_RATE_LIMIT = 120;
 const DEFAULT_RATE_WINDOW_SECONDS = 60;
@@ -39,6 +45,23 @@ export function createGatewayRequestHandler(
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     addCorsHeaders(req, res);
+
+    // Localhost-only access guard: reject non-local clients when enabled
+    if (resolveLocalhostOnlyEnabled()) {
+      const remoteAddr = req.socket.remoteAddress ?? '';
+      const isLocal = remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+      if (!isLocal) {
+        const exemptPaths = resolveLocalhostOnlyExemptPaths();
+        const reqPath = extractPath(req.url ?? '/');
+        if (!exemptPaths.some((p) => reqPath === p || reqPath.startsWith(p + '/'))) {
+          log.warn('Non-localhost access rejected', { remoteAddr, path: reqPath });
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Access denied: localhost only' }));
+          recordRequestMetrics({ route: reqPath, method: (req.method ?? 'GET').toUpperCase(), statusCode: 403, latencyMs: 0 });
+          return;
+        }
+      }
+    }
 
     // In-memory rate limiting (applies regardless of Redis availability)
     const clientKey = req.socket.remoteAddress ?? 'unknown';
@@ -162,12 +185,18 @@ export function createGatewayRequestHandler(
         stack: error instanceof Error ? error.stack : undefined,
         latencyMs: Date.now() - startedAt,
       });
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          error: 'Internal server error',
-        }),
-      );
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error: 'Internal server error',
+            requestId: requestId ?? undefined,
+          }),
+        );
+      } else {
+        // Headers already sent (streaming/SSE) — destroy the response
+        res.destroy();
+      }
       recordRequestMetrics({
         route: routePattern,
         method,

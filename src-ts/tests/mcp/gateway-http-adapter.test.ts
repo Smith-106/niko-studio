@@ -9,6 +9,7 @@ import {
   parseQuery,
   readRequestBody,
   resolveGatewayCorsOrigins,
+  invalidateCorsCache,
   sendHttpResponse,
   toHttpRequest,
 } from '../../mcp/gateway-http-adapter';
@@ -267,6 +268,9 @@ describe('gateway-http-adapter', () => {
   });
 
   describe('CORS policy', () => {
+    beforeEach(() => {
+      invalidateCorsCache();
+    });
     it('reads cors origins from canonical resolver at request time', () => {
       const resolverSpy = vi.spyOn(mcpConfig, 'resolveCorsOrigins').mockReturnValue(['http://allowed.local']);
 

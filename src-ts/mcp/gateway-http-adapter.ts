@@ -123,9 +123,20 @@ export function sendHttpResponse(res: ServerResponse, httpResponse: HttpResponse
   );
 }
 
+/** Cached CORS origins — recomputed only on config reload. */
+let _cachedCorsOrigins: string[] | null = null;
+
+export function invalidateCorsCache(): void {
+  _cachedCorsOrigins = null;
+}
+
 export function resolveGatewayCorsOrigins(): string[] {
+  if (_cachedCorsOrigins !== null) {
+    return _cachedCorsOrigins;
+  }
   try {
-    return resolveCorsOrigins();
+    _cachedCorsOrigins = resolveCorsOrigins();
+    return _cachedCorsOrigins;
   } catch {
     return [];
   }

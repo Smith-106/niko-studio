@@ -87,8 +87,22 @@ export async function startGatewayServer(
   // Graceful shutdown: flush WorkflowEngine state, close WebSocket relay, then close HTTP server
   const shutdown = async (signal: string) => {
     _log.info(`Received ${signal}, shutting down gracefully...`);
+
+    // Stop rate limiter timer to prevent leaks
     try {
-      await shutdownGatewayControlPlane();
+      const { stopRateLimiter } = await import('./gateway-request-handler');
+      stopRateLimiter();
+    } catch { /* best effort */ }
+
+    // Close WebSocket relay before HTTP server so WS clients get close frames
+    try {
+      await (wsRelay as unknown as { close(): Promise<void> }).close();
+    } catch (e) {
+      _log.error('Error closing WebSocket relay', { error: String(e) });
+    }
+
+    try {
+      await shutdownGatewayControlPlane(container);
     } catch (e) {
       _log.error('Error during control plane shutdown', { error: String(e) });
     }
@@ -96,11 +110,22 @@ export async function startGatewayServer(
       _log.info('Gateway server closed');
       process.exit(0);
     });
-    setTimeout(() => process.exit(1), 5000);
+    setTimeout(() => {
+      _log.warn('Shutdown timed out after 5000ms, forcing exit');
+      process.exit(1);
+    }, 5000);
   };
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // Register global async error handlers to prevent silent crashes
+  process.on('unhandledRejection', (reason) => {
+    _log.error('Unhandled promise rejection', { error: String(reason) });
+  });
+  process.on('uncaughtException', (err) => {
+    _log.error('Uncaught exception', { error: err.message, stack: err.stack });
+  });
 
   return server;
 }

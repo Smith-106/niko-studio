@@ -48,11 +48,18 @@ export class WorkflowEventRelay {
 
     if (server) {
       server.on('upgrade', (request, socket, head) => {
-        const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
-        if (url.pathname === path) {
-          this.wss.handleUpgrade(request, socket, head, (ws) => {
-            this.wss.emit('connection', ws, request);
-          });
+        try {
+          const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
+          if (url.pathname === path) {
+            this.wss.handleUpgrade(request, socket, head, (ws) => {
+              this.wss.emit('connection', ws, request);
+            });
+          } else {
+            // Destroy sockets for non-matching upgrade paths to prevent fd leaks
+            socket.destroy();
+          }
+        } catch {
+          socket.destroy();
         }
       });
     }

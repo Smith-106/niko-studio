@@ -119,16 +119,8 @@ fn resolve_app_config_path(resource_dir: &Path) -> Option<PathBuf> {
     None
 }
 
-pub async fn is_gateway_healthy(base: &str) -> bool {
+pub async fn is_gateway_healthy_with_client(client: &reqwest::Client, base: &str) -> bool {
     let health_url = format!("{}/health", base);
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(2))
-        .build()
-        .ok();
-    let client = match client {
-        Some(c) => c,
-        None => return false,
-    };
     client
         .get(&health_url)
         .send()
@@ -138,22 +130,40 @@ pub async fn is_gateway_healthy(base: &str) -> bool {
         .unwrap_or(false)
 }
 
+pub async fn is_gateway_healthy(base: &str) -> bool {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(2))
+        .build()
+        .ok();
+    let client = match client {
+        Some(c) => c,
+        None => return false,
+    };
+    is_gateway_healthy_with_client(&client, base).await
+}
+
 pub struct GatewayState {
     child: Mutex<Option<CommandChild>>,
     local_base: Mutex<Option<String>>,
     base_override: Mutex<Option<String>>,
     start_lock: AsyncMutex<()>,
     cached_base: Mutex<Option<CachedBase>>,
+    health_client: reqwest::Client,
 }
 
 impl GatewayState {
     pub fn new() -> Self {
+        let health_client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(2))
+            .build()
+            .expect("Failed to build reqwest health client");
         Self {
             child: Mutex::new(None),
             local_base: Mutex::new(None),
             base_override: Mutex::new(None),
             start_lock: AsyncMutex::new(()),
             cached_base: Mutex::new(None),
+            health_client,
         }
     }
 
@@ -178,43 +188,62 @@ impl GatewayState {
     }
 
     async fn resolve_base_uncached(&self, app: &tauri::AppHandle) -> Result<String, String> {
-        if let Some(env_base) = get_configured_gateway_base() {
-            if is_gateway_healthy(&env_base).await {
-                return Ok(env_base);
-            }
-            eprintln!(
-                "[gateway] configured base '{}' is unhealthy, falling back to override / sidecar",
-                env_base
-            );
-        }
-
+        // Collect candidate bases for concurrent health probing
+        let env_base = get_configured_gateway_base();
         let override_base = {
             self.base_override
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
                 .clone()
         };
-        if let Some(override_base) = override_base {
-            if is_gateway_healthy(&override_base).await {
-                return Ok(override_base);
-            }
-            eprintln!(
-                "[gateway] override base '{}' is unhealthy, falling back to sidecar",
-                override_base
-            );
-        }
-
         let local_base = {
             self.local_base
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
                 .clone()
         };
-        if let Some(local_base) = local_base {
-            if is_gateway_healthy(&local_base).await {
-                return Ok(local_base);
+
+        // Probe all candidates concurrently to minimize cold-start latency.
+        // Priority: env_base > override_base > local_base
+        let env_fut = async {
+            if let Some(ref base) = env_base {
+                if is_gateway_healthy_with_client(&self.health_client, base).await {
+                    return Some(base.clone());
+                }
+                eprintln!("[gateway] configured base '{}' is unhealthy, falling back", base);
             }
-            self.stop_child_best_effort();
+            None
+        };
+        let override_fut = async {
+            if let Some(ref base) = override_base {
+                if is_gateway_healthy_with_client(&self.health_client, base).await {
+                    return Some(base.clone());
+                }
+                eprintln!("[gateway] override base '{}' is unhealthy, falling back", base);
+            }
+            None
+        };
+        let local_fut = async {
+            if let Some(ref base) = local_base {
+                if is_gateway_healthy_with_client(&self.health_client, base).await {
+                    return Some(base.clone());
+                }
+                self.stop_child_best_effort();
+            }
+            None
+        };
+
+        let (env_result, override_result, local_result) = tokio::join!(env_fut, override_fut, local_fut);
+
+        // Return by priority
+        if let Some(base) = env_result {
+            return Ok(base);
+        }
+        if let Some(base) = override_result {
+            return Ok(base);
+        }
+        if let Some(base) = local_result {
+            return Ok(base);
         }
 
         self.start_local_sidecar(app).await
@@ -245,11 +274,18 @@ impl GatewayState {
             .and_then(|v| v.parse::<u16>().ok())
         {
             Some(p) if p > 0 => p,
-            _ => std::net::TcpListener::bind("127.0.0.1:0")
-                .map_err(|e| format!("Failed to bind ephemeral port: {e}"))?
-                .local_addr()
-                .map_err(|e| format!("Failed to read bound addr: {e}"))?
-                .port(),
+            _ => {
+                // Bind an ephemeral port, read it, then drop the listener
+                // so the sidecar can bind the same port immediately.
+                let listener = std::net::TcpListener::bind("127.0.0.1:0")
+                    .map_err(|e| format!("Failed to bind ephemeral port: {e}"))?;
+                let port = listener
+                    .local_addr()
+                    .map_err(|e| format!("Failed to read bound addr: {e}"))?
+                    .port();
+                drop(listener);
+                port
+            }
         };
 
         let base = format!("http://127.0.0.1:{port}");
