@@ -200,4 +200,43 @@
 
 ## 9. Learnings
 
-（待沉淀）
+### 反复根因模式
+
+**Pattern: Tauri CommandChild API 缺失 wait()**
+- 触发条件: 使用 `tauri_plugin_shell::process::CommandChild` 管理 sidecar 进程，调用 `kill()` 后需要确认进程退出
+- 修复模板: kill 后用 `OpenProcess(SYNCHRONIZE)` + 轮询 PID 确认进程退出（Windows），或用 `on('close')` 事件（Node.js child_process）
+- 后续建议: `/spec-add debug "tauri-commandchild-no-wait" "Tauri CommandChild 只有 kill() 和 pid()，无 wait()。Windows 上 kill 后需轮询 PID 确保进程退出释放端口" --keywords tauri,commandchild,sidecar,kill,wait,port`
+
+**Pattern: parseInt NaN 语义陷阱**
+- 触发条件: `parseInt(nonNumeric, 10)` 返回 NaN，后续 `NaN < 1` 和 `NaN > 65535` 均为 false，校验被穿透
+- 修复模板: 用 `Number.isFinite(parsed)` 或 `parseIntSafe()` 辅助函数替代直接 `parseInt()`
+- 后续建议: `/spec-add coding "parseint-nan-trap" "parseInt() 返回 NaN 时，NaN < 1 === false 且 NaN > 65535 === false，导致 NaN 通过范围校验。必须用 Number.isFinite() 显式排除" --keywords parseint,nan,validation,config`
+
+### 非显而易见 workaround
+
+**Node.js listen() 静默挂起**
+- 问题场景: `server.listen(port, host, callback)` 不监听 `error` 事件时，端口占用导致 Promise 永远不 resolve/reject
+- 解决方案: 在 listen 前注册 `server.on('error', reject)` 事件
+- 适用范围: 所有 Node.js `http.Server.listen()` 包装为 Promise 的场景
+
+### 架构边界违反
+
+（无 — 本次修复均在各层内部，未跨层修改）
+
+### 可复用泛化 pattern
+
+**同步文件操作无异常保护**
+- pattern 签名: `fs.writeFileSync() / fs.mkdirSync()` 无 try-catch
+- 风险说明: 在不可写路径下抛未捕获异常，导致整个进程崩溃
+- fix 模板: 包裹 try-catch + log.warn() fallback
+- 适用场景: 配置文件创建、初始化等"尽力而为"操作
+
+### 建议的 /spec-add 命令
+
+```
+/spec-add debug "tauri-commandchild-no-wait" "Tauri CommandChild 只有 kill() 和 pid()，无 wait()。Windows 上 kill 后需轮询 PID 确保进程退出释放端口" --keywords tauri,commandchild,sidecar,kill,wait,port
+
+/spec-add coding "parseint-nan-trap" "parseInt() 返回 NaN 时，NaN < 1 === false 且 NaN > 65535 === false，导致 NaN 通过范围校验。必须用 Number.isFinite() 显式排除" --keywords parseint,nan,validation,config
+
+/spec-add learning "nodejs-listen-silent-hang" "server.listen() 不监听 error 事件时，端口占用导致 Promise 永远不 resolve/reject。修复: listen 前注册 server.on('error', reject)" --keywords listen,eaddrinuse,promise,hang
+```
