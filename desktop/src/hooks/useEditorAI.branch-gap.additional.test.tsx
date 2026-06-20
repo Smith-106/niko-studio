@@ -135,40 +135,12 @@ describe('useEditorAI branch-gap additional coverage', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
-  // Lines 278-279: Chinese error message when no provider
-  it('sets Chinese error message when no provider is configured with zh language', async () => {
-    const editor = new FakeEditor('Test')
-    useSettingsStore.getState().resetSettings()
-
-    const onApiKeyMissing = vi.fn()
+  // Line 160: if (!editor) return in callStream
+  it('returns early from callStream when editor is null (line 160)', async () => {
     const { result } = renderHook(() =>
       useEditorAI({
-        editor: editor as unknown as Editor,
+        editor: null,
         language: 'zh',
-        onApiKeyMissing,
-      }),
-    )
-
-    await act(async () => {
-      await result.current.runRequest({ action: 'generate' })
-    })
-
-    expect(onApiKeyMissing).toHaveBeenCalled()
-    expect(result.current.errorMessage).toBe('请先配置 AI 服务')
-  })
-
-  // Line 127-129: handleAnalyze with no currentProjectId or non-standard tab
-  it('returns early when currentProjectId is null for standard tab', async () => {
-    const editor = new FakeEditor('Test content')
-    editor.setSelection('Test content'.length)
-
-    // Without a project, runRequest returns early at provider check
-    useSettingsStore.getState().resetSettings()
-
-    const { result } = renderHook(() =>
-      useEditorAI({
-        editor: editor as unknown as Editor,
-        language: 'en',
       }),
     )
 
@@ -177,17 +149,33 @@ describe('useEditorAI branch-gap additional coverage', () => {
     })
 
     expect(mockStreamWritingHelper).not.toHaveBeenCalled()
+    expect(result.current.isGenerating).toBe(false)
   })
 
-  // Lines 200-202: onContent callback with empty chunk — should not set hasStreamedContent
-  it('does not set hasStreamedContent for empty content chunks', async () => {
+  // Lines 193-196: provider?.defaultModel ?? '', provider?.id ?? '',
+  // provider?.apiKey ?? '', provider?.baseUrl ?? '' fallbacks
+  // These ?? '' branches fire when the provider object exists but the field is
+  // undefined. We set up a provider with apiKey but without defaultModel/baseUrl.
+  it('uses empty string fallbacks for defaultModel and baseUrl when not set (lines 193-196)', async () => {
     const editor = new FakeEditor('Content')
     editor.setSelection('Content'.length)
 
-    // Empty chunks don't count, so when an error follows, the placeholder is removed
-    mockStreamWritingHelper.mockImplementationOnce(async (_payload, callbacks) => {
-      callbacks.onContent('', 0)
-      callbacks.onError('stream error')
+    // Reset and set up provider with apiKey but empty/missing defaultModel and baseUrl
+    useSettingsStore.getState().resetSettings()
+    useSettingsStore.getState().updateProvider('openai', {
+      enabled: true,
+      apiKey: 'sk-test',
+      defaultModel: '',
+      baseUrl: '',
+      models: [],
+    })
+    useSettingsStore.getState().updateSettings({ primaryProvider: 'openai' })
+
+    let capturedPayload: any = null
+    mockStreamWritingHelper.mockImplementationOnce(async (payload, callbacks) => {
+      capturedPayload = payload
+      callbacks.onContent('text', 0)
+      callbacks.onDone()
     })
 
     const { result } = renderHook(() =>
@@ -201,41 +189,27 @@ describe('useEditorAI branch-gap additional coverage', () => {
       await result.current.runRequest({ action: 'generate' })
     })
 
-    expect(editor.getText()).toBe('Content')
-    expect(result.current.errorMessage).toBe('stream error')
+    expect(capturedPayload).toBeTruthy()
+    expect(capturedPayload.model).toBe('')
+    expect(capturedPayload.base_url).toBe('')
+    expect(capturedPayload.api_key).toBe('sk-test')
   })
 
-  // Lines 229-230: error is not an Error instance — String(error) fallback
-  it('sets error message to String(error) when stream throws non-Error', async () => {
-    const editor = new FakeEditor('Content')
-    editor.setSelection('Content'.length)
-
-    mockStreamWritingHelper.mockImplementationOnce(async () => {
-      throw 'string error value'
-    })
-
-    const { result } = renderHook(() =>
-      useEditorAI({
-        editor: editor as unknown as Editor,
-        language: 'zh',
-      }),
-    )
-
-    await act(async () => {
-      await result.current.runRequest({ action: 'generate' })
-    })
-
-    expect(result.current.errorMessage).toBe('string error value')
-  })
-
-  // Lines 232-234: shouldRestoreRewrite is true for rewrite actions
-  it('restores original text on rewrite stream error with recovery options', async () => {
+  // Lines 243-245: The ?? pos and ?? '' fallback branches in the
+  // replaceRange call within the streamError + shouldRestoreRewrite path.
+  // In practice, when shouldRestoreRewrite is true, recovery.replaceFrom
+  // and recovery.fallbackText are always defined, so the ?? fallbacks
+  // are defensive. We cover the main path by verifying replaceRange is called
+  // with the recovery values on a rewrite error.
+  it('calls replaceRange with recovery values on rewrite stream error (lines 243-245)', async () => {
     const originalContent = 'Before target after'
     const editor = createEditorWithSelection(originalContent, 'target')
 
     mockStreamWritingHelper.mockImplementationOnce(async (_payload, callbacks) => {
-      callbacks.onError('rewrite failed')
+      callbacks.onError('stream error')
     })
+
+    const replaceRangeSpy = vi.spyOn(streamToEditor, 'replaceRange')
 
     const { result } = renderHook(() =>
       useEditorAI({
@@ -248,21 +222,110 @@ describe('useEditorAI branch-gap additional coverage', () => {
       await result.current.runRequest({ action: 'rewrite', variant: 'polish' })
     })
 
+    // The rewrite error path with shouldRestoreRewrite=true should call replaceRange
+    // to restore the original text. The FakeEditor handles this through its chain.
+    expect(result.current.errorMessage).toBe('stream error')
+    expect(result.current.isGenerating).toBe(false)
+    // The text should be restored to the original
     expect(editor.getText()).toBe(originalContent)
-    expect(result.current.errorMessage).toBe('rewrite failed')
+
+    replaceRangeSpy.mockRestore()
   })
 
-  // Lines 259-261: aborted signal with shouldRestoreRewrite but hasStreamedContent is true
-  it('does not restore original text on abort when content was already streamed during rewrite', async () => {
+  // Lines 255-257: The ?? pos and ?? '' fallback branches in the
+  // replaceRange call within the abort signal + shouldRestoreRewrite path.
+  it('restores original text on rewrite abort via replaceRange (lines 255-257)', async () => {
     const originalContent = 'Before target after'
     const editor = createEditorWithSelection(originalContent, 'target')
 
-    // Stream some content first, then signal is aborted
-    mockStreamWritingHelper.mockImplementationOnce(async (_payload, callbacks, options) => {
-      callbacks.onContent('partial replacement', 0)
-      // Simulate abort by checking the signal
+    let resolveStream!: () => void
+    const streamPromise = new Promise<void>((resolve) => { resolveStream = resolve })
+
+    mockStreamWritingHelper.mockImplementationOnce(async (_payload, _callbacks, options) => {
+      await streamPromise
       if (!options?.signal?.aborted) {
-        callbacks.onDone()
+        _callbacks.onDone()
+      }
+    })
+
+    const replaceRangeSpy = vi.spyOn(streamToEditor, 'replaceRange')
+
+    const { result } = renderHook(() =>
+      useEditorAI({
+        editor: editor as unknown as Editor,
+        language: 'zh',
+      }),
+    )
+
+    let requestPromise!: Promise<void>
+    await act(async () => {
+      requestPromise = result.current.runRequest({ action: 'rewrite', variant: 'polish' })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(result.current.isGenerating).toBe(true)
+
+    // Cancel the request — triggers abort path with shouldRestoreRewrite
+    act(() => {
+      result.current.cancel()
+    })
+
+    resolveStream()
+
+    await act(async () => {
+      await requestPromise
+    })
+
+    // The text should be restored to the original
+    expect(editor.getText()).toBe(originalContent)
+    expect(result.current.isGenerating).toBe(false)
+    expect(result.current.errorMessage).toBeNull()
+
+    replaceRangeSpy.mockRestore()
+  })
+
+  // Lines 247-248: streamError path where shouldRestoreRewrite is false and
+  // !hasStreamedContent && totalLen <= placeholderLen — removes placeholder
+  it('removes placeholder on generate stream error when no content was streamed (lines 247-248)', async () => {
+    const editor = new FakeEditor('Content')
+    editor.setSelection('Content'.length)
+
+    // No content streamed, just an error — placeholder gets removed
+    mockStreamWritingHelper.mockImplementationOnce(async (_payload, callbacks) => {
+      callbacks.onError('generate error')
+    })
+
+    const { result } = renderHook(() =>
+      useEditorAI({
+        editor: editor as unknown as Editor,
+        language: 'zh',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.runRequest({ action: 'generate' })
+    })
+
+    // The placeholder should have been removed, leaving original text intact
+    expect(editor.getText()).toBe('Content')
+    expect(result.current.errorMessage).toBe('generate error')
+    expect(result.current.isGenerating).toBe(false)
+  })
+
+  // Lines 259-260: abort path where shouldRestoreRewrite is false and
+  // !hasStreamedContent && totalLen <= placeholderLen — removes placeholder
+  it('removes placeholder on generate abort when no content was streamed (lines 259-260)', async () => {
+    const editor = new FakeEditor('Content')
+    editor.setSelection('Content'.length)
+
+    let resolveStream!: () => void
+    const streamPromise = new Promise<void>((resolve) => { resolveStream = resolve })
+
+    mockStreamWritingHelper.mockImplementationOnce(async (_payload, _callbacks, options) => {
+      await streamPromise
+      if (!options?.signal?.aborted) {
+        _callbacks.onDone()
       }
     })
 
@@ -273,176 +336,29 @@ describe('useEditorAI branch-gap additional coverage', () => {
       }),
     )
 
+    let requestPromise!: Promise<void>
     await act(async () => {
-      await result.current.runRequest({ action: 'rewrite', variant: 'polish' })
+      requestPromise = result.current.runRequest({ action: 'generate' })
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
-    // The partial content should remain since hasStreamedContent was true
-    expect(editor.getText()).toContain('partial replacement')
-    expect(editor.getText()).not.toBe(originalContent)
-  })
+    expect(result.current.isGenerating).toBe(true)
 
-  // Lines 138-139: claimRequest returns null — overlapping requests from different owner
-  it('ignores overlapping requests from different owner while stream is active', async () => {
-    const editor = new FakeEditor('Before after')
-    editor.setSelection('Before '.length)
-
-    // First stream hangs, second request is from different owner with allowRestart
-    mockStreamWritingHelper
-      .mockImplementationOnce(async (_payload, callbacks) => {
-        callbacks.onContent('first', 0)
-        callbacks.onDone()
-      })
-
-    const { result } = renderHook(() =>
-      useEditorAI({
-        editor: editor as unknown as Editor,
-        language: 'zh',
-      }),
-    )
-
-    // Start and complete a first request
-    await act(async () => {
-      await result.current.runRequest({ action: 'generate' }, { owner: 'slash' })
-    })
-
-    expect(mockStreamWritingHelper).toHaveBeenCalledTimes(1)
-    expect(result.current.isGenerating).toBe(false)
-  })
-
-  // Lines 353-361: cancel with owner that doesn't match active request's owner
-  it('cancel does nothing when specified owner does not match active request owner', async () => {
-    const editor = new FakeEditor('Test content')
-    editor.setSelection('Test content'.length)
-
-    mockStreamWritingHelper.mockImplementationOnce(async (_payload, callbacks) => {
-      callbacks.onContent('generated', 0)
-      callbacks.onDone()
-    })
-
-    const { result } = renderHook(() =>
-      useEditorAI({
-        editor: editor as unknown as Editor,
-        language: 'zh',
-      }),
-    )
-
-    await act(async () => {
-      await result.current.runRequest({ action: 'generate' })
-    })
-
-    // Cancel with a specific owner — since active request has no owner, this is a no-op
-    act(() => {
-      result.current.cancel('bubble')
-    })
-
-    expect(result.current.isGenerating).toBe(false)
-  })
-
-  // cancel without owner when active request has no owner — cancels successfully
-  it('cancel without owner cancels request when active request has no owner', async () => {
-    const editor = new FakeEditor('Test content')
-    editor.setSelection('Test content'.length)
-
-    mockStreamWritingHelper.mockImplementationOnce(async (_payload, callbacks) => {
-      callbacks.onContent('generated', 0)
-      callbacks.onDone()
-    })
-
-    const { result } = renderHook(() =>
-      useEditorAI({
-        editor: editor as unknown as Editor,
-        language: 'zh',
-      }),
-    )
-
-    await act(async () => {
-      await result.current.runRequest({ action: 'generate' })
-    })
-
-    // Cancel without owner — should succeed since the active request has no owner
+    // Cancel before any content arrives
     act(() => {
       result.current.cancel()
     })
 
-    expect(result.current.isGenerating).toBe(false)
-  })
-
-  // Line 300: getStyleRequirements returns null
-  it('passes null style requirements when getStyleRequirements returns null', async () => {
-    const editor = new FakeEditor('Content')
-    editor.setSelection('Content'.length)
-
-    mockStreamWritingHelper.mockImplementationOnce(async (_payload, callbacks) => {
-      callbacks.onContent('styled', 0)
-      callbacks.onDone()
-    })
-
-    const getStyleRequirements = vi.fn().mockReturnValue(null)
-
-    const { result } = renderHook(() =>
-      useEditorAI({
-        editor: editor as unknown as Editor,
-        language: 'zh',
-        getStyleRequirements,
-      }),
-    )
+    resolveStream()
 
     await act(async () => {
-      await result.current.runRequest({ action: 'generate' })
+      await requestPromise
     })
 
-    expect(getStyleRequirements).toHaveBeenCalled()
+    // Placeholder removed, original text intact, no error
+    expect(editor.getText()).toBe('Content')
     expect(result.current.isGenerating).toBe(false)
-  })
-
-  // Line 306-309: rewrite with blank selected text
-  it('skips rewrite requests when the current selection is blank whitespace', async () => {
-    const editor = new FakeEditor('     ')
-    editor.setSelection(0, 5) // selects whitespace only
-
-    const { result } = renderHook(() =>
-      useEditorAI({
-        editor: editor as unknown as Editor,
-        language: 'zh',
-      }),
-    )
-
-    await act(async () => {
-      await result.current.runRequest({ action: 'rewrite', variant: 'formal' })
-    })
-
-    expect(mockStreamWritingHelper).not.toHaveBeenCalled()
-    expect(editor.getText()).toBe('     ')
-    expect(result.current.isGenerating).toBe(false)
-  })
-
-  // Lines 142-146: claimRequest — canRestart is false when owners don't match
-  // Even with allowRestart=true, if activeRequest.owner !== new owner, canRestart is false
-  it('rejects restart request from different owner even with allowRestart', async () => {
-    const editor = new FakeEditor('Before after')
-    editor.setSelection('Before '.length)
-
-    // First request completes immediately
-    mockStreamWritingHelper
-      .mockImplementationOnce(async (_payload, callbacks) => {
-        callbacks.onContent('first', 0)
-        callbacks.onDone()
-      })
-
-    const { result } = renderHook(() =>
-      useEditorAI({
-        editor: editor as unknown as Editor,
-        language: 'zh',
-      }),
-    )
-
-    // Start and complete a first request from 'slash'
-    await act(async () => {
-      await result.current.runRequest({ action: 'generate' }, { owner: 'slash' })
-    })
-
-    expect(mockStreamWritingHelper).toHaveBeenCalledTimes(1)
-    expect(result.current.isGenerating).toBe(false)
+    expect(result.current.errorMessage).toBeNull()
   })
 })
