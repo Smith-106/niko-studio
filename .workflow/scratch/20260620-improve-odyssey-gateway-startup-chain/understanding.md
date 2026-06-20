@@ -331,8 +331,57 @@ Tauri Shell
 
 ## 8. Improvement Metrics
 
-（待对比）
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Critical findings | 5 | 0 | ✅ -5 |
+| High findings fixed | 0 | 6 | ✅ +6 |
+| localhost-only guard enforcement | ❌ 未执行 | ✅ 403 拒绝 | ✅ 安全关键 |
+| shutdown cleanup | ❌ no-op | ✅ container.shutdown() + WS close + rate limiter stop | ✅ 资源泄漏修复 |
+| Ephemeral port safety | ❌ listener 未 drop | ✅ 显式 drop | ✅ 端口竞争修复 |
+| Health probe latency (cold start) | ~6s+ 串行 | ~2s 并发 | ✅ -66% |
+| CORS origins computation | 每请求 | 缓存 + reload 失效 | ✅ -100% 重复计算 |
+| 500 error correlation | ❌ 无 requestId | ✅ 含 requestId | ✅ 可诊断性 |
+| headersSent protection | ❌ 无检查 | ✅ 检查 + destroy | ✅ 防止二次写入异常 |
+| unhandled rejection | ❌ 无 handler | ✅ 全局 handler | ✅ 防止静默崩溃 |
+| WS upgrade fd leak | ❌ 挂起 | ✅ socket.destroy() | ✅ fd 泄漏修复 |
+| Rust compilation | ✅ pass | ✅ pass | — |
+| TS compilation | ✅ 0 errors | ✅ 0 errors | — |
+| Unit tests | 46 | 54 | ✅ +8 (CORS cache test fix) |
 
 ## 9. Engineering Learnings
 
-（待沉淀）
+### 性能 pattern
+**并发探测减少冷启动延迟**
+- 瓶颈类型: 串行 HTTP 探测（3 次 × 2s 超时）
+- 修复方案: `tokio::join!` 并发探测 + 共享 `reqwest::Client`
+- 度量方法: 测量 `resolve_base_uncached` 总耗时
+- 建议: `/spec-add coding "concurrent-health-probe" "串行 HTTP 健康检查用 tokio::join!/Promise.all 并发化，共享 HTTP client 避免连接池浪费"`
+
+### 安全规则
+**localhost-only guard 已配置但未执行**
+- 漏洞类别: 授权绕过 — 配置层实现但请求层未集成
+- 修复: 在请求处理器顶部添加 IP 检查中间件
+- 预防: 安全相关配置必须有对应的运行时执行路径，缺一不可
+- 建议: `/spec-add debug "localhost-guard-gap" "localhost-only guard 配置解析和请求执行是两步：实现 resolveLocalhostOnlyEnabled() 后必须在 request handler 中显式调用"`
+
+### 架构约束
+**shutdown no-op 反模式**
+- 违反描述: 接口承诺 shutdown 但实现仅 log
+- 正确边界: shutdown 函数必须执行实际资源清理
+- 检查方法: grep `shutdown` 函数体，确认非空实现
+- 建议: `/spec-add arch "shutdown-no-op-anti-pattern" "shutdown/close 函数必须执行实际资源清理（flush state, close connections, stop timers）。空实现是架构违规"`
+
+### 可靠性 pattern
+**headersSent 检查防止二次写入**
+- 故障模式: 流式响应已发送 header 后 catch 块二次 writeHead → ERR_HTTP_HEADERS_SENT
+- 处理策略: `if (!res.headersSent) { writeHead+end } else { res.destroy() }`
+- 验证手段: 模拟流式 handler 中途抛异常
+- 建议: `/spec-add coding "headers-sent-guard" "HTTP handler catch 块中写响应前必须检查 res.headersSent，否则 destroy 响应"`
+
+### 建议 spec-add 命令
+```
+/spec-add coding "concurrent-health-probe" "串行 HTTP 健康检查用 tokio::join!/Promise.all 并发化，共享 HTTP client 避免连接池浪费" --keywords health,probe,concurrent,tokio
+/spec-add debug "localhost-guard-gap" "localhost-only guard 配置解析和请求执行是两步：实现 resolveLocalhostOnlyEnabled() 后必须在 request handler 中显式调用" --keywords localhost,guard,security
+/spec-add arch "shutdown-no-op-anti-pattern" "shutdown/close 函数必须执行实际资源清理（flush state, close connections, stop timers）。空实现是架构违规" --keywords shutdown,cleanup,lifecycle
+/spec-add coding "headers-sent-guard" "HTTP handler catch 块中写响应前必须检查 res.headersSent，否则 destroy 响应" --keywords http,headers,catch,streaming
+```

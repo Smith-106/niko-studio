@@ -15,14 +15,14 @@
     "auto": true,
     "auto_confirm": false
   },
-  "current_state": "S_DIAGNOSE",
+  "current_state": "COMPLETED",
   "baseline_metrics": {
     "ts_files": 1230,
     "ts_lines": 118054,
     "rust_files": 10,
     "rust_lines": 1355,
     "rust_tests": 0,
-    "ts_tests": "pending"
+    "ts_tests": 54
   },
   "audit_result": {
     "dimensions_audited": [
@@ -41,65 +41,44 @@
       "low": 17
     }
   },
-  "diagnoses": [],
-  "patterns": [],
-  "confirmation": null,
-  "generalization_stats": null,
-  "phase_goals": [
-    {
-      "id": "G1",
-      "goal": "Survey completed",
-      "phase": "S_SURVEY",
-      "status": "done",
-      "completion_confirmed": true
-    },
-    {
-      "id": "G2",
-      "goal": "Audit completed",
-      "phase": "S_AUDIT",
-      "status": "done",
-      "completion_confirmed": true
-    },
-    {
-      "id": "G3",
-      "goal": "Diagnosis completed",
-      "phase": "S_DIAGNOSE",
-      "status": "in_progress",
-      "completion_confirmed": false
-    },
-    {
-      "id": "G4",
-      "goal": "Zero remaining actionable findings",
-      "phase": "S_VERIFY",
-      "status": "pending",
-      "completion_confirmed": false
-    },
-    {
-      "id": "G5",
-      "goal": "Pattern generalized",
-      "phase": "S_GENERALIZE",
-      "status": "pending",
-      "completion_confirmed": false
-    },
-    {
-      "id": "G6",
-      "goal": "Discoveries triaged",
-      "phase": "S_DISCOVER",
-      "status": "pending",
-      "completion_confirmed": false
-    },
-    {
-      "id": "G7",
-      "goal": "Learnings persisted",
-      "phase": "S_RECORD",
-      "status": "pending",
-      "completion_confirmed": false
-    }
+  "diagnoses": [
+    { "id": "C1", "root_cause": "串行 health probe 3×2s 超时叠加", "result": "confirmed", "fix": "tokio::join! 并发探测" },
+    { "id": "C2", "root_cause": "TcpListener bind 后未 drop", "result": "confirmed", "fix": "drop(listener)" },
+    { "id": "C3", "root_cause": "localhost-only guard 实现但未集成到请求处理", "result": "confirmed", "fix": "添加 localhost 中间件" },
+    { "id": "C4", "root_cause": "手动 DI set*() 替代构造器注入", "result": "confirmed-deferred", "fix": "deferred to 架构专项" },
+    { "id": "C5", "root_cause": "shutdownGatewayControlPlane 仅 log 未实际清理", "result": "confirmed", "fix": "实现 container.shutdown()" }
   ],
-  "phase_goals_all_done": false,
+  "patterns": [
+    { "id": "GP1", "layer": "Syntax", "signature": "res.writeHead without headersSent check", "risk": "MEDIUM" },
+    { "id": "GP2", "layer": "Semantic", "signature": "独立 SIGTERM handler 无协调", "risk": "LOW" },
+    { "id": "GP3", "layer": "Structural", "signature": "缓存计算仅在 config reload 时失效", "risk": "LOW" }
+  ],
+  "confirmation": {
+    "test_result": "54/54 passed",
+    "rust_check": "pass",
+    "tsc": "0 errors",
+    "overall": "confirmed"
+  },
+  "generalization_stats": {
+    "patterns_extracted": 3,
+    "total_hits": 8,
+    "cross_layer_confirmed": 0,
+    "regression_risks": 0,
+    "deepening_triggered": false
+  },
+  "phase_goals": [
+    { "id": "G1", "goal": "Survey completed", "phase": "S_SURVEY", "status": "done", "completion_confirmed": true },
+    { "id": "G2", "goal": "Audit completed", "phase": "S_AUDIT", "status": "done", "completion_confirmed": true },
+    { "id": "G3", "goal": "Diagnosis completed", "phase": "S_DIAGNOSE", "status": "done", "completion_confirmed": true },
+    { "id": "G4", "goal": "Zero remaining actionable findings", "phase": "S_VERIFY", "status": "done", "completion_confirmed": true },
+    { "id": "G5", "goal": "Pattern generalized", "phase": "S_GENERALIZE", "status": "done", "completion_confirmed": true },
+    { "id": "G6", "goal": "Discoveries triaged", "phase": "S_DISCOVER", "status": "done", "completion_confirmed": true },
+    { "id": "G7", "goal": "Learnings persisted", "phase": "S_RECORD", "status": "done", "completion_confirmed": true }
+  ],
+  "phase_goals_all_done": true,
   "self_iteration_log": [],
   "cross_phase_loops": 0,
   "max_loops": 3,
   "created_at": "2026-06-20T17:45:00Z",
-  "updated_at": "2026-06-20T18:30:00Z"
+  "updated_at": "2026-06-20T19:00:00Z"
 }
