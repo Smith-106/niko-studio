@@ -1759,7 +1759,7 @@ export class WorkflowEngine {
   /** Sync plan to state store (fire-and-forget, non-blocking). */
   private _syncPlanToStore(plan: WorkflowPlan): void {
     if (!this._stateStore) return;
-    this._stateStore.savePlan(plan).catch(() => {});
+    this._stateStore.savePlan(plan).catch((e) => { _log.error('Failed to sync plan to state store:', e) });
   }
 
   /** Get the injected state store, if any. */

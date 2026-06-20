@@ -220,4 +220,8 @@ export {
   rsGetPersonasEndpoint,
   rsCreateCustomPersonaEndpoint,
   rsGetOverlayEndpoint,
+  rsAIFlavorEndpoint,
+  rsFeedbackEndpoint,
+  rsCompareEndpoint,
+  rsDeAIEndpoint,
 } from '../../reader/mcp/reader-endpoints';

@@ -60,6 +60,10 @@ import {
   rsGetPersonasEndpoint,
   rsCreateCustomPersonaEndpoint,
   rsGetOverlayEndpoint,
+  rsAIFlavorEndpoint,
+  rsFeedbackEndpoint,
+  rsCompareEndpoint,
+  rsDeAIEndpoint,
 } from '../endpoints';
 import type { GatewayRoute } from '../gateway-route-types';
 
@@ -148,4 +152,8 @@ export const contentRoutes: GatewayRoute[] = [
   { method: 'GET', pattern: /^\/reader\/personas$/, handler: rsGetPersonasEndpoint },
   { method: 'POST', pattern: /^\/reader\/personas\/custom$/, handler: rsCreateCustomPersonaEndpoint },
   { method: 'POST', pattern: /^\/reader\/overlay$/, handler: rsGetOverlayEndpoint },
+  { method: 'POST', pattern: /^\/reader\/ai-flavor$/, handler: rsAIFlavorEndpoint },
+  { method: 'POST', pattern: /^\/reader\/feedback$/, handler: rsFeedbackEndpoint },
+  { method: 'POST', pattern: /^\/reader\/compare$/, handler: rsCompareEndpoint },
+  { method: 'POST', pattern: /^\/reader\/de-ai$/, handler: rsDeAIEndpoint },
 ];

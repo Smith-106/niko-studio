@@ -557,7 +557,16 @@ export class ConfigManager extends EventEmitter {
     // 4. Project config file
     if (this.configPath) {
       if (fs.existsSync(this.configPath)) {
-        this.loadFromFile()
+        try {
+          this.loadFromFile()
+        } catch (err) {
+          if (this.initialized) {
+            // Hot-reload path: log and keep current config rather than crash
+            log.error('Config reload failed, keeping current config', { error: String(err) })
+          } else {
+            throw err
+          }
+        }
       } else if (this.autoCreate) {
         this.createDefaultConfigFile()
       }
@@ -690,6 +699,7 @@ export class ConfigManager extends EventEmitter {
       this.applyDictToConfig(data)
     } catch (err) {
       log.error(`Failed to load config from ${this.configPath}`, { error: String(err) })
+      throw new Error(`Config load failed from ${this.configPath}: ${String(err)}`)
     }
   }
 
@@ -858,6 +868,7 @@ integration:
         this.reloadFromSource()
       })
     } catch (err) {
+      // Intentionally swallowed: file watching is an optional convenience; app continues without hot-reload
       log.error(`Failed to start config file watcher`, { error: String(err) })
     }
   }

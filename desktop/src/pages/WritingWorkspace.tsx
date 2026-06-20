@@ -40,7 +40,7 @@ export default function WritingWorkspace() {
 
   // 加载 Nowledge Mem 状态
   useEffect(() => {
-    invoke<NowledgeStatus>('get_nowledge_status').then(setNowledgeStatus).catch(() => {})
+    invoke<NowledgeStatus>('get_nowledge_status').then(setNowledgeStatus).catch((e) => { logger.error('Failed to load Nowledge status:', e) })
   }, [])
 
   // 分析质量
@@ -111,10 +111,10 @@ export default function WritingWorkspace() {
         <div className="p-3 border-b border-zinc-800">
           <label className="text-[10px] text-zinc-500 block mb-1">当前章节</label>
           <div className="flex items-center gap-2">
-            <button onClick={() => { const c = Math.max(1, chapter - 1); setChapter(c); invoke('set_current_chapter', { chapter: c }) }}
+            <button onClick={() => { const c = Math.max(1, chapter - 1); setChapter(c); invoke('set_current_chapter', { chapter: c }).catch((err) => logger.error('Failed to set current chapter:', err)) }}
               className="w-7 h-7 rounded bg-zinc-800 text-zinc-400 hover:bg-zinc-700 flex items-center justify-center">-</button>
             <span className="text-lg font-mono font-bold w-10 text-center">{chapter}</span>
-            <button onClick={() => { const c = chapter + 1; setChapter(c); invoke('set_current_chapter', { chapter: c }) }}
+            <button onClick={() => { const c = chapter + 1; setChapter(c); invoke('set_current_chapter', { chapter: c }).catch((err) => logger.error('Failed to set current chapter:', err)) }}
               className="w-7 h-7 rounded bg-zinc-800 text-zinc-400 hover:bg-zinc-700 flex items-center justify-center">+</button>
           </div>
         </div>

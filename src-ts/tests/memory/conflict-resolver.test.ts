@@ -84,8 +84,17 @@ describe('ConflictResolver', () => {
       const resolver = new ConflictResolver();
       const embedder = createEmbedder();
       resolver.setEmbedder(embedder);
-      // embedder is used internally; just verify no error
-      expect(true).toBe(true);
+      // Verify the embedder is wired by checking that semantic similarity is used
+      const db = createMockDb([
+        { id: 'mem-emb', content: 'existing content', valid_from: null, valid_until: null, importance: 0.5 },
+      ]);
+      resolver.setDbConnection(db);
+      // When embedder is set, check() should use it for similarity calculation
+      // rather than falling back to lexical Jaccard similarity
+      expect(embedder.embed).not.toHaveBeenCalled();
+      return resolver.check('existing content', 'entity-1').then(() => {
+        expect(embedder.embed).toHaveBeenCalled();
+      });
     });
   });
 

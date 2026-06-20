@@ -1,4 +1,18 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+/**
+ * DocumentEditor branch-gap additional test — focused coverage for uncovered branches
+ *
+ * Target branches:
+ * - Line 58: fallbackTitle = currentConversationTitle ?? t.appTitle ?? '未命名文档'
+ *   (a) t.appTitle is falsy → falls through to '未命名文档' deepest fallback
+ * - Line 84: sessionKey = currentConversationId ?? currentChapterId ?? currentProjectId ?? 'session-global'
+ *   (a) All three IDs null → session-global (existing test covers this but only renders,
+ *       doesn't trigger updateSessionTelemetry which exercises the branch)
+ * - Line 109: sessionIntelligence: telemetry ? [summarizeWritingSessionTelemetry(telemetry)] : []
+ *   (a) telemetry is null (no prior telemetry) → passes empty array
+ * - Line 297: editorStateCache.get(currentChapterId)?.json ?? chapterContent
+ *   (a) Cache entry exists but .json is null → falls through to chapterContent
+ */
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const editorHandleMocks = vi.hoisted(() => ({
@@ -7,13 +21,15 @@ const editorHandleMocks = vi.hoisted(() => ({
   generatingListener: null as null | ((value: boolean) => void),
 }))
 
+// Mock i18n with appTitle set to null so the ?? deepest fallback triggers
 vi.mock('../i18n', async () => {
   const actual = await vi.importActual<typeof import('../i18n')>('../i18n')
 
   return {
     ...actual,
     useI18n: () => ({
-      t: actual.translations.en,
+      // appTitle is null so `t.appTitle ?? '未命名文档'` falls through (line 58)
+      t: { ...actual.translations.en, appTitle: null as unknown as string },
       translate: (key: keyof typeof actual.translations.en, params?: Record<string, string>) => {
         const raw = actual.translations.en[key] ?? String(key)
         if (!params) return raw
@@ -42,6 +58,16 @@ vi.mock('./ExportDialog', () => ({
       <button type="button" onClick={onClose}>
         close-export
       </button>
+    </div>
+  ),
+}))
+
+vi.mock('./editor/EmptyEditorGuide', () => ({
+  EmptyEditorGuide: ({ onAIContinue, onAddCharacter, onFromTemplate }: { onAIContinue: () => void; onAddCharacter: () => void; onFromTemplate: () => void }) => (
+    <div data-testid="empty-editor-guide">
+      <button type="button" onClick={onAIContinue}>AI Continue</button>
+      <button type="button" onClick={onAddCharacter}>Add Character</button>
+      <button type="button" onClick={onFromTemplate}>Start from Template</button>
     </div>
   ),
 }))
@@ -127,16 +153,19 @@ vi.mock('../../../src-ts/analysis/personalized-craft-profile', () => ({
 }))
 
 import { createDefaultProjectWorkspaceContext } from '../types/workspace'
-import { readChapterContent } from '../services/projectFileService'
+import { readChapterContent, writeChapterContent } from '../services/projectFileService'
+import { autoSaveSnapshot } from '../services/versionService'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { DocumentEditor } from './DocumentEditor'
 import { buildPersonalizedCraftProfile } from '../../../src-ts/analysis/personalized-craft-profile'
 
 const mockedReadChapterContent = vi.mocked(readChapterContent)
+const mockedWriteChapterContent = vi.mocked(writeChapterContent)
+const mockedAutoSaveSnapshot = vi.mocked(autoSaveSnapshot)
 const mockedBuildPersonalizedCraftProfile = vi.mocked(buildPersonalizedCraftProfile)
 
-function resetEditorState() {
+function resetEditorState(overrides?: Record<string, unknown>) {
   useSettingsStore.getState().updateSettings({ language: 'en' })
   useAppStore.setState((state) => ({
     ...state,
@@ -165,6 +194,7 @@ function resetEditorState() {
     personalizedCraftSummary: null,
     personalizedCraftTrajectory: null,
     personalizedCraftRecommendations: [],
+    ...overrides,
   }))
 }
 
@@ -187,18 +217,23 @@ async function renderDocumentEditor(props?: Partial<React.ComponentProps<typeof 
 describe('DocumentEditor branch-gap additional coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
-    resetEditorState()
-  })
-
-  afterEach(() => {
     vi.useRealTimers()
+    resetEditorState()
+    mockedReadChapterContent.mockResolvedValue('chapter text content')
+    mockedWriteChapterContent.mockResolvedValue()
+    mockedAutoSaveSnapshot.mockResolvedValue()
+    mockedBuildPersonalizedCraftProfile.mockReturnValue({
+      dominantWeaknesses: [],
+      growthTrajectory: { summary: 'steady' },
+      recommendations: [],
+    })
   })
 
-  // Line 58: fallbackTitle = currentConversationTitle ?? t.appTitle ?? '未命名文档'
-  // Test the deep fallback when currentConversationTitle is null
-  it('uses appTitle fallback when currentConversationTitle is null', async () => {
-    useAppStore.setState({
+  // Line 58: deepest fallback '未命名文档' when t.appTitle is null/undefined
+  // The i18n mock above sets appTitle to null, so with no conversation title
+  // the ?? operator falls through to '未命名文档'
+  it('uses deepest fallback when conversation title is null and appTitle is null (line 58)', async () => {
+    resetEditorState({
       currentConversationId: null,
       conversationsById: {},
       allConversationIds: [],
@@ -206,55 +241,15 @@ describe('DocumentEditor branch-gap additional coverage', () => {
 
     await renderDocumentEditor()
 
-    // The title input should show the app title from the i18n translations
+    // With appTitle=null and no conversation, the ?? operator falls through to '未命名文档'
     const titleInput = screen.getByRole('textbox', { name: 'Document title' })
-    expect(titleInput).toHaveValue(useSettingsStore.getState().settings.language === 'en' ? expect.any(String) : expect.any(String))
+    expect(titleInput).toHaveValue('未命名文档')
   })
 
-  // Line 58: the deepest fallback '未命名文档' when both currentConversationTitle and t.appTitle are falsy
-  it('uses deepest fallback when currentConversationTitle and appTitle are null', async () => {
-    // Set conversation with null title to test the ?? chain
-    useAppStore.setState({
-      currentConversationId: 'conv-null-title',
-      conversationsById: {
-        'conv-null-title': {
-          id: 'conv-null-title',
-          title: '',
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      },
-      allConversationIds: ['conv-null-title'],
-    })
-
-    await renderDocumentEditor()
-
-    const titleInput = screen.getByRole('textbox')
-    // Should render with some title (empty or fallback)
-    expect(titleInput).toBeInTheDocument()
-  })
-
-  // Line 84: sessionKey = currentConversationId ?? currentChapterId ?? currentProjectId ?? 'session-global'
-  // Test the fallback when currentConversationId is null
-  it('falls back to chapterId for session key when conversationId is null', async () => {
-    useAppStore.setState({
-      currentConversationId: null,
-      currentChapterId: 'chapter-fallback',
-      currentProjectId: 'project-fallback',
-      conversationsById: {},
-      allConversationIds: [],
-    })
-
-    await renderDocumentEditor()
-
-    // The component should render successfully, using chapterId as the session key
-    expect(screen.getByRole('textbox')).toBeInTheDocument()
-  })
-
-  // Line 84: deepest fallback to 'session-global'
-  it('falls back to session-global when conversationId, chapterId, and projectId are all null', async () => {
-    useAppStore.setState({
+  // Line 84: session-global fallback triggered by an editor update
+  // when all conversation/chapter/project IDs are null
+  it('uses session-global key when all IDs are null and editor updates (line 84)', async () => {
+    resetEditorState({
       currentConversationId: null,
       currentChapterId: null,
       currentProjectId: null,
@@ -264,86 +259,128 @@ describe('DocumentEditor branch-gap additional coverage', () => {
 
     await renderDocumentEditor()
 
+    // Trigger an editor update to exercise updateSessionTelemetry
+    // which contains the sessionKey = ... ?? 'session-global' branch
+    fireEvent.click(screen.getByRole('button', { name: 'emit-update' }))
+
+    // The component should still render correctly
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
 
-  // Line 109: personalizedCraftEnabled is true and recommendations are mapped
-  it('computes personalized craft recommendations when craft profile is enabled', async () => {
-    mockedBuildPersonalizedCraftProfile.mockReturnValue({
-      dominantWeaknesses: [
-        { dimensionId: 'pacing', latestStatus: 'improving' },
-      ],
-      growthTrajectory: { summary: 'upward trend' },
-      recommendations: [
-        { summary: 'Vary sentence length more' },
-        { summary: 'Add more sensory details' },
-        { summary: 'Reduce adverb usage' },
-        { summary: 'Use stronger verbs' },
-      ],
-    } as ReturnType<typeof buildPersonalizedCraftProfile>)
-
-    useAppStore.setState({
-      personalizedCraftEnabled: true,
-    })
-
-    await renderDocumentEditor()
-
-    // Trigger an editor update to start the craft profile computation
-    const updateButton = screen.getByRole('button', { name: 'emit-update' })
-    await act(async () => {
-      updateButton.click()
-    })
-
-    // For editor_update with non-empty text, there's a 3-second debounce
-    await act(async () => {
-      vi.advanceTimersByTime(3500)
-    })
-
-    await waitFor(() => {
-      expect(mockedBuildPersonalizedCraftProfile).toHaveBeenCalled()
-    })
-  })
-
-  // Line 109: immediate execution when editorText is empty (the else branch of the debounce)
-  it('computes craft profile immediately for save events', async () => {
+  // Line 109: buildPersonalizedCraftProfile is called with sessionIntelligence
+  // When personalizedCraftEnabled is true and a non-editor_update event fires
+  // (e.g., history_open), runCraftProfile runs immediately.
+  it('invokes buildPersonalizedCraftProfile on history panel open with craft enabled (line 109)', async () => {
     mockedBuildPersonalizedCraftProfile.mockReturnValue({
       dominantWeaknesses: [],
       growthTrajectory: { summary: 'no data yet' },
-      recommendations: [
-        { summary: 'Write more to get recommendations' },
-      ],
+      recommendations: [{ summary: 'Keep writing' }],
     } as ReturnType<typeof buildPersonalizedCraftProfile>)
 
-    useAppStore.setState({
+    resetEditorState({
+      personalizedCraftEnabled: true,
+      historyPanelOpen: false,
+    })
+
+    await renderDocumentEditor()
+
+    // Opening history panel triggers updateSessionTelemetry({ type: 'history_open' })
+    // which (since event.type !== 'editor_update') immediately calls runCraftProfile (line 126)
+    act(() => {
+      useAppStore.setState((state) => ({
+        ...state,
+        historyPanelOpen: true,
+      }))
+    })
+
+    await waitFor(() => {
+      expect(mockedBuildPersonalizedCraftProfile).toHaveBeenCalled()
+    }, { timeout: 5000 })
+
+    // Verify sessionIntelligence was passed as an array
+    const lastCall = mockedBuildPersonalizedCraftProfile.mock.calls[mockedBuildPersonalizedCraftProfile.mock.calls.length - 1]
+    expect(lastCall[0]).toHaveProperty('sessionIntelligence')
+    expect(Array.isArray(lastCall[0].sessionIntelligence)).toBe(true)
+  })
+
+  // Line 109: buildPersonalizedCraftProfile receives telemetry after editor update
+  // After an editor update, the 3s debounce timer fires and calls runCraftProfile
+  // with a non-null telemetry.
+  it('invokes buildPersonalizedCraftProfile after debounce with craft enabled (line 109 truthy)', async () => {
+    mockedBuildPersonalizedCraftProfile.mockReturnValue({
+      dominantWeaknesses: [{ dimensionId: 'pacing', latestStatus: 'needs work' }],
+      growthTrajectory: { summary: 'growing' },
+      recommendations: [{ summary: 'Improve pacing' }],
+    } as ReturnType<typeof buildPersonalizedCraftProfile>)
+
+    resetEditorState({
       personalizedCraftEnabled: true,
     })
 
     await renderDocumentEditor()
 
-    // Trigger a save event — runs craft profile immediately
-    const saveButton = screen.getByRole('button', { name: 'emit-save' })
-    await act(async () => {
-      saveButton.click()
+    // Trigger an editor update — sets editorTextRef and starts 3s debounce
+    fireEvent.click(screen.getByRole('button', { name: 'emit-update' }))
+
+    // Wait for the debounce timer (3 seconds) to fire
+    await waitFor(() => {
+      expect(mockedBuildPersonalizedCraftProfile).toHaveBeenCalled()
+    }, { timeout: 8000 })
+  })
+
+  // Line 297: editorStateCache has entry for currentChapterId but .json is null
+  // → falls through to chapterContent via ?.json ?? chapterContent
+  // When a chapter is loaded but no editor update happened (editorJson stays null),
+  // switching away caches { json: null, text: '' }, then switching back
+  // hits `?.json ?? chapterContent` where json is null.
+  it('uses chapterContent when cache entry has null json (line 297)', async () => {
+    const initialContent = JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', attrs: { id: 'from-read' } }] })
+    mockedReadChapterContent.mockResolvedValueOnce(initialContent)
+
+    resetEditorState({
+      currentProjectId: 'project-cache',
+      currentChapterId: 'chapter-A',
+      currentConversationId: null,
+      conversationsById: {},
+      allConversationIds: [],
+    })
+
+    await renderDocumentEditor()
+
+    // Verify initial content loaded
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-props')).toHaveTextContent('from-read')
+    }, { timeout: 5000 })
+
+    // Switch to a different chapter — no editor update happened on chapter-A,
+    // so the cache stores { json: null, text: '' }
+    mockedReadChapterContent.mockResolvedValue('other-chapter-content')
+
+    act(() => {
+      useAppStore.setState((state) => ({
+        ...state,
+        currentChapterId: 'chapter-B',
+      }))
+    })
+
+    // Wait for the other chapter to load
+    await waitFor(() => {
+      expect(mockedReadChapterContent).toHaveBeenCalledWith('project-cache', 'chapter-B')
+    }, { timeout: 5000 })
+
+    // Switch back to chapter-A — cache has { json: null, text: '' }
+    // so `?.json ?? chapterContent` falls through to chapterContent
+    mockedReadChapterContent.mockResolvedValueOnce('cached-fallback-content')
+
+    act(() => {
+      useAppStore.setState((state) => ({
+        ...state,
+        currentChapterId: 'chapter-A',
+      }))
     })
 
     await waitFor(() => {
-      expect(mockedBuildPersonalizedCraftProfile).toHaveBeenCalled()
-    })
-  })
-
-  // Line 297: editorStateCache.get(currentChapterId)?.json ?? chapterContent
-  // Test when cache entry has null json — falls back to chapterContent
-  it('uses chapterContent when cached editor json is null', async () => {
-    mockedReadChapterContent.mockResolvedValue('chapter text from storage')
-
-    // The editorStateCache is module-level. We need to access it.
-    // Since it's internal, we test by verifying the NikoEditor receives
-    // the right initialContent. The cache is populated after updates.
-    await renderDocumentEditor()
-
-    // After initial load, contentLoaded should be true and
-    // the editor should receive chapterContent (not cache)
-    const editorProps = screen.getByTestId('editor-props')
-    expect(editorProps.textContent).toBe('chapter text from storage')
+      expect(screen.getByTestId('editor-props')).toHaveTextContent('cached-fallback-content')
+    }, { timeout: 5000 })
   })
 })

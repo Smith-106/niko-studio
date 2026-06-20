@@ -229,6 +229,7 @@ async function callLLMForRewrite(prompt: string): Promise<string | null> {
 
     return content.trim() || null;
   } catch (exc) {
+    // Intentionally swallowed: LLM call failure is expected; caller handles null return gracefully
     const message = exc instanceof Error ? exc.message : String(exc);
     log.warn('LLM rewrite call error', { error: message });
     return null;
