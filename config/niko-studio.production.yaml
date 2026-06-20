@@ -3,7 +3,7 @@
 #   python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml
 
 app_name: niko-studio
-version: "11.0.3"
+version: "11.0.4"
 debug: false
 env: production
 data_dir: .writing
