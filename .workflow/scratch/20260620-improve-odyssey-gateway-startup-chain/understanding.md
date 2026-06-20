@@ -224,7 +224,53 @@ Tauri Shell
 
 ## 6. Generalization
 
-（待泛化）
+### 提取的 Patterns（3 层）
+
+| ID | Layer | Signature | Source | Risk | Fix Template |
+|----|-------|-----------|--------|------|-------------|
+| GP1 | Syntax | `res.writeHead(5xx)` without `headersSent` check | H20 | MEDIUM | `if (!res.headersSent) { res.writeHead(...); res.end(...) } else { res.destroy() }` |
+| GP2 | Semantic | `process.on('SIGTERM/SIGINT', () => { shutdown(); process.exit(0) })` 独立注册无协调 | 本次改进 | LOW | 统一到 gateway-bootstrap shutdown 链，各服务仅暴露 `shutdown()` 方法 |
+| GP3 | Structural | 缓存计算结果仅在 config reload 时失效 | H5 CORS 缓存 | LOW | `_cache + invalidate()` 模式，onReload 时 invalidate |
+
+### 代码库扫描命中
+
+#### GP1 — headersSent 未检查
+
+| File | Line | Risk | Note |
+|------|------|------|------|
+| gateway-request-handler.ts | 188 | FIXED | ✅ 已添加 |
+| 其他 endpoint handler | — | SAFE | 通过 `sendHttpResponse()` 统一输出，handler 不直接操作 res |
+
+**结论**: GP1 仅 1 处命中，已修复。
+
+#### GP2 — 独立 SIGTERM 处理器
+
+| File | Line | Risk | Note |
+|------|------|------|------|
+| db/pool.ts | 180-181 | LOW | 数据库连接池，独立注册合理 |
+| services/backup-manager.ts | 970-971 | LOW | 备份服务，独立注册合理 |
+| services/indexing-service.ts | 235-236 | LOW | 索引服务，独立注册合理 |
+| services/token-service.ts | 415-416 | LOW | Token 服务，独立注册合理 |
+| mcp/gateway-bootstrap.ts | 119-120 | FIXED | ✅ 统一优雅关闭链 |
+
+**结论**: GP2 的独立服务注册是合理的——这些服务在非 gateway 上下文独立运行。Gateway bootstrap 已有统一关闭链。
+
+#### GP3 — 缓存计算
+
+| File | Line | Risk | Note |
+|------|------|------|------|
+| gateway-http-adapter.ts | CORS origins | FIXED | ✅ `_cachedCorsOrigins + invalidateCorsCache()` |
+| gateway_runtime.rs | cached_base | SAFE | ✅ 已有 BASE_CACHE_TTL + config reload 时 invalidate |
+
+**结论**: GP3 仅 1 处命中，已修复。
+
+### 泛化统计
+
+- Patterns extracted: 3
+- Total hits: 8
+- Cross-layer confirmed: 0
+- Regression risks: 0
+- Deepening triggered: no
 
 ## 7. Discoveries
 
