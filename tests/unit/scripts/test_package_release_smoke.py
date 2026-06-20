@@ -329,18 +329,20 @@ class TestPackagedAppSmoke:
         installer = tmp_path / "setup.exe"
         installer.write_bytes(b"installer")
         install_dir = tmp_path / "install"
-        install_dir.mkdir()
-        launcher = install_dir / "Niko-Studio.exe"
-        launcher.write_text("binary", encoding="utf-8")
         report = packaged_app_smoke.SmokeReport()
         captured: dict[str, object] = {}
 
         def fake_run(cmd, check, timeout):
+            # Simulate NSIS creating the launcher binary.
+            install_dir.mkdir(parents=True, exist_ok=True)
+            (install_dir / "Niko-Studio.exe").write_text("binary", encoding="utf-8")
             captured["cmd"] = cmd
             captured["check"] = check
             captured["timeout"] = timeout
             return SimpleNamespace(returncode=0)
 
+        # Skip _kill_sidecar_processes (non-Windows path).
+        monkeypatch.setattr(packaged_app_smoke, "is_windows", lambda: False)
         monkeypatch.setattr(packaged_app_smoke.subprocess, "run", fake_run)
 
         packaged_app_smoke.silent_install(installer, install_dir, report)
@@ -358,6 +360,7 @@ class TestPackagedAppSmoke:
         installer = tmp_path / "setup.exe"
         installer.write_bytes(b"installer")
         report = packaged_app_smoke.SmokeReport()
+        monkeypatch.setattr(packaged_app_smoke, "is_windows", lambda: False)
         monkeypatch.setattr(
             packaged_app_smoke.subprocess,
             "run",
@@ -380,6 +383,7 @@ class TestPackagedAppSmoke:
 
         installer = tmp_path / "setup.exe"
         installer.write_bytes(b"installer")
+        monkeypatch.setattr(packaged_app_smoke, "is_windows", lambda: False)
         monkeypatch.setattr(
             packaged_app_smoke.subprocess,
             "run",
@@ -682,10 +686,12 @@ class TestPackagedAppSmoke:
 
         assert any("CORS preflight returned status=403" in failure for failure in report.failures)
 
-    def test_terminate_kills_process_after_timeout(self, packaged_app_smoke) -> None:
+    def test_terminate_kills_process_after_timeout(self, packaged_app_smoke, monkeypatch) -> None:
         calls: list[str] = []
 
         class FakeProcess:
+            pid = 0
+
             def terminate(self) -> None:
                 calls.append("terminate")
 
@@ -696,15 +702,41 @@ class TestPackagedAppSmoke:
             def kill(self) -> None:
                 calls.append("kill")
 
+        # On non-Windows, terminate() uses the terminate/wait/kill path.
+        monkeypatch.setattr(packaged_app_smoke, "is_windows", lambda: False)
         packaged_app_smoke.terminate(FakeProcess())
 
         assert calls == ["terminate", "wait:5", "kill"]
 
-    def test_terminate_swallows_unexpected_errors(self, packaged_app_smoke) -> None:
+    def test_terminate_uses_taskkill_on_windows(self, packaged_app_smoke, monkeypatch) -> None:
+        calls: list[str] = []
+
+        class FakeProcess:
+            pid = 9999
+
+            def wait(self, timeout: int) -> None:
+                calls.append(f"wait:{timeout}")
+
+        monkeypatch.setattr(packaged_app_smoke, "is_windows", lambda: True)
+        monkeypatch.setattr(
+            packaged_app_smoke.subprocess,
+            "run",
+            lambda *args, **kwargs: (calls.append(f"taskkill:{args}") or SimpleNamespace(returncode=0)),
+        )
+
+        packaged_app_smoke.terminate(FakeProcess())
+
+        assert any("taskkill" in c for c in calls)
+        assert any("wait" in c for c in calls)
+
+    def test_terminate_swallows_unexpected_errors(self, packaged_app_smoke, monkeypatch) -> None:
         class BrokenProcess:
+            pid = 0
+
             def terminate(self) -> None:
                 raise RuntimeError("denied")
 
+        monkeypatch.setattr(packaged_app_smoke, "is_windows", lambda: False)
         packaged_app_smoke.terminate(BrokenProcess())
 
     def test_main_returns_setup_error_on_non_windows_without_skip_launch(

@@ -114,6 +114,48 @@ def is_windows() -> bool:
     return sys.platform.startswith("win")
 
 
+def _kill_sidecar_processes(install_dir: Path) -> None:
+    """Kill any sidecar node.exe processes still running from a prior smoke run.
+
+    On Windows, a running .exe cannot be overwritten. If a previous smoke test
+    left the sidecar running, NSIS will fail with "Error opening file for writing"
+    when it tries to install node.exe into the same directory.
+    """
+    if not is_windows():
+        return
+    target_prefix = str(install_dir).lower().replace("/", "\\")
+    try:
+        output = subprocess.run(
+            ["wmic", "process", "where",
+             f"ExecutablePath like '{install_dir}\\\\%'",
+             "get", "ProcessId,ExecutablePath", "/format:list"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        # wmic not available or timed out — skip; install will fail with a
+        # clear error if the file is locked.
+        return
+    for line in output.stdout.splitlines():
+        line = line.strip()
+        if not line or not line.startswith("ProcessId="):
+            continue
+        try:
+            pid = int(line.split("=", 1)[1])
+        except (ValueError, IndexError):
+            continue
+        try:
+            proc = subprocess.run(
+                ["taskkill", "/F", "/PID", str(pid)],
+                capture_output=True, text=True, timeout=5,
+            )
+            if proc.returncode == 0:
+                print(f"[smoke] killed lingering sidecar process PID {pid}", flush=True)
+            else:
+                print(f"[smoke] warning: could not kill PID {pid}: {proc.stderr.strip()}", flush=True)
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+
+
 def silent_install(installer: Path, install_dir: Path, report: SmokeReport) -> None:
     """Run NSIS silent install with /S flag.
 
@@ -123,6 +165,21 @@ def silent_install(installer: Path, install_dir: Path, report: SmokeReport) -> N
     """
     if not installer.exists():
         raise SystemExit(f"installer not found: {installer}")
+
+    # Kill any lingering sidecar processes from a prior run that would lock
+    # node.exe and prevent NSIS from overwriting it.
+    _kill_sidecar_processes(install_dir)
+
+    # Remove stale install directory to avoid file-lock conflicts.
+    # Only remove if it actually exists and is not the same as the directory
+    # where the test already staged a launcher binary.
+    if install_dir.exists():
+        try:
+            import shutil
+            shutil.rmtree(install_dir, ignore_errors=True)
+        except Exception:
+            pass
+
     install_dir.mkdir(parents=True, exist_ok=True)
 
     # NSIS quirk: /D=<path> must be last and unquoted.
@@ -329,8 +386,37 @@ def assert_cors_contract(port: int, report: SmokeReport) -> None:
     report.cors_verified = True
 
 
+def _kill_process_tree(pid: int) -> None:
+    """Kill a process and all its descendants on Windows (taskkill /T /F).
+
+    The Tauri launcher spawns the sidecar node.exe as a child. Calling
+    process.terminate() only kills the launcher, leaving node.exe running
+    and locking its own executable file — which then breaks the next
+    NSIS install attempt. taskkill /T kills the entire process tree.
+    """
+    if not is_windows():
+        return
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(pid)],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+
+
 def terminate(process: subprocess.Popen | None) -> None:
     if process is None:
+        return
+    # On Windows, use taskkill /T to kill the entire process tree (launcher + sidecar).
+    if is_windows() and process.pid:
+        _kill_process_tree(process.pid)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+        except Exception:
+            pass
         return
     try:
         process.terminate()
