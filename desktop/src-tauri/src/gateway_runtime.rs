@@ -429,7 +429,40 @@ impl GatewayState {
     pub fn stop_child_best_effort(&self) {
         let child_opt = self.child.lock().unwrap_or_else(|e| e.into_inner()).take();
         if let Some(child) = child_opt {
+            let pid = child.pid();
             let _ = child.kill();
+            // CommandChild (tauri_plugin_shell) has no wait() method.
+            // On Windows, kill() sends a terminate signal but the process may
+            // still hold the port until it fully exits. Poll the PID to ensure
+            // the process has actually terminated before releasing resources.
+            if cfg!(target_os = "windows") {
+                let deadline = Instant::now() + Duration::from_secs(3);
+                while Instant::now() < deadline {
+                    // Check if the process still exists using OpenProcess.
+                    // SAFETY: OpenProcess with SYNCHRONIZE only queries the handle;
+                    // we close it immediately. No mutation of the external process.
+                    let alive = unsafe {
+                        #[link(name = "kernel32")]
+                        extern "system" {
+                            fn OpenProcess(access: u32, inherit: bool, pid: u32) -> *mut ();
+                            fn CloseHandle(h: *mut ());
+                        }
+                        const SYNCHRONIZE: u32 = 0x100000;
+                        let handle = OpenProcess(SYNCHRONIZE, false, pid);
+                        if handle.is_null() {
+                            // Process already gone — OpenProcess fails.
+                            false
+                        } else {
+                            CloseHandle(handle);
+                            true
+                        }
+                    };
+                    if !alive {
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+            }
         }
         *self.local_base.lock().unwrap_or_else(|e| e.into_inner()) = None;
         *self.cached_base.lock().unwrap_or_else(|e| e.into_inner()) = None;

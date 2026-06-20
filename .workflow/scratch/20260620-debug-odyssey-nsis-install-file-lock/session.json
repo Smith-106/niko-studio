@@ -1,0 +1,25 @@
+{
+  "session_id": "debug-odyssey-20260620-150000",
+  "issue": "Niko-Studio Desktop 从安装到运行全过程存在多个错误间隙，导致用户在某些条件下遇到无法诊断的启动失败",
+  "flags": { "skip_fix": false, "skip_generalize": false, "auto": true, "auto_confirm": false },
+  "current_state": "S_DIAGNOSE",
+  "diagnosis_retries": 0,
+  "root_cause": null,
+  "patterns": [],
+  "confirmation": null,
+  "phase_goals": [
+    { "id": "G1", "goal": "Root cause identified", "done_when": "evidence has phase=diagnosis result=confirmed", "phase": "S_DIAGNOSE", "status": "in_progress", "completion_confirmed": false },
+    { "id": "G2", "goal": "Explore context gathered", "done_when": "explore.json populated", "phase": "S_EXPLORE", "status": "done", "completion_confirmed": true },
+    { "id": "G3", "goal": "Fix applied and confirmed", "done_when": "confirmation.overall == confirmed", "phase": "S_CONFIRM", "status": "pending", "completion_confirmed": false },
+    { "id": "G4", "goal": "Pattern generalized", "done_when": "patterns[] >=1 entry", "phase": "S_GENERALIZE", "status": "pending", "completion_confirmed": false },
+    { "id": "G5", "goal": "Discoveries triaged", "done_when": "all hits classified", "phase": "S_DISCOVER", "status": "pending", "completion_confirmed": false },
+    { "id": "G6", "goal": "Learnings persisted", "done_when": "spec entries created or no actionable learnings", "phase": "S_RECORD", "status": "pending", "completion_confirmed": false }
+  ],
+  "phase_goals_all_done": false,
+  "self_iteration_log": [],
+  "generalization_stats": null,
+  "cross_phase_loops": 0,
+  "max_loops": 3,
+  "created_at": "2026-06-20T15:00:00Z",
+  "updated_at": "2026-06-20T15:30:00Z"
+}

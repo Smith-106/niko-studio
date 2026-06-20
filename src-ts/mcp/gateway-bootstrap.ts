@@ -44,7 +44,14 @@ function logGatewayStartup(host: string, port: number): void {
 }
 
 function listen(server: Server, host: string, port: number): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        reject(new Error(`Port ${port} is already in use. Set NIKO_GATEWAY_PORT to a different port.`));
+      } else {
+        reject(new Error(`Server listen failed: ${err.message}`));
+      }
+    });
     server.listen(port, host, () => resolve());
   });
 }
@@ -104,7 +111,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
 
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--port' && argv[i + 1]) {
-      portOverride = parseInt(argv[i + 1], 10);
+      const parsed = parseInt(argv[i + 1], 10);
+      portOverride = Number.isFinite(parsed) ? parsed : undefined;
     }
     if (argv[i] === '--host' && argv[i + 1]) {
       hostOverride = argv[i + 1];

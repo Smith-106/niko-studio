@@ -606,6 +606,12 @@ export class ConfigManager extends EventEmitter {
       return ['true', '1', 'yes', 'on'].includes(raw.trim().toLowerCase())
     }
 
+    function parseIntSafe(raw: string | undefined, fallback: number): number {
+      if (!raw) return fallback
+      const n = parseInt(raw, 10)
+      return Number.isFinite(n) ? n : fallback
+    }
+
     function parseCsv(raw: string | undefined): string[] {
       if (!raw) return []
       return raw.split(',').map(s => s.trim()).filter(s => s.length > 0)
@@ -646,7 +652,7 @@ export class ConfigManager extends EventEmitter {
     if (env.NIKO_WORKFLOW_DEGRADE_ON_ERROR) this.config.workflow.degradeOnError = parseBool(env.NIKO_WORKFLOW_DEGRADE_ON_ERROR)
     if (env.NIKO_WORKFLOW_CRITICAL_GATE_ALWAYS_ON) this.config.workflow.criticalGateAlwaysOn = parseBool(env.NIKO_WORKFLOW_CRITICAL_GATE_ALWAYS_ON)
     if (env.NIKO_WORKFLOW_QUALITY_PHASE_TIMEOUT_SECONDS) {
-      this.config.workflow.qualityPhaseTimeoutSeconds = parseInt(env.NIKO_WORKFLOW_QUALITY_PHASE_TIMEOUT_SECONDS, 10)
+      this.config.workflow.qualityPhaseTimeoutSeconds = parseIntSafe(env.NIKO_WORKFLOW_QUALITY_PHASE_TIMEOUT_SECONDS, this.config.workflow.qualityPhaseTimeoutSeconds)
     }
     if (env.NIKO_WORKFLOW_PERSISTENCE) {
       const v = env.NIKO_WORKFLOW_PERSISTENCE.toLowerCase();
@@ -655,7 +661,7 @@ export class ConfigManager extends EventEmitter {
 
     // Gateway
     if (env.NIKO_GATEWAY_HOST) this.config.gateway.host = env.NIKO_GATEWAY_HOST
-    if (env.NIKO_GATEWAY_PORT) this.config.gateway.port = parseInt(env.NIKO_GATEWAY_PORT, 10)
+    if (env.NIKO_GATEWAY_PORT) this.config.gateway.port = parseIntSafe(env.NIKO_GATEWAY_PORT, this.config.gateway.port)
     if (env.NIKO_GATEWAY_RELOAD) this.config.gateway.reload = parseBool(env.NIKO_GATEWAY_RELOAD)
     if (env.NIKO_GATEWAY_LOCALHOST_ONLY) this.config.gateway.localhostOnly = parseBool(env.NIKO_GATEWAY_LOCALHOST_ONLY)
     if (env.NIKO_GATEWAY_LOCALHOST_ONLY_EXEMPT_PATHS) this.config.gateway.localhostOnlyExemptPaths = parseCsv(env.NIKO_GATEWAY_LOCALHOST_ONLY_EXEMPT_PATHS)
@@ -673,11 +679,11 @@ export class ConfigManager extends EventEmitter {
     if (env.NIKO_LANGFLOW_ENABLED) this.config.integration.langflowEnabled = parseBool(env.NIKO_LANGFLOW_ENABLED)
     if (env.NIKO_DBHUB_GOVERNANCE_ENABLED) this.config.integration.dbhubGovernanceEnabled = parseBool(env.NIKO_DBHUB_GOVERNANCE_ENABLED)
     if (env.NIKO_SEARCH_ROUTE_MODE) this.config.integration.searchRouteMode = env.NIKO_SEARCH_ROUTE_MODE
-    if (env.NIKO_SEARCH_ELASTIC_TIMEOUT_MS) this.config.integration.searchElasticTimeoutMs = parseInt(env.NIKO_SEARCH_ELASTIC_TIMEOUT_MS, 10)
-    if (env.NIKO_REDIS_RATE_LIMIT) this.config.integration.redisRateLimit = parseInt(env.NIKO_REDIS_RATE_LIMIT, 10)
-    if (env.NIKO_REDIS_RATE_LIMIT_WINDOW_SECONDS) this.config.integration.redisRateLimitWindowSeconds = parseInt(env.NIKO_REDIS_RATE_LIMIT_WINDOW_SECONDS, 10)
+    if (env.NIKO_SEARCH_ELASTIC_TIMEOUT_MS) this.config.integration.searchElasticTimeoutMs = parseIntSafe(env.NIKO_SEARCH_ELASTIC_TIMEOUT_MS, this.config.integration.searchElasticTimeoutMs)
+    if (env.NIKO_REDIS_RATE_LIMIT) this.config.integration.redisRateLimit = parseIntSafe(env.NIKO_REDIS_RATE_LIMIT, this.config.integration.redisRateLimit)
+    if (env.NIKO_REDIS_RATE_LIMIT_WINDOW_SECONDS) this.config.integration.redisRateLimitWindowSeconds = parseIntSafe(env.NIKO_REDIS_RATE_LIMIT_WINDOW_SECONDS, this.config.integration.redisRateLimitWindowSeconds)
     if (env.NIKO_LANGFLOW_FLOW_NAME) this.config.integration.langflowFlowName = env.NIKO_LANGFLOW_FLOW_NAME
-    if (env.NIKO_REDIS_CACHE_TTL_SECONDS) this.config.integration.redisCacheTtlSeconds = parseInt(env.NIKO_REDIS_CACHE_TTL_SECONDS, 10)
+    if (env.NIKO_REDIS_CACHE_TTL_SECONDS) this.config.integration.redisCacheTtlSeconds = parseIntSafe(env.NIKO_REDIS_CACHE_TTL_SECONDS, this.config.integration.redisCacheTtlSeconds)
   }
 
   private loadFromFile(): void {
@@ -753,12 +759,13 @@ export class ConfigManager extends EventEmitter {
   private createDefaultConfigFile(): void {
     if (!this.configPath) return
 
-    const dir = path.dirname(this.configPath)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
-    }
+    try {
+      const dir = path.dirname(this.configPath)
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+      }
 
-    const content = `# Niko-Studio Configuration
+      const content = `# Niko-Studio Configuration
 # This file supports hot-reload - changes apply automatically
 
 app_name: niko-studio
@@ -846,6 +853,12 @@ integration:
   redis_cache_ttl_seconds: 120
 `
     fs.writeFileSync(this.configPath, content, 'utf-8')
+    } catch (err) {
+      // Non-fatal: default config file creation is best-effort.
+      // If the directory is read-only or disk is full, the application
+      // can still run with built-in defaults.
+      log.warn('Failed to create default config file', { error: String(err) })
+    }
   }
 
   // ---- File watching ----
@@ -1115,7 +1128,7 @@ export function validateConfig(): { errors: string[]; warnings: string[] } {
   if (config.workflow.sessionTimeout < 60) warnings.push('workflow.sessionTimeout < 60s may cause premature expiry')
 
   // Gateway
-  if (config.gateway.port < 1 || config.gateway.port > 65535) errors.push('gateway.port must be 1-65535')
+  if (!Number.isFinite(config.gateway.port) || config.gateway.port < 1 || config.gateway.port > 65535) errors.push('gateway.port must be 1-65535')
 
   // Graph
   if (config.graph.maxConnections < 1) errors.push('graph.maxConnections must be >= 1')
