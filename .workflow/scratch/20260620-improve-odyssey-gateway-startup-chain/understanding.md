@@ -83,7 +83,63 @@ Tauri Shell
 
 ## 3. Audit Findings
 
-（待审查）
+### Severity Distribution
+
+| Dimension | Critical | High | Medium | Low | Total |
+|-----------|----------|------|--------|-----|-------|
+| Performance | 2 | 4 | 6 | 4 | 16 |
+| Security | 1 | 5 | 7 | 2 | 15 |
+| Architecture | 1 | 3 | 6 | 1 | 11 |
+| Reliability | 1 | 5 | 8 | 2 | 16 |
+| Observability | 0 | 8 | 7 | 2 | 17 |
+| Maintainability | 0 | 3 | 10 | 6 | 19 |
+| **Total** | **5** | **28** | **44** | **17** | **94** |
+
+### Critical Findings (5)
+
+| ID | Dimension | Title | File | Line |
+|----|-----------|-------|------|------|
+| C1 | Perf | 串行 health probe 冷启动 6s+ 延迟 | gateway_runtime.rs | 180 |
+| C2 | Perf | Ephemeral port TcpListener 未 drop — 端口竞争 | gateway_runtime.rs | 248 |
+| C3 | Sec | localhost-only guard 已配置但请求处理未执行 | gateway-request-handler.ts | 40 |
+| C4 | Arch | set*() 全局可变状态替代 proper DI | health/config/mcp-admin/workflow | 多处 |
+| C5 | Rel | shutdownGatewayControlPlane 是 no-op | container/gateway-control-plane.ts | 21 |
+
+### High Findings (28 — 摘要)
+
+| ID | Dim | Title | File |
+|----|-----|-------|------|
+| H1 | Perf | reqwest::Client 每次 is_gateway_healthy 新建 | gateway_runtime.rs:124 |
+| H2 | Perf | std::thread::sleep 阻塞 async runtime | gateway_runtime.rs:439 |
+| H3 | Perf | startGatewayServer 串行初始化 | gateway-bootstrap.ts:63 |
+| H4 | Perf | ServiceContainer._doInitialize 串行初始化 | ServiceContainer.ts:357 |
+| H5 | Perf | CORS origins 每请求重新计算 | gateway-http-adapter.ts:136 |
+| H6 | Sec | 默认 host 0.0.0.0 绑定所有接口 | config.ts:143 |
+| H7 | Sec | CORS wildcard 反射 Origin 头 | gateway-http-adapter.ts:138 |
+| H8 | Sec | Config endpoint 可修改 localhost-only guard | endpoints/config.ts:73 |
+| H9 | Sec | Secret endpoint 无认证走 HTTP | endpoints/config.ts:225 |
+| H10 | Sec | WebSocket relay 无认证无 origin 校验 | gateway-ws.ts:60 |
+| H11 | Sec | Admin endpoints 无认证 | routes/admin.ts:1 |
+| H12 | Arch | gateway-state.ts 跨 4 层的 god module | gateway-state.ts:1 |
+| H13 | Arch | `as unknown as` 类型绕过 | gateway-state.ts:111 |
+| H14 | Arch | MCP 层直接导入 container | gateway-request-handler.ts:4 |
+| H15 | Rel | prewarm 失败丢弃已有健康服务 | gateway-control-plane.ts:124 |
+| H16 | Rel | 无 unhandledRejection handler | gateway-bootstrap.ts:59 |
+| H17 | Rel | WS close 后立即 terminate — 客户端收到非优雅关闭 | gateway-ws.ts:124 |
+| H18 | Rel | ServiceContainer.initializeAll 设 initialized=true 即使部分失败 | ServiceContainer.ts:338 |
+| H19 | Rel | readRequestBody 超时未 destroy socket | gateway-http-adapter.ts:16 |
+| H20 | Rel | 请求 catch 未检查 headersSent | gateway-request-handler.ts:165 |
+| H21 | Obs | 无启动耗时 metric | gateway-bootstrap.ts:85 |
+| H22 | Obs | health-poll loop 无诊断日志 | gateway_runtime.rs:402 |
+| H23 | Obs | sidecar 终止仅发 frontend 不进系统日志 | gateway_runtime.rs:359 |
+| H24 | Obs | requestId 非唯一且未传播到下游 | gateway-request-handler.ts:27 |
+| H25 | Obs | 500 响应无 requestId | gateway-request-handler.ts:165 |
+| H26 | Obs | health 返回 200 即使 degraded | endpoints/health.ts:330 |
+| H27 | Obs | Metrics map 达 500 key 全清丢失历史 | metrics.ts:99 |
+| H28 | Obs | 无 prewarm 失败标记 | gateway-control-plane.ts:119 |
+| H29 | Maint | ConfigManager.loadFromEnv 30+ if 分支 | config/index.ts:601 |
+| H30 | Maint | gateway_runtime.rs start_local_sidecar 复杂度 ~15 | gateway_runtime.rs:223 |
+| H31 | Maint | Rust 端零测试 | gateway_runtime.rs:1 |
 
 ## 4. Root Cause Diagnosis
 
