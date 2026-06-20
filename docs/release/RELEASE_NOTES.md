@@ -1,5 +1,60 @@
 # RELEASE NOTES
 
+## v11.0.0 — 写作工具新能力 + M26 Reader Simulation + 质量加固 (2026-06-20)
+
+### 概述
+
+v11.0.0 新增三大写作工具新能力模块（Story Bible、AI 共创引擎、读者模拟），完成 M26 Reader Simulation 里程碑，并在代码质量、测试覆盖和安全性方面做了全面加固。
+
+### 新功能
+
+**Story Bible (T-010)**
+- Story Bible 实体 CRUD API：`/story-bible/entities/*`
+- 从稿件自动提取实体
+- 完整性评分检查
+
+**AI 共创引擎 (T-020)**
+- 自动/引导式共创生成
+- 创意模式与预设配置
+- Quality Control 输出验证与创意配置
+
+**Reader Simulation (M26)**
+- `/reader/analyze` — 多画像阅读模拟
+- `/reader/ai-flavor` — AI 味检测（规则引擎）
+- `/reader/de-ai` — 去 AI 味重写（RevisionService 集成）
+- `/reader/feedback` — 分析反馈与画像权重调整
+- `/reader/compare` — A/B 版本对比
+- `/reader/personas` — 预设与自定义画像管理
+- `/reader/overlay` — 批注标记可视化
+
+### 改进与修复
+
+- 新手引导系统：首次启动自动检测配置状态
+- 跨章节 AI 上下文：写作助手自动携带前 N 章节摘要
+- 编辑器状态持久化：滚动位置、光标位置、折叠状态
+- localStorage 防抖写入，修复竞态条件
+- setInterval.unref() 防止后台 timer 阻止 Node.js 进程退出
+- console→logger 迁移：统一结构化日志输出
+- 关键空 catch 块修复：补充错误日志
+- fire-and-forget Tauri invoke 调用补充 .catch() 处理
+
+### 质量指标
+
+| 指标 | v10.0.0 | v11.0.0 |
+|------|---------|---------|
+| TypeScript 编译错误 | 0 | 0 |
+| src-ts 测试 | 3,057 | 5,864 |
+| desktop 测试 | — | 3,470 |
+| src-ts 分支覆盖率 | — | 99.93% |
+| desktop 分支覆盖率 | — | 98.34% |
+| npm 审计漏洞 | 0 critical | 1 low (esbuild dev server) |
+
+### 破坏性变更
+
+无。所有新增端点通过 MCP 路由注册，不影响现有 API 契约。
+
+---
+
 ## v10.0.0 — 协作改进三阶段完成 (2026-05-28)
 
 ### 概述
