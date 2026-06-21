@@ -50,3 +50,8 @@ currentEvent/currentData 在 while 循环内初始化，跨 chunk 事件被丢�
 安全相关配置必须有对应的运行时执行路径。漏洞类别：授权绕过 — 配置层实现但请求层未集成。修复：在请求处理器顶部添加 IP 检查中间件（403 拒绝非本地请求）。
 来源：odyssey-improve C3, gateway-request-handler.ts:45-58
 </spec-entry>
+
+<spec-entry category="debug" keywords="recovery,risk,mitigation,test" date="2026-06-21" title="Recovery risk mitigations (lock scope / failure-path / flaky test)" description="R1: Lock domain limited to git-mutating critical sections to avoid throughput regression. R2: Failure-path semantics mus">
+### Recovery risk mitigations (lock scope / failure-path / flaky test)
+R1: Lock domain limited to git-mutating critical sections to avoid throughput regression. R2: Failure-path semantics must preserve existing UI response contracts with explicit failure reason assertions. R3: New concurrent tests must use deterministic temp workspaces and strict teardown to avoid flakiness.
+</spec-entry>

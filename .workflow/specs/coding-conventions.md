@@ -190,3 +190,20 @@ MCP endpoint 接收外部输入时必须强制三道校验，缺一不可（M26 
 **规则**：新建 endpoint 的验收清单必须包含这三道校验，作为可复用 endpoint 安全契约。
 来源：quality-retrospective M26-P1 INS-5e45e297, review.json SEC-001/002/004, reader-endpoints.ts:39,547,640
 </spec-entry>
+
+<spec-entry category="coding" keywords="consistency,foreshadow,api-key,state" date="2026-06-21" title="Foreshadow state/status key alignment pattern" description="Foreshadow data model uses 'state' everywhere (Foreshadow interface, database $.state, foreshadowPlant writes state). AP">
+### Foreshadow state/status key alignment pattern
+Foreshadow data model uses 'state' everywhere (Foreshadow interface, database $.state, foreshadowPlant writes state). API endpoint, service, and engine must all use consistent key name 'state' not 'status'. Mismatch causes query failures as the SQL json_extract uses $.state. ISS-20260618-002 fix: graphForeshadowsEndpoint body.status -> body.state, graphGetForeshadows parameter status -> state, graph-engine getForeshadows parameter status -> state.
+</spec-entry>
+<spec-entry category="coding" keywords="consistency,endpoint,fallback,nested-properties" date="2026-06-21" title="Endpoint nested/flat dual fallback pattern" description="GraphEngine.getCharacter returns attributes nested in properties (data.properties.role), but some callers provide flat s">
+### Endpoint nested/flat dual fallback pattern
+GraphEngine.getCharacter returns attributes nested in properties (data.properties.role), but some callers provide flat shapes (data.role). Endpoint must read props.xxx ?? data.xxx to handle both shapes. ISS-20260618-002 fix: characterProfileEndpoint reads props.role ?? data.role, with similar fallbacks for personality/background/motivation/relationships/growth/five_dimension_score.
+</spec-entry>
+<spec-entry category="coding" keywords="foreshadow,endpoint,semantics,api-shape" date="2026-06-21" title="foreshadowPlant planted_at/planted_time/scene_id semantic separation" description="foreshadowToDict/foreshadowFromDict contract: planted_at = scene identifier (where), planted_time = timestamp (when). fo">
+### foreshadowPlant planted_at/planted_time/scene_id semantic separation
+foreshadowToDict/foreshadowFromDict contract: planted_at = scene identifier (where), planted_time = timestamp (when). foreshadowPlantEndpoint must store scene_id in planted_at (not timestamp), separate planted_time as ISO timestamp, and include scene_id in response. ISS-20260618-002 fix: planted_at=scene_id, planted_time=new Date().toISOString(), response adds scene_id field.
+</spec-entry>
+<spec-entry category="coding" keywords="duplication,single-source-of-truth,ai-templates,dedup" date="2026-06-21" title="AI template words shared module + Set dedup guard" description="When two independent modules share domain constants, extract a shared module (src-ts/reader/ai-templates.ts) exporting d">
+### AI template words shared module + Set dedup guard
+When two independent modules share domain constants, extract a shared module (src-ts/reader/ai-templates.ts) exporting detection and replacement derived arrays. Add Set-based dedup guard: assertNoDuplicates() throws on duplicate label at module load time. ISS-20260621-010 fix: 52->38 Chinese entries (dedup 14), 41->41 English entries (add 16 missing replacements), detector/revision-service both import from shared module.
+</spec-entry>

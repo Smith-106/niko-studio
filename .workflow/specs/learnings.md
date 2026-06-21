@@ -212,3 +212,8 @@ INS-0f0144a2 · M26-P1 retrospective · 路由: note
 新功能前端 API 层在 desktop/src/api/ 添加时，应复制既有 writing-craft.ts 约定而非新造 fetch wrapper：每 endpoint 一个薄函数、直接 callApi 返回（无内层信封解包）、params as unknown as Record<string,unknown> 满足 callApi body 签名、import { type ApiResponse, callApi } from './core'。body cast 是项目级公认取舍而非逐文件决定，应精确匹配。M26 reader.ts 即按此约定，TASK-002-summary 确认与 writing-craft.ts 一致。详见 knowhow KNW-retro-reuse-callapi-wrapper-2026-06-21。
 INS-31c776c2 · M26-P1 retrospective · 路由: note
 </spec-entry>
+
+<spec-entry category="learning" keywords="recovery,completed,mutex,atomicity" date="2026-06-21" title="Recovery chain completed patterns (mutex/atomicity/test-matrix)" description="WS1: workspace-scoped async mutex serializes concurrent restore/rollback per workspace (commit 676fca89). WS2: quickRoll">
+### Recovery chain completed patterns (mutex/atomicity/test-matrix)
+WS1: workspace-scoped async mutex serializes concurrent restore/rollback per workspace (commit 676fca89). WS2: quickRollback persistence only after successful restore, failure branch preserves consistency. WS3: expanded recovery test matrix with concurrency and failure injection.
+</spec-entry>

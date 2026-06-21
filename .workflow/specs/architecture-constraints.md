@@ -277,3 +277,8 @@ M26 实现自定义画像持久化：使用 .niko-studio/reader-personas.json �
 **规则**：前端组件只从 `desktop/src/api/*` 导入领域类型，禁止从 `../src-ts/*` 导入。验收门槛应增加 grep 跨边界 import 检查项——M26 的 DEC-3 契约统一意图被 ARCH-001 实现期 import 捷径绕过。
 来源：quality-retrospective M26-P1 INS-d5187f08, ReportGenerator.tsx:3, reader.ts:17, review.json:138 ARCH-001
 </spec-entry>
+
+<spec-entry category="arch" keywords="recovery,parallel,mutex,atomicity" date="2026-06-21" title="Recovery parallel fix strategy" description="WS1 (workspace-scoped mutex) + WS2 (quickRollback atomicity) can be implemented in parallel; WS3 (test matrix) depends o">
+### Recovery parallel fix strategy
+WS1 (workspace-scoped mutex) + WS2 (quickRollback atomicity) can be implemented in parallel; WS3 (test matrix) depends on both for behavioral stability. Lock domain limited to git-mutating critical sections only to avoid throughput regression.
+</spec-entry>
