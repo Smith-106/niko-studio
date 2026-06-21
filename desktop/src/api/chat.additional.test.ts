@@ -313,4 +313,34 @@ describe('chat additional coverage', () => {
     expect(onContent).not.toHaveBeenCalled()
     expect(loggerErrorMock).toHaveBeenCalledWith('Failed to parse SSE data:', expect.any(SyntaxError))
   })
+
+  it('dispatches content events split across multiple chunks (ISS-20260613-009)', async () => {
+    const onContent = vi.fn()
+    // event: 和 data: 在不同 chunk 到达 — 修复前因 currentEvent 循环内重置而丢失
+    const chunk1 = 'event: content\n'
+    const chunk2 = 'data: {"chunk":"hello","index":0}\n\n'
+
+    vi.stubGlobal('fetch', vi.fn(async () => createSseResponse([chunk1, chunk2])))
+
+    await chatStream(request, { onContent })
+
+    expect(onContent).toHaveBeenCalledWith('hello', 0)
+  })
+
+  it('dispatches the final event when the stream ends without a trailing blank line (ISS-20260613-009)', async () => {
+    const onDone = vi.fn()
+    // 流末尾无尾随空行 — 修复前 done 事件会被截留在 currentEvent/currentData 不触发
+    const sseChunk = [
+      'event: done\n',
+      'data: {"status":"completed"}',
+    ].join('')
+
+    vi.stubGlobal('fetch', vi.fn(async () => createSseResponse([sseChunk])))
+
+    await chatStream(request, { onDone })
+
+    expect(onDone).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'completed' }),
+    )
+  })
 })

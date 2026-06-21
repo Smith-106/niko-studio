@@ -352,11 +352,37 @@ export async function chatStream(
     // 使用流式 TextDecoder
     const decoder = new TextDecoder()
     let buffer = ''
+    // ISS-20260613-009: currentEvent/currentData 必须在循环外声明，
+    // 否则跨 chunk 的 SSE 事件会因每轮循环变量重置而丢失
+    let currentEvent = ''
+    let currentData = ''
 
     while (true) {
       const { done, value } = await reader.read()
 
       if (done) {
+        // 流结束，buffer 可能残留最后一行（无尾随 \n），并入解析后再补发
+        if (buffer) {
+          for (const line of buffer.split('\n')) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7).trim()
+            } else if (line.startsWith('data: ')) {
+              currentData = line.slice(6).trim()
+            }
+          }
+          buffer = ''
+        }
+        // 补发尚未 dispatch 的尾部事件（无尾随空行的流会丢最后一个事件）
+        if (currentEvent && currentData) {
+          try {
+            const data = JSON.parse(currentData)
+            handleStreamEventOptimized(currentEvent, data, callbacks, scheduleContentUpdate)
+          } catch (e) {
+            logger.error('Failed to parse SSE data:', e)
+          }
+          currentEvent = ''
+          currentData = ''
+        }
         // 流结束，刷新剩余内容
         flushContentBuffer()
         break
@@ -368,9 +394,6 @@ export async function chatStream(
       // 解析 SSE 事件
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
-
-      let currentEvent = ''
-      let currentData = ''
 
       for (const line of lines) {
         if (line.startsWith('event: ')) {
