@@ -1,3 +1,9 @@
+---
+related:
+  - "knowhow-knw-retro-reuse-callapi-wrapper-2026-06-21"
+  - "knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21"
+  - "knowhow-knw-retro-verification-green-not-healthy-2026-06-21"
+---
 # Rule-first + LLM enhancement layering — 2026-06-21
 
 **Source**: quality-retrospective M26-P1 (technical lens), INS-8ab166cd
@@ -22,5 +28,5 @@ Building an analysis feature where the rule surface is enumerable (AI-flavor, st
 85% coverage, 12 deterministic tests, degrades gracefully when LLM rewrite path unconfigured.
 
 ## Related
-- [[KNW-retro-verification-green-not-healthy-2026-06-21]] — why rule coverage alone can mask dimensional gaps
-- [[KNW-retro-scope-deviation-deferred-record-2026-06-21]]
+- [[knowhow-knw-retro-verification-green-not-healthy-2026-06-21]] — why rule coverage alone can mask dimensional gaps
+- [[knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21]]

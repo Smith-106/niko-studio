@@ -1,3 +1,10 @@
+---
+related:
+  - "spec:project:coding-conventions"
+  - "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21"
+  - "knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21"
+  - "knowhow-knw-retro-verification-green-not-healthy-2026-06-21"
+---
 # Reuse callApi/ApiResponse wrapper for new frontend API layers — 2026-06-21
 
 **Source**: quality-retrospective M26-P1 (technical lens), INS-31c776c2
@@ -20,4 +27,4 @@ The body cast is an **accepted project-wide tradeoff**, not a per-file decision.
 - `.summaries/TASK-002-summary.md:56` — note: "consistent with existing API layer writing-craft.ts"
 
 ## Related
-- [[KNW-retro-rule-first-llm-enhancement-2026-06-21]]
+- [[knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21]]

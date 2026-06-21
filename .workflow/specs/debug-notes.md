@@ -9,6 +9,9 @@ keywords:
   - workaround
   - root-cause
   - gotcha
+related:
+  - "spec:project:architecture-constraints"
+  - "spec:project:coding-conventions"
 ---
 
 # Debug Notes

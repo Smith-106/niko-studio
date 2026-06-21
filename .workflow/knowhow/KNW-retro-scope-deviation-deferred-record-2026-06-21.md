@@ -1,3 +1,9 @@
+---
+related:
+  - "knowhow-knw-retro-reuse-callapi-wrapper-2026-06-21"
+  - "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21"
+  - "knowhow-knw-retro-verification-green-not-healthy-2026-06-21"
+---
 # Record scope deviations in plan deferred list, not just task Deviations — 2026-06-21
 
 **Source**: quality-retrospective M26-P1 (process lens), INS-0f0144a2
@@ -23,4 +29,4 @@ Otherwise the original scope becomes a hidden gap that review rediscovers as a b
 - `.workflow/state.json` accumulated_context.deferred — empty array, scope not recorded
 
 ## Related
-- [[KNW-retro-verification-green-not-healthy-2026-06-21]]
+- [[knowhow-knw-retro-verification-green-not-healthy-2026-06-21]]

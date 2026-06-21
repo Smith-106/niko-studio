@@ -11,8 +11,8 @@ keywords:
   - formatting
   - pattern
 related:
-  - knowhow-doc-harvest-debug-reexport-anchor
----
+  - "knowhow-doc-harvest-debug-reexport-anchor"
+  - "spec:project:learnings"---
 
 
 

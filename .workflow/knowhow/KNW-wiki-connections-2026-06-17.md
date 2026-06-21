@@ -1,3 +1,8 @@
+---
+related:
+  - "knowhow-knw-wiki-connections-2026-06-18"
+  - "knowhow-knw-wiki-connections-2026-06-21"
+---
 # Wiki Connections — 2026-06-17
 
 ## Baseline

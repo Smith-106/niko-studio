@@ -9,6 +9,9 @@ keywords:
   - gate
   - approval
   - standard
+related:
+  - "spec:project:coding-conventions"
+  - "spec:project:quality-rules"
 ---
 
 # Review Standards

@@ -14,7 +14,8 @@ related:
   - "spec:project:ui-conventions-006"
   - "spec:project:ui-conventions-007"
   - "spec:project:ui-conventions-008"
----
+  - "spec:project:architecture-constraints"
+  - "spec:project:coding-conventions"---
 
 
 

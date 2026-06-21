@@ -14,7 +14,8 @@ related:
   - "spec:project:quality-rules-006"
   - "spec:project:quality-rules-007"
   - "spec:project:quality-rules-008"
----
+  - "spec:project:coding-conventions"
+  - "spec:project:review-standards"---
 
 
 

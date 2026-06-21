@@ -1,3 +1,9 @@
+---
+related:
+  - "knowhow-knw-retro-reuse-callapi-wrapper-2026-06-21"
+  - "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21"
+  - "knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21"
+---
 # Structural verification green ≠ code healthy — 2026-06-21
 
 **Source**: quality-retrospective M26-P1 (quality lens), INS-f54a8bff
@@ -25,5 +31,5 @@ A dimensional review is **never optional** even when verification is green. The 
 - Both high findings mapped to UAT accepted_risk (T-012 CORR-003, T-013 SEC-003) — verification did not surface them
 
 ## Related
-- [[KNW-retro-rule-first-llm-enhancement-2026-06-21]]
-- [[KNW-retro-scope-deviation-deferred-record-2026-06-21]]
+- [[knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21]]
+- [[knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21]]
