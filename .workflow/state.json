@@ -212,9 +212,22 @@
       "completed_at": "2026-06-16T20:35:00+08:00",
       "description": "Execute: 6/6 tasks completed — P0 regression guards (skillsSlice+conversationSlice+learning+workspace endpoints), P1 M25 endpoints (revision+style+worldview), P1 frontend stores+API (writing bridge+3 slices), P1-P2 depth (3 store companions+3 hook tests), coverage baseline (frontend 95-99%, backend ~100%). Also fixed 27 pre-existing failing tests from API evolution.",
       "harvested": true
+    },
+    {
+      "id": "RMAP-20260622-m27-security-frontend",
+      "type": "roadmap",
+      "milestone": "M27",
+      "phase": null,
+      "scope": "milestone",
+      "path": ".workflow/roadmap.md",
+      "status": "completed",
+      "depends_on": null,
+      "created_at": "2026-06-22T02:30:00Z",
+      "completed_at": "2026-06-22T02:30:00Z",
+      "description": "M27 roadmap: Security Hardening (3 HIGH fixes + shared validation module) + Frontend Integration Completion (cross-boundary import elimination)"
     }
   ],
-  "current_milestone": null,
+  "current_milestone": "M27",
   "initialized": true,
   "last_updated": "2026-06-21T13:00:00Z",
   "milestone_history": [
@@ -485,6 +498,25 @@
       "id": "M25",
       "name": "Intelligent Revision + Session Intelligence + Style Personalization",
       "status": "completed"
+    },
+    {
+      "id": "M27",
+      "name": "Security Hardening + Frontend Integration Completion",
+      "type": "standard",
+      "status": "active",
+      "started_at": "2026-06-22T02:30:00Z",
+      "phases": [
+        {
+          "number": 1,
+          "title": "Security Hardening",
+          "status": "pending"
+        },
+        {
+          "number": 2,
+          "title": "Frontend Integration Completion",
+          "status": "pending"
+        }
+      ]
     }
   ],
   "milestones": [
@@ -618,6 +650,24 @@
         1
       ],
       "status": "completed"
+    },
+    {
+      "id": "M27",
+      "name": "Security Hardening + Frontend Integration Completion",
+      "type": "standard",
+      "status": "planned",
+      "phases": [
+        {
+          "number": 1,
+          "title": "Security Hardening",
+          "status": "pending"
+        },
+        {
+          "number": 2,
+          "title": "Frontend Integration Completion",
+          "status": "pending"
+        }
+      ]
     }
   ],
   "project": "niko-studio",
@@ -1100,5 +1150,5 @@
       "reason": "knowledge-audit artifact scope since 2026-05-01"
     }
   ],
-  "status": "idle"
+  "status": "active"
 }

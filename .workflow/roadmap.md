@@ -1,90 +1,136 @@
-# Roadmap: Niko Studio M24 — Tech Debt Cleanup + Narrative Visualization
+# Roadmap: M27 — Security Hardening + Frontend Integration Completion
+
+- [[spec:project:architecture-constraints]]
+- [[spec:project:coding-conventions]]
 
 ## Overview
 
-M24 聚焦两大目标：(1) 清理 M10-M23 积累的 6 项技术债（console 收口、巨型组件拆分、类型安全加固、翻译模块化、catalog 外置、workflow-engine 重构），(2) 在稳定代码基础上交付叙事结构可视化 MVP。技术债采用"接口冻结"策略——所有重构保持公共 API 不变；workflow-engine 采用 Strategy 模式分层；craft-catalog 外置为 JSON 热加载。Phase 1 通过 wave DAG 内部分 3 批次执行（P1 基础设施 → P2 独立重构 → P2 深度重构），Phase 2 在稳定基础上构建新功能。
+M27 聚焦两大目标：(1) 修复 3 个安全 HIGH issues（输入长度/路径遍历/数值范围）并通过共享校验模块将防护推广至全部 15+ endpoints，(2) 清除剩余 6 处前端跨边界 import 并对齐 frontend-backend 类型契约。
+
+安全修复采用"输入校验三件套"模式（长度限制 + 路径收容 + 数值范围），与 learnings 中的 MCP endpoint 安全契约一致。前端修复延续 ISS-015/016 的 api/reader.ts 重导出模式，消除所有 `from '../../../../src-ts/'` 跨边界 import。
 
 ## Phases
 
-**Minimum-phase principle:** Default 1 phase. Only add phases for hard dependencies (runtime + not parallelizable + full barrier). Wave DAG inside each phase handles task ordering.
-
-- [x] **Phase 1: Tech Debt Cleanup** — F-001~F-006 技术债清理，3 波次递进执行 ✅ completed
-- [x] **Phase 2: Narrative Visualization MVP** — F-007 叙事结构可视化核心功能 ✅ completed
+- [ ] **Phase 1: Security Hardening** — 共享校验模块 + 3 个 HIGH fix + 全端点推广
+- [ ] **Phase 2: Frontend Integration Completion** — 跨边界 import 清除 + 类型对齐 + reader-endpoints 拆分准备
 
 ## Phase Details
 
-### Phase 1: Tech Debt Cleanup
+### Phase 1: Security Hardening
 
-**Goal**: 完成 6 项技术债清理，提升代码健康度。Wave 1 建立基础设施模式（logger + 组件拆分），Wave 2 执行独立重构（as-any + translations），Wave 3 执行深度重构（catalog 外置 + workflow-engine Strategy 模式）。全程接口冻结，不破坏向后兼容。
+**Goal**: 创建共享输入校验模块，修复 3 个安全 HIGH，将防护推广至 reader 全部 7 个端点 + 其他模块 15 个端点。
 
-**Depends on**: Nothing (first phase)
+**Depends on**: Nothing
 
-**Requirements**: F-001, F-002, F-003, F-004, F-005, F-006
-
-**Success Criteria** (what must be TRUE):
-1. 前端 17 个文件的 `console.*` 全部收口到结构化 logger，生产环境无信息泄露
-2. EvaluationPanel (1783行) 和 StoryBiblePanel (1788行) 各拆分为 ≤500 行的子组件，保持功能等价
-3. 4 个非测试文件的 `as any` 全部替换为正确类型，TypeScript strict 无报错
-4. translations.ts (2892行) 按模块拆分为独立文件，key 结构不变，i18n 流程无影响
-5. craft-catalog (1584行) 外置为 JSON 文件，支持热加载，现有引用透明迁移
-6. workflow-engine (1970行) 采用 Strategy 模式分层，编排逻辑与业务规则分离，公共 API 签名不变
-7. 所有现有测试通过，无回归
-
-### Phase 2: Narrative Visualization MVP
-
-**Goal**: 交付叙事结构可视化核心功能——故事线时间轴、角色关系图谱、情节张力曲线。基于 Phase 1 稳定的 workflow-engine 和 craft 数据层构建，集成到现有编辑器面板体系。
-
-**Depends on**: Phase 1 (workflow-engine refactored API + externalized craft-catalog)
-
-**Requirements**: F-007
+**Requirements**: ISS-20260620-007 (文本长度), ISS-20260620-008 (路径遍历), ISS-20260620-009 (数值范围)
 
 **Success Criteria** (what must be TRUE):
-1. 故事线时间轴组件渲染章节事件序列，支持缩放和筛选
-2. 角色关系图谱动态展示角色互动频率和关系类型变化
-3. 情节张力曲线基于 M23 reader-state 模型实时渲染，标注关键转折点
-4. 可视化面板集成到编辑器侧边栏，响应文档切换
-5. 新增测试覆盖率 ≥ 80%，现有测试无回归
+1. `src-ts/mcp/input-validation.ts` 导出三个共享校验函数：`validateStringLength()`, `safeResolveWorkspaceRoot()`, `validateWeight()`
+2. reader 7 个 endpoint 全部添加 `validateStringLength` 长度守卫（novelId<=256, text<=100k, name<=200），超标返回 413
+3. `NIKO_WORKFLOW_WORKSPACE` 在 8 个 endpoint + 3 个 service 文件共 11 处替换为 `safeResolveWorkspaceRoot()`，含路径遍历拦截
+4. `rsCreateCustomPersonaEndpoint` 权重校验添加 `Number.isFinite()` + [0,1] 范围检查；`adjustPersonaWeights` NaN 安全回退
+5. `chat.ts` 的 `validateChatMessagesLimits` 重构为调用共享模块（可选，保持向后兼容）
+6. 至少 15 个新增单元测试覆盖三类校验的边界条件
+7. TypeScript strict 无新增 error，现有测试无回归
 
-**Phase split justification (3-condition check):**
-1. Runtime dependency: F-007 可视化组件在运行时调用 workflow-engine 的分析编排 API 和 craft-catalog 数据
-2. Not parallelizable: workflow-engine 内部 Strategy 模式重构改变执行路径，F-007 集成测试需要稳定的重构后实现
-3. Full barrier: F-001~F-006 全部完成并验证后，F-007 才能可靠集成测试
+**Wave DAG**:
+- Wave 1: TASK-001 (创建 input-validation.ts 共享模块) → 无依赖
+- Wave 2: TASK-002/003/004 (三个 HIGH fix) → depends_on TASK-001
+- Wave 3: TASK-005 (其他端点推广) → depends_on TASK-002
+
+### Phase 2: Frontend Integration Completion
+
+**Goal**: 清除全部前端跨边界 import，对齐 frontend-backend 类型契约，为 reader-endpoints.ts 拆分做准备。
+
+**Depends on**: Phase 1 (类型可能因 input-validation 改变)
+
+**Requirements**: ISS-20260621-018 (跨边界 import), ISS-20260621-013 (reader-endpoints 拆分)
+
+**Success Criteria** (what must be TRUE):
+1. `desktop/src/` 零个 `from '../../../../src-ts/'` 或 `from '../../../src-ts/'` 跨边界 import（`grep -r "from.*src-ts" desktop/src/` 返回 0 结果）
+2. `desktop/src/types/` 目录下所有类型均从 `api/` 层重导出，或定义在独立的 `types/` 文件中
+3. `desktop/src/api/narrative-visualization.ts` 类型从 `api/` 层重导出而非直接 import src-ts
+4. `desktop/src/utils/writingSessionTelemetry.ts` 类型改为本地声明或 api 层重导出
+5. `desktop/src/components/DocumentEditor.tsx` 的 `buildPersonalizedCraftProfile` 调用通过 api 层间接
+6. reader-endpoints.ts 拆分方案文档化（路由/校验/服务/类型导出），为后续 M 执行做准备
+7. TypeScript strict 无新增 error，现有测试无回归
+
+**Wave DAG**:
+- Wave 1: TASK-006 (类型迁移到 api/types 层) → 无依赖
+- Wave 2: TASK-007 (组件 import 重指向) → depends_on TASK-006
+- Wave 3: TASK-008 (reader-endpoints 拆分方案 + grep 验收) → depends_on TASK-007
 
 ## Scope Decisions
 
 - **In scope**:
-  - F-001: 前端 console 收口（17 文件）
-  - F-002: EvaluationPanel + StoryBiblePanel 拆分
-  - F-003: MathView, ExportDialog, WritingHelperPanel, revisionOrchestrator 类型加固
-  - F-004: translations.ts 按模块拆分
-  - F-005: craft-catalog 外置为 JSON + 热加载 loader
-  - F-006: workflow-engine Strategy 模式分层重构
-  - F-007: 叙事可视化 MVP（时间轴 + 关系图 + 张力曲线）
+  - S-001: 共享输入校验模块 (input-validation.ts)
+  - S-002: Reader endpoints 文本长度限制 (ISS-20260620-007)
+  - S-003: Workspace root 路径遍历拦截 (ISS-20260620-008)
+  - S-004: Persona 权重数值范围校验 (ISS-20260620-009)
+  - S-005: 其他端点输入校验推广（critic/wiki/graph/agent/workflow/memory）
+  - F-001: narrative-visualization.ts 跨边界 import 清除
+  - F-002: writingSessionTelemetry.ts 跨边界 import 清除
+  - F-003: workspace.ts 跨边界 import 清除
+  - F-004: DocumentEditor.tsx buildPersonalizedCraftProfile import 清除
+  - F-005: reader-endpoints.ts 拆分方案文档化
 
-- **Deferred (M25)**:
-  - F-008: 智能修订工作流增强
-  - 写作会话智能（行为模式分析）
-  - 写作知识个性化（风格推荐）
+- **Deferred (M28+)**:
+  - reader-endpoints.ts 实际拆分执行（需架构决策 + 专项测试）
+  - gateway-control-plane 双文件清理（container/ re-export 垫片保持向后兼容）
+  - GatewayDeps ISP 拆分 (ISS-20260613-033)
+  - 29 个 medium issues 逐个修复（分批 triage 到后续 M）
 
 - **Out of scope**:
-  - 重写 workflow-engine 架构（仅重构）
-  - 引入新 UI 框架或状态管理库
   - 破坏现有 API 接口向后兼容性
-  - 多人协作功能
-  - Electron 框架迁移
+  - 引入新依赖
+  - 前端新功能开发
 
 ## Implementation Strategies
 
 | Strategy | Applies To | Description |
 |----------|-----------|-------------|
-| 接口冻结 | F-001~F-006 | 所有重构保持公共 API 签名不变，内部实现自由调整 |
-| JSON 外置 | F-005 | craft-catalog 数据提取为 JSON，TypeScript 仅保留 loader + 类型定义 |
-| Strategy 模式 | F-006 | workflow-engine 按职责拆分为 Strategy 接口 + 具体策略实现 |
-| 逐步拆分 | F-002 | 巨型组件先提取子组件，再调整 props 传递，最后验证渲染等价 |
+| 共享校验模块 | S-001~S-005 | 创建 src-ts/mcp/input-validation.ts，导出三件套校验函数 |
+| 输入校验三件套 | S-002~S-005 | 长度上限 + 路径收容 + 数值范围，每个 endpoint 必备 |
+| API 层重导出 | F-001~F-004 | 类型在 api/ 层定义或重导出，前端组件只从 api/ 或 types/ 导入 |
+| 方案先行 | F-005 | reader-endpoints 拆分先出方案，不直接执行 |
+| 渐进替换 | S-003 | 11 处 resolveWorkspaceRoot 渐进替换为 safeResolveWorkspaceRoot，保持接口不变 |
+
+## Task Breakdown
+
+### Phase 1 Tasks (8 tasks)
+
+| ID | Title | Wave | Effort | Depends On | Files |
+|----|-------|------|--------|------------|-------|
+| TASK-001 | 创建 src-ts/mcp/input-validation.ts 共享校验模块 | W1 | S | — | src-ts/mcp/input-validation.ts (new) |
+| TASK-002 | Reader endpoints 添加文本长度限制 (ISS-007) | W2 | M | TASK-001 | src-ts/reader/mcp/reader-endpoints.ts |
+| TASK-003 | safeResolveWorkspaceRoot 替换 11 处 resolveWorkspaceRoot (ISS-008) | W2 | M | TASK-001 | src-ts/mcp/endpoints/{workspace,workflow,wiki,graph,critic,chat,agent,memory}.ts, src-ts/mcp/services/workflow.ts, workflow-revision.ts, src-ts/services/revision-service.ts |
+| TASK-004 | Persona 权重 Number.isFinite + [0,1] 范围校验 (ISS-009) | W2 | S | TASK-001 | src-ts/reader/mcp/reader-endpoints.ts, src-ts/reader/PersonaDefinition.ts |
+| TASK-005 | 其他端点输入校验推广 | W3 | M | TASK-002 | src-ts/mcp/endpoints/{critic,wiki,graph,agent,workflow,memory}.ts |
+| TASK-006 | 输入校验单元测试 (15+ cases) | W3 | M | TASK-004 | tests/mcp/input-validation.test.ts (new) |
+| TASK-007 | reader-endpoints 集成测试补充 | W3 | S | TASK-002 | tests/reader/reader-endpoints.validation.test.ts (new) |
+| TASK-008 | 回归验证 + TypeScript 严格检查 | W3 | S | TASK-005~007 | — |
+
+### Phase 2 Tasks (4 tasks)
+
+| ID | Title | Wave | Effort | Depends On | Files |
+|----|-------|------|--------|------------|-------|
+| TASK-009 | narrative-visualization + workspace + writingSession 类型迁移 | W1 | M | — | desktop/src/api/narrative-visualization.ts, desktop/src/types/workspace.ts, desktop/src/utils/writingSessionTelemetry.ts |
+| TASK-010 | DocumentEditor.tsx buildPersonalizedCraftProfile import 清除 | W2 | S | TASK-009 | desktop/src/components/DocumentEditor.tsx, desktop/src/components/DocumentEditor.*.test.tsx |
+| TASK-011 | reader-endpoints.ts 拆分方案文档化 | W2 | S | TASK-010 | .workflow/milestones/M27/reader-endpoints-split-plan.md |
+| TASK-012 | grep 验收 + 回归测试 | W3 | S | TASK-010 | — |
+
+## Risk Assessment
+
+| Risk | Probability | Impact | Mitigation |
+|------|------------|--------|------------|
+| safeResolveWorkspaceRoot 破坏现有 workspace 解析 | Low | High | 保持 resolveWorkspaceRoot() 签名不变，内部委托 safeResolveWorkspaceRoot()；添加 NIKO_WORKSPACE_ALLOW_OUTSIDE=true 逃生舱 |
+| 文本长度限制过小影响正常使用 | Low | Medium | MAX_TEXT_LENGTH=100k > 24k chat 限制，覆盖 99% 稿件；可配置 |
+| 类型迁移导致 test break | Medium | Low | 渐进替换，每步 tsc + vitest 验证 |
+| reader-endpoints 拆分方案决策分歧 | Medium | Low | P2 只产出方案，不执行；留 M28 决策 |
 
 ## Progress
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Tech Debt & Integration | ✅ Completed | F-001~F-006, 3-way data integration, mtime detection, sourceIndex persistence, Nowledge Mem library bridge |
-| 2. Narrative Visualization MVP | ✅ Completed | F-007: TimelineView, CharacterGraphView, TensionCurveView, ReaderState integration |
+| 1. Security Hardening | Not started | — |
+| 2. Frontend Integration Completion | Not started | — |
