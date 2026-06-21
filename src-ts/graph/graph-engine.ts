@@ -1181,9 +1181,9 @@ export class GraphEngine {
   // Foreshadow
   // -----------------------------------------------------------------------
 
-  /** Get foreshadow status */
+  /** Get foreshadows by state */
   async getForeshadows(
-    status?: string,
+    state?: string,
     chapter?: number | null,
     scope?: GraphReadScope | null
   ): Promise<Record<string, unknown>[]> {
@@ -1197,9 +1197,9 @@ export class GraphEngine {
       params.push(...scoped.params);
     }
 
-    if (status) {
+    if (state) {
       sql += " AND json_extract(properties, '$.state') = ?";
-      params.push(status);
+      params.push(state);
     }
 
     if (chapter !== undefined && chapter !== null) {

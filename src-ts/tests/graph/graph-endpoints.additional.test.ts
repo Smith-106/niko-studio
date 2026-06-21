@@ -77,7 +77,8 @@ describe('graph endpoints additional coverage', () => {
       expect.objectContaining({
         description: 'A bell tolls before each attack.',
         state: 'planted',
-        planted_at: '2026-06-04T13:00:00.000Z',
+        planted_at: 'scene-7',
+        planted_time: '2026-06-04T13:00:00.000Z',
         importance: 3,
         scene_id: 'scene-7',
         tags: ['omen', 'bell'],
@@ -103,7 +104,8 @@ describe('graph endpoints additional coverage', () => {
       expect.objectContaining({
         description: 'Defaultable omen',
         state: 'planted',
-        planted_at: '2026-06-04T13:00:00.000Z',
+        planted_at: '',
+        planted_time: '2026-06-04T13:00:00.000Z',
         importance: 1,
       }),
     );
@@ -188,7 +190,7 @@ describe('graph endpoints additional coverage', () => {
     expect(graphGetCharacterMock).toHaveBeenCalledWith('', true, false, null);
   });
 
-  it('uses default foreshadow status and a project-only scope when listing foreshadows', async () => {
+  it('uses default foreshadow state and a project-only scope when listing foreshadows', async () => {
     graphGetForeshadowsMock.mockResolvedValueOnce([{ id: 'foreshadow-2' }]);
     const { graphForeshadowsEndpoint } = await import('../../mcp/endpoints/graph.js');
 

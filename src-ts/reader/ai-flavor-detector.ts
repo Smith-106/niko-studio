@@ -11,6 +11,11 @@
  * Related: R-M26-003, TASK-004
  */
 
+import {
+  AI_TEMPLATE_PATTERNS_ZH as AI_TEMPLATE_PATTERNS,
+  AI_TEMPLATE_PATTERNS_EN,
+} from './ai-templates.js';
+
 // ============================================================
 // Types
 // ============================================================
@@ -43,107 +48,13 @@ export interface AIFlavorResult {
 
 /**
  * Chinese AI template expressions — commonly overused by LLMs
+ * (imported from ai-templates.ts — single source of truth)
  */
-const AI_TEMPLATE_PATTERNS: Array<{ pattern: RegExp; label: string; weight: number }> = [
-  { pattern: /值得注意的是/g, label: '值得注意的是', weight: 1.0 },
-  { pattern: /让我们/g, label: '让我们', weight: 0.8 },
-  { pattern: /综上所述/g, label: '综上所述', weight: 1.0 },
-  { pattern: /首先[，,]/g, label: '首先，', weight: 0.6 },
-  { pattern: /其次[，,]/g, label: '其次，', weight: 0.6 },
-  { pattern: /最后[，,]/g, label: '最后，', weight: 0.6 },
-  { pattern: /总而言之/g, label: '总而言之', weight: 1.0 },
-  { pattern: /不可否认/g, label: '不可否认', weight: 0.9 },
-  { pattern: /毫无疑问/g, label: '毫无疑问', weight: 0.9 },
-  { pattern: /显而易见/g, label: '显而易见', weight: 0.9 },
-  { pattern: /从某种意义来说/g, label: '从某种意义来说', weight: 0.8 },
-  { pattern: /在一定程度上/g, label: '在一定程度上', weight: 0.8 },
-  { pattern: /不难发现/g, label: '不难发现', weight: 0.9 },
-  { pattern: /由此可见/g, label: '由此可见', weight: 0.9 },
-  { pattern: /一言以蔽之/g, label: '一言以蔽之', weight: 1.0 },
-  { pattern: /更有甚者/g, label: '更有甚者', weight: 0.8 },
-  { pattern: /退一步说/g, label: '退一步说', weight: 0.8 },
-  { pattern: /平心而论/g, label: '平心而论', weight: 0.9 },
-  { pattern: /众所周知/g, label: '众所周知', weight: 0.9 },
-  { pattern: /换言之/g, label: '换言之', weight: 0.7 },
-  { pattern: /追根溯源/g, label: '追根溯源', weight: 0.8 },
-  { pattern: /归根结底/g, label: '归根结底', weight: 0.9 },
-  { pattern: /一言蔽之/g, label: '一言蔽之', weight: 1.0 },
-  { pattern: /无独有偶/g, label: '无独有偶', weight: 0.8 },
-  { pattern: /更有甚者/g, label: '更有甚者', weight: 0.8 },
-  { pattern: /无独有偶/g, label: '无独有偶', weight: 0.8 },
-  { pattern: /退一步讲/g, label: '退一步讲', weight: 0.8 },
-  { pattern: /退一步说/g, label: '退一步说', weight: 0.8 },
-  { pattern: /退一步来看/g, label: '退一步来看', weight: 0.8 },
-  { pattern: /值得注意的是/g, label: '值得注意的是', weight: 1.0 },
-  { pattern: /需要指出的是/g, label: '需要指出的是', weight: 0.9 },
-  { pattern: /必须承认/g, label: '必须承认', weight: 0.9 },
-  { pattern: /不得不承认/g, label: '不得不承认', weight: 0.9 },
-  { pattern: /应当指出/g, label: '应当指出', weight: 0.9 },
-  { pattern: /需要强调/g, label: '需要强调', weight: 0.9 },
-  { pattern: /有必要说明/g, label: '有必要说明', weight: 0.9 },
-  { pattern: /特别需要/g, label: '特别需要', weight: 0.8 },
-  { pattern: /特别值得一提的是/g, label: '特别值得一提的是', weight: 0.9 },
-  { pattern: /特别值得注意的是/g, label: '特别值得注意的是', weight: 0.9 },
-  { pattern: /更加重要的是/g, label: '更加重要的是', weight: 0.8 },
-  { pattern: /更为重要的是/g, label: '更为重要的是', weight: 0.8 },
-  { pattern: /更重要的是/g, label: '更重要的是', weight: 0.8 },
-  { pattern: /更加重要的是/g, label: '更加重要的是', weight: 0.8 },
-  { pattern: /更为重要的是/g, label: '更为重要的是', weight: 0.8 },
-  { pattern: /更重要的是/g, label: '更重要的是', weight: 0.8 },
-  { pattern: /更加重要的是/g, label: '更加重要的是', weight: 0.8 },
-  { pattern: /更为重要的是/g, label: '更为重要的是', weight: 0.8 },
-  { pattern: /更重要的是/g, label: '更重要的是', weight: 0.8 },
-  { pattern: /更加重要的是/g, label: '更加重要的是', weight: 0.8 },
-  { pattern: /更为重要的是/g, label: '更为重要的是', weight: 0.8 },
-  { pattern: /更重要的是/g, label: '更重要的是', weight: 0.8 },
-];
 
 /**
  * English AI template expressions
+ * (imported from ai-templates.ts — single source of truth)
  */
-const AI_TEMPLATE_PATTERNS_EN: Array<{ pattern: RegExp; label: string; weight: number }> = [
-  { pattern: /it is important to note that/gi, label: 'it is important to note that', weight: 0.9 },
-  { pattern: /it should be noted that/gi, label: 'it should be noted that', weight: 0.9 },
-  { pattern: /in conclusion/gi, label: 'in conclusion', weight: 1.0 },
-  { pattern: /to summarize/gi, label: 'to summarize', weight: 0.9 },
-  { pattern: /in summary/gi, label: 'in summary', weight: 0.9 },
-  { pattern: /furthermore/gi, label: 'furthermore', weight: 0.7 },
-  { pattern: /moreover/gi, label: 'moreover', weight: 0.7 },
-  { pattern: /additionally/gi, label: 'additionally', weight: 0.6 },
-  { pattern: /consequently/gi, label: 'consequently', weight: 0.7 },
-  { pattern: /therefore/gi, label: 'therefore', weight: 0.6 },
-  { pattern: /thus/gi, label: 'thus', weight: 0.6 },
-  { pattern: /however/gi, label: 'however', weight: 0.5 },
-  { pattern: /nevertheless/gi, label: 'nevertheless', weight: 0.7 },
-  { pattern: /on the other hand/gi, label: 'on the other hand', weight: 0.7 },
-  { pattern: /it is worth noting/gi, label: 'it is worth noting', weight: 0.9 },
-  { pattern: /it is worth mentioning/gi, label: 'it is worth mentioning', weight: 0.9 },
-  { pattern: /delve into/gi, label: 'delve into', weight: 0.8 },
-  { pattern: /navigate the complexities of/gi, label: 'navigate the complexities of', weight: 1.0 },
-  { pattern: /in the realm of/gi, label: 'in the realm of', weight: 0.9 },
-  { pattern: /a myriad of/gi, label: 'a myriad of', weight: 0.8 },
-  { pattern: /tapestry of/gi, label: 'tapestry of', weight: 0.9 },
-  { pattern: /landscape of/gi, label: 'landscape of', weight: 0.8 },
-  { pattern: /multifaceted/gi, label: 'multifaceted', weight: 0.8 },
-  { pattern: /underscores the importance of/gi, label: 'underscores the importance of', weight: 0.9 },
-  { pattern: /highlights the need for/gi, label: 'highlights the need for', weight: 0.9 },
-  { pattern: /serves as a testament to/gi, label: 'serves as a testament to', weight: 1.0 },
-  { pattern: /sheds light on/gi, label: 'sheds light on', weight: 0.8 },
-  { pattern: /paves the way for/gi, label: 'paves the way for', weight: 0.9 },
-  { pattern: /opens the door to/gi, label: 'opens the door to', weight: 0.8 },
-  { pattern: /at the end of the day/gi, label: 'at the end of the day', weight: 0.8 },
-  { pattern: /when it comes to/gi, label: 'when it comes to', weight: 0.7 },
-  { pattern: /in terms of/gi, label: 'in terms of', weight: 0.6 },
-  { pattern: /with respect to/gi, label: 'with respect to', weight: 0.7 },
-  { pattern: /in the context of/gi, label: 'in the context of', weight: 0.7 },
-  { pattern: /it goes without saying/gi, label: 'it goes without saying', weight: 0.9 },
-  { pattern: /needless to say/gi, label: 'needless to say', weight: 0.9 },
-  { pattern: /as a matter of fact/gi, label: 'as a matter of fact', weight: 0.8 },
-  { pattern: /to put it simply/gi, label: 'to put it simply', weight: 0.8 },
-  { pattern: /in other words/gi, label: 'in other words', weight: 0.6 },
-  { pattern: /for instance/gi, label: 'for instance', weight: 0.5 },
-  { pattern: /for example/gi, label: 'for example', weight: 0.4 },
-];
 
 /**
  * Sensory vocabulary categories

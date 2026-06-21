@@ -109,9 +109,9 @@ export async function graphCharacterEndpoint(request: HttpRequest): Promise<Http
 export async function graphForeshadowsEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const scope = resolveGraphScope(body);
-  const status = body.status as string | undefined;
+  const state = body.state as string | undefined;
   const result = await graphGetForeshadows(
-    status ?? undefined,
+    state ?? undefined,
     body.chapter as number | undefined,
     scope
   );
@@ -132,7 +132,8 @@ export async function foreshadowPlantEndpoint(request: HttpRequest): Promise<Htt
   const properties: Record<string, unknown> = {
     description,
     state: 'planted',
-    planted_at: new Date().toISOString(),
+    planted_at: body.scene_id ?? '',
+    planted_time: new Date().toISOString(),
     importance: body.importance ?? 1,
     ...(body.scene_id ? { scene_id: body.scene_id } : {}),
     ...(Array.isArray(body.tags) ? { tags: body.tags } : {}),
@@ -147,7 +148,8 @@ export async function foreshadowPlantEndpoint(request: HttpRequest): Promise<Htt
     description,
     state: 'planted',
     planted_at: String(properties.planted_at),
-    planted_time: String(properties.planted_at),
+    planted_time: String(properties.planted_time),
+    scene_id: body.scene_id ? String(body.scene_id) : null,
     hints: [],
     harvested_at: null,
     harvested_time: null,
@@ -196,13 +198,13 @@ export async function characterProfileEndpoint(request: HttpRequest): Promise<Ht
   return jsonResponse({
     id: String(data.id ?? `char-${name}`),
     name,
-    role: String(props.role ?? 'unknown'),
-    personality: props.personality ?? {},
-    background: props.background ?? {},
-    motivation: props.motivation ?? {},
-    relationships: props.relationships ?? {},
-    growth: props.growth ?? {},
-    five_dimension_score: props.five_dimension_score ?? {},
+    role: String(props.role ?? data.role ?? 'unknown'),
+    personality: props.personality ?? data.personality ?? {},
+    background: props.background ?? data.background ?? {},
+    motivation: props.motivation ?? data.motivation ?? {},
+    relationships: props.relationships ?? data.relationships ?? {},
+    growth: props.growth ?? data.growth ?? {},
+    five_dimension_score: props.five_dimension_score ?? data.five_dimension_score ?? {},
     created_at: String(data.created_at ?? new Date().toISOString()),
     updated_at: String(data.updated_at ?? new Date().toISOString()),
   });

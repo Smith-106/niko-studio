@@ -108,13 +108,13 @@ export async function graphGetRelationships(
 }
 
 export async function graphGetForeshadows(
-  status?: string | null,
+  state?: string | null,
   chapter?: number | null,
   scope?: GraphReadScope | null
 ): Promise<unknown[]> {
   const engine = getEngine();
   if (!engine) return [];
-  return scope ? engine.getForeshadows(status ?? undefined, chapter, scope) : engine.getForeshadows(status ?? undefined, chapter);
+  return scope ? engine.getForeshadows(state ?? undefined, chapter, scope) : engine.getForeshadows(state ?? undefined, chapter);
 }
 
 export async function graphAddEntity(

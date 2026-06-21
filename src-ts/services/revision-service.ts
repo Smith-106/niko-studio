@@ -38,6 +38,11 @@ import type {
 
 import { createLogger } from '../logger/index';
 
+import {
+  AI_TEMPLATE_REPLACEMENTS_ZH as AI_TEMPLATE_REPLACEMENTS,
+  AI_TEMPLATE_REPLACEMENTS_EN,
+} from '../reader/ai-templates.js';
+
 const log = createLogger('revision-service');
 
 // ============================================================
@@ -45,79 +50,12 @@ const log = createLogger('revision-service');
 // ============================================================
 
 /**
- * Chinese AI template expressions that should be replaced with natural alternatives.
+ * Chinese AI template replacements — imported from ai-templates.ts (single source of truth)
  */
-const AI_TEMPLATE_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
-  { pattern: /值得注意的是/g, replacement: '' },
-  { pattern: /让我们/g, replacement: '' },
-  { pattern: /综上所述/g, replacement: '' },
-  { pattern: /首先[，,]/g, replacement: '' },
-  { pattern: /其次[，,]/g, replacement: '' },
-  { pattern: /最后[，,]/g, replacement: '' },
-  { pattern: /总而言之/g, replacement: '' },
-  { pattern: /不可否认/g, replacement: '' },
-  { pattern: /毫无疑问/g, replacement: '' },
-  { pattern: /显而易见/g, replacement: '' },
-  { pattern: /从某种意义来说/g, replacement: '' },
-  { pattern: /在一定程度上/g, replacement: '' },
-  { pattern: /不难发现/g, replacement: '' },
-  { pattern: /由此可见/g, replacement: '' },
-  { pattern: /一言以蔽之/g, replacement: '' },
-  { pattern: /更有甚者/g, replacement: '' },
-  { pattern: /退一步说/g, replacement: '' },
-  { pattern: /退一步讲/g, replacement: '' },
-  { pattern: /退一步来看/g, replacement: '' },
-  { pattern: /平心而论/g, replacement: '' },
-  { pattern: /众所周知/g, replacement: '' },
-  { pattern: /换言之/g, replacement: '' },
-  { pattern: /追根溯源/g, replacement: '' },
-  { pattern: /归根结底/g, replacement: '' },
-  { pattern: /一言蔽之/g, replacement: '' },
-  { pattern: /无独有偶/g, replacement: '' },
-  { pattern: /需要指出的是/g, replacement: '' },
-  { pattern: /必须承认/g, replacement: '' },
-  { pattern: /不得不承认/g, replacement: '' },
-  { pattern: /应当指出/g, replacement: '' },
-  { pattern: /需要强调/g, replacement: '' },
-  { pattern: /有必要说明/g, replacement: '' },
-  { pattern: /特别需要/g, replacement: '' },
-  { pattern: /特别值得一提的是/g, replacement: '' },
-  { pattern: /特别值得注意的是/g, replacement: '' },
-  { pattern: /更加重要的是/g, replacement: '' },
-  { pattern: /更为重要的是/g, replacement: '' },
-  { pattern: /更重要的是/g, replacement: '' },
-];
 
 /**
- * English AI template expressions that should be replaced.
+ * English AI template replacements — imported from ai-templates.ts (single source of truth)
  */
-const AI_TEMPLATE_REPLACEMENTS_EN: Array<{ pattern: RegExp; replacement: string }> = [
-  { pattern: /it is important to note that/gi, replacement: '' },
-  { pattern: /it should be noted that/gi, replacement: '' },
-  { pattern: /in conclusion/gi, replacement: '' },
-  { pattern: /to summarize/gi, replacement: '' },
-  { pattern: /in summary/gi, replacement: '' },
-  { pattern: /it is worth noting/gi, replacement: '' },
-  { pattern: /it is worth mentioning/gi, replacement: '' },
-  { pattern: /delve into/gi, replacement: 'explore' },
-  { pattern: /navigate the complexities of/gi, replacement: 'understand' },
-  { pattern: /in the realm of/gi, replacement: 'in' },
-  { pattern: /a myriad of/gi, replacement: 'many' },
-  { pattern: /tapestry of/gi, replacement: 'rich' },
-  { pattern: /landscape of/gi, replacement: 'world of' },
-  { pattern: /multifaceted/gi, replacement: 'complex' },
-  { pattern: /underscores the importance of/gi, replacement: 'shows' },
-  { pattern: /highlights the need for/gi, replacement: 'shows why' },
-  { pattern: /serves as a testament to/gi, replacement: 'shows' },
-  { pattern: /sheds light on/gi, replacement: 'reveals' },
-  { pattern: /paves the way for/gi, replacement: 'enables' },
-  { pattern: /opens the door to/gi, replacement: 'allows' },
-  { pattern: /at the end of the day/gi, replacement: 'ultimately' },
-  { pattern: /it goes without saying/gi, replacement: '' },
-  { pattern: /needless to say/gi, replacement: '' },
-  { pattern: /as a matter of fact/gi, replacement: '' },
-  { pattern: /to put it simply/gi, replacement: '' },
-];
 
 /**
  * Apply rule-based de-AI rewrites to text.

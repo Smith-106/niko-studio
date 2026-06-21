@@ -188,9 +188,9 @@ describe('graph foreshadow endpoint branch coverage', () => {
   it('foreshadowStatsEndpoint returns counts for planted/hinted/harvested', async () => {
     const { foreshadowStatsEndpoint } = await import('../../mcp/endpoints/graph');
 
-    graphGetForeshadowsMock.mockImplementation(async (status) => {
-      if (status === 'planted') return [{ id: '1' }, { id: '2' }];
-      if (status === 'hinted') return [{ id: '3' }];
+    graphGetForeshadowsMock.mockImplementation(async (state) => {
+      if (state === 'planted') return [{ id: '1' }, { id: '2' }];
+      if (state === 'hinted') return [{ id: '3' }];
       return []; // harvested
     });
 

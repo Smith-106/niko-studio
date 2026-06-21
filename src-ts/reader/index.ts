@@ -38,3 +38,4 @@ export { ConsensusEngine, createConsensusEngine } from './ConsensusEngine';
 
 export type { AIFlavorIndicator, AIFlavorResult } from './ai-flavor-detector';
 export { detectAIFlavor, createAIFlavorDetector } from './ai-flavor-detector';
+export type { AITemplateEntry } from './ai-templates';
