@@ -1,7 +1,10 @@
 ---
 title: Obsidian Rust-Node-WebView 涓夊眰鏋舵瀯
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-020"
 ---
+
 ---
 type: spec
 slug: harvest-brainstorm-obsidian-architecture

@@ -1,7 +1,10 @@
 ---
 title: Logger isDev-based noop 妯″紡
 createdBy: harvest
+related:
+  - "spec:project:quality-rules-003"
 ---
+
 ---
 type: knowhow
 slug: harvest-debug-logger-noop

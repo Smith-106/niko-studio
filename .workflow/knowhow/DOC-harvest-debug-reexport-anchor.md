@@ -1,7 +1,10 @@
 ---
 title: "缁勪欢瀛愮洰褰?+ 鍏煎鎬?re-export 閿氭ā寮?tags: component-structure,re-export-anchor,backward-compat"
 createdBy: harvest
+related:
+  - "spec:project:coding-conventions-002"
 ---
+
 ---
 type: knowhow
 slug: harvest-debug-reexport-anchor

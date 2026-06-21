@@ -1,7 +1,10 @@
 ---
 title: IntelligenceService content-hash 缂撳瓨閬垮厤鍐椾綑 API 璋冪敤
 createdBy: harvest
+related:
+  - "spec:project:coding-conventions-010"
 ---
+
 ---
 type: knowhow
 slug: harvest-other-intelligence-cache

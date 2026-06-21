@@ -1,7 +1,10 @@
 ---
 title: M24 5 鎺ュ彛鍚戝悗鍏煎濂戠害
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-024"
 ---
+
 ---
 type: spec
 slug: harvest-brainstorm-backward-compat

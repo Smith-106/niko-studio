@@ -1,7 +1,10 @@
 ---
 title: BookWorld worldview extraction 鏄犲皠鍒?knowledge-service
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-007"
 ---
+
 ---
 type: knowhow
 slug: harvest-other-bookworld-worldview

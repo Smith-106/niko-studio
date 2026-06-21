@@ -1,7 +1,10 @@
 ---
 title: "MiroFish GraphRAG 浠庡啓浣滆嚜鍔ㄦ瀯寤虹煡璇嗗浘璋?tags: MiroFish,GraphRAG,knowledge-graph"
 createdBy: harvest
+related:
+  - "spec:project:harvest-brainstorm-cytoscape"
 ---
+
 ---
 type: knowhow
 slug: harvest-other-mirofish-graphrag

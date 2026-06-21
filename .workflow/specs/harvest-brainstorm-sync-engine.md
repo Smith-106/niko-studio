@@ -1,7 +1,10 @@
 ---
 title: 鍚屾寮曟搸锛氫簨浠堕┍鍔ㄦ贩鍚?+ 缁撴瀯鍖?diff + HUMAN_QUEUE
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-025"
 ---
+
 ---
 type: spec
 slug: harvest-brainstorm-sync-engine

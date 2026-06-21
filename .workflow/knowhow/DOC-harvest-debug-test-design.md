@@ -1,7 +1,10 @@
 ---
 title: 娴嬭瘯璁″垝璁捐锛歟2e + 闆嗘垚娣峰悎 + verification_truth/artifact
 createdBy: harvest
+related:
+  - "spec:project:test-conventions"
 ---
+
 ---
 type: knowhow
 slug: harvest-debug-test-design

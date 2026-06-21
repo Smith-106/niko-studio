@@ -1,7 +1,10 @@
 ---
 title: "i18n 妯″潡鎷嗗垎 + index 鑱氬悎鍣ㄦā寮?tags: i18n,module-split,aggregator-pattern"
 createdBy: harvest
+related:
+  - "spec:project:coding-conventions-003"
 ---
+
 ---
 type: knowhow
 slug: harvest-debug-i18n-split

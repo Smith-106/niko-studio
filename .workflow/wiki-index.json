@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": 1781954201427,
+  "generatedAt": 1782001431596,
   "entries": [
     {
       "id": "roadmap-roadmap",
@@ -37,8 +37,8 @@
         "nuxt"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -46,10 +46,7 @@
       "sourceRef": null,
       "parent": null,
       "related": [
-        "spec:project:architecture-constraints-032",
-        "spec:project:architecture-constraints-033",
-        "spec:project:architecture-constraints-034",
-        "spec:project:architecture-constraints-031"
+        "spec:project:harvest-brainstorm-error-propagation"
       ],
       "source": {
         "kind": "file",
@@ -68,8 +65,8 @@
         "priority"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -93,8 +90,8 @@
         "dependency-chain"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -118,8 +115,8 @@
         "APP_VERSION"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -143,8 +140,8 @@
         "sidecar"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -168,8 +165,8 @@
         "release"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -194,8 +191,8 @@
         "backend"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -220,8 +217,8 @@
         "separation"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -246,8 +243,8 @@
         "opt-in"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -273,8 +270,8 @@
         "reuse"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -299,8 +296,8 @@
         "guides"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -324,8 +321,8 @@
         "runtime-safety"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -349,8 +346,8 @@
         "test-environment"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -374,8 +371,8 @@
         "enhance-not-rebuild"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -399,8 +396,8 @@
         "knowledge-engine"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -424,8 +421,8 @@
         "context-pipeline"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -449,8 +446,8 @@
         "dual-engine"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -474,8 +471,8 @@
         "integration-surface"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -500,8 +497,8 @@
         "llm"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -525,8 +522,8 @@
         "adapter-pattern"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -549,8 +546,8 @@
         "optional-module"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -574,8 +571,8 @@
         "workspace-scoped"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -599,8 +596,8 @@
         "parallel-implementation"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -625,8 +622,8 @@
         "wiki"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -650,8 +647,8 @@
         "backward-compatibility"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -676,8 +673,8 @@
         "typed-contracts"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -701,8 +698,8 @@
         "interface-contract"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -726,8 +723,8 @@
         "graceful-degradation"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -752,8 +749,8 @@
         "extend-not-create"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -779,8 +776,8 @@
         "cypher"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -805,8 +802,8 @@
         "reader-simulation"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -831,8 +828,8 @@
         "架构约束"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -857,8 +854,8 @@
         "注入"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -883,8 +880,8 @@
         "统一"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -908,8 +905,144 @@
         "reader-personas"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:02.935Z",
-      "updated": "2026-06-19T16:10:02.939Z",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-035",
+      "type": "spec",
+      "title": "shutdown-no-op 反模式 — shutdown 函数必须实际清理资源",
+      "summary": "shutdown/close 函数必须执行实际资源清理（flush state, close connections, stop timers），空实现是架构违规",
+      "tags": [
+        "shutdown",
+        "cleanup",
+        "lifecycle",
+        "no-op",
+        "反模式",
+        "资源泄漏"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-036",
+      "type": "spec",
+      "title": "独立 SIGTERM handler 应统一到 shutdown 链",
+      "summary": "各服务独立注册 SIGTERM/SIGINT 导致关闭顺序不可控，应统一到 gateway-bootstrap shutdown 链",
+      "tags": [
+        "sigterm",
+        "handler",
+        "graceful-shutdown",
+        "协调",
+        "优雅关闭"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-037",
+      "type": "spec",
+      "title": "新增分析轴作为独立 detector 层而非 enum 扩展，并显式指定共享常量模块",
+      "summary": "跨切分析关注点（AI-flavor/sentiment）应建独立模块 + 可选字段挂载，避免扩散到既有 enum；同时显式指定共享常量模块位置防双写",
+      "tags": [
+        "detector",
+        "independent-layer",
+        "enum-extension",
+        "shared-constants",
+        "minimal-invasion"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-038",
+      "type": "spec",
+      "title": "复用 transformation service 通过 config 注入意图而非 fork",
+      "summary": "新功能需要文本重写（de-AI/style-shift）时扩展既有 RevisionConfig 注入 intent 字段，而非建并行 rewrite 管线",
+      "tags": [
+        "reuse",
+        "transformation-service",
+        "config-injection",
+        "strategy-pattern",
+        "revision"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
+      "scope": "project",
+      "category": "arch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:architecture-constraints",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/architecture-constraints.md"
+      }
+    },
+    {
+      "id": "spec:project:architecture-constraints-039",
+      "type": "spec",
+      "title": "前端模块只从 desktop/src/api 导入领域类型，禁止跨 desktop/src-ts 边界",
+      "summary": "frontend 跨边界 import backend 类型（../../../../src-ts）破坏模块分离并制造构建耦合，应从 api 层单一来源导入",
+      "tags": [
+        "frontend-backend",
+        "import-boundary",
+        "shared-types",
+        "module-separation",
+        "contract"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:07:31.250Z",
+      "updated": "2026-06-21T00:07:31.260Z",
       "scope": "project",
       "category": "arch",
       "specCategory": null,
@@ -936,8 +1069,8 @@
         "pattern"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -945,10 +1078,7 @@
       "sourceRef": null,
       "parent": null,
       "related": [
-        "spec:project:coding-conventions-020",
-        "spec:project:coding-conventions-021",
-        "spec:project:coding-conventions-018",
-        "spec:project:coding-conventions-019"
+        "knowhow-doc-harvest-debug-reexport-anchor"
       ],
       "source": {
         "kind": "file",
@@ -966,8 +1096,8 @@
         "代码搜索"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -991,8 +1121,8 @@
         "backward-compat"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1016,8 +1146,8 @@
         "aggregator-pattern"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1041,8 +1171,8 @@
         "catalog-loader"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1066,8 +1196,8 @@
         "keyword-first"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1091,8 +1221,8 @@
         "four-layer"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1117,8 +1247,8 @@
         "singleton"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1142,8 +1272,8 @@
         "frontend-only"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1168,8 +1298,8 @@
         "desktop-api"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1193,8 +1323,8 @@
         "cache-invalidation"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1218,8 +1348,8 @@
         "public-API"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1244,8 +1374,8 @@
         "chapter-switching"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1270,8 +1400,8 @@
         "gating"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1296,8 +1426,8 @@
         "interface"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1323,8 +1453,8 @@
         "vitest"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1350,8 +1480,8 @@
         "test"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1377,8 +1507,8 @@
         "anti-pattern"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1404,8 +1534,173 @@
         "前端封装"
       ],
       "status": "active",
-      "created": "2026-06-19T16:10:07.318Z",
-      "updated": "2026-06-19T16:10:07.325Z",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
+      "scope": "project",
+      "category": "coding",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-019",
+      "type": "spec",
+      "title": "parseInt NaN 语义陷阱 — NaN 通过范围校验",
+      "summary": "65535 === false，导致 NaN 通过范围校验\"> ### parseInt NaN 语义陷阱 — NaN 通过范围校验 `parseInt(nonNumeric, 10)` 返回 NaN，后续 `NaN < 1` 和 `NaN > 65535` 均为 false，校验被穿透。必须用 `Number.isFinite()` 显式排除 NaN 和 Infinity。修复模板：`parseIntSafe()` 辅助函数或 `!Number.isFinite(par",
+      "tags": [
+        "parseint",
+        "nan",
+        "validation",
+        "config",
+        "范围校验"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
+      "scope": "project",
+      "category": "coding",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-020",
+      "type": "spec",
+      "title": "并发健康检查减少冷启动延迟",
+      "summary": "串行 HTTP 健康检查用 tokio::join!/Promise.all 并发化，共享 HTTP client 避免连接池浪费",
+      "tags": [
+        "health",
+        "probe",
+        "concurrent",
+        "tokio",
+        "冷启动",
+        "串行"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
+      "scope": "project",
+      "category": "coding",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-021",
+      "type": "spec",
+      "title": "HTTP handler headersSent 检查防止二次写入",
+      "summary": "catch 块中写响应前必须检查 res.headersSent，否则 destroy 响应",
+      "tags": [
+        "http",
+        "headers",
+        "catch",
+        "streaming",
+        "headersSent",
+        "二次写入"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
+      "scope": "project",
+      "category": "coding",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-022",
+      "type": "spec",
+      "title": "CORS 缓存 + config reload 时 invalidate",
+      "summary": "CORS origins 每请求重新计算浪费资源，改用缓存 + config reload 失效模式",
+      "tags": [
+        "cors",
+        "cache",
+        "reload",
+        "config",
+        "invalidate"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
+      "scope": "project",
+      "category": "coding",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-023",
+      "type": "spec",
+      "title": "共享文件多任务编辑通过 depends_on 串行化",
+      "summary": "单文件被 3+ 任务编辑时，显式 depends_on 串行化而非仅依赖 wave 分组，并在 collision_notes 标注热点",
+      "tags": [
+        "wave-planning",
+        "depends_on",
+        "collision-notes",
+        "file-contention",
+        "parallel-edit"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
+      "scope": "project",
+      "category": "coding",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:coding-conventions",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/coding-conventions.md"
+      }
+    },
+    {
+      "id": "spec:project:coding-conventions-024",
+      "type": "spec",
+      "title": "MCP endpoint 强制输入校验三件套（长度/路径/数值范围）",
+      "summary": "任何接收文本/env-derived 路径/数值权重的 endpoint 都应内置 max-length + path containment + finite-in-range 三道校验",
+      "tags": [
+        "mcp-endpoint",
+        "input-validation",
+        "security-contract",
+        "max-length",
+        "path-traversal",
+        "finite-range"
+      ],
+      "status": "active",
+      "created": "2026-06-21T00:09:15.801Z",
+      "updated": "2026-06-21T00:09:15.816Z",
       "scope": "project",
       "category": "coding",
       "specCategory": null,
@@ -1431,8 +1726,8 @@
         "gotcha"
       ],
       "status": "active",
-      "created": "2026-06-13T15:46:42.942Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-20T18:30:05.291Z",
+      "updated": "2026-06-20T18:30:05.297Z",
       "scope": "project",
       "category": "debug",
       "specCategory": null,
@@ -1457,8 +1752,8 @@
         "normalizeAscii"
       ],
       "status": "active",
-      "created": "2026-06-13T15:46:42.942Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-20T18:30:05.291Z",
+      "updated": "2026-06-20T18:30:05.297Z",
       "scope": "project",
       "category": "debug",
       "specCategory": null,
@@ -1483,8 +1778,8 @@
         "chat"
       ],
       "status": "active",
-      "created": "2026-06-13T15:46:42.942Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-20T18:30:05.291Z",
+      "updated": "2026-06-20T18:30:05.297Z",
       "scope": "project",
       "category": "debug",
       "specCategory": null,
@@ -1508,8 +1803,91 @@
         "const-bindings"
       ],
       "status": "active",
-      "created": "2026-06-13T15:46:42.942Z",
-      "updated": "2026-06-18T15:09:33.293Z",
+      "created": "2026-06-20T18:30:05.291Z",
+      "updated": "2026-06-20T18:30:05.297Z",
+      "scope": "project",
+      "category": "debug",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:debug-notes",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/debug-notes.md"
+      }
+    },
+    {
+      "id": "spec:project:debug-notes-004",
+      "type": "spec",
+      "title": "Tauri CommandChild 无 wait() — kill 后须轮询 PID 确认退出",
+      "summary": "Tauri CommandChild 只有 kill() 和 pid()，无 wait()。Windows 上 kill 后需轮询 PID 确保进程退出释放端口",
+      "tags": [
+        "tauri",
+        "commandchild",
+        "sidecar",
+        "kill",
+        "wait",
+        "port",
+        "进程退出"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:30:05.291Z",
+      "updated": "2026-06-20T18:30:05.297Z",
+      "scope": "project",
+      "category": "debug",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:debug-notes",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/debug-notes.md"
+      }
+    },
+    {
+      "id": "spec:project:debug-notes-005",
+      "type": "spec",
+      "title": "同步文件操作无 try-catch 保护 — 进程崩溃",
+      "summary": "fs.writeFileSync / mkdirSync 在不可写路径下抛未捕获异常导致整个进程崩溃",
+      "tags": [
+        "writefilesync",
+        "mkdirsync",
+        "try-catch",
+        "crash",
+        "uncaught-exception"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:30:05.291Z",
+      "updated": "2026-06-20T18:30:05.297Z",
+      "scope": "project",
+      "category": "debug",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:debug-notes",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/debug-notes.md"
+      }
+    },
+    {
+      "id": "spec:project:debug-notes-006",
+      "type": "spec",
+      "title": "localhost-only guard 配置-执行两步必须同步",
+      "summary": "localhost-only guard 配置解析和请求执行是两步：实现 resolveLocalhostOnlyEnabled() 后必须在 request handler 中显式调用",
+      "tags": [
+        "localhost",
+        "guard",
+        "security",
+        "配置-执行两步",
+        "授权绕过"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:30:05.291Z",
+      "updated": "2026-06-20T18:30:05.297Z",
       "scope": "project",
       "category": "debug",
       "specCategory": null,
@@ -1530,14 +1908,16 @@
       "tags": [],
       "status": "active",
       "created": "2026-06-13T16:12:46.840Z",
-      "updated": "2026-06-13T16:12:46.841Z",
+      "updated": "2026-06-20T18:40:08.835Z",
       "scope": "project",
       "category": null,
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-024"
+      ],
       "source": {
         "kind": "file",
         "path": "specs/harvest-brainstorm-backward-compat.md"
@@ -1551,14 +1931,16 @@
       "tags": [],
       "status": "active",
       "created": "2026-06-13T16:12:46.941Z",
-      "updated": "2026-06-13T16:12:46.942Z",
+      "updated": "2026-06-20T18:40:44.675Z",
       "scope": "project",
       "category": null,
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:harvest-brainstorm-embedding"
+      ],
       "source": {
         "kind": "file",
         "path": "specs/harvest-brainstorm-cytoscape.md"
@@ -1593,14 +1975,16 @@
       "tags": [],
       "status": "active",
       "created": "2026-06-13T16:12:47.192Z",
-      "updated": "2026-06-13T16:12:47.192Z",
+      "updated": "2026-06-20T18:40:04.146Z",
       "scope": "project",
       "category": null,
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-027"
+      ],
       "source": {
         "kind": "file",
         "path": "specs/harvest-brainstorm-error-propagation.md"
@@ -1614,14 +1998,16 @@
       "tags": [],
       "status": "active",
       "created": "2026-06-13T16:12:47.297Z",
-      "updated": "2026-06-13T16:12:47.297Z",
+      "updated": "2026-06-20T18:39:35.011Z",
       "scope": "project",
       "category": null,
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-001"
+      ],
       "source": {
         "kind": "file",
         "path": "specs/harvest-brainstorm-m24-scope.md"
@@ -1635,14 +2021,16 @@
       "tags": [],
       "status": "active",
       "created": "2026-06-13T16:12:47.408Z",
-      "updated": "2026-06-13T16:12:47.408Z",
+      "updated": "2026-06-20T18:39:36.267Z",
       "scope": "project",
       "category": null,
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-018"
+      ],
       "source": {
         "kind": "file",
         "path": "specs/harvest-brainstorm-m26-scope.md"
@@ -1656,14 +2044,16 @@
       "tags": [],
       "status": "active",
       "created": "2026-06-13T16:12:47.511Z",
-      "updated": "2026-06-13T16:12:47.511Z",
+      "updated": "2026-06-20T18:39:53.963Z",
       "scope": "project",
       "category": null,
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-020"
+      ],
       "source": {
         "kind": "file",
         "path": "specs/harvest-brainstorm-obsidian-architecture.md"
@@ -1677,14 +2067,16 @@
       "tags": [],
       "status": "active",
       "created": "2026-06-13T16:12:47.617Z",
-      "updated": "2026-06-13T16:12:47.618Z",
+      "updated": "2026-06-20T18:40:45.807Z",
       "scope": "project",
       "category": null,
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-025"
+      ],
       "source": {
         "kind": "file",
         "path": "specs/harvest-brainstorm-sync-engine.md"
@@ -1702,15 +2094,17 @@
         "learning"
       ],
       "status": "active",
-      "created": "2026-06-17T23:46:46.769Z",
-      "updated": "2026-06-17T23:46:46.770Z",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
       "scope": "project",
       "category": "learning",
       "specCategory": null,
       "createdBy": null,
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "knowhow-doc-harvest-other-bookworld-ablation"
+      ],
       "source": {
         "kind": "file",
         "path": "specs/learnings.md"
@@ -1728,8 +2122,8 @@
         "enum-driven"
       ],
       "status": "active",
-      "created": "2026-06-17T23:46:46.769Z",
-      "updated": "2026-06-17T23:46:46.770Z",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
       "scope": "project",
       "category": "learning",
       "specCategory": null,
@@ -1754,8 +2148,8 @@
         "hook-detection"
       ],
       "status": "active",
-      "created": "2026-06-17T23:46:46.769Z",
-      "updated": "2026-06-17T23:46:46.770Z",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
       "scope": "project",
       "category": "learning",
       "specCategory": null,
@@ -1781,8 +2175,8 @@
         "detective-fiction"
       ],
       "status": "active",
-      "created": "2026-06-17T23:46:46.769Z",
-      "updated": "2026-06-17T23:46:46.770Z",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
       "scope": "project",
       "category": "learning",
       "specCategory": null,
@@ -1806,8 +2200,8 @@
         "dependency-order"
       ],
       "status": "active",
-      "created": "2026-06-17T23:46:46.769Z",
-      "updated": "2026-06-17T23:46:46.770Z",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
       "scope": "project",
       "category": "learning",
       "specCategory": null,
@@ -1832,8 +2226,8 @@
         "scene-mode"
       ],
       "status": "active",
-      "created": "2026-06-17T23:46:46.769Z",
-      "updated": "2026-06-17T23:46:46.770Z",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
       "scope": "project",
       "category": "learning",
       "specCategory": null,
@@ -1859,8 +2253,8 @@
         "alignment"
       ],
       "status": "active",
-      "created": "2026-06-17T23:46:46.769Z",
-      "updated": "2026-06-17T23:46:46.770Z",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
       "scope": "project",
       "category": "learning",
       "specCategory": null,
@@ -1885,10 +2279,492 @@
         "quality-control"
       ],
       "status": "active",
-      "created": "2026-06-17T23:46:46.769Z",
-      "updated": "2026-06-17T23:46:46.770Z",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
       "scope": "project",
       "category": "learning",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-008",
+      "type": "spec",
+      "title": "Node.js listen() 不监听 error 导致静默挂起",
+      "summary": "server.listen() 不监听 error 事件时，端口占用导致 Promise 永远不 resolve/reject",
+      "tags": [
+        "listen",
+        "eaddrinuse",
+        "promise",
+        "hang",
+        "nodejs",
+        "静默挂起"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "learning",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-009",
+      "type": "spec",
+      "title": "C4 set*() DI 重构 deferred — 历史渐进导致全局可变状态",
+      "summary": "手动 DI 模式 set*() 替代构造器注入，需重构为 GatewayContext",
+      "tags": [
+        "di",
+        "gateway",
+        "refactor",
+        "set-methods",
+        "全局可变状态",
+        "历史渐进"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "learning",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-010",
+      "type": "spec",
+      "title": "gateway-state.ts god module 拆分 deferred",
+      "summary": "跨 4 层的 god module 需架构决策后拆分",
+      "tags": [
+        "god-module",
+        "gateway-state",
+        "拆分",
+        "架构决策"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "learning",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-011",
+      "type": "spec",
+      "title": "Knowhow ↔ Spec type bridge 是知识图谱最高价值连接",
+      "summary": "harvest 产出的 knowhow 条目必须回链到对应 spec，否则成为孤立重灾区",
+      "tags": [
+        "wiki",
+        "knowledge-graph",
+        "orphan",
+        "type-bridge",
+        "knowhow",
+        "harvest"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "technique",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-012",
+      "type": "spec",
+      "title": "新增分析轴作为独立 detector 层而非 enum 扩展，并显式指定共享常量模块",
+      "summary": "跨切分析关注点应建独立模块+可选字段挂载，避免扩散到既有 enum；同时显式指定共享常量模块防双写",
+      "tags": [
+        "detector",
+        "independent-layer",
+        "enum-extension",
+        "shared-constants",
+        "minimal-invasion"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "technique",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-013",
+      "type": "spec",
+      "title": "复用 transformation service 通过 config 注入意图而非 fork",
+      "summary": "新功能需文本重写时扩展既有 RevisionConfig 注入 intent 字段，而非建并行 rewrite 管线",
+      "tags": [
+        "reuse",
+        "transformation-service",
+        "config-injection",
+        "strategy-pattern",
+        "revision"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "pattern",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-014",
+      "type": "spec",
+      "title": "前端模块只从 desktop/src/api 导入领域类型，禁止跨 desktop/src-ts 边界",
+      "summary": "frontend 跨边界 import backend 类型破坏模块分离并制造构建耦合，应从 api 层单一来源导入",
+      "tags": [
+        "frontend-backend",
+        "import-boundary",
+        "shared-types",
+        "module-separation",
+        "contract"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "antipattern",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-015",
+      "type": "spec",
+      "title": "共享文件多任务编辑通过 depends_on 串行化",
+      "summary": "单文件被 3+ 任务编辑时显式 depends_on 串行化而非仅依赖 wave 分组，并在 collision_notes 标注热点",
+      "tags": [
+        "wave-planning",
+        "depends_on",
+        "collision-notes",
+        "file-contention",
+        "parallel-edit"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "pattern",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-016",
+      "type": "spec",
+      "title": "MCP endpoint 强制输入校验三件套（长度/路径/数值范围）",
+      "summary": "任何接收文本/env-derived 路径/数值权重的 endpoint 都应内置 max-length + path containment + finite-in-range 三道校验",
+      "tags": [
+        "mcp-endpoint",
+        "input-validation",
+        "security-contract",
+        "max-length",
+        "path-traversal",
+        "finite-range"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "antipattern",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-017",
+      "type": "spec",
+      "title": "提取 ai-templates 共享模块消除 detector/revision-service 模板词双写",
+      "summary": "AI 模板词库在两处独立维护并已 diverged，需提取共享模块并加 Set 去重",
+      "tags": [
+        "duplication",
+        "single-source-of-truth",
+        "ai-templates",
+        "maintainability"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "antipattern",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-018",
+      "type": "spec",
+      "title": "ConsensusEngine 除零 NaN 传播 (CORR-003 高危 deferred)",
+      "summary": "avgScore=scores.reduce/length 无空数组保护，除零产生 NaN 传播下游",
+      "tags": [
+        "accepted-risk",
+        "division-by-zero",
+        "consensus-engine",
+        "NaN-propagation"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "gotcha",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-019",
+      "type": "spec",
+      "title": "RevisionService LLM fetch 缺 HTTPS/超时 (SEC-003 高危 deferred)",
+      "summary": "fetch 无 HTTPS 校验、无 AbortSignal/timeout、apiKey 明文 header",
+      "tags": [
+        "accepted-risk",
+        "llm-security",
+        "https",
+        "timeout",
+        "api-key"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "gotcha",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-020",
+      "type": "spec",
+      "title": "reader-endpoints.ts 跨 8 维度 findings 拆分为路由/校验/服务/类型导出",
+      "summary": "单文件承载 8 个跨维度 findings 成 god module，含多 lazy singleton 阻碍测试隔离",
+      "tags": [
+        "god-file",
+        "module-boundary",
+        "refactor-target",
+        "testability",
+        "DI"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "antipattern",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-021",
+      "type": "spec",
+      "title": "修复 ReportGenerator.tsx 跨边界 import 后端 ConsensusEngine 类型 (ARCH-001)",
+      "summary": "前端跨边界 import 后端类型破坏 DEC-3 契约统一意图",
+      "tags": [
+        "frontend-backend",
+        "import-boundary",
+        "contract",
+        "build-coupling"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "antipattern",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-022",
+      "type": "spec",
+      "title": "分析功能规则优先 + LLM 增强分层，降级记录可观测日志",
+      "summary": "规则可枚举的分析功能应 rules-first + LLM 作增强层，外部依赖缺失时优雅降级并记录当前路径",
+      "tags": [
+        "rule-based",
+        "graceful-degradation",
+        "observability",
+        "llm-fallback"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "technique",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-023",
+      "type": "spec",
+      "title": "结构验证 0-gap 不代表代码健康，must-have truths 纳入边界与安全约束",
+      "summary": "verification 6/6 passed + 0 gaps 但同批代码 review 发现 21 findings 含 2 high",
+      "tags": [
+        "verification",
+        "must-have-truths",
+        "review-gap",
+        "boundary-check"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "gotcha",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-024",
+      "type": "spec",
+      "title": "执行期收窄 definition_of_done 必须记入 plan deferred 列表",
+      "summary": "TASK-001 范围静默收窄仅记 Deviations，遗留 TODO 被 review 标记 CORR-001",
+      "tags": [
+        "scope-creep-down",
+        "deferred-scope",
+        "todo-leak",
+        "definition-of-done"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "gotcha",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "spec:project:learnings",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "specs/learnings.md"
+      }
+    },
+    {
+      "id": "spec:project:learnings-025",
+      "type": "spec",
+      "title": "新 endpoint 前端 API 层复用 callApi/ApiResponse 包装",
+      "summary": "新功能前端 API 层应复制既有 writing-craft.ts 的 callApi 约定而非新造 fetch wrapper",
+      "tags": [
+        "api-layer",
+        "convention",
+        "callApi",
+        "frontend"
+      ],
+      "status": "active",
+      "created": "2026-06-20T18:44:37.813Z",
+      "updated": "2026-06-21T00:14:10.198Z",
+      "scope": "project",
+      "category": "pattern",
       "specCategory": null,
       "createdBy": null,
       "sourceRef": null,
@@ -2210,14 +3086,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:47.717Z",
-      "updated": "2026-06-13T16:12:47.717Z",
+      "updated": "2026-06-20T18:40:05.534Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:coding-conventions-011"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-debug-camelcase-api.md"
@@ -2231,14 +3109,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:47.829Z",
-      "updated": "2026-06-13T16:12:47.830Z",
+      "updated": "2026-06-20T18:39:37.304Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:coding-conventions-004"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-debug-craft-catalog-json.md"
@@ -2252,14 +3132,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:47.937Z",
-      "updated": "2026-06-13T16:12:47.938Z",
+      "updated": "2026-06-20T18:39:48.255Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:coding-conventions-003"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-debug-i18n-split.md"
@@ -2273,14 +3155,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:48.049Z",
-      "updated": "2026-06-13T16:12:48.049Z",
+      "updated": "2026-06-20T18:40:24.007Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:quality-rules-003"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-debug-logger-noop.md"
@@ -2294,14 +3178,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:48.166Z",
-      "updated": "2026-06-13T16:12:48.167Z",
+      "updated": "2026-06-20T18:39:49.872Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:coding-conventions-002"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-debug-reexport-anchor.md"
@@ -2315,14 +3201,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:48.288Z",
-      "updated": "2026-06-13T16:12:48.288Z",
+      "updated": "2026-06-20T18:40:21.793Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:test-conventions"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-debug-test-design.md"
@@ -2336,14 +3224,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:48.431Z",
-      "updated": "2026-06-13T16:12:48.432Z",
+      "updated": "2026-06-20T18:39:32.844Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:learnings-005"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-other-bookworld-ablation.md"
@@ -2378,14 +3268,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:48.652Z",
-      "updated": "2026-06-13T16:12:48.653Z",
+      "updated": "2026-06-20T18:40:20.175Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-007"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-other-bookworld-worldview.md"
@@ -2399,14 +3291,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:48.758Z",
-      "updated": "2026-06-13T16:12:48.759Z",
+      "updated": "2026-06-20T18:40:07.165Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:coding-conventions-010"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-other-intelligence-cache.md"
@@ -2420,14 +3314,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:48.868Z",
-      "updated": "2026-06-13T16:12:48.869Z",
+      "updated": "2026-06-20T18:39:51.666Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-008"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-other-lifecycle-hooks.md"
@@ -2483,14 +3379,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:49.201Z",
-      "updated": "2026-06-13T16:12:49.202Z",
+      "updated": "2026-06-20T18:40:18.395Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:coding-conventions-008"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-other-m10-style-learning.md"
@@ -2504,14 +3402,16 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:49.315Z",
-      "updated": "2026-06-13T16:12:49.316Z",
+      "updated": "2026-06-20T18:40:47.643Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:harvest-brainstorm-cytoscape"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-other-mirofish-graphrag.md"
@@ -2525,17 +3425,460 @@
       "tags": [],
       "status": "draft",
       "created": "2026-06-13T16:12:49.430Z",
-      "updated": "2026-06-13T16:12:49.432Z",
+      "updated": "2026-06-20T18:40:42.542Z",
       "scope": null,
       "category": "document",
       "specCategory": null,
       "createdBy": "harvest",
       "sourceRef": null,
       "parent": null,
-      "related": [],
+      "related": [
+        "spec:project:architecture-constraints-022"
+      ],
       "source": {
         "kind": "file",
         "path": "knowhow/DOC-harvest-other-workflowservice.md"
+      }
+    },
+    {
+      "id": "knowhow-knw-retro-reuse-callapi-wrapper-2026-06-21",
+      "type": "knowhow",
+      "title": "Reuse callApi/ApiResponse wrapper for new frontend API layers — 2026-06-21",
+      "summary": "**Source**: quality-retrospective M26-P1 (technical lens), INS-31c776c2 **Type**: pattern / convention",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T00:11:37.261Z",
+      "updated": "2026-06-21T00:11:37.276Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-reuse-callapi-wrapper-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-reuse-callapi-wrapper-2026-06-21-001",
+      "type": "knowhow",
+      "title": "When to use",
+      "summary": "Adding a new feature's frontend API layer in `desktop/src/api/`. Copy the existing convention verbatim rather than inventing a new fetch wrapper.",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:37.261Z",
+      "updated": "2026-06-21T00:11:37.276Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-reuse-callapi-wrapper-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-reuse-callapi-wrapper-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-reuse-callapi-wrapper-2026-06-21-002",
+      "type": "knowhow",
+      "title": "Pattern (from desktop/src/api/writing-craft.ts, reused by reader.ts)",
+      "summary": "- One thin function per endpoint - Direct `callApi` return — no inner envelope unwrap - `params as unknown as Record<string, unknown>` to satisfy callApi's body signature - Import `{ type ApiResponse, callApi } from './core'` The body cast",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:37.261Z",
+      "updated": "2026-06-21T00:11:37.276Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-reuse-callapi-wrapper-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-reuse-callapi-wrapper-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-reuse-callapi-wrapper-2026-06-21-003",
+      "type": "knowhow",
+      "title": "Evidence (M26)",
+      "summary": "- `desktop/src/api/reader.ts:1` — `import { type ApiResponse, callApi } from './core'` - `desktop/src/api/reader.ts:190` — `createCustomPersona` uses `params as unknown as Record<string, unknown>` - `.summaries/TASK-002-summary.md:56` — not",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:37.261Z",
+      "updated": "2026-06-21T00:11:37.276Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-reuse-callapi-wrapper-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-reuse-callapi-wrapper-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-reuse-callapi-wrapper-2026-06-21-004",
+      "type": "knowhow",
+      "title": "Related",
+      "summary": "- [[KNW-retro-rule-first-llm-enhancement-2026-06-21]]",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:37.261Z",
+      "updated": "2026-06-21T00:11:37.276Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-reuse-callapi-wrapper-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-reuse-callapi-wrapper-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21",
+      "type": "knowhow",
+      "title": "Rule-first + LLM enhancement layering — 2026-06-21",
+      "summary": "**Source**: quality-retrospective M26-P1 (technical lens), INS-8ab166cd **Type**: technique / pattern",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T00:11:10.949Z",
+      "updated": "2026-06-21T00:11:10.956Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-rule-first-llm-enhancement-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-rule-first-llm-enhancement-2026-06-21-001",
+      "type": "knowhow",
+      "title": "When to use",
+      "summary": "Building an analysis feature where the rule surface is enumerable (AI-flavor, style metrics, readability stats). Prefer shipping rules first, then layer LLM on top only where rules are insufficient.",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:10.949Z",
+      "updated": "2026-06-21T00:11:10.956Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-rule-first-llm-enhancement-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-rule-first-llm-enhancement-2026-06-21-002",
+      "type": "knowhow",
+      "title": "Pattern",
+      "summary": "- **Layer 1 (rules)**: pure functions, regex + statistics, zero LLM dependency, runs in microseconds, deterministic, fully testable - **Layer 2 (LLM enhancement)**: optional, only where rules insufficient - **Degradation**: when LLM path un",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:10.949Z",
+      "updated": "2026-06-21T00:11:10.956Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-rule-first-llm-enhancement-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-rule-first-llm-enhancement-2026-06-21-003",
+      "type": "knowhow",
+      "title": "Evidence (M26)",
+      "summary": "- `src-ts/reader/ai-flavor-detector.ts:470` — `detectAIFlavor` entry, no async/await, no fetch, pure rule-based - `.summaries/TASK-004-summary.md:49` — pure rule layer, near-zero overhead - `src-ts/services/revision-service.ts:199-201` — LL",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:10.949Z",
+      "updated": "2026-06-21T00:11:10.956Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-rule-first-llm-enhancement-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-rule-first-llm-enhancement-2026-06-21-004",
+      "type": "knowhow",
+      "title": "Result",
+      "summary": "85% coverage, 12 deterministic tests, degrades gracefully when LLM rewrite path unconfigured.",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:10.949Z",
+      "updated": "2026-06-21T00:11:10.956Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-rule-first-llm-enhancement-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-rule-first-llm-enhancement-2026-06-21-005",
+      "type": "knowhow",
+      "title": "Related",
+      "summary": "- [[KNW-retro-verification-green-not-healthy-2026-06-21]] — why rule coverage alone can mask dimensional gaps - [[KNW-retro-scope-deviation-deferred-record-2026-06-21]]",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:10.949Z",
+      "updated": "2026-06-21T00:11:10.956Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-rule-first-llm-enhancement-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-rule-first-llm-enhancement-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21",
+      "type": "knowhow",
+      "title": "Record scope deviations in plan deferred list, not just task Deviations — 2026-06-21",
+      "summary": "**Source**: quality-retrospective M26-P1 (process lens), INS-0f0144a2 **Type**: gotcha / process tip",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T00:11:30.276Z",
+      "updated": "2026-06-21T00:11:30.280Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-scope-deviation-deferred-record-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-scope-deviation-deferred-record-2026-06-21-001",
+      "type": "knowhow",
+      "title": "The trap",
+      "summary": "M26-P1 TASK-001's planned action was to wire real manuscript text from `workspace/manuscript` service, with `definition_of_done = read real novel content`. During execution the scope was **silently narrowed** to an empty-report fallback (pe",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:30.276Z",
+      "updated": "2026-06-21T00:11:30.280Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-scope-deviation-deferred-record-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-scope-deviation-deferred-record-2026-06-21-002",
+      "type": "knowhow",
+      "title": "Lesson",
+      "summary": "When execution narrows a task's `definition_of_done` mid-flight: 1. Record it in the **plan's `deferred` list** with a follow-up task ID — not just a task summary Deviations note 2. The summary note is ephemeral and invisible to future plan",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:30.276Z",
+      "updated": "2026-06-21T00:11:30.280Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-scope-deviation-deferred-record-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-scope-deviation-deferred-record-2026-06-21-003",
+      "type": "knowhow",
+      "title": "Evidence",
+      "summary": "- `.workflow/scratch/20260618-plan-P1-reader-simulation-anti-ai-flavor/.task/TASK-001.json` — action (wire manuscript) vs definition_of_done (read real novel) - `.summaries/TASK-001-summary.md` Deviations — \"replaced TODO with empty-report ",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:30.276Z",
+      "updated": "2026-06-21T00:11:30.280Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-scope-deviation-deferred-record-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-scope-deviation-deferred-record-2026-06-21-004",
+      "type": "knowhow",
+      "title": "Related",
+      "summary": "- [[KNW-retro-verification-green-not-healthy-2026-06-21]]",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:30.276Z",
+      "updated": "2026-06-21T00:11:30.280Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-scope-deviation-deferred-record-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-scope-deviation-deferred-record-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-knw-retro-verification-green-not-healthy-2026-06-21",
+      "type": "knowhow",
+      "title": "Structural verification green ≠ code healthy — 2026-06-21",
+      "summary": "**Source**: quality-retrospective M26-P1 (quality lens), INS-f54a8bff **Type**: gotcha / lesson",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T00:11:20.964Z",
+      "updated": "2026-06-21T00:11:20.969Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-verification-green-not-healthy-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-verification-green-not-healthy-2026-06-21-001",
+      "type": "knowhow",
+      "title": "The trap",
+      "summary": "`verification.json` checks truth/artifact/key_link existence. M26-P1 verified 6/6 truths passed, **0 gaps**, coverage 0.85 — a green signal. But the same batch of code yielded **21 review findings** in dimensional review, including **2 high",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:20.964Z",
+      "updated": "2026-06-21T00:11:20.969Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-verification-green-not-healthy-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-verification-green-not-healthy-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-verification-green-not-healthy-2026-06-21-002",
+      "type": "knowhow",
+      "title": "Lesson",
+      "summary": "When planning `must_have.truths`, include not just existence checks but **boundary conditions and security constraints**: - empty-array / division guards (catches CORR-003 除零) - protocol enforcement (catches SEC-003 HTTPS) - timeout / abort",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:20.964Z",
+      "updated": "2026-06-21T00:11:20.969Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-verification-green-not-healthy-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-verification-green-not-healthy-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-verification-green-not-healthy-2026-06-21-003",
+      "type": "knowhow",
+      "title": "Evidence",
+      "summary": "- `.workflow/scratch/20260618-plan-P1-reader-simulation-anti-ai-flavor/verification.json` — gaps: [], coverage 0.85 - `.workflow/scratch/20260619-review-P1-reader-simulation-anti-ai-flavor/review.json` — severity_distribution 2 high / 12 me",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:20.964Z",
+      "updated": "2026-06-21T00:11:20.969Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-verification-green-not-healthy-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-verification-green-not-healthy-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-retro-verification-green-not-healthy-2026-06-21-004",
+      "type": "knowhow",
+      "title": "Related",
+      "summary": "- [[KNW-retro-rule-first-llm-enhancement-2026-06-21]] - [[KNW-retro-scope-deviation-deferred-record-2026-06-21]]",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-21T00:11:20.964Z",
+      "updated": "2026-06-21T00:11:20.969Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-retro-verification-green-not-healthy-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-retro-verification-green-not-healthy-2026-06-21.md"
       }
     },
     {
@@ -2704,6 +4047,237 @@
       "source": {
         "kind": "file",
         "path": "knowhow/KNW-wiki-connections-2026-06-18.md"
+      }
+    },
+    {
+      "id": "knowhow-knw-wiki-connections-2026-06-21",
+      "type": "knowhow",
+      "title": "Wiki Connections — 2026-06-21",
+      "summary": "## Baseline",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-001",
+      "type": "knowhow",
+      "title": "Baseline",
+      "summary": "- Health: 28 - Orphans: 48 - Broken links: 12 - Entries: 137",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-002",
+      "type": "knowhow",
+      "title": "Suggestions (20)",
+      "summary": "| # | Score | Source | Target | Reason | |---|---|---|---|---| | 1 | 0.92 | knowhow-doc-harvest-other-bookworld-ablation | spec:project:learnings-005 | tag overlap (BookWorld,ablation) + type bridge | | 2 | 0.92 | spec:project:harvest-brain",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-003",
+      "type": "knowhow",
+      "title": "Reverse Links (8)",
+      "summary": "为强化双向连接，对前 8 个建议添加反向链接： | Source | Target | Reason | |---|---|---| | spec:project:learnings-005 | knowhow-doc-harvest-other-bookworld-ablation | bidirectional | | spec:project:architecture-constraints-001 | spec:project:harvest-brainstorm-",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-004",
+      "type": "knowhow",
+      "title": "Applied",
+      "summary": "- Forward links applied: 20/20 - Reverse links applied: 8/8 - Total updates: 28 - New health: 51 (delta +23) - New orphans: 25 (delta -23)",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-005",
+      "type": "knowhow",
+      "title": "Rescued (23 entries no longer orphan)",
+      "summary": "- **Knowhow harvest (15)**: 全部 knowhow-doc-harvest-debug-* 和 knowhow-doc-harvest-other-* 现已连接到对应 spec - **Brainstorm harvest (7)**: 全部 spec:project:harvest-brainstorm-* 现已连接到对应架构决策 - **wiki-connections reports**: 部分通过反向链接获得 in-degree",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-006",
+      "type": "knowhow",
+      "title": "Remaining Orphans (25)",
+      "summary": "- **Issue entries (~73)**: 全部 ISS-* 条目仍孤立 — issue 条目天然难以链接（需专门标签分类） - **Scratch notes (17)**: workflow 会话工件，多为一次性分析/讨论记录 - **wiki-connection reports (8)**: 历史连接报告（KNW-wiki-connections-*），元条目",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-007",
+      "type": "knowhow",
+      "title": "类型分布",
+      "summary": "- spec: 86 条目（含 36 arch + 22 coding + 6 debug + 10 learnings + 8 brainstorm harvest + 父条目） - knowhow: 24 条目（15 harvest + 8 session + 1 meta） - note: 17 条目（全部 scratch 会话工件） - issue: 73+ 条目（全部孤立） - roadmap: 1",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-008",
+      "type": "knowhow",
+      "title": "Hub 浓度",
+      "summary": "- 父 spec 条目（architecture-constraints, coding-conventions 等）仍是主 hub - 新增反向链接使 knowhow 和 brainstorm 条目获得 in-degree - issue 条目缺乏 hub 结构（无标签分类，无相互引用）",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-009",
+      "type": "knowhow",
+      "title": "关键发现",
+      "summary": "1. **Knowhow ↔ Spec 是最高价值的 type bridge** — 15 个 knowhow 条目原是孤立的重灾区，现在全部通过同概念连接到 spec 2. **Brainstorm harvest 条目脱离知识图谱** — 7 个 brainstorm 收获条目从未链接到实际架构决策，是知识沉淀断裂点 3. **Issue 条目无连接结构** — 73+ issue 条目完全孤立，缺乏标签或分类，建议后续 harvest 时为 issue 添加 categ",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
+      }
+    },
+    {
+      "id": "knowhow-KNW-wiki-connections-2026-06-21-010",
+      "type": "knowhow",
+      "title": "Graph Insights",
+      "summary": "- **Knowhow 高孤立率修复**: knowhow 类条目原孤立率最高（15/24 = 62%），本轮修复后降至 0%。根因：harvest 时 knowhow 条目未自动建立到对应 spec 的引用。 - **Brainstorm 断链**: brainstorm → architecture 决策的连接是知识沉淀的关键断点。brainstorm 产出的决策需显式回链到架构 spec，否则知识图谱无法追溯决策来源。 - **Issue 条目无图谱价值**: issu",
+      "tags": [],
+      "status": "active",
+      "created": "2026-06-20T18:43:58.524Z",
+      "updated": "2026-06-20T18:43:58.528Z",
+      "scope": null,
+      "category": "session",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": "knowhow-knw-wiki-connections-2026-06-21",
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "knowhow/KNW-wiki-connections-2026-06-21.md"
       }
     },
     {
@@ -2917,6 +4491,27 @@
       }
     },
     {
+      "id": "scratch-20260618-plan-p1-reader-simulation-anti-ai-flavor-retrospective",
+      "type": "note",
+      "title": "Retrospective — M26 Phase 1: Reader Simulation 2.0 + Anti-AI-Flavor Suite",
+      "summary": "> **Phase**: `PLN-20260618-m26-p1-reader-simulation-anti-ai-flavor` · **Status**: verified · **Completed**: 2026-06-19 · **Lenses**: technical · process · quality · decision",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T00:06:15.094Z",
+      "updated": "2026-06-21T00:06:15.103Z",
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260618-plan-P1-reader-simulation-anti-ai-flavor/retrospective.md"
+      }
+    },
+    {
       "id": "scratch-20260619-analyze-fix-remaining-risks-context",
       "type": "note",
       "title": "Context: 修复剩余风险与建议",
@@ -2998,6 +4593,27 @@
       "source": {
         "kind": "file",
         "path": "scratch/20260620-debug-odyssey-nsis-install-file-lock/understanding.md"
+      }
+    },
+    {
+      "id": "scratch-20260620-improve-odyssey-gateway-startup-chain-understanding",
+      "type": "note",
+      "title": "Improve Odyssey: Gateway Startup Chain 运行质量提升",
+      "summary": "## 1. Target & Baseline",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-20T12:06:32.808Z",
+      "updated": "2026-06-20T12:06:32.825Z",
+      "scope": null,
+      "category": "scratch",
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": null,
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "file",
+        "path": "scratch/20260620-improve-odyssey-gateway-startup-chain/understanding.md"
       }
     },
     {
@@ -4828,6 +6444,314 @@
         "kind": "virtual",
         "path": "issues/issues.jsonl",
         "line": 83
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-001",
+      "type": "issue",
+      "title": "Config endpoint 可修改 localhost-only guard (SEC-005)",
+      "summary": "Config endpoint 允许通过 HTTP 修改 localhost-only guard 配置，攻击者可远程禁用 localhost 保护",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-001",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 84
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-002",
+      "type": "issue",
+      "title": "Secret endpoint 无认证走 HTTP (SEC-006)",
+      "summary": "Secret endpoint 通过 HTTP 传输 API key 等敏感数据，无认证保护",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-002",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 85
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-003",
+      "type": "issue",
+      "title": "WebSocket relay 无认证无 origin 校验 (SEC-007)",
+      "summary": "gateway-ws.ts WebSocket relay 不校验 origin 和认证信息，允许任意连接",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-003",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 86
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-004",
+      "type": "issue",
+      "title": "Admin endpoints 无认证 (SEC-008)",
+      "summary": "Admin endpoints 无认证保护，任意 HTTP 客户端可访问管理功能",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-004",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 87
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-005",
+      "type": "issue",
+      "title": "CORS wildcard 反射 Origin 头 (SEC-009)",
+      "summary": "CORS 配置使用 wildcard 反射请求 Origin 头，允许任意跨域",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-005",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 88
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-006",
+      "type": "issue",
+      "title": "默认 host 0.0.0.0 绑定所有接口",
+      "summary": "默认 host 0.0.0.0 绑定所有网络接口，改为 127.0.0.1 是破坏性变更需版本规划",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-006",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 89
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-007",
+      "type": "issue",
+      "title": "health endpoint 返回 200 即使服务 degraded",
+      "summary": "health endpoint 始终返回 200，即使部分服务已降级。应返回 503",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-007",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 90
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-008",
+      "type": "issue",
+      "title": "5 个 _initSchema deferred 缺 try-catch 保护",
+      "summary": "5 个文件的 _initSchema 调用 _db.exec 无 try-catch：unified-memory.ts, sqlite-workflow-state-store.ts, memory-mcp.ts, writing-session-cluster.ts, graph-engine.ts",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-008",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 91
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-009",
+      "type": "issue",
+      "title": "prewarm 失败丢弃已有健康服务 (REL-001)",
+      "summary": "prewarmGatewayControlPlane 失败时丢弃已初始化的健康服务",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-009",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 92
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-010",
+      "type": "issue",
+      "title": "AI 模板词列表 detector/revision-service 双写并已发散",
+      "summary": "AI 模板词库（值得注意的是/让我们/综上所述 等）在 ai-flavor-detector.ts 的 AI_TEMPLATE_PATTERNS 与 revision-service.ts 的 AI_TEMPLATE_REPLACEMENTS 两处独立维护，已 diverged；且 detector 单文件内存在重复 entries（值得注意的是/更有甚者/无独有偶/退一步说/更加重要的是 各出现 2-3 次），重复 entries 虚增匹配计数。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-010",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 93
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-011",
+      "type": "issue",
+      "title": "ConsensusEngine 除零导致 NaN 传播",
+      "summary": "ConsensusEngine.ts:371 \u0007vgScore = scores.reduce(...)/scores.length 无空数组保护，当某维度无 consensus 项时除以 0 产生 NaN，并传播到下游聚合与前端展示。review 标记为 high (CORR-003)，UAT 接受为风险但未在阶段内修复。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-011",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 94
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-012",
+      "type": "issue",
+      "title": "RevisionService LLM fetch 缺 HTTPS 强制与超时",
+      "summary": "revision-service.ts:204 \fetch(${baseUrl}/chat/completions) 无 HTTPS 协议校验（明文 HTTP 下 Bearer apiKey 泄露）、无 AbortSignal/timeout（挂起风险）、apiKey 在 header 明文。review 标记为 high (SEC-003)，UAT 接受为风险但未在阶段内修复。",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-012",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 95
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-013",
+      "type": "issue",
+      "title": "reader-endpoints.ts 跨 8 维度 findings，需拆分为路由/校验/服务/类型导出",
+      "summary": "reader-endpoints.ts 单文件承载 8 个跨 correctness/security/architecture/maintainability/best-practices 的 findings（CORR-001, SEC-001, SEC-002, SEC-004, ARCH-002, MAINT-001, BP-001 等），已成 700+ 行 god module。含多个 module-level lazy singleton（ARCH-002）阻碍测",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-013",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 96
+      }
+    },
+    {
+      "id": "issue-ISS-20260621-014",
+      "type": "issue",
+      "title": "ReportGenerator.tsx 跨边界 import 后端 ConsensusEngine 类型",
+      "summary": "ReportGenerator.tsx:3 import type { ConsensusReport, ConsensusItem } from '../../../../src-ts/reader/ConsensusEngine' 跨 desktop/src-ts 边界，用脆弱相对路径把后端实现类型拉入前端 bundle。desktop/src/api/reader.ts 已重定义同一 interface，应从 api 层唯一导入。review 标记为 medium (A",
+      "tags": [],
+      "status": "draft",
+      "created": "2026-06-21T12:00:00Z",
+      "updated": "2026-06-21T12:00:00Z",
+      "scope": null,
+      "category": null,
+      "specCategory": null,
+      "createdBy": null,
+      "sourceRef": "ISS-20260621-014",
+      "parent": null,
+      "related": [],
+      "source": {
+        "kind": "virtual",
+        "path": "issues/issues.jsonl",
+        "line": 97
       }
     }
   ]

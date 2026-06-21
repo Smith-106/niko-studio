@@ -11,11 +11,12 @@ keywords:
   - dependency
   - nuxt
 related:
-  - "spec:project:architecture-constraints-032"
-  - "spec:project:architecture-constraints-033"
-  - "spec:project:architecture-constraints-034"
-  - "spec:project:architecture-constraints-031"
+  - "spec:project:harvest-brainstorm-error-propagation"
 ---
+
+
+
+
 
 
 
@@ -237,4 +238,42 @@ M26 统一了前后端 ConsensusReport / OverlayMarker 数据契约。前端 Rep
 ### 自定义画像持久化 .niko-studio/reader-personas.json
 M26 实现自定义画像持久化：使用 .niko-studio/reader-personas.json 存储用户自定义 persona，/reader/personas/custom 保存，重启后可读取。
 参考：src-ts/reader/mcp/reader-endpoints.ts, 决策来源 PLN-20260618
+</spec-entry>
+
+<spec-entry category="arch" keywords="shutdown,cleanup,lifecycle,no-op,反模式,资源泄漏" date="2026-06-21" title="shutdown-no-op 反模式 — shutdown 函数必须实际清理资源" description="shutdown/close 函数必须执行实际资源清理（flush state, close connections, stop timers），空实现是架构违规">
+### shutdown-no-op 反模式 — shutdown 函数必须实际清理资源
+接口承诺 shutdown 但实现仅 log 的反模式导致资源泄漏。修复：`shutdownGatewayControlPlane` 必须调用 `container.shutdown()` + WS relay close + rate limiter stop。检查方法：grep `shutdown` 函数体，确认非空实现。边界：shutdown 函数必须执行实际资源清理（flush state, close connections, stop timers），空实现是架构违规。
+来源：odyssey-improve C5, gateway-control-plane.ts:21
+</spec-entry>
+
+<spec-entry category="arch" keywords="sigterm,handler,graceful-shutdown,协调,优雅关闭" date="2026-06-21" title="独立 SIGTERM handler 应统一到 shutdown 链" description="各服务独立注册 SIGTERM/SIGINT 导致关闭顺序不可控，应统一到 gateway-bootstrap shutdown 链">
+### 独立 SIGTERM handler 应统一到 shutdown 链
+`process.on('SIGTERM/SIGINT', () => { shutdown(); process.exit(0) })` 独立注册无协调，导致关闭顺序不可控、资源竞争。修复：统一到 gateway-bootstrap shutdown 链，各服务仅暴露 `shutdown()` 方法。例外：独立运行的服务（db pool, backup manager, token service）独立注册合理。
+来源：odyssey-improve GP2, gateway-bootstrap.ts:119-120
+</spec-entry>
+
+<spec-entry category="arch" keywords="detector,independent-layer,enum-extension,shared-constants,minimal-invasion" date="2026-06-21" title="新增分析轴作为独立 detector 层而非 enum 扩展，并显式指定共享常量模块" description="跨切分析关注点（AI-flavor/sentiment）应建独立模块 + 可选字段挂载，避免扩散到既有 enum；同时显式指定共享常量模块位置防双写" source="retrospective">
+### 新增分析轴作为独立 detector 层而非 enum 扩展，并显式指定共享常量模块
+新增跨切分析关注点（AI-flavor、sentiment 等）时，建为独立模块（自有 indicator 类型 + 纯函数入口 + Optional<T> 挂载到既有结果对象），而非扩展核心 enum（如 QualityDimension）。这保持核心 enum 稳定，新 detector 可独立演进或跳过，不触碰 consensus 聚合，保留向后兼容。
+
+**关键补充**：独立 detector 层决策必须同时指定共享常量模块路径。若新 detector 与既有服务共用同一组领域常量（如 AI 模板词库），未指定共享层会自然演化为双写并漂移（M26 的 MAINT-002：detector 与 revision-service 各定义 60+/40+ 模板词并已 diverged）。
+
+**模式**：`enum + interface + Record<Enum, Interface> + 检测函数` 四层结构，新轴作为 `result.aiFlavor?: AIFlavorResult` 可选字段。
+来源：quality-retrospective M26-P1 INS-67dcee40, ai-flavor-detector.ts:18, plan.json:58, review.json:182 MAINT-002
+</spec-entry>
+
+<spec-entry category="arch" keywords="reuse,transformation-service,config-injection,strategy-pattern,revision" date="2026-06-21" title="复用 transformation service 通过 config 注入意图而非 fork" description="新功能需要文本重写（de-AI/style-shift）时扩展既有 RevisionConfig 注入 intent 字段，而非建并行 rewrite 管线" source="retrospective">
+### 复用 transformation service 通过 config 注入意图而非 fork
+新功能需要文本重写（de-AI、style-shift）时，扩展现有 RevisionConfig 增加可选 intent 字段（quality_goals、target_style、revision_mode）并注入新目标，而非建并行 rewrite 管线。服务内部策略梯（LLM → 规则 → identity fallback）免费服务新用例，避免重复模板字典，保持单一代码路径维护。
+
+**M26 验证**：De-AI rewrite 复用 `IRevisionService.revise`，将 De-AI 目标作为 qualityGoals 注入，零额外管线，复用 M25 session tracking，31 tests passed。
+来源：quality-retrospective M26-P1 INS-e7dac8cc, revision-service.ts:192-237, plan.json:59, TASK-005-summary.md:5
+</spec-entry>
+
+<spec-entry category="arch" keywords="frontend-backend,import-boundary,shared-types,module-separation,contract" date="2026-06-21" title="前端模块只从 desktop/src/api 导入领域类型，禁止跨 desktop/src-ts 边界" description="frontend 跨边界 import backend 类型（../../../../src-ts）破坏模块分离并制造构建耦合，应从 api 层单一来源导入" source="retrospective">
+### 前端模块只从 desktop/src/api 导入领域类型，禁止跨 desktop/src-ts 边界
+前端组件 `from '../../../../src-ts/reader/ConsensusEngine'` 跨 desktop/src-ts 边界，用脆弱相对路径把后端实现类型拉入 bundle。当 api 层已重定义同一 interface（desktop/src/api/reader.ts）时，修复是提取共享 types 包或让 api 层成为前端唯一导入源。
+
+**规则**：前端组件只从 `desktop/src/api/*` 导入领域类型，禁止从 `../src-ts/*` 导入。验收门槛应增加 grep 跨边界 import 检查项——M26 的 DEC-3 契约统一意图被 ARCH-001 实现期 import 捷径绕过。
+来源：quality-retrospective M26-P1 INS-d5187f08, ReportGenerator.tsx:3, reader.ts:17, review.json:138 ARCH-001
 </spec-entry>

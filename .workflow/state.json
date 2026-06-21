@@ -285,6 +285,7 @@
       "completed_at": "2026-06-19T01:10:00+08:00",
       "description": "Review: WARN — 0 critical, 2 high, 12 medium, 7 low findings. Verdict allows proceeding to test with caveats.",
       "harvested": true
+    },
     {
       "id": "TST-20260619-m26-p1-reader-simulation-anti-ai-flavor",
       "type": "test",
@@ -341,11 +342,39 @@
       "completed_at": "2026-06-19T11:40:00Z",
       "description": "Execute: 4/4 tasks completed — dependency fixes, TODO/console cleanup, monitoring docs, semantic chunk commits.",
       "harvested": true
+    },
+    {
+      "id": "DBG-20260620-odyssey-nsis-install-file-lock",
+      "type": "debug",
+      "milestone": "M26",
+      "phase": null,
+      "scope": "standalone",
+      "path": ".workflow/scratch/20260620-debug-odyssey-nsis-install-file-lock",
+      "status": "completed",
+      "depends_on": null,
+      "created_at": "2026-06-20T00:00:00+08:00",
+      "completed_at": "2026-06-20T23:59:00+08:00",
+      "description": "Debug odyssey: NSIS install file lock — startup chain root cause (CommandChild+listen()+parseIntNaN), 5 EGs fixed, 8/8 tests.",
+      "harvested": true
+    },
+    {
+      "id": "IMP-20260620-odyssey-gateway-startup-chain",
+      "type": "improve",
+      "milestone": "M26",
+      "phase": null,
+      "scope": "standalone",
+      "path": ".workflow/scratch/20260620-improve-odyssey-gateway-startup-chain",
+      "status": "completed",
+      "depends_on": "DBG-20260620-odyssey-nsis-install-file-lock",
+      "created_at": "2026-06-20T00:00:00+08:00",
+      "completed_at": "2026-06-20T23:59:00+08:00",
+      "description": "Improve odyssey: gateway startup chain — 6 dimensions audited, 94 findings, 11 fixes applied, Critical 5→0, tests 46→54.",
+      "harvested": true
     }
   ],
   "current_milestone": "M26",
   "initialized": true,
-  "last_updated": "2026-06-19T10:58:30Z",
+  "last_updated": "2026-06-21T13:00:00Z",
   "milestone_history": [
     {
       "id": "M26",

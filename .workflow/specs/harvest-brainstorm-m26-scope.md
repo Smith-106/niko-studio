@@ -1,7 +1,10 @@
 ---
 title: M26 鑼冨洿锛歅erformance Optimization + Deep LLM Integration
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-018"
 ---
+
 ---
 type: spec
 slug: harvest-brainstorm-m26-scope

@@ -1,7 +1,10 @@
 ---
 title: Style learning锛氭彁鍙?via builtin-style-analysis锛屾敞鍏?via style_profile
 createdBy: harvest
+related:
+  - "spec:project:coding-conventions-008"
 ---
+
 ---
 type: knowhow
 slug: harvest-other-m10-style-learning

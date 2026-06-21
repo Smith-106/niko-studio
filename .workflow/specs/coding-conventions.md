@@ -11,11 +11,11 @@ keywords:
   - formatting
   - pattern
 related:
-  - "spec:project:coding-conventions-020"
-  - "spec:project:coding-conventions-021"
-  - "spec:project:coding-conventions-018"
-  - "spec:project:coding-conventions-019"
+  - knowhow-doc-harvest-debug-reexport-anchor
 ---
+
+
+
 
 
 
@@ -145,4 +145,48 @@ callApi 已在 2xx 响应时将原始 body 封装为 {success: true, data: rawBo
 ### 前端新建 reader.ts API 层复用 callApi/ApiResponse 模式
 M26 新建 desktop/src/api/reader.ts 统一前端 reader API 调用，暴露 analyzeReader/compareReaderVersions/submitReaderFeedback/detectAIFlavor/deAiRewrite，均复用 callApi/ApiResponse 模式。消除组件内裸 fetch 调用，降低 API 签名漂移风险。
 参考：desktop/src/api/reader.ts, desktop/src/api/reader.test.ts
+</spec-entry>
+
+<spec-entry category="coding" keywords="parseint,nan,validation,config,范围校验" date="2026-06-21" title="parseInt NaN 语义陷阱 — NaN 通过范围校验" description="parseInt() 返回 NaN 时，NaN < 1 === false 且 NaN > 65535 === false，导致 NaN 通过范围校验">
+### parseInt NaN 语义陷阱 — NaN 通过范围校验
+`parseInt(nonNumeric, 10)` 返回 NaN，后续 `NaN < 1` 和 `NaN > 65535` 均为 false，校验被穿透。必须用 `Number.isFinite()` 显式排除 NaN 和 Infinity。修复模板：`parseIntSafe()` 辅助函数或 `!Number.isFinite(parsed)` guard。
+来源：odyssey-debug EG-21/EG-23, gateway-bootstrap.ts, config/index.ts
+</spec-entry>
+
+<spec-entry category="coding" keywords="health,probe,concurrent,tokio,冷启动,串行" date="2026-06-21" title="并发健康检查减少冷启动延迟" description="串行 HTTP 健康检查用 tokio::join!/Promise.all 并发化，共享 HTTP client 避免连接池浪费">
+### 并发健康检查减少冷启动延迟
+串行 HTTP 健康检查（3 次 × 2s 超时）叠加导致冷启动 6s+ 延迟。修复：`tokio::join!` 并发探测 + 共享 `reqwest::Client`（或 `Promise.all`），将延迟降至 ~2s。
+来源：odyssey-improve C1+H1, gateway_runtime.rs:180-230
+</spec-entry>
+
+<spec-entry category="coding" keywords="http,headers,catch,streaming,headersSent,二次写入" date="2026-06-21" title="HTTP handler headersSent 检查防止二次写入" description="catch 块中写响应前必须检查 res.headersSent，否则 destroy 响应">
+### HTTP handler headersSent 检查防止二次写入
+流式响应已发送 header 后 catch 块二次 writeHead 导致 ERR_HTTP_HEADERS_SENT。处理策略：`if (!res.headersSent) { writeHead+end } else { res.destroy() }`。
+来源：odyssey-improve H20/GP1, gateway-request-handler.ts:179-187
+</spec-entry>
+
+<spec-entry category="coding" keywords="cors,cache,reload,config,invalidate" date="2026-06-21" title="CORS 缓存 + config reload 时 invalidate" description="CORS origins 每请求重新计算浪费资源，改用缓存 + config reload 失效模式">
+### CORS 缓存 + config reload 时 invalidate
+`resolveCorsOrigins()` 每次请求调用（遍历 NIKO_ALLOWED_ORIGINS + 环境变量解析），浪费资源。修复：`_cachedCorsOrigins + invalidateCorsCache()` 模式，config reload 时调用 invalidate。
+来源：odyssey-improve H5/GP3, gateway-http-adapter.ts:126-140
+</spec-entry>
+
+<spec-entry category="coding" keywords="wave-planning,depends_on,collision-notes,file-contention,parallel-edit" date="2026-06-21" title="共享文件多任务编辑通过 depends_on 串行化" description="单文件被 3+ 任务编辑时，显式 depends_on 串行化而非仅依赖 wave 分组，并在 collision_notes 标注热点" source="retrospective">
+### 共享文件多任务编辑通过 depends_on 串行化
+单文件被 3+ 任务编辑时，仅靠 wave 分组不足以防止并行编辑冲突，需显式 `depends_on` 边串行化。M26 的 reader-endpoints.ts 被 6/10 任务编辑，规划时在 collision_notes 标注 `TASK-007 depends_on TASK-006`，W3 三任务串行完成无合并冲突，0 rework iterations。
+
+**规则**：任何被 3+ 任务编辑的文件，在 plan 的 collision_notes 显式声明串行顺序，并在 task JSON 的 `depends_on` 建立边，即使同 wave 内也串行。
+来源：quality-retrospective M26-P1 INS-1f83f679, plan.json#collision_notes, TASK-007.json#depends_on, index.json#waves[2]
+</spec-entry>
+
+<spec-entry category="coding" keywords="mcp-endpoint,input-validation,security-contract,max-length,path-traversal,finite-range" date="2026-06-21" title="MCP endpoint 强制输入校验三件套（长度/路径/数值范围）" description="任何接收文本/env-derived 路径/数值权重的 endpoint 都应内置 max-length + path containment + finite-in-range 三道校验" source="retrospective">
+### MCP endpoint 强制输入校验三件套（长度/路径/数值范围）
+MCP endpoint 接收外部输入时必须强制三道校验，缺一不可（M26 review 的 SEC-001/002/004 同源缺失）：
+
+1. **长度上限**（SEC-001）：文本输入必须有 max-length，防止内存耗尽 / 超长 payload
+2. **路径收容**（SEC-002）：env-derived 路径必须 path containment 校验（path.resolve 后检查是否在允许根目录内），防 path traversal
+3. **数值范围**（SEC-004）：数值权重必须 `Number.isFinite(x) && x >= min && x <= max`，防 NaN/Infinity 污染计算（与 ConsensusEngine 除零 CORR-003 同类）
+
+**规则**：新建 endpoint 的验收清单必须包含这三道校验，作为可复用 endpoint 安全契约。
+来源：quality-retrospective M26-P1 INS-5e45e297, review.json SEC-001/002/004, reader-endpoints.ts:39,547,640
 </spec-entry>

@@ -1,7 +1,10 @@
 ---
 title: "BookWorld ablation锛氱幆澧冨搷搴斿拰鍦烘櫙妯″紡鏄牳蹇冭础鐚洜瀛?tags: BookWorld,ablation,immersion"
 createdBy: harvest
+related:
+  - "spec:project:learnings-005"
 ---
+
 ---
 type: knowhow
 slug: harvest-other-bookworld-ablation

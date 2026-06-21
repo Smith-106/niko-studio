@@ -1,7 +1,10 @@
 ---
 title: Craft catalog JSON data file 妯″紡
 createdBy: harvest
+related:
+  - "spec:project:coding-conventions-004"
 ---
+
 ---
 type: knowhow
 slug: harvest-debug-craft-catalog-json

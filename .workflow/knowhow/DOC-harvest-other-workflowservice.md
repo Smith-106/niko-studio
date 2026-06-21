@@ -1,7 +1,10 @@
 ---
 title: "WorkflowService pattern: 鍐呯疆宸ヤ綔娴佸父閲?+ checkpoint 璐ㄩ噺闂ㄦ帶"
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-022"
 ---
+
 ---
 type: knowhow
 slug: harvest-other-workflowservice

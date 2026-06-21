@@ -1,7 +1,10 @@
 ---
 title: "M24 璺ㄧ壒鎬ч敊璇紶鎾鍒?tags: m24,error-handling,graceful-degradation"
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-027"
 ---
+
 ---
 type: spec
 slug: harvest-brainstorm-error-propagation

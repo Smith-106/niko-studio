@@ -1,7 +1,10 @@
 ---
 title: "Cytoscape.js 鐭ヨ瘑鍥捐氨 4 绉嶈鍥炬ā寮?tags: obsidian-integration,knowledge-graph,cytoscape"
 createdBy: harvest
+related:
+  - "spec:project:harvest-brainstorm-embedding"
 ---
+
 ---
 type: spec
 slug: harvest-brainstorm-cytoscape

@@ -1,7 +1,10 @@
 ---
 title: "M24 鑼冨洿鍏辫瘑锛歵ech debt F-001~F-006 + F-007 鍙欎簨鍙鍖?tags: m24,milestone-scope,tech-debt,consensus"
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-001"
 ---
+
 ---
 type: spec
 slug: harvest-brainstorm-m24-scope

@@ -1,7 +1,10 @@
 ---
 title: "OpenStory agent lifecycle: perception鈫抪lanning鈫抏xecution鈫抮eflection"
 createdBy: harvest
+related:
+  - "spec:project:architecture-constraints-008"
 ---
+
 ---
 type: knowhow
 slug: harvest-other-lifecycle-hooks
