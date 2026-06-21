@@ -201,6 +201,12 @@ async function callLLMForRewrite(prompt: string): Promise<string | null> {
       return null;
     }
 
+    // ISS-012: enforce HTTPS protocol to prevent API key leakage over plain HTTP
+    if (!baseUrl.startsWith('https://')) {
+      log.warn('LLM_BASE_URL must use HTTPS protocol, falling back to rule-based rewrite', { baseUrl });
+      return null;
+    }
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -216,6 +222,7 @@ async function callLLMForRewrite(prompt: string): Promise<string | null> {
         temperature: 0.7,
         max_tokens: 4096,
       }),
+      signal: AbortSignal.timeout(30_000), // ISS-012: 30s timeout to prevent hanging
     });
 
     if (!response.ok) {

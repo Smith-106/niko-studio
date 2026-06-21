@@ -8,6 +8,7 @@
 import { type Server } from 'node:http';
 import { WebSocketServer, WebSocket, type Data } from 'ws';
 import { createLogger } from '../logger/index.js';
+import { resolveLocalhostOnlyEnabled } from './config';
 
 const _log = createLogger('workflow-event-relay');
 
@@ -49,6 +50,30 @@ export class WorkflowEventRelay {
     if (server) {
       server.on('upgrade', (request, socket, head) => {
         try {
+          // ISS-003: WebSocket upgrade requires localhost-only + origin check when guard is enabled
+          if (resolveLocalhostOnlyEnabled()) {
+            const remoteAddr = (socket as import('node:net').Socket).remoteAddress ?? '';
+            // No remoteAddress = internal/test call, not over network — allow by default
+            const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+            if (!isLocal) {
+              _log.warn('WebSocket upgrade rejected: non-localhost client', { remoteAddr });
+              socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+              socket.destroy();
+              return;
+            }
+            // Origin check: reject cross-origin WebSocket connections
+            const origin = request.headers.origin;
+            if (origin) {
+              const allowed = ['http://localhost', 'http://127.0.0.1', 'tauri://'];
+              if (!allowed.some((prefix) => origin.startsWith(prefix))) {
+                _log.warn('WebSocket upgrade rejected: disallowed origin', { origin });
+                socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+                socket.destroy();
+                return;
+              }
+            }
+          }
+
           const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
           if (url.pathname === path) {
             this.wss.handleUpgrade(request, socket, head, (ws) => {
@@ -56,10 +81,10 @@ export class WorkflowEventRelay {
             });
           } else {
             // Destroy sockets for non-matching upgrade paths to prevent fd leaks
-            socket.destroy();
+            socket.destroy?.();
           }
         } catch {
-          socket.destroy();
+          socket.destroy?.();
         }
       });
     }

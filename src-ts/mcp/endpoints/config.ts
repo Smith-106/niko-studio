@@ -7,6 +7,7 @@
 
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
+import { resolveLocalhostOnlyEnabled } from '../config';
 
 // ---------------------------------------------------------------
 // Constants
@@ -70,8 +71,8 @@ const MODIFIABLE_FIELDS: string[] = [
   'obsidian.auto_discover',
   'obsidian.sync_on_startup',
   'obsidian.default_vault',
-  'gateway.localhost_only',
-  'gateway.localhost_only_exempt_paths',
+  // ISS-001: gateway.localhost_only and localhost_only_exempt_paths removed from
+  // API-modifiable list — disabling the localhost guard via HTTP is a security bypass.
   'gateway.detection_evasion_guard',
   'gateway.metrics_enabled',
   'gateway.ui_bridge_enabled',
@@ -197,7 +198,16 @@ export async function updateConfig(request: HttpRequest): Promise<HttpResponse> 
   }
 }
 
-export async function getSecrets(_request: HttpRequest): Promise<HttpResponse> {
+export async function getSecrets(request: HttpRequest): Promise<HttpResponse> {
+  // ISS-002: secrets endpoint requires localhost-only when guard is enabled
+  if (resolveLocalhostOnlyEnabled()) {
+    const remoteAddr = request.remoteAddress ?? '';
+    // No remoteAddress = internal/test call, not over network — allow by default
+    const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+    if (!isLocal) {
+      return jsonResponse({ error: 'Access denied: localhost only' }, 403);
+    }
+  }
   if (!configAccess) {
     return jsonResponse({ error: 'Config access not initialized' }, 500);
   }
@@ -223,6 +233,15 @@ export async function getSecrets(_request: HttpRequest): Promise<HttpResponse> {
 }
 
 export async function updateSecrets(request: HttpRequest): Promise<HttpResponse> {
+  // ISS-002: secrets endpoint requires localhost-only when guard is enabled
+  if (resolveLocalhostOnlyEnabled()) {
+    const remoteAddr = request.remoteAddress ?? '';
+    // No remoteAddress = internal/test call, not over network — allow by default
+    const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+    if (!isLocal) {
+      return jsonResponse({ error: 'Access denied: localhost only' }, 403);
+    }
+  }
   if (!configAccess) {
     return jsonResponse({ error: 'Config access not initialized' }, 500);
   }

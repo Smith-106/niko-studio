@@ -368,6 +368,12 @@ export class ConsensusEngine {
     for (const [dimKey, dimName] of Object.entries(dimensionMap)) {
       const scores = reactions.map((r) => r.dimensions[dimKey as keyof typeof r.dimensions]);
 
+      // Guard: empty reactions → zero score, avoid NaN from division-by-zero
+      if (scores.length === 0) {
+        summaries[dimName] = { avgScore: 0, consensus: 0 };
+        continue;
+      }
+
       const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
 
       // Consensus = 1 - normalized standard deviation

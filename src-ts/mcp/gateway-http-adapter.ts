@@ -105,6 +105,7 @@ export function toHttpRequest(
     body,
     query,
     params,
+    remoteAddress: req.socket?.remoteAddress,
   };
 }
 

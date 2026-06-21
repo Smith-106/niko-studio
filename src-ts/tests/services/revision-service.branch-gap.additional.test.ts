@@ -30,7 +30,7 @@ function withLLMEnv(fn: () => Promise<void>): Promise<void> {
   const originalModel = process.env['LLM_MODEL'];
 
   process.env['LLM_API_KEY'] = 'test-key';
-  process.env['LLM_BASE_URL'] = 'http://localhost:9999';
+  process.env['LLM_BASE_URL'] = 'https://localhost:9999';
   process.env['LLM_MODEL'] = 'test-model';
 
   return fn().finally(() => {

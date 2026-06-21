@@ -17,7 +17,7 @@ describe('services/revision-service LLM rewrite coverage', () => {
     const originalModel = process.env['LLM_MODEL'];
 
     process.env['LLM_API_KEY'] = 'test-api-key';
-    process.env['LLM_BASE_URL'] = 'http://localhost:9999';
+    process.env['LLM_BASE_URL'] = 'https://localhost:9999';
     process.env['LLM_MODEL'] = 'test-model';
 
     const mockFetch = vi.fn().mockResolvedValue({
@@ -85,7 +85,7 @@ describe('services/revision-service LLM rewrite coverage', () => {
 
     // Verify fetch was called with correct parameters
     expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:9999/chat/completions',
+      'https://localhost:9999/chat/completions',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -132,7 +132,7 @@ describe('services/revision-service LLM rewrite coverage', () => {
     const originalModel = process.env['LLM_MODEL'];
 
     process.env['LLM_API_KEY'] = 'test-api-key';
-    process.env['LLM_BASE_URL'] = 'http://localhost:9999';
+    process.env['LLM_BASE_URL'] = 'https://localhost:9999';
     process.env['LLM_MODEL'] = 'test-model';
 
     const mockFetch = vi.fn().mockResolvedValue({
@@ -222,7 +222,7 @@ describe('services/revision-service LLM rewrite coverage', () => {
     const originalModel = process.env['LLM_MODEL'];
 
     process.env['LLM_API_KEY'] = 'test-api-key';
-    process.env['LLM_BASE_URL'] = 'http://localhost:9999';
+    process.env['LLM_BASE_URL'] = 'https://localhost:9999';
     process.env['LLM_MODEL'] = 'test-model';
 
     const mockFetch = vi.fn().mockRejectedValue(new Error('network down'));

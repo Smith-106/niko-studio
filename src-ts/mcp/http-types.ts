@@ -19,6 +19,7 @@ export interface HttpRequest {
   body: unknown;
   query: Record<string, string>;
   params: Record<string, string>;
+  remoteAddress?: string; // client IP for localhost-only guard checks
   traceContext?: HttpRequestTraceContext;
 }
 

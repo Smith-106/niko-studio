@@ -7,6 +7,7 @@
 
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
+import { resolveLocalhostOnlyEnabled } from '../config';
 import {
   MCP_SERVICE_CONFIGS,
   MCP_SERVICE_HEALTH_CACHE,
@@ -107,6 +108,15 @@ export async function listMcpServices(request: HttpRequest): Promise<HttpRespons
 
 /** POST /admin/mcp/services - Create a new MCP service config */
 export async function createMcpService(request: HttpRequest): Promise<HttpResponse> {
+  // ISS-004: admin write endpoints require localhost-only when guard is enabled
+  if (resolveLocalhostOnlyEnabled()) {
+    const remoteAddr = request.remoteAddress ?? '';
+    // No remoteAddress = internal/test call, not over network — allow by default
+    const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+    if (!isLocal) {
+      return jsonResponse({ error: 'Access denied: localhost only' }, 403);
+    }
+  }
   const body = parseBody(request) as Record<string, unknown>;
   const rawServiceId = String(body.id ?? body.service_id ?? '').trim().toLowerCase();
 
@@ -129,6 +139,15 @@ export async function createMcpService(request: HttpRequest): Promise<HttpRespon
 
 /** PUT /admin/mcp/services/:service_id - Update an MCP service config */
 export async function updateMcpService(request: HttpRequest): Promise<HttpResponse> {
+  // ISS-004: admin write endpoints require localhost-only when guard is enabled
+  if (resolveLocalhostOnlyEnabled()) {
+    const remoteAddr = request.remoteAddress ?? '';
+    // No remoteAddress = internal/test call, not over network — allow by default
+    const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+    if (!isLocal) {
+      return jsonResponse({ error: 'Access denied: localhost only' }, 403);
+    }
+  }
   const serviceId = (request.params['service_id'] ?? '').trim().toLowerCase();
   if (!serviceId) {
     return jsonResponse({ error: 'service_id is required' }, 400);
@@ -152,6 +171,15 @@ export async function updateMcpService(request: HttpRequest): Promise<HttpRespon
 
 /** DELETE /admin/mcp/services/:service_id - Delete an MCP service config */
 export async function deleteMcpService(request: HttpRequest): Promise<HttpResponse> {
+  // ISS-004: admin write endpoints require localhost-only when guard is enabled
+  if (resolveLocalhostOnlyEnabled()) {
+    const remoteAddr = request.remoteAddress ?? '';
+    // No remoteAddress = internal/test call, not over network — allow by default
+    const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+    if (!isLocal) {
+      return jsonResponse({ error: 'Access denied: localhost only' }, 403);
+    }
+  }
   const serviceId = (request.params['service_id'] ?? '').trim().toLowerCase();
   if (!serviceId) {
     return jsonResponse({ error: 'service_id is required' }, 400);
@@ -176,6 +204,15 @@ export async function deleteMcpService(request: HttpRequest): Promise<HttpRespon
 
 /** POST /admin/mcp/services/:service_id/enabled - Enable/disable an MCP service */
 export async function setMcpServiceEnabled(request: HttpRequest): Promise<HttpResponse> {
+  // ISS-004: admin write endpoints require localhost-only when guard is enabled
+  if (resolveLocalhostOnlyEnabled()) {
+    const remoteAddr = request.remoteAddress ?? '';
+    // No remoteAddress = internal/test call, not over network — allow by default
+    const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+    if (!isLocal) {
+      return jsonResponse({ error: 'Access denied: localhost only' }, 403);
+    }
+  }
   const serviceId = (request.params['service_id'] ?? '').trim().toLowerCase();
   if (!serviceId) {
     return jsonResponse({ error: 'service_id is required' }, 400);
