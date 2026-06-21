@@ -36,11 +36,26 @@ export interface ReaderReaction {
   overallScore: number
 }
 
+export interface AIFlavorIndicator {
+  pattern: string
+  match: string
+  position: number
+}
+
+export interface AIFlavorResult {
+  aiFlavorScore: number
+  indicators: AIFlavorIndicator[]
+  confidence: number
+  evidence: string[]
+  suggestions: string[]
+}
+
 export interface EditorialAnalysis {
   structuralIssues: string[]
   styleNotes: string[]
   pacingAssessment: string
   recommendations: string[]
+  aiFlavor?: AIFlavorResult
 }
 
 export interface DimensionScore {
@@ -65,13 +80,21 @@ export interface ReaderAnalyzeResult {
 }
 
 export interface OverlayMarker {
-  personaId: string
-  personaName: string
-  position: { chapter: string; paragraph: number }
-  reaction: 'positive' | 'negative' | 'neutral'
-  comment: string
+  id: string
+  type: 'consensus' | 'dissent' | 'highlight'
   dimension: string
-  text: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  description: string
+  position: { chapterId?: string; paragraphIndex?: number }
+  personaCount: number
+  consensusStrength: number
+  personaIds: string[]
+}
+
+export interface DimensionOverlayEntry {
+  avgScore: number
+  markerCount: number
+  worstSeverity: string
 }
 
 export interface ReaderOverlayResult {
@@ -86,6 +109,7 @@ export interface ReaderPersona {
   id: string
   name: string
   description: string
+  type?: 'preset' | 'custom'
   parameters: {
     plotWeight: number
     characterWeight: number
@@ -95,6 +119,11 @@ export interface ReaderPersona {
     focusAreas: string[]
     biases: string[]
   }
+  ageGroup?: string
+  culturalBackground?: string
+  readingPreference?: string
+  genrePreference?: string
+  aiFlavorSensitivity?: number
 }
 
 export interface ReaderPersonasResult {
@@ -203,6 +232,105 @@ export async function submitFeedback(
 }
 
 // ============================================================
+// AI Flavor & De-AI & A/B Compare (GAP-04/05/06)
+// ============================================================
+
+export interface AIFlavorDetectionResult {
+  novelId: string
+  score: number
+  indicators: AIFlavorIndicator[]
+  confidence: number
+  evidence: string[]
+  suggestions: string[]
+}
+
+export interface DeAIRewriteResult {
+  novelId: string
+  originalText: string
+  revisedText: string
+  aiFlavorScore: number
+  improvements?: {
+    delta: number
+    improvedDimensions: string[]
+    regressedDimensions: string[]
+    unchangedDimensions: string[]
+  }
+  suggestions: string[]
+  mode: string
+}
+
+export interface ComparisonDimension {
+  dimension: string
+  scoreA: number
+  scoreB: number
+  delta: number
+  winner: 'A' | 'B' | 'tie'
+}
+
+export interface ReaderCompareResult {
+  novelId: string
+  versionAConsensus: ConsensusReport
+  versionBConsensus: ConsensusReport
+  comparison: ComparisonDimension[]
+  overallWinner: 'A' | 'B' | 'tie'
+  versionALabel?: string
+  versionBLabel?: string
+}
+
+/**
+ * Detect AI-generated prose patterns in text.
+ *
+ * Calls POST /reader/ai-flavor.
+ */
+export async function detectAIFlavor(
+  novelId: string,
+  text?: string,
+): Promise<ApiResponse<AIFlavorDetectionResult>> {
+  return callApi<AIFlavorDetectionResult>('/reader/ai-flavor', 'POST', {
+    novelId,
+    text,
+  })
+}
+
+/**
+ * De-AI rewrite: detect and rewrite AI-generated prose to sound natural.
+ *
+ * Calls POST /reader/de-ai.
+ */
+export async function deAIRewrite(
+  novelId: string,
+  text?: string,
+  mode?: 'de-ai' | 'style-shift',
+  targetStyle?: string,
+): Promise<ApiResponse<DeAIRewriteResult>> {
+  return callApi<DeAIRewriteResult>('/reader/de-ai', 'POST', {
+    novelId,
+    text,
+    mode,
+    targetStyle,
+  } as unknown as Record<string, unknown>)
+}
+
+/**
+ * A/B comparison of two text versions using reader simulation.
+ *
+ * Calls POST /reader/compare.
+ */
+export async function compareReader(
+  novelId: string,
+  versionA: { text: string; label?: string },
+  versionB: { text: string; label?: string },
+  personaIds?: string[],
+): Promise<ApiResponse<ReaderCompareResult>> {
+  return callApi<ReaderCompareResult>('/reader/compare', 'POST', {
+    novelId,
+    versionA,
+    versionB,
+    personaIds,
+  } as unknown as Record<string, unknown>)
+}
+
+// ============================================================
 // Barrel export
 // ============================================================
 
@@ -212,4 +340,7 @@ export const readerApi = {
   getReaderPersonas,
   createCustomPersona,
   submitFeedback,
+  detectAIFlavor,
+  deAIRewrite,
+  compareReader,
 }

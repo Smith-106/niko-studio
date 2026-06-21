@@ -1,0 +1,56 @@
+{
+  "open_questions": [
+    {
+      "area": "UI/UX",
+      "question": "9 维度权重反馈的具体交互位置在哪里？",
+      "options": [
+        "ReaderOverlay marker",
+        "DetailPanel",
+        "ReportGenerator dimension card"
+      ]
+    },
+    {
+      "area": "UI/UX",
+      "question": "A/B 测试视图复用 ReaderOverlay 还是新建面板？",
+      "options": [
+        "复用 ReaderOverlay",
+        "新建 ReaderABTestPanel"
+      ]
+    },
+    {
+      "area": "i18n",
+      "question": "anti-AI-flavor 中文术语标准化？",
+      "options": [
+        "反 AI 味",
+        "去 AI 感",
+        "AI 痕迹检测"
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "status": "open",
+      "title": "自定义画像持久化方案",
+      "description": ".niko-studio/reader-personas.json 或 SQLite",
+      "ref": "context.md#Free"
+    },
+    {
+      "status": "open",
+      "title": "A/B 测试返回结构",
+      "description": "复用 RevisionComparison 或新建 ReaderABComparison",
+      "ref": "context.md#Free"
+    },
+    {
+      "status": "open",
+      "title": "Anti-AI-flavor 规则层关键词",
+      "description": "由 implementer 根据效果迭代",
+      "ref": "context.md#Free"
+    },
+    {
+      "status": "open",
+      "title": "前端 reader API 层命名",
+      "description": "reader.ts / readerSimulation.ts",
+      "ref": "context.md#Free"
+    }
+  ]
+}

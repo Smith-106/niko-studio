@@ -1,0 +1,36 @@
+{
+  "open_questions": [
+    {
+      "area": "dependency-audit",
+      "question": "哪些剩余低/中危漏洞可以通过 npm audit fix 自动修复而不破坏构建/测试？",
+      "options": [
+        "运行 npm audit fix 后逐项验证",
+        "手动升级指定包",
+        "记录为 issue 延后"
+      ]
+    },
+    {
+      "area": "git-cleanup",
+      "question": "2088 个变更文件应如何具体分块（deps/tests/components/cleanup/governance）？",
+      "options": [
+        "按目录与文件类型分块",
+        "按修改意图分块",
+        "保留部分未提交治理清理"
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "status": "open",
+      "title": "具体分块提交命名",
+      "description": "由执行者根据 git status 决定具体 commit 命名与顺序",
+      "ref": "context.md#Free"
+    },
+    {
+      "status": "open",
+      "title": "无法自动修复的漏洞处理",
+      "description": "对不在生产运行路径上的低/中危漏洞，允许记录为 issue 延后",
+      "ref": "context.md#Free"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { FileText, Download, RefreshCw, AlertTriangle, CheckCircle, XCircle, Users } from 'lucide-react'
-import type { ConsensusReport, ConsensusItem } from '../../../../src-ts/reader/ConsensusEngine'
+import type { ConsensusReport, ConsensusItem } from '../../api/reader'
 import { analyzeReader } from '../../api/reader'
 import { logger } from '../../utils/logger'
 

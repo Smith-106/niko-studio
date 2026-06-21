@@ -1,0 +1,74 @@
+{
+  "id": "TASK-001",
+  "title": "修复 /reader/analyze 空文本 TODO",
+  "description": "当前 reader-endpoints.ts:165-167 将 manuscriptText 硬编码为空字符串，导致所有上层分析返回无意义结果。需要接入 workspace/manuscript 服务获取真实小说内容。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "在 rsAnalyzeEndpoint 中，将 `const manuscriptText = ''` 替换为通过 workspace/manuscript 服务读取 novelId 对应的真实文本。修改后 /reader/analyze 返回的分析必须包含非空文本的 readerReactions 和 editorialAnalysis。",
+  "scope": "src-ts/reader/mcp/reader-endpoints.ts",
+  "focus_paths": ["src-ts/reader/mcp/reader-endpoints.ts"],
+  "read_first": [
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/reader/DualEngine.ts",
+    "src-ts/reader/DimensionAnalyzer.ts"
+  ],
+  "depends_on": [],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "reader-endpoints.ts 中不再出现 `const manuscriptText = ''` 或空文本 TODO",
+      "/reader/analyze 对已知 novelId 返回的 editorialAnalysis 包含与文本长度相关的结构性分析（如段落数、字数）"
+    ],
+    "verification": "运行 reader-endpoints 测试，确认 analyze endpoint 对模拟 novelId 返回非空分析结果；grep 确认文件中无空文本 TODO",
+    "definition_of_done": "analyze endpoint 能读取真实小说内容并返回有意义的分析结果"
+  },
+  "files": [
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.ts",
+      "action": "modify",
+      "target": "rsAnalyzeEndpoint",
+      "change": "将 manuscriptText 从空字符串替换为从 workspace/manuscript 服务读取真实内容"
+    }
+  ],
+  "implementation": [
+    "查找 workspace/manuscript 服务的读取接口（如 getManuscriptText(novelId) 或类似）",
+    "在 rsAnalyzeEndpoint 中引入该接口调用",
+    "处理 novelId 不存在时的错误返回（404 或 400）",
+    "删除或替换 TODO 注释",
+    "更新 reader-endpoints.test.ts 中的测试用例，使用非空文本验证"
+  ],
+  "test": {
+    "commands": ["npm test -- --grep 'reader-endpoints'"],
+    "unit": ["src-ts/tests/reader/reader-endpoints.test.ts"],
+    "integration": [],
+    "success_metrics": ["所有 reader-endpoints 测试通过", "grep 确认无空文本 TODO"]
+  },
+  "reference": {
+    "pattern": "现有 endpoint 使用 parseBody + jsonResponse 模式",
+    "files": ["src-ts/reader/mcp/reader-endpoints.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "直接接入现有 workspace/manuscript 服务，最小侵入",
+    "decision_factors": ["所有上层功能依赖真实文本", "TODO 是已知阻塞"],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "title": "workspace/manuscript 服务接口不存在",
+      "severity": "high",
+      "mitigation": "若接口不存在，先添加简单的 manuscript 读取辅助函数，不阻塞后续任务"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "1.5h",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 1,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}

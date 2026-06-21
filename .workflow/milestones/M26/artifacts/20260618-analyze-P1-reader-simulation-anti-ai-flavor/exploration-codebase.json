@@ -1,0 +1,935 @@
+{
+  "analysis_id": "ANL-P1-reader-simulation-anti-ai-flavor-2026-06-18",
+  "created_at": "2026-06-18T21:50:00+08:00",
+  "scope": "M26-Phase1",
+  "topic": "Reader Simulation Expansion + Anti-AI-Flavor Detection + i18n Optimization",
+  "requirements": ["R-M26-001", "R-M26-002", "R-M26-003", "R-M26-004", "R-M26-005", "R-M26-006"],
+
+  "relevant_files": [
+    {
+      "path": "src-ts/reader/PersonaDefinition.ts",
+      "relevance": 0.95,
+      "role": "modify_target",
+      "rationale": "Core reader persona interface with 4 weights (plot, character, style, pacing) + focusAreas + biases. Must expand for R-M26-001 (age, culture, reading preference, genre preference). Currently has only 3 presets (Suspense Enthusiast, Literary Critic, General Reader).",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-001 primary target: persona parameter expansion",
+      "key_code": [
+        { "symbol": "ReaderPersona.parameters", "location": "src-ts/reader/PersonaDefinition.ts:18-27", "description": "Current parameters only include plotWeight, characterWeight, styleWeight, pacingWeight, toleranceThreshold, focusAreas, biases. Missing age, culture, genrePreference, readingHabit fields." },
+        { "symbol": "createSuspenseEnthusiast", "location": "src-ts/reader/PersonaDefinition.ts:39-67", "description": "Preset persona factory — needs new demographic fields" },
+        { "symbol": "PRESET_PERSONAS", "location": "src-ts/reader/PersonaDefinition.ts:140-160", "description": "Map of preset persona IDs to factories — expansion point for new preset types" }
+      ]
+    },
+    {
+      "path": "src-ts/reader/DimensionAnalyzer.ts",
+      "relevance": 0.92,
+      "role": "modify_target",
+      "rationale": "4-dimension analyzer (PLOT_COHERENCE, CHARACTER_CONSISTENCY, STYLE_CONSISTENCY, PACING_TENSION). R-M26-002 requires integration with 9-dimension writing analysis. The analyzeAllDimensions() method only returns scores for 4 legacy dimensions.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002 primary target: bridge 4-dimension reader to 9-dimension writing craft",
+      "key_code": [
+        { "symbol": "analyzeAllDimensions", "location": "src-ts/reader/DimensionAnalyzer.ts:80-100", "description": "Analyzes all 4 quality dimensions. Must be extended to accept WritingCraftDimension[] or delegate to writing-craft analyzers." },
+        { "symbol": "QualityDimension", "location": "src-ts/quality/types.ts:13-18", "description": "Enum with 4 dimensions. Hardcoded in multiple places." }
+      ]
+    },
+    {
+      "path": "src-ts/reader/ConsensusEngine.ts",
+      "relevance": 0.88,
+      "role": "modify_target",
+      "rationale": "Multi-persona consensus with grouping by dimension+location. R-M26-005 A/B testing needs comparison mode between persona sets. Currently buildConsensus() aggregates all reactions into single report. Needs persona-set partitioning.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-005 primary target: A/B comparison between persona groups",
+      "key_code": [
+        { "symbol": "buildConsensus", "location": "src-ts/reader/ConsensusEngine.ts:78-120", "description": "Aggregates all reactions. Needs overload for partitioned reactions (group A vs group B)." },
+        { "symbol": "ConsensusReport", "location": "src-ts/reader/ConsensusEngine.ts:33-39", "description": "Report structure needs comparison fields for A/B mode." }
+      ]
+    },
+    {
+      "path": "src-ts/reader/DualEngine.ts",
+      "relevance": 0.85,
+      "role": "modify_target",
+      "rationale": "Parallel reader + editor engine. analyze() runs both via Promise.all. runReaderEngine() delegates to DimensionAnalyzer (4 dims). Needs to optionally delegate to 9-dimension writing craft analysis for R-M26-002.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: DualEngine orchestration layer needs mode switch between legacy 4-dim and expanded 9-dim analysis",
+      "key_code": [
+        { "symbol": "runReaderEngine", "location": "src-ts/reader/DualEngine.ts:120-160", "description": "Delegates to DimensionAnalyzer. Needs conditional delegation to WritingCraftAnalyzer." },
+        { "symbol": "DualEngine.analyze", "location": "src-ts/reader/DualEngine.ts:90-110", "description": "Entry point for analysis. Needs new options parameter for analysis mode." }
+      ]
+    },
+    {
+      "path": "src-ts/reader/OverlayBridge.ts",
+      "relevance": 0.80,
+      "role": "modify_target",
+      "rationale": "Bridges consensus to overlay markers. transformToOverlay() creates markers with type 'consensus'|'dissent'. R-M26-005 A/B testing needs new marker types for 'groupA'/'groupB' comparison.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-005: Overlay visualization needs comparison mode markers",
+      "key_code": [
+        { "symbol": "OverlayMarker.type", "location": "src-ts/reader/OverlayBridge.ts:20", "description": "Current union: 'consensus' | 'dissent' | 'highlight'. Needs 'groupA' | 'groupB' | 'difference' for A/B." },
+        { "symbol": "transformToOverlay", "location": "src-ts/reader/OverlayBridge.ts:90-130", "description": "Core transformation logic. Needs A/B comparison path." }
+      ]
+    },
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.ts",
+      "relevance": 0.87,
+      "role": "modify_target",
+      "rationale": "4 endpoints: rsAnalyzeEndpoint, rsGetPersonasEndpoint, rsCreateCustomPersonaEndpoint, rsGetOverlayEndpoint. Uses in-memory stores (customPersonaStore, analysisResultCache). R-M26-001 needs new endpoint for persona categories. R-M26-005 needs A/B endpoint.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-001 + R-M26-005: API surface expansion",
+      "key_code": [
+        { "symbol": "customPersonaStore", "location": "src-ts/reader/mcp/reader-endpoints.ts:49", "description": "In-memory Map — not persistent. Production risk." },
+        { "symbol": "rsAnalyzeEndpoint", "location": "src-ts/reader/mcp/reader-endpoints.ts:120-180", "description": "Main analysis endpoint. Needs new parameters for analysis mode and persona sets." },
+        { "symbol": "contentRoutes", "location": "src-ts/mcp/routes/content.ts:146-150", "description": "Reader routes registered at lines 146-150. New routes need registration here." }
+      ]
+    },
+    {
+      "path": "src-ts/mcp/endpoints/writing-craft.ts",
+      "relevance": 0.90,
+      "role": "pattern_reference",
+      "rationale": "9-dimension writing analysis endpoint. Each dimension has dedicated analyzer. WritingCraftDimension = 'structure'|'character'|'suspense'|'emotion'|'dialogue'|'webnovel'|'hook'|'cliffhanger'|'show_tell'. This is the target system R-M26-002 needs to integrate with.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Source of 9 dimensions to bridge into reader simulation",
+      "key_code": [
+        { "symbol": "WritingCraftDimension", "location": "src-ts/mcp/endpoints/writing-craft.ts:28-37", "description": "9-dimension union type. The canonical list of craft dimensions." },
+        { "symbol": "writingCraftAnalyzeEndpoint", "location": "src-ts/mcp/endpoints/writing-craft.ts:65-100", "description": "Entry point that delegates to per-dimension analyzers. Pattern for how reader engine could delegate." },
+        { "symbol": "analyzeDimension", "location": "src-ts/mcp/endpoints/writing-craft.ts:110-200", "description": "Per-dimension analysis dispatch. Shows how to integrate specialized analyzers." }
+      ]
+    },
+    {
+      "path": "src-ts/mcp/endpoints/writing-craft-llm.ts",
+      "relevance": 0.82,
+      "role": "pattern_reference",
+      "rationale": "LLM-enhanced analysis with per-dimension system prompts. DIMENSION_SYSTEM_PROMPT has Chinese prompts for each dimension. Pattern for how R-M26-003 anti-AI detection could use LLM prompts.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: LLM prompt pattern for anti-AI detection",
+      "key_code": [
+        { "symbol": "DIMENSION_SYSTEM_PROMPT", "location": "src-ts/mcp/endpoints/writing-craft-llm.ts:24-34", "description": "Record of per-dimension Chinese system prompts. Pattern for anti-AI-flavor detection prompts." }
+      ]
+    },
+    {
+      "path": "src-ts/workflow/revision-session.ts",
+      "relevance": 0.78,
+      "role": "pattern_reference",
+      "rationale": "Core revision analysis with 9 dimensions. analyzeRevisionText() delegates to per-dimension analyzers. DEFAULT_REVISION_DIMENSIONS = ['structure','character','suspense','emotion','dialogue','webnovel','hook','cliffhanger','show_tell']. Shows how 9-dimension analysis is already implemented elsewhere.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Existing 9-dimension analysis pattern to replicate in reader module",
+      "key_code": [
+        { "symbol": "DEFAULT_REVISION_DIMENSIONS", "location": "src-ts/workflow/revision-session.ts:140-150", "description": "Array of 9 dimensions. Same set as WritingCraftDimension." },
+        { "symbol": "analyzeRevisionText", "location": "src-ts/workflow/revision-session.ts:200-280", "description": "Delegates to per-dimension analyzers. Pattern for reader engine integration." }
+      ]
+    },
+    {
+      "path": "src-ts/workflow/revision-loop.ts",
+      "relevance": 0.75,
+      "role": "pattern_reference",
+      "rationale": "Critic-driven revision loop. RevisionLoop class with updateFromCritic(), shouldContinue(), decision logic. R-M26-004 de-AI/style transformation could use similar loop structure for iterative de-AI refinement.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-004: Loop pattern for iterative de-AI transformation",
+      "key_code": [
+        { "symbol": "RevisionLoop", "location": "src-ts/workflow/revision-loop.ts:150-300", "description": "Class orchestrating writerFn + criticFn loop. Pattern for de-AI transformation loop." },
+        { "symbol": "runRevisionLoop", "location": "src-ts/workflow/revision-loop.ts:300-400", "description": "Entry function with timeout/error handling. Reusable pattern." }
+      ]
+    },
+    {
+      "path": "src-ts/services/revision-service.ts",
+      "relevance": 0.72,
+      "role": "pattern_reference",
+      "rationale": "RevisionServiceImpl with cross-iteration learning accumulator. learningAccumulator = new Map<string, DimensionLearningEntry>(). R-M26-004 de-AI could accumulate style transformation learnings similarly.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-004: Learning accumulator pattern for cross-iteration style transformation",
+      "key_code": [
+        { "symbol": "learningAccumulator", "location": "src-ts/services/revision-service.ts:55", "description": "Map storing per-dimension learning across iterations. Pattern for de-AI learning." },
+        { "symbol": "RevisionServiceImpl.revise", "location": "src-ts/services/revision-service.ts:69-120", "description": "Full revision cycle with learning. Pattern for de-AI service." }
+      ]
+    },
+    {
+      "path": "src-ts/services/personalization-service.ts",
+      "relevance": 0.70,
+      "role": "pattern_reference",
+      "rationale": "PersonalizationServiceImpl with preference signals and craft profiles. Signals: PreferenceSignal[] with actions 'accepted'|'rejected'|'modified'. R-M26-001 persona preferences could be stored as signals.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-001: Preference signal pattern for persona customization tracking",
+      "key_code": [
+        { "symbol": "PreferenceSignal", "location": "src-ts/protocols/personalization.ts:73-79", "description": "Signal with action, category, value, confidence. Pattern for tracking persona preference adjustments." },
+        { "symbol": "PersonalizationServiceImpl", "location": "src-ts/services/personalization-service.ts:36-100", "description": "Service with signal accumulation and profile building." }
+      ]
+    },
+    {
+      "path": "src-ts/narrative/style-system.ts",
+      "relevance": 0.85,
+      "role": "pattern_reference",
+      "rationale": "30-dimensional StyleVector system (lexical, syntactic, rhetorical, rhythmic, tone, narrative). StyleDimension enum with 30 dimensions. R-M26-003 anti-AI-flavor style fingerprint drift detection can leverage this existing vector system.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: Style fingerprint foundation for AI-flavor detection",
+      "key_code": [
+        { "symbol": "StyleDimension", "location": "src-ts/narrative/style-system.ts:22-64", "description": "Enum with 30 dimensions across 6 categories. Key for style fingerprinting." },
+        { "symbol": "StyleVector", "location": "src-ts/narrative/style-system.ts:70-110", "description": "30-field vector interface. Can detect drift by comparing vectors." }
+      ]
+    },
+    {
+      "path": "src-ts/narrative/show-tell-analyzer.ts",
+      "relevance": 0.80,
+      "role": "pattern_reference",
+      "rationale": "Show vs Tell analysis with sensory coverage metrics. SensoryCoverage { visual, auditory, tactile, olfactory, gustatory, overall }. R-M26-003 anti-AI-flavor 'sensory coverage insufficiency' can directly use this analyzer.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: Sensory coverage metrics for AI-flavor detection",
+      "key_code": [
+        { "symbol": "SensoryCoverage", "location": "src-ts/narrative/show-tell-analyzer.ts:15-22", "description": "5-sense coverage metrics. Directly applicable to AI-flavor sensory insufficiency detection." },
+        { "symbol": "TELL_INDICATORS", "location": "src-ts/narrative/show-tell-analyzer.ts:46-55", "description": "Chinese tell-pattern indicators. Can be extended with AI-flavor pattern indicators." }
+      ]
+    },
+    {
+      "path": "src-ts/narrative/character-voice-fingerprint.ts",
+      "relevance": 0.78,
+      "role": "pattern_reference",
+      "rationale": "Voice fingerprint extraction for consistency checking. VoiceFingerprint { character, dialogueCount, sentenceLengthPreference, catchphrases, formalityLevel, emotionalExpressionTendency, rhetoricalHabits }. R-M26-003 'style fingerprint drift' can extend this for author-level fingerprinting.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: Voice fingerprint pattern for author style drift detection",
+      "key_code": [
+        { "symbol": "VoiceFingerprint", "location": "src-ts/narrative/character-voice-fingerprint.ts:14-23", "description": "Per-character voice fingerprint. Pattern for author-level style fingerprint." },
+        { "symbol": "VoiceConsistencyWarning", "location": "src-ts/narrative/character-voice-fingerprint.ts:25-30", "description": "Warning structure for voice drift. Pattern for AI-flavor drift warnings." }
+      ]
+    },
+    {
+      "path": "src-ts/quality/types.ts",
+      "relevance": 0.75,
+      "role": "type_definition",
+      "rationale": "QualityDimension enum with 4 dimensions. HardConstraint and CreativitySpectrum types. R-M26-002 requires expanding or bridging this enum with WritingCraftDimension.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Quality dimension type system needs expansion",
+      "key_code": [
+        { "symbol": "QualityDimension", "location": "src-ts/quality/types.ts:13-18", "description": "4-dimension enum. Hardcoded constraint across the system." }
+      ]
+    },
+    {
+      "path": "src-ts/protocols/revision.ts",
+      "relevance": 0.70,
+      "role": "type_definition",
+      "rationale": "IRevisionService protocol with revise() method returning RevisionCycleResult. R-M26-004 de-AI transformation could be implemented as a new protocol or extend this one.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-004: Protocol pattern for de-AI service definition",
+      "key_code": [
+        { "symbol": "IRevisionService", "location": "src-ts/protocols/revision.ts:59-79", "description": "Protocol interface with initialize() and revise(). Pattern for IDeAIService." }
+      ]
+    },
+    {
+      "path": "src-ts/protocols/personalization.ts",
+      "relevance": 0.68,
+      "role": "type_definition",
+      "rationale": "IPersonalizationService protocol with buildProfile, getRecommendations, recordPreferenceSignal. R-M26-001 persona preference tracking could extend this protocol.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-001: Protocol for persona preference tracking",
+      "key_code": [
+        { "symbol": "IPersonalizationService", "location": "src-ts/protocols/personalization.ts:33-67", "description": "Protocol with preference signal recording. Pattern for persona preference tracking." }
+      ]
+    },
+    {
+      "path": "src-ts/container/types.ts",
+      "relevance": 0.65,
+      "role": "integration_point",
+      "rationale": "Service container types. ServiceTypes includes RevisionService, PersonalizationService symbols. New services (DeAIService, AntiAIFlavorDetector) need registration here.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "Service registration point for new M26 services",
+      "key_code": [
+        { "symbol": "ServiceTypes", "location": "src-ts/container/types.ts:42-80", "description": "Symbol registry for DI container. New services need symbols here." }
+      ]
+    },
+    {
+      "path": "src-ts/container/adapters.ts",
+      "relevance": 0.62,
+      "role": "integration_point",
+      "rationale": "Service adapters bridging container interfaces to implementations. New service implementations need adapter registration here.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "Service wiring for new M26 implementations"
+    },
+    {
+      "path": "src-ts/mcp/routes/content.ts",
+      "relevance": 0.80,
+      "role": "integration_point",
+      "rationale": "All HTTP routes. Reader routes at lines 146-150. New endpoints for R-M26-001 (persona categories), R-M26-005 (A/B compare) need registration here.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "Route registration for new reader endpoints",
+      "key_code": [
+        { "symbol": "contentRoutes", "location": "src-ts/mcp/routes/content.ts:66-151", "description": "GatewayRoute array with all endpoint registrations. Reader routes at 146-150." }
+      ]
+    },
+    {
+      "path": "src-ts/mcp/endpoints/index.ts",
+      "relevance": 0.78,
+      "role": "integration_point",
+      "rationale": "Barrel exports. Reader endpoints exported at lines 218-223. New endpoints need barrel export here.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "Export registration for new reader endpoints",
+      "key_code": [
+        { "symbol": "reader endpoint exports", "location": "src-ts/mcp/endpoints/index.ts:218-223", "description": "Barrel export for rsAnalyzeEndpoint, rsGetPersonasEndpoint, etc." }
+      ]
+    },
+    {
+      "path": "desktop/src/components/reader/PersonaSelector.tsx",
+      "relevance": 0.88,
+      "role": "modify_target",
+      "rationale": "Frontend persona selector with 3 presets (Suspense Enthusiast, Literary Critic, General Reader). Weights: plot, character, style, pacing. Needs expansion for R-M26-001 (age, culture, reading preference, genre preference).",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-001: Frontend persona selector UI expansion",
+      "key_code": [
+        { "symbol": "PersonaWeights", "location": "desktop/src/components/reader/PersonaSelector.tsx:9-14", "description": "Current weights only: plot, character, style, pacing. Missing new demographic fields." },
+        { "symbol": "PRESET_PERSONAS", "location": "desktop/src/components/reader/PersonaSelector.tsx:37-68", "description": "3 preset personas. Needs expansion for new persona types with demographic fields." }
+      ]
+    },
+    {
+      "path": "desktop/src/components/reader/ReaderOverlay.tsx",
+      "relevance": 0.82,
+      "role": "modify_target",
+      "rationale": "Overlay visualization with marker filtering by dimension and type. DimensionFilter type: 'All' | 'Plot' | 'Character' | 'Style' | 'Pacing'. Needs expansion for 9 dimensions and A/B comparison mode (R-M26-002, R-M26-005).",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002 + R-M26-005: Overlay UI needs dimension expansion and A/B mode",
+      "key_code": [
+        { "symbol": "DimensionFilter", "location": "desktop/src/components/reader/ReaderOverlay.tsx:35", "description": "Current filter: 'All' | 'Plot' | 'Character' | 'Style' | 'Pacing'. Needs 9-dimension expansion." },
+        { "symbol": "DIMENSION_LABELS", "location": "desktop/src/components/reader/ReaderOverlay.tsx:24-33", "description": "Label mapping for 4 dimensions + 4 extras. Needs 9-dimension labels." }
+      ]
+    },
+    {
+      "path": "desktop/src/components/reader/DetailPanel.tsx",
+      "relevance": 0.78,
+      "role": "modify_target",
+      "rationale": "Detail panel showing consensus items with severity colors and strength bars. DIMENSION_LABELS maps dimension names to Chinese. Needs 9-dimension labels and A/B comparison UI (R-M26-005).",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002 + R-M26-005: Detail panel dimension expansion and comparison UI",
+      "key_code": [
+        { "symbol": "DIMENSION_LABELS", "location": "desktop/src/components/reader/DetailPanel.tsx:24-37", "description": "Label mapping including legacy and new dimensions. Needs 9-dimension coverage." },
+        { "symbol": "ConsensusStrengthBar", "location": "desktop/src/components/reader/DetailPanel.tsx:39-63", "description": "Consensus strength visualization. Needs A/B comparison variant." }
+      ]
+    },
+    {
+      "path": "desktop/src/components/reader/ReportGenerator.tsx",
+      "relevance": 0.75,
+      "role": "modify_target",
+      "rationale": "Report generation with ConsensusReport display. DIMENSION_LABELS for 4 dimensions. Needs 9-dimension support and A/B comparison report format (R-M26-005).",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002 + R-M26-005: Report generation for expanded dimensions and A/B mode",
+      "key_code": [
+        { "symbol": "DIMENSION_LABELS", "location": "desktop/src/components/reader/ReportGenerator.tsx:38-47", "description": "Report dimension labels. Needs 9-dimension coverage." }
+      ]
+    },
+    {
+      "path": "desktop/src/api/writing-craft.ts",
+      "relevance": 0.80,
+      "role": "integration_point",
+      "rationale": "Frontend API for writing craft. Includes ShowTellAnalysisResult with sensoryCoverage. WritingCraftDimension type with 9 dimensions. Bridge between frontend and backend 9-dimension analysis.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Frontend API for 9-dimension analysis — bridge pattern",
+      "key_code": [
+        { "symbol": "WritingCraftDimension", "location": "desktop/src/api/writing-craft.ts:3-13", "description": "9-dimension union type. Canonical frontend type." },
+        { "symbol": "ShowTellAnalysisResult", "location": "desktop/src/api/writing-craft.ts:42-57", "description": "Sensory coverage result. Relevant to R-M26-003." }
+      ]
+    },
+    {
+      "path": "desktop/src/api/workflow/revision.ts",
+      "relevance": 0.72,
+      "role": "integration_point",
+      "rationale": "Frontend API for revision workflow. workflowRevisionStartSession, workflowRevisionAnalyze, etc. RevisionDimension with 9 dimensions. Pattern for how R-M26-004 de-AI frontend API could be structured.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-004: Frontend API pattern for iterative transformation workflow",
+      "key_code": [
+        { "symbol": "RevisionDimension", "location": "desktop/src/api/workflow/revision.ts:9-19", "description": "9-dimension type. Same as WritingCraftDimension." }
+      ]
+    },
+    {
+      "path": "desktop/src/api/m10-apis.ts",
+      "relevance": 0.70,
+      "role": "integration_point",
+      "rationale": "API for multi-pass revision, style extract/apply. runMultiPassRevision, extractStyleProfile, applyStyle. R-M26-004 de-AI/style transformation can use these existing APIs.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-004: Existing style transformation APIs to leverage",
+      "key_code": [
+        { "symbol": "runMultiPassRevision", "location": "desktop/src/api/m10-apis.ts:41-45", "description": "Multi-pass revision API. Pattern for de-AI iterative transformation." },
+        { "symbol": "extractStyleProfile", "location": "desktop/src/api/m10-apis.ts:47-51", "description": "Style extraction API. Can extract baseline for drift detection." }
+      ]
+    },
+    {
+      "path": "desktop/src/api/core.ts",
+      "relevance": 0.60,
+      "role": "integration_point",
+      "rationale": "Core API client with callApi, getResolvedApiBase. All frontend API modules use this. New reader APIs need to follow this pattern.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "API client foundation for new endpoints"
+    },
+    {
+      "path": "desktop/src/stores/app/intelligenceSlice.ts",
+      "relevance": 0.65,
+      "role": "modify_target",
+      "rationale": "Store slice for analysis. AnalysisModule = 'character_arc' | 'pacing' | 'consistency' | 'readability'. R-M26-003 anti-AI-flavor detection needs new analysis module registration.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: Store slice needs new analysis module for anti-AI detection",
+      "key_code": [
+        { "symbol": "AnalysisModule", "location": "desktop/src/stores/app/intelligenceSlice.ts:3", "description": "4 analysis modules. Needs 'anti_ai_flavor' or similar." }
+      ]
+    },
+    {
+      "path": "desktop/src/stores/appStore.ts",
+      "relevance": 0.55,
+      "role": "integration_point",
+      "rationale": "Zustand store combining all slices. New reader simulation slices need registration here.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "Store composition for new reader simulation state"
+    },
+    {
+      "path": "desktop/src/i18n/index.ts",
+      "relevance": 0.75,
+      "role": "modify_target",
+      "rationale": "i18next initialization. Currently only zh-CN and en-US. R-M26-006 Chinese market i18n optimization needs locale expansion and translation key additions for reader simulation.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-006: i18n initialization and locale management",
+      "key_code": [
+        { "symbol": "i18n.init", "location": "desktop/src/i18n/index.ts:12-22", "description": "i18next init with zh-CN and en-US resources. Needs expansion for Chinese market variants." },
+        { "symbol": "LANGUAGE_TO_LOCALE", "location": "desktop/src/i18n/index.ts:25-28", "description": "Language to locale mapping. Currently only zh->zh-CN, en->en-US." }
+      ]
+    },
+    {
+      "path": "desktop/src/i18n/translations.ts",
+      "relevance": 0.70,
+      "role": "modify_target",
+      "rationale": "Legacy translation system with modular structure. 11 translation modules. No reader-specific translations found. R-M26-006 needs new reader simulation translation module.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-006: Translation module structure for new reader simulation translations",
+      "key_code": [
+        { "symbol": "Translations", "location": "desktop/src/i18n/translations.ts:16-27", "description": "Combined translation type from 11 modules. Needs reader module addition." }
+      ]
+    },
+    {
+      "path": "desktop/src/i18n/locales/zh-CN.json",
+      "relevance": 0.65,
+      "role": "modify_target",
+      "rationale": "Chinese translations. No reader-specific translations found. R-M26-006 needs Chinese market optimization including reader simulation terminology.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-006: Chinese translation keys for reader simulation"
+    },
+    {
+      "path": "desktop/src/types/reader.ts",
+      "relevance": 0.70,
+      "role": "type_definition",
+      "rationale": "Re-exports OverlayMarker from backend. Bridges backend reader types to frontend. New types from R-M26-001/002/005 need re-export here.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "Type bridge for new reader simulation types",
+      "key_code": [
+        { "symbol": "OverlayMarker re-export", "location": "desktop/src/types/reader.ts:7-11", "description": "Re-exports OverlayMarker, DimensionOverlayEntry, OverlayBridgeResult from src-ts." }
+      ]
+    },
+    {
+      "path": "src-ts/narrative/fictional_dream/immersion.ts",
+      "relevance": 0.72,
+      "role": "pattern_reference",
+      "rationale": "ImmersionCatalyst and EmpathyDeepener classes for Fictional Dream Engine Layer 4. Detects internal conflicts, choice dilemmas, reader participation. R-M26-002 reader simulation could leverage immersion scoring.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Immersion scoring for reader simulation emotional dimension",
+      "key_code": [
+        { "symbol": "ImmersionCatalyst", "location": "src-ts/narrative/fictional_dream/immersion.ts:68-120", "description": "Detects internal conflicts and dilemmas. Produces immersion score." },
+        { "symbol": "ImmersionAnalysisResult", "location": "src-ts/narrative/fictional_dream/immersion.ts:54-62", "description": "Result with overallScore, internalConflicts, readerParticipation." }
+      ]
+    },
+    {
+      "path": "src-ts/narrative/fictional_dream/identification.ts",
+      "relevance": 0.68,
+      "role": "pattern_reference",
+      "rationale": "IdentificationBuilder for Layer 2 of Fictional Dream Engine. Detects goal support, courage recognition, noble value binding. Godfather technique detection. R-M26-002 character dimension analysis.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Character identification scoring for reader simulation",
+      "key_code": [
+        { "symbol": "IdentificationBuilder", "location": "src-ts/narrative/fictional_dream/identification.ts:60-100", "description": "Builds identification analysis with noble values and goal keywords." }
+      ]
+    },
+    {
+      "path": "src-ts/narrative/character-depth.ts",
+      "relevance": 0.65,
+      "role": "pattern_reference",
+      "rationale": "Character depth system with Frey's 5-dimension model, OCEAN personality, McKee arc types. CharacterArcType enum with 8 arc types. R-M26-002 character dimension analysis.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Character depth analysis for reader simulation character dimension",
+      "key_code": [
+        { "symbol": "CharacterArcType", "location": "src-ts/narrative/character-depth.ts:64-73", "description": "8 arc types including positive_change, redemption_arc, disillusionment_arc." }
+      ]
+    },
+    {
+      "path": "src-ts/narrative/character-manager.ts",
+      "relevance": 0.62,
+      "role": "pattern_reference",
+      "rationale": "Character manager with 5-dimension model, cross-scene tracking, dialogue consistency. PersonalityType, MotivationType, GrowthStage enums. R-M26-002 character dimension.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Character management for reader simulation"
+    },
+    {
+      "path": "src-ts/narrative/cross-chapter-character-tracker.ts",
+      "relevance": 0.60,
+      "role": "pattern_reference",
+      "rationale": "Cross-chapter character consistency tracking. Detects post-mortem appearances, personality flips, knowledge regression. CharacterConflictType enum. R-M26-002 consistency dimension.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-002: Cross-chapter consistency for reader simulation"
+    },
+    {
+      "path": "src-ts/mcp/endpoints/writing.ts",
+      "relevance": 0.55,
+      "role": "pattern_reference",
+      "rationale": "Writing endpoints with novel quality check, writing helper, SSE streaming. detectionEvasion guard in writingHelperProcessEndpoint (line 351). R-M26-003 anti-AI-flavor detection can leverage this existing guard pattern.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: Existing detection evasion guard pattern",
+      "key_code": [
+        { "symbol": "detectionEvasion", "location": "src-ts/mcp/endpoints/writing.ts:351", "description": "Boolean flag for detection evasion guard. System prompt changes when enabled." }
+      ]
+    },
+    {
+      "path": "src-ts/mcp/endpoints/analysis.ts",
+      "relevance": 0.50,
+      "role": "pattern_reference",
+      "rationale": "Analysis endpoints with pattern detection and narrative visualization. TEMPLATES array with 6 pattern templates (three-act-rise, foreshadow-payoff, character-arc, foil-pair, recurring-motif, tension-curve). Pattern detection infrastructure R-M26-003 could use.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: Pattern detection infrastructure for AI-flavor detection",
+      "key_code": [
+        { "symbol": "TEMPLATES", "location": "src-ts/mcp/endpoints/analysis.ts:106-113", "description": "6 pattern templates with keywords and minOccurrences. Pattern for AI-flavor template detection." }
+      ]
+    },
+    {
+      "path": "src-ts/services/event-bus.ts",
+      "relevance": 0.55,
+      "role": "integration_point",
+      "rationale": "Cross-service EventBus with wildcard support, backpressure, dead letter queue. New reader simulation events (persona changed, analysis completed, A/B comparison ready) can use this event bus.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "Event infrastructure for reader simulation cross-component communication",
+      "key_code": [
+        { "symbol": "TypedEventBus", "location": "src-ts/services/event-bus.ts:73-150", "description": "Event bus with publish/subscribe, wildcard, relay, event log, dead letter queue." }
+      ]
+    },
+    {
+      "path": "desktop/src/api/intelligence.ts",
+      "relevance": 0.58,
+      "role": "integration_point",
+      "rationale": "Intelligence API with 4 analysis modules (character_arc, pacing, consistency, readability). callAnalysisAgent() pattern. R-M26-003 needs new anti-AI-flavor module.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: Analysis module pattern for anti-AI-flavor detection",
+      "key_code": [
+        { "symbol": "AnalysisModule", "location": "desktop/src/api/intelligence.ts:3", "description": "4 analysis modules. Needs 'anti_ai_flavor' addition." },
+        { "symbol": "MODULE_PROMPTS", "location": "desktop/src/api/intelligence.ts:5-14", "description": "Per-module prompt mapping. Pattern for anti-AI module prompt." }
+      ]
+    },
+    {
+      "path": "desktop/src/api/analysis.ts",
+      "relevance": 0.52,
+      "role": "integration_point",
+      "rationale": "Analysis API for pattern detection and session clustering. detectPatterns() and clusterSessions(). R-M26-003 pattern detection could use this API.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "R-M26-003: Pattern detection API for AI-flavor template detection"
+    },
+    {
+      "path": "desktop/src/api/skills.ts",
+      "relevance": 0.50,
+      "role": "integration_point",
+      "rationale": "Skills API for loading skill packs. R-M26-003 anti-AI-flavor detection could be implemented as a skill pack. R-M26-004 de-AI transformation could also be a skill.",
+      "discovery_source": "bash-scan",
+      "topic_relation": "Skill system integration for anti-AI and de-AI capabilities"
+    }
+  ],
+
+  "call_chains": [
+    {
+      "name": "Reader Simulation Analysis Flow (Legacy 4-Dim)",
+      "steps": [
+        { "caller": "rsAnalyzeEndpoint", "callee": "DualEngine.analyze", "file": "src-ts/reader/mcp/reader-endpoints.ts:120-180" },
+        { "caller": "DualEngine.analyze", "callee": "runReaderEngine + runEditorEngine", "file": "src-ts/reader/DualEngine.ts:90-110" },
+        { "caller": "runReaderEngine", "callee": "DimensionAnalyzer.analyzeAllDimensions", "file": "src-ts/reader/DualEngine.ts:120-160" },
+        { "caller": "DimensionAnalyzer.analyzeAllDimensions", "callee": "analyzeDimension (x4)", "file": "src-ts/reader/DimensionAnalyzer.ts:80-100" },
+        { "caller": "DualEngine.analyze", "callee": "ConsensusEngine.buildConsensus", "file": "src-ts/reader/DualEngine.ts:170-200" },
+        { "caller": "rsGetOverlayEndpoint", "callee": "OverlayBridge.transformToOverlay", "file": "src-ts/reader/mcp/reader-endpoints.ts:200-250" }
+      ],
+      "requirement": "R-M26-002",
+      "note": "This 4-dimension chain must be extended or forked to support 9-dimension writing craft analysis. The DimensionAnalyzer is the bottleneck."
+    },
+    {
+      "name": "Writing Craft 9-Dimension Analysis Flow",
+      "steps": [
+        { "caller": "writingCraftAnalyzeEndpoint", "callee": "analyzeDimension (per-dim)", "file": "src-ts/mcp/endpoints/writing-craft.ts:65-100" },
+        { "caller": "analyzeDimension", "callee": "SuspenseAnalyzer / CharacterDepthSystem / ReaderSatisfactionAnalyzer / DialogueAnalyzer / etc.", "file": "src-ts/mcp/endpoints/writing-craft.ts:110-200" }
+      ],
+      "requirement": "R-M26-002",
+      "note": "This chain analyzes 9 dimensions but is NOT connected to the reader simulation engine. Integration gap."
+    },
+    {
+      "name": "Revision Loop Flow",
+      "steps": [
+        { "caller": "RevisionServiceImpl.revise", "callee": "runRevisionLoop", "file": "src-ts/services/revision-service.ts:69-120" },
+        { "caller": "runRevisionLoop", "callee": "criticFn (evaluateContent)", "file": "src-ts/workflow/revision-loop.ts:300-400" },
+        { "caller": "runRevisionLoop", "callee": "writerFn (revision)", "file": "src-ts/workflow/revision-loop.ts:300-400" },
+        { "caller": "criticFn", "callee": "evaluateContent (critic service)", "file": "src-ts/services/revision-service.ts:87-97" }
+      ],
+      "requirement": "R-M26-004",
+      "note": "Pattern for iterative de-AI transformation loop. Critic evaluates AI-flavor, Writer applies de-AI transformation."
+    },
+    {
+      "name": "Frontend Reader Overlay Flow",
+      "steps": [
+        { "caller": "PersonaSelector", "callee": "rsAnalyzeEndpoint (via API)", "file": "desktop/src/components/reader/PersonaSelector.tsx:120-180" },
+        { "caller": "API response", "callee": "ReaderOverlay", "file": "desktop/src/components/reader/ReaderOverlay.tsx:37-80" },
+        { "caller": "ReaderOverlay", "callee": "DetailPanel", "file": "desktop/src/components/reader/DetailPanel.tsx:1-100" },
+        { "caller": "DetailPanel", "callee": "ReportGenerator", "file": "desktop/src/components/reader/ReportGenerator.tsx:1-100" }
+      ],
+      "requirement": "R-M26-001 + R-M26-005",
+      "note": "Frontend flow needs persona parameter expansion (R-M26-001) and A/B comparison mode (R-M26-005)."
+    },
+    {
+      "name": "Style Fingerprint Detection Flow",
+      "steps": [
+        { "caller": "extractStyleProfile", "callee": "StyleVector extraction", "file": "src-ts/narrative/style-system.ts:120-180" },
+        { "caller": "extractVoiceFingerprints", "callee": "DialogueAnalyzer", "file": "src-ts/narrative/character-voice-fingerprint.ts:55-100" },
+        { "caller": "analyzeShowTell", "callee": "SensoryCoverage calculation", "file": "src-ts/narrative/show-tell-analyzer.ts:100-150" }
+      ],
+      "requirement": "R-M26-003",
+      "note": "Existing style detection infrastructure. Needs composition into unified anti-AI-flavor detector."
+    },
+    {
+      "name": "i18n Translation Flow",
+      "steps": [
+        { "caller": "useI18n", "callee": "translations[language]", "file": "desktop/src/i18n/index.ts:65-80" },
+        { "caller": "translations", "callee": "zhApp + zhChat + ... (11 modules)", "file": "desktop/src/i18n/translations.ts:44-73" },
+        { "caller": "i18next", "callee": "zh-CN.json / en-US.json", "file": "desktop/src/i18n/index.ts:12-22" }
+      ],
+      "requirement": "R-M26-006",
+      "note": "Legacy translation system coexists with i18next. New reader simulation translations need to be added to both systems."
+    }
+  ],
+
+  "data_flows": [
+    {
+      "name": "Persona Definition Flow",
+      "source": "PersonaSelector (frontend)",
+      "target": "DualEngine (backend)",
+      "data": "ReaderPersona with weights, focusAreas, biases",
+      "transformations": [
+        "Frontend PersonaWeights -> Backend ReaderPersona.parameters",
+        "PersonaSelector PRESET_PERSONAS -> PersonaDefinition preset factories",
+        "Custom persona form -> rsCreateCustomPersonaEndpoint -> customPersonaStore"
+      ],
+      "requirement": "R-M26-001",
+      "gap": "Missing fields: age, culture, readingPreference, genrePreference. Frontend PersonaWeights type (4 fields) does not match backend ReaderPersona.parameters (7 fields)."
+    },
+    {
+      "name": "Analysis Result Flow",
+      "source": "DualEngine",
+      "target": "ReaderOverlay + DetailPanel + ReportGenerator",
+      "data": "DualEngineResult -> ConsensusReport -> OverlayMarker[]",
+      "transformations": [
+        "DualEngineResult.readerReactions -> ConsensusEngine.buildConsensus -> ConsensusReport",
+        "ConsensusReport.items -> OverlayBridge.transformToOverlay -> OverlayMarker[]",
+        "OverlayMarker[] -> ReaderOverlay filtering -> DetailPanel detail view -> ReportGenerator report"
+      ],
+      "requirement": "R-M26-002 + R-M26-005",
+      "gap": "Currently only 4 dimensions flow through. 9-dimension results from writing-craft.ts are not connected. A/B comparison requires new data flow for partitioned persona sets."
+    },
+    {
+      "name": "Quality Dimension Flow",
+      "source": "QualityDimension enum",
+      "target": "DimensionAnalyzer, ConsensusEngine, OverlayBridge, ReaderOverlay, DetailPanel, ReportGenerator",
+      "data": "4-dimension enum (PLOT_COHERENCE, CHARACTER_CONSISTENCY, STYLE_CONSISTENCY, PACING_TENSION)",
+      "transformations": [
+        "QualityDimension -> DimensionAnalyzer scoring",
+        "QualityDimension -> ConsensusEngine grouping",
+        "QualityDimension -> OverlayBridge marker dimension field",
+        "QualityDimension -> ReaderOverlay/DetailPanel/ReportGenerator DIMENSION_LABELS mapping"
+      ],
+      "requirement": "R-M26-002",
+      "gap": "Hardcoded 4 dimensions in QualityDimension enum. WritingCraftDimension has 9 dimensions. No bridge between the two type systems. All downstream consumers need updates."
+    },
+    {
+      "name": "Style Fingerprint Flow",
+      "source": "Text content",
+      "target": "StyleVector, VoiceFingerprint, SensoryCoverage",
+      "data": "Raw text -> Extracted style metrics",
+      "transformations": [
+        "Text -> StyleSystem.extractVector -> StyleVector (30 dims)",
+        "Text -> VoiceFingerprint.extract -> VoiceFingerprint[]",
+        "Text -> ShowTellAnalyzer.analyze -> ShowTellResult with SensoryCoverage"
+      ],
+      "requirement": "R-M26-003",
+      "gap": "These three analyzers are independent. No unified anti-AI-flavor detector composes them. No drift comparison between baseline and current text."
+    },
+    {
+      "name": "Revision/De-AI Learning Flow",
+      "source": "RevisionServiceImpl",
+      "target": "learningAccumulator",
+      "data": "Per-dimension baseline scores, deltas, evidence across iterations",
+      "transformations": [
+        "Revision iteration -> DimensionLearningEntry (baselines, deltas, evidence, occurrences)",
+        "Accumulated entries -> RevisionLearningInsight (trend: improving/stable/declining)"
+      ],
+      "requirement": "R-M26-004",
+      "gap": "Learning accumulator is in-memory only (no persistence). Pattern exists but needs adaptation for de-AI transformation tracking."
+    },
+    {
+      "name": "i18n Translation Flow",
+      "source": "Translation modules",
+      "target": "UI components",
+      "data": "Chinese/English translation strings",
+      "transformations": [
+        "11 modular translation files -> translations.ts composition -> useI18n hook",
+        "zh-CN.json / en-US.json -> i18next resources"
+      ],
+      "requirement": "R-M26-006",
+      "gap": "No reader simulation translation module exists. Legacy and i18next systems both need updates. Chinese market optimization may need locale variants (zh-CN, zh-TW, zh-HK)."
+    }
+  ],
+
+  "code_anchors": [
+    {
+      "requirement": "R-M26-001",
+      "anchors": [
+        { "file": "src-ts/reader/PersonaDefinition.ts", "line": 18, "description": "ReaderPersona.parameters interface — add age, culture, readingPreference, genrePreference" },
+        { "file": "src-ts/reader/PersonaDefinition.ts", "line": 39, "description": "createSuspenseEnthusiast() — expand with new demographic fields" },
+        { "file": "desktop/src/components/reader/PersonaSelector.tsx", "line": 9, "description": "PersonaWeights interface — add new weight fields" },
+        { "file": "desktop/src/components/reader/PersonaSelector.tsx", "line": 37, "description": "PRESET_PERSONAS array — add new preset personas with demographics" }
+      ]
+    },
+    {
+      "requirement": "R-M26-002",
+      "anchors": [
+        { "file": "src-ts/reader/DimensionAnalyzer.ts", "line": 42, "description": "DimensionAnalyzer class — extend to support 9 dimensions or delegate to writing-craft analyzers" },
+        { "file": "src-ts/reader/DualEngine.ts", "line": 120, "description": "runReaderEngine() — add mode parameter for 9-dimension analysis" },
+        { "file": "src-ts/quality/types.ts", "line": 13, "description": "QualityDimension enum — bridge or extend with WritingCraftDimension" },
+        { "file": "src-ts/mcp/endpoints/writing-craft.ts", "line": 28, "description": "WritingCraftDimension type — canonical 9-dimension list" },
+        { "file": "desktop/src/components/reader/ReaderOverlay.tsx", "line": 35, "description": "DimensionFilter type — expand to 9 dimensions" }
+      ]
+    },
+    {
+      "requirement": "R-M26-003",
+      "anchors": [
+        { "file": "src-ts/narrative/style-system.ts", "line": 22, "description": "StyleDimension enum — 30-dimension fingerprint basis" },
+        { "file": "src-ts/narrative/show-tell-analyzer.ts", "line": 15, "description": "SensoryCoverage interface — sensory insufficiency detection" },
+        { "file": "src-ts/narrative/character-voice-fingerprint.ts", "line": 14, "description": "VoiceFingerprint interface — style drift detection basis" },
+        { "file": "src-ts/mcp/endpoints/writing-craft-llm.ts", "line": 24, "description": "DIMENSION_SYSTEM_PROMPT — LLM prompt pattern for anti-AI detection" },
+        { "file": "desktop/src/stores/app/intelligenceSlice.ts", "line": 3, "description": "AnalysisModule type — add 'anti_ai_flavor' module" }
+      ]
+    },
+    {
+      "requirement": "R-M26-004",
+      "anchors": [
+        { "file": "src-ts/workflow/revision-loop.ts", "line": 150, "description": "RevisionLoop class — pattern for iterative de-AI transformation" },
+        { "file": "src-ts/services/revision-service.ts", "line": 55, "description": "learningAccumulator — pattern for cross-iteration learning" },
+        { "file": "src-ts/protocols/revision.ts", "line": 59, "description": "IRevisionService — protocol pattern for de-AI service" },
+        { "file": "desktop/src/api/m10-apis.ts", "line": 41, "description": "runMultiPassRevision — existing multi-pass API to leverage" }
+      ]
+    },
+    {
+      "requirement": "R-M26-005",
+      "anchors": [
+        { "file": "src-ts/reader/ConsensusEngine.ts", "line": 78, "description": "buildConsensus() — add overload for partitioned persona groups" },
+        { "file": "src-ts/reader/OverlayBridge.ts", "line": 20, "description": "OverlayMarker.type — add 'groupA'/'groupB'/'difference' types" },
+        { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 120, "description": "rsAnalyzeEndpoint — add persona set partitioning parameter" },
+        { "file": "desktop/src/components/reader/DetailPanel.tsx", "line": 39, "description": "ConsensusStrengthBar — add A/B comparison variant" }
+      ]
+    },
+    {
+      "requirement": "R-M26-006",
+      "anchors": [
+        { "file": "desktop/src/i18n/index.ts", "line": 12, "description": "i18next.init — add Chinese market locale variants" },
+        { "file": "desktop/src/i18n/translations.ts", "line": 16, "description": "Translations type — add reader simulation module" },
+        { "file": "desktop/src/i18n/translations.ts", "line": 44, "description": "translations record — add reader module translations" }
+      ]
+    }
+  ],
+
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "high",
+      "category": "architecture",
+      "requirement": "R-M26-002",
+      "title": "4-dimension vs 9-dimension type system gap",
+      "description": "Reader Simulation uses QualityDimension enum (4 dims: plot, character, style, pacing) while Writing Craft Analysis uses WritingCraftDimension (9 dims: structure, character, suspense, emotion, dialogue, webnovel, hook, cliffhanger, show_tell). These two type systems are completely disconnected. No bridge exists. The DimensionAnalyzer only understands 4 dimensions. To integrate, either: (1) expand QualityDimension to 9, or (2) create a bridge that maps WritingCraftDimension results into the reader consensus flow. Option 2 is less disruptive.",
+      "affected_files": [
+        "src-ts/reader/DimensionAnalyzer.ts",
+        "src-ts/quality/types.ts",
+        "src-ts/mcp/endpoints/writing-craft.ts",
+        "src-ts/reader/DualEngine.ts"
+      ],
+      "recommendation": "Implement a WritingCraftBridge class that delegates 9-dimension analysis to writing-craft analyzers and transforms results into DimensionScore[] format consumable by ConsensusEngine. This avoids changing the core QualityDimension enum and minimizes downstream impact."
+    },
+    {
+      "id": "F-002",
+      "severity": "high",
+      "category": "data",
+      "requirement": "R-M26-001",
+      "title": "Persona parameters mismatch between frontend and backend",
+      "description": "Frontend PersonaWeights (desktop/src/components/reader/PersonaSelector.tsx:9) has 4 fields: plot, character, style, pacing. Backend ReaderPersona.parameters (src-ts/reader/PersonaDefinition.ts:18) has 7 fields including toleranceThreshold, focusAreas, biases. The frontend does not expose toleranceThreshold or focusAreas editing. For R-M26-001, new fields (age, culture, readingPreference, genrePreference) need to be added to both frontend and backend types consistently.",
+      "affected_files": [
+        "desktop/src/components/reader/PersonaSelector.tsx",
+        "src-ts/reader/PersonaDefinition.ts",
+        "desktop/src/types/reader.ts"
+      ],
+      "recommendation": "Define a shared PersonaParameters interface in a common types package, or at minimum ensure frontend PersonaWeights extends to match backend parameters. Add new demographic fields to both."
+    },
+    {
+      "id": "F-003",
+      "severity": "medium",
+      "category": "architecture",
+      "requirement": "R-M26-003",
+      "title": "Anti-AI-flavor detection: no unified detector exists",
+      "description": "Three independent analyzers exist for style detection (StyleSystem with 30-dim vector, VoiceFingerprint, ShowTellAnalyzer with SensoryCoverage), but no unified AntiAIFlavorDetector composes them. Each analyzer operates independently. R-M26-003 requires detecting: (1) templated expressions, (2) style fingerprint drift, (3) sensory coverage insufficiency. The building blocks exist but need composition.",
+      "affected_files": [
+        "src-ts/narrative/style-system.ts",
+        "src-ts/narrative/show-tell-analyzer.ts",
+        "src-ts/narrative/character-voice-fingerprint.ts"
+      ],
+      "recommendation": "Create a new AntiAIFlavorAnalyzer class that composes StyleVector drift detection, SensoryCoverage threshold checking, and VoiceFingerprint consistency. Add a new 'anti_ai_flavor' AnalysisModule."
+    },
+    {
+      "id": "F-004",
+      "severity": "medium",
+      "category": "architecture",
+      "requirement": "R-M26-005",
+      "title": "ConsensusEngine does not support persona set partitioning",
+      "description": "ConsensusEngine.buildConsensus() aggregates all reactions into a single report. For A/B testing (R-M26-005), reactions need to be partitioned into two groups before consensus building, then results compared. No partitioning logic exists. The OverlayBridge also lacks marker types for group comparison.",
+      "affected_files": [
+        "src-ts/reader/ConsensusEngine.ts",
+        "src-ts/reader/OverlayBridge.ts",
+        "src-ts/reader/mcp/reader-endpoints.ts"
+      ],
+      "recommendation": "Add buildConsensus overload accepting groupA and groupB reaction arrays. Add new OverlayMarker types ('groupA', 'groupB', 'difference'). Create new endpoint rsComparePersonasEndpoint."
+    },
+    {
+      "id": "F-005",
+      "severity": "medium",
+      "category": "data",
+      "requirement": "R-M26-001 + R-M26-006",
+      "title": "In-memory persona storage not persistent",
+      "description": "reader-endpoints.ts uses customPersonaStore = new Map<string, ReaderPersona>() (line 49). Custom personas are lost on restart. For production use with expanded personas (R-M26-001), persistence is needed. Similarly, analysisResultCache (line 50) is in-memory.",
+      "affected_files": [
+        "src-ts/reader/mcp/reader-endpoints.ts"
+      ],
+      "recommendation": "Replace in-memory Map with KnowledgeMemoryEngineAdapter or file-based persistence. The personalization-service.ts already uses this pattern (line 40)."
+    },
+    {
+      "id": "F-006",
+      "severity": "medium",
+      "category": "integration",
+      "requirement": "R-M26-004",
+      "title": "RevisionServiceImpl writerFn is a no-op",
+      "description": "In RevisionServiceImpl.revise() (src-ts/services/revision-service.ts:87-97), the writerFn returns draft unchanged with comment '// Writer function — returns draft unchanged (actual revision happens via suggestions)'. For R-M26-004 de-AI transformation, an actual writer implementation is needed.",
+      "affected_files": [
+        "src-ts/services/revision-service.ts"
+      ],
+      "recommendation": "Implement writerFn that calls a de-AI transformation service (e.g., via LLM with de-AI system prompt, or rule-based transformation). The existing writing-helper endpoint (src-ts/mcp/endpoints/writing.ts) has detectionEvasion guard pattern that can be adapted."
+    },
+    {
+      "id": "F-007",
+      "severity": "low",
+      "category": "integration",
+      "requirement": "R-M26-006",
+      "title": "Dual i18n systems require synchronized updates",
+      "description": "The codebase has two i18n systems: (1) i18next with zh-CN.json/en-US.json, and (2) legacy translations.ts with 11 modular modules. New reader simulation translations need to be added to both. Risk of key mismatch between systems.",
+      "affected_files": [
+        "desktop/src/i18n/index.ts",
+        "desktop/src/i18n/translations.ts",
+        "desktop/src/i18n/locales/zh-CN.json"
+      ],
+      "recommendation": "Add a new 'reader' module to translations.ts. Ensure keys are mirrored in zh-CN.json. Consider migrating legacy system to i18next-only to reduce maintenance burden."
+    },
+    {
+      "id": "F-008",
+      "severity": "low",
+      "category": "architecture",
+      "requirement": "R-M26-002",
+      "title": "Fictional Dream Engine not connected to Reader Simulation",
+      "description": "The Fictional Dream Engine (4 layers: sympathy -> identification -> empathy -> immersion) has ImmersionCatalyst and EmpathyDeepener classes that produce immersion scores. These are not connected to the Reader Simulation's 4 dimensions. The 'emotion' dimension from WritingCraftDimension could be enriched with immersion data.",
+      "affected_files": [
+        "src-ts/narrative/fictional_dream/immersion.ts",
+        "src-ts/narrative/fictional_dream/identification.ts"
+      ],
+      "recommendation": "Optional enhancement: connect ImmersionCatalyst output to the emotion/suspense dimension scoring in the reader engine. This would provide deeper emotional analysis than heuristic scoring."
+    },
+    {
+      "id": "F-009",
+      "severity": "low",
+      "category": "testing",
+      "requirement": "All",
+      "title": "Reader simulation module has test coverage gaps",
+      "description": "From the test coverage analysis (20260616-analyze-test-coverage), the narrative/ directory has 93% coverage but fictional_dream/identification.ts is listed as uncovered. The reader/ module tests were not explicitly found in the coverage report, suggesting potential gaps.",
+      "affected_files": [
+        "src-ts/reader/",
+        "src-ts/narrative/fictional_dream/"
+      ],
+      "recommendation": "Verify test coverage for reader/ module before implementing R-M26 changes. Add tests for new functionality (persona expansion, 9-dimension bridge, A/B comparison, anti-AI detection)."
+    },
+    {
+      "id": "F-010",
+      "severity": "low",
+      "category": "integration",
+      "requirement": "R-M26-003",
+      "title": "Existing detectionEvasion guard can be extended for anti-AI",
+      "description": "writing-endpoints.ts (line 351) has a detectionEvasion flag that changes the system prompt to 'avoid AI-generated typical patterns'. This is a primitive form of anti-AI-flavor detection. R-M26-003 can build on this by making the detection systematic and score-based rather than just a prompt toggle.",
+      "affected_files": [
+        "src-ts/mcp/endpoints/writing.ts"
+      ],
+      "recommendation": "Extract the detectionEvasion concept into a proper AntiAIFlavorDetector service with scoring, then use the score to drive the writing helper's system prompt intensity."
+    }
+  ],
+
+  "risks": [
+    {
+      "id": "RISK-001",
+      "severity": "critical",
+      "probability": "high",
+      "requirement": "R-M26-002",
+      "title": "Type system cascade: QualityDimension enum expansion breaks downstream consumers",
+      "description": "QualityDimension is a hardcoded enum used in HardConstraintViolation, HardConstraintResult, DimensionAnalyzer, ConsensusEngine, OverlayBridge, and all frontend components. Expanding from 4 to 9 dimensions would require changes across 15+ files. Missing any consumer would cause type errors or runtime failures.",
+      "mitigation": "Use the bridge approach (F-001 recommendation) instead of expanding the enum. Create a WritingCraftBridge that maps 9-dimension results into the existing 4-dimension consensus flow, or add a parallel 9-dimension flow that coexists with the legacy 4-dimension flow. Deprecate 4-dimension flow gradually."
+    },
+    {
+      "id": "RISK-002",
+      "severity": "high",
+      "probability": "high",
+      "requirement": "R-M26-001 + R-M26-005",
+      "title": "Frontend-backend type drift during persona expansion",
+      "description": "The frontend PersonaSelector and backend PersonaDefinition types are already partially mismatched (4 vs 7 fields). Adding 4 more fields (age, culture, readingPreference, genrePreference) increases the risk of frontend-backend contract drift. API serialization/deserialization errors could occur if fields are added inconsistently.",
+      "mitigation": "Create a shared PersonaParameters type in a common package (or src-ts/types/reader.ts with frontend re-export). Use strict validation in the rsCreateCustomPersonaEndpoint. Add contract tests for persona serialization."
+    },
+    {
+      "id": "RISK-003",
+      "severity": "high",
+      "probability": "medium",
+      "requirement": "R-M26-003",
+      "title": "Anti-AI-flavor detection accuracy: false positives on human-written text",
+      "description": "Anti-AI-flavor detection based on style fingerprinting, sensory coverage, and template patterns risks false positives on human-written text that happens to have low sensory coverage or matches common patterns. This could alienate users if their human-written text is flagged as 'AI-flavored'.",
+      "mitigation": "(1) Use ensemble scoring (combine multiple signals with weights, not single threshold). (2) Provide confidence scores, not binary flags. (3) Allow user calibration/baseline extraction from their own writing samples. (4) Include human-written reference corpus for comparison."
+    },
+    {
+      "id": "RISK-004",
+      "severity": "medium",
+      "probability": "medium",
+      "requirement": "R-M26-004",
+      "title": "De-AI transformation quality: over-correction destroying author voice",
+      "description": "Aggressive de-AI transformation could over-correct and destroy the author's natural voice, making text worse rather than better. The transformation needs to preserve author style while removing AI artifacts.",
+      "mitigation": "(1) Extract author baseline style fingerprint before transformation. (2) Use delta scoring: measure distance from baseline, not just AI-flavor score. (3) Make transformation intensity configurable. (4) Provide before/after comparison UI. (5) Allow user to accept/reject per-suggestion."
+    },
+    {
+      "id": "RISK-005",
+      "severity": "medium",
+      "probability": "medium",
+      "requirement": "R-M26-005",
+      "title": "A/B testing performance: doubling analysis cost",
+      "description": "A/B comparison requires running the full analysis pipeline twice (once per persona group). If each analysis is LLM-powered, this doubles API cost and latency. The current in-memory cache (analysisResultCache) does not help since groups are different.",
+      "mitigation": "(1) Cache per-persona results, then combine for consensus. (2) Use lightweight heuristic analysis for initial A/B, with LLM only on disagreement. (3) Add progress streaming for long-running A/B comparisons. (4) Consider parallel execution with Promise.all."
+    },
+    {
+      "id": "RISK-006",
+      "severity": "medium",
+      "probability": "low",
+      "requirement": "R-M26-006",
+      "title": "i18n key explosion: maintaining two translation systems",
+      "description": "Adding reader simulation translations to both i18next (JSON) and legacy (TypeScript modules) systems doubles maintenance. Risk of key drift and missing translations in one system.",
+      "mitigation": "(1) Add reader module only to legacy system first (lower risk). (2) Run ensureTranslationShape() validation. (3) Plan migration to i18next-only in future phase. (4) Use automated key extraction from source code."
+    },
+    {
+      "id": "RISK-007",
+      "severity": "low",
+      "probability": "medium",
+      "requirement": "All",
+      "title": "In-memory storage limits scalability",
+      "description": "customPersonaStore and analysisResultCache are in-memory Maps. As personas expand (R-M26-001) and analysis dimensions increase (R-M26-002), memory usage grows. No eviction policy exists.",
+      "mitigation": "(1) Add LRU eviction to caches. (2) Persist personas to disk/knowledge store. (3) Add cache size limits and monitoring."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import React from 'react'
-import type { OverlayMarker } from '../../../../src-ts/reader/OverlayBridge'
-import type { ConsensusReport } from '../../../../src-ts/reader/ConsensusEngine'
+import type { OverlayMarker } from '../../types/reader'
+import type { ConsensusReport } from '../../api/reader'
 
 export interface DetailPanelProps {
   selectedItem: OverlayMarker | null

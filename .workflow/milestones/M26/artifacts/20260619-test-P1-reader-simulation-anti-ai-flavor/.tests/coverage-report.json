@@ -1,0 +1,55 @@
+{
+  "target": "phase-1-reader-simulation-anti-ai-flavor",
+  "generated_at": "2026-06-19T01:45:00+08:00",
+  "src_ts": {
+    "all_files": {
+      "statements": 99.74,
+      "branches": 99.83,
+      "functions": 99.94,
+      "lines": 99.74
+    },
+    "reader_modules": {
+      "reader/mcp": {
+        "statements": 83.38,
+        "branches": 91.53,
+        "functions": 92.3,
+        "lines": 83.38
+      }
+    },
+    "summary": "776 test files passed, 5795 tests passed"
+  },
+  "desktop": {
+    "all_files": {
+      "statements": 99.59,
+      "branches": 97.81,
+      "functions": 99.2,
+      "lines": 99.59
+    },
+    "reader_modules": {
+      "src/api/reader.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "src/components/reader": {
+        "statements": 97.07,
+        "branches": 97.08,
+        "functions": 91.89,
+        "lines": 97.07
+      }
+    },
+    "summary": "407 test files passed, 3273 tests passed (e2e excluded)"
+  },
+  "requirements_covered": [
+    "R-M26-001",
+    "R-M26-002",
+    "R-M26-003",
+    "R-M26-004",
+    "R-M26-005",
+    "R-M26-006",
+    "SC-regression"
+  ],
+  "requirements_uncovered": [],
+  "coverage_percentage": 98.67
+}

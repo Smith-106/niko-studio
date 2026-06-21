@@ -1,0 +1,257 @@
+{
+  "phase": 1,
+  "level": "standard",
+  "verdict": "WARN",
+  "reviewed_at": "2026-06-19T01:10:00+08:00",
+  "reviewer": "workflow-reviewer",
+  "dimensions_reviewed": ["correctness", "security", "architecture", "maintainability", "best-practices"],
+  "files_reviewed": [
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/services/revision-service.ts",
+    "src-ts/reader/ai-flavor-detector.ts",
+    "src-ts/reader/ConsensusEngine.ts",
+    "desktop/src/api/reader.ts",
+    "desktop/src/components/reader/ReportGenerator.tsx",
+    "desktop/src/components/reader/DetailPanel.tsx",
+    "src-ts/reader/PersonaDefinition.ts"
+  ],
+  "severity_distribution": {
+    "critical": 0,
+    "high": 2,
+    "medium": 12,
+    "low": 7,
+    "total": 21
+  },
+  "critical_files": [],
+  "findings": [
+    {
+      "id": "CORR-001",
+      "dimension": "correctness",
+      "severity": "medium",
+      "title": "TODO left unresolved: manuscript text is hardcoded empty",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 400,
+      "description": "/reader/analyze has TODO for manuscript text fetch; currently returns empty report.",
+      "impact": "Real analysis path unreachable until manuscript storage is wired.",
+      "suggestion": "Implement manuscript retrieval in future phase; current behavior matches task scope."
+    },
+    {
+      "id": "CORR-002",
+      "dimension": "correctness",
+      "severity": "medium",
+      "title": "Duplicate pattern entries in AI_TEMPLATE_PATTERNS",
+      "file": "src-ts/reader/ai-flavor-detector.ts",
+      "line": 72,
+      "description": "Several Chinese template patterns are duplicated, inflating match counts.",
+      "impact": "Template score may be artificially high for duplicated patterns.",
+      "suggestion": "Deduplicate AI_TEMPLATE_PATTERNS."
+    },
+    {
+      "id": "CORR-003",
+      "dimension": "correctness",
+      "severity": "high",
+      "title": "Potential division by zero in ConsensusEngine.calculateDimensionSummaries",
+      "file": "src-ts/reader/ConsensusEngine.ts",
+      "line": 371,
+      "description": "scores.length could be 0 if reactions lack a dimension key.",
+      "impact": "NaN propagates through consensus calculations.",
+      "suggestion": "Guard against empty scores array and filter undefined values."
+    },
+    {
+      "id": "CORR-004",
+      "dimension": "correctness",
+      "severity": "medium",
+      "title": "Feedback aggregate 'modify' action never triggers weight adjustment",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 765,
+      "description": "'ignore' increments the 'modify' counter but the weight adjustment logic only compares accept vs reject.",
+      "impact": "Ignore action contributes to threshold but is discarded in adjustment.",
+      "suggestion": "Incorporate modify count into weight logic or rename action."
+    },
+    {
+      "id": "CORR-005",
+      "dimension": "correctness",
+      "severity": "medium",
+      "title": "DetailPanel consensus matching by description is fragile",
+      "file": "desktop/src/components/reader/DetailPanel.tsx",
+      "line": 122,
+      "description": "Matches OverlayMarker to ConsensusItem by exact description string.",
+      "impact": "Matches may fail if descriptions are truncated or merged.",
+      "suggestion": "Use stable identifier for matching."
+    },
+    {
+      "id": "CORR-006",
+      "dimension": "correctness",
+      "severity": "medium",
+      "title": "RevisionService weak points based on original text only",
+      "file": "src-ts/services/revision-service.ts",
+      "line": 348,
+      "description": "Weak points are derived from baseline analysis, not current draft.",
+      "impact": "Iterations use stale feedback.",
+      "suggestion": "Re-analyze current draft each iteration."
+    },
+    {
+      "id": "SEC-001",
+      "dimension": "security",
+      "severity": "medium",
+      "title": "No input length limits on text fields",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 640,
+      "description": "Endpoints accept arbitrary-length text without size validation.",
+      "impact": "Potential DoS via large payloads.",
+      "suggestion": "Add max text length check (e.g. 50000 chars)."
+    },
+    {
+      "id": "SEC-002",
+      "dimension": "security",
+      "severity": "medium",
+      "title": "Persona file path from environment variable without sanitization",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 39,
+      "description": "NIKO_WORKFLOW_WORKSPACE is trimmed but not validated.",
+      "impact": "Path traversal possible if env var is untrusted.",
+      "suggestion": "Resolve and validate workspace root is within allowed base."
+    },
+    {
+      "id": "SEC-003",
+      "dimension": "security",
+      "severity": "high",
+      "title": "LLM API key sent without HTTPS/timeout validation",
+      "file": "src-ts/services/revision-service.ts",
+      "line": 204,
+      "description": "No HTTPS protocol check or request timeout on LLM fetch.",
+      "impact": "API key could leak to attacker-controlled endpoint; hangs possible.",
+      "suggestion": "Enforce HTTPS, add timeout, allowlist safe domains."
+    },
+    {
+      "id": "SEC-004",
+      "dimension": "security",
+      "severity": "medium",
+      "title": "No validation of persona parameter numeric ranges",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 547,
+      "description": "Weight fields accept NaN, Infinity, and out-of-range values.",
+      "impact": "Malformed parameters corrupt analysis.",
+      "suggestion": "Validate finite numbers in [0,1] range."
+    },
+    {
+      "id": "ARCH-001",
+      "dimension": "architecture",
+      "severity": "medium",
+      "title": "Frontend imports backend types directly",
+      "file": "desktop/src/components/reader/ReportGenerator.tsx",
+      "line": 3,
+      "description": "ReportGenerator imports types from ../../../../src-ts/reader/ConsensusEngine.",
+      "impact": "Breaks frontend/backend separation.",
+      "suggestion": "Extract shared types or duplicate minimal types."
+    },
+    {
+      "id": "ARCH-002",
+      "dimension": "architecture",
+      "severity": "medium",
+      "title": "Manual singleton pattern instead of DI",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 128,
+      "description": "Multiple lazy singletons with module-level mutable state.",
+      "impact": "Testing difficulty and state leakage.",
+      "suggestion": "Use DI container or injectable service instances."
+    },
+    {
+      "id": "ARCH-003",
+      "dimension": "architecture",
+      "severity": "low",
+      "title": "RevisionService dynamic import with .js extension",
+      "file": "src-ts/services/revision-service.ts",
+      "line": 286,
+      "description": "Dynamic import of '../mcp/services/critic.js' bypasses type checking.",
+      "impact": "Runtime failure risk if build output differs.",
+      "suggestion": "Use static import or stable interface."
+    },
+    {
+      "id": "MAINT-001",
+      "dimension": "maintainability",
+      "severity": "medium",
+      "title": "DIMENSION_TO_PARAM mapping has redundant entries",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 272,
+      "description": "Map contains 12 entries for 4 dimensions with 3 naming conventions.",
+      "impact": "Maintenance burden and inconsistency risk.",
+      "suggestion": "Normalize dimension names to single canonical form."
+    },
+    {
+      "id": "MAINT-002",
+      "dimension": "maintainability",
+      "severity": "medium",
+      "title": "AI template patterns duplicated between detector and revision-service",
+      "file": "src-ts/reader/ai-flavor-detector.ts",
+      "line": 47,
+      "description": "Pattern lists defined in both files and already diverged.",
+      "impact": "Inconsistent de-AI behavior.",
+      "suggestion": "Extract shared ai-templates module."
+    },
+    {
+      "id": "MAINT-003",
+      "dimension": "maintainability",
+      "severity": "low",
+      "title": "Severity color logic duplicated across components",
+      "file": "desktop/src/components/reader/DetailPanel.tsx",
+      "line": 12,
+      "description": "SEVERITY_COLORS/DIMENSION_LABELS duplicated.",
+      "impact": "Style changes require multiple edits.",
+      "suggestion": "Extract shared constants."
+    },
+    {
+      "id": "MAINT-004",
+      "dimension": "maintainability",
+      "severity": "low",
+      "title": "ConsensusBar duplicated in DetailPanel and ReportGenerator",
+      "file": "desktop/src/components/reader/DetailPanel.tsx",
+      "line": 41,
+      "description": "Nearly identical bar components in two files.",
+      "suggestion": "Extract shared ConsensusBar component."
+    },
+    {
+      "id": "MAINT-005",
+      "dimension": "maintainability",
+      "severity": "medium",
+      "title": "ReportGenerator dimensionSummaries fallback overwrites avgScore",
+      "file": "desktop/src/components/reader/ReportGenerator.tsx",
+      "line": 244,
+      "description": "Fallback overwrites avgScore with last persona's score instead of averaging.",
+      "impact": "Incorrect scores shown in fallback path.",
+      "suggestion": "Compute actual average or remove fallback."
+    },
+    {
+      "id": "BP-001",
+      "dimension": "best-practices",
+      "severity": "low",
+      "title": "require used inside function instead of static import",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 43,
+      "description": "getPersonasFilePath uses require('node:path').",
+      "suggestion": "Use static import."
+    },
+    {
+      "id": "BP-002",
+      "dimension": "best-practices",
+      "severity": "low",
+      "title": "Inline SVG instead of lucide-react icons",
+      "file": "desktop/src/components/reader/DetailPanel.tsx",
+      "line": 176,
+      "description": "Thumbs up/down icons are inline SVG.",
+      "suggestion": "Use lucide-react ThumbsUp/ThumbsDown."
+    },
+    {
+      "id": "BP-003",
+      "dimension": "best-practices",
+      "severity": "low",
+      "title": "Unused React import in DetailPanel",
+      "file": "desktop/src/components/reader/DetailPanel.tsx",
+      "line": 1,
+      "description": "Imports React but only uses useState.",
+      "suggestion": "Use named import."
+    }
+  ],
+  "deep_dives": [],
+  "issues_created": []
+}

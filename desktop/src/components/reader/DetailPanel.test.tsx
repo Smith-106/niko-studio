@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ConsensusReport } from '../../../../src-ts/reader/ConsensusEngine'
-import type { OverlayMarker } from '../../../../src-ts/reader/OverlayBridge'
+import type { ConsensusReport } from '../../api/reader'
+import type { OverlayMarker } from '../../types/reader'
 
 import { DetailPanel } from './DetailPanel'
 

@@ -1,0 +1,117 @@
+{
+  "$schema": "context-package/1.0",
+  "source": {
+    "type": "analyze",
+    "artifact_id": "ANL-20260619-fix-remaining-risks",
+    "session_path": ".workflow/scratch/20260619-analyze-fix-remaining-risks",
+    "generated_at": "2026-06-19T10:40:51Z"
+  },
+  "requirements": [
+    {
+      "id": "G1",
+      "title": "修复 desktop 与 src-ts 剩余低/中危依赖漏洞",
+      "acceptance": "npm audit --audit-level=high 无 critical/high，且 lint/typecheck/test/build 全绿",
+      "ref": "context.md#Locked"
+    },
+    {
+      "id": "G2",
+      "title": "清理源码中的 TODO 与控制台输出",
+      "acceptance": "已识别 4 个文件的 TODO 被实现/删除/转 issue，console.log 被移除或替换为 logger",
+      "ref": "context.md#Locked"
+    },
+    {
+      "id": "G3",
+      "title": "整理工作树并分块提交",
+      "acceptance": "工作树被拆分为 <=5 个语义清晰的 commit，无未跟踪临时文件",
+      "ref": "context.md#Locked"
+    },
+    {
+      "id": "G4",
+      "title": "补充部署/回滚/监控文档或确认现有覆盖",
+      "acceptance": "docs/ 新增或更新运行手册/回滚方案/监控检查清单，或在 README/scripts 中明确引用现有 CI/发布脚本",
+      "ref": "context.md#Locked"
+    }
+  ],
+  "constraints": [
+    {
+      "status": "locked",
+      "title": "依赖修复范围",
+      "description": "优先 npm audit fix 可自动修复的低/中危漏洞；不处理需要 --force 的破坏性升级，除非评估后确认安全",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "质量门槛",
+      "description": "修复后 desktop/src-ts 的 lint/typecheck/test/build 必须保持通过，语句覆盖率保持 100%",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "TODO/控制台输出清理",
+      "description": "TODO 必须实现、删除或转 issue；console.log 必须移除或替换为 logger",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "工作树提交规范",
+      "description": "必须按语义分块提交，不允许一次性大杂烩提交",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "文档可见性",
+      "description": "部署/回滚/监控文档必须可从 docs/ 或 README 检索，或明确引用现有脚本",
+      "ref": "context.md#Locked"
+    }
+  ],
+  "domain": {
+    "milestone": "M26",
+    "phase": null,
+    "scope": "adhoc"
+  },
+  "non_goals": [
+    {
+      "title": "新增业务功能或 M26 后续 phase 实现",
+      "rationale": "超出本次收尾风险修复范围",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "大规模代码重构",
+      "rationale": "避免范围膨胀",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "生产环境真实部署执行",
+      "rationale": "仅补充文档与准备，不执行真实部署",
+      "ref": "context.md#Deferred"
+    }
+  ],
+  "insights": [
+    {
+      "role": "analyzer",
+      "area": "security",
+      "summary": "desktop 与 src-ts 的关键/高危漏洞已清零，剩余均为 low/moderate 且多为开发/构建依赖。"
+    },
+    {
+      "role": "analyzer",
+      "area": "code-quality",
+      "summary": "TODO 与 console.log 集中在 4 个文件，清理成本低但需要在交付前完成或明确转 issue。"
+    },
+    {
+      "role": "analyzer",
+      "area": "release-readiness",
+      "summary": "工作树状态混乱（~2088 个变更文件），交付前必须分块提交；缺少独立运行手册，需补充最小文档。"
+    }
+  ],
+  "open_questions": [],
+  "references": [
+    {
+      "type": "analysis",
+      "path": "context.md"
+    },
+    {
+      "type": "discussion",
+      "path": "discussion.md"
+    }
+  ]
+}

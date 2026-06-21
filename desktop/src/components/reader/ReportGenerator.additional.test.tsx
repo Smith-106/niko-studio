@@ -7,7 +7,7 @@ vi.mock('../../api/reader', () => ({
   analyzeReader: analyzeReaderMock,
 }))
 
-import type { ConsensusItem } from '../../../../src-ts/reader/ConsensusEngine'
+import type { ConsensusItem } from '../../api/reader'
 import {
   ConsensusIssueItem,
   DissentItem,

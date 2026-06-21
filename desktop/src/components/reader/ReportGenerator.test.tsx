@@ -9,7 +9,7 @@ vi.mock('../../api/reader', () => ({
 
 import { logger } from '../../utils/logger'
 
-import type { ConsensusItem, ConsensusReport } from '../../../../src-ts/reader/ConsensusEngine'
+import type { ConsensusItem, ConsensusReport } from '../../api/reader'
 import {
   ConsensusBar,
   ConsensusIssueItem,

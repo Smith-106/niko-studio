@@ -1,0 +1,41 @@
+{
+  "session_id": "debug-odyssey-20260620-150000",
+  "issue": "Niko-Studio Desktop 从安装到运行全过程存在多个错误间隙，导致用户在某些条件下遇到无法诊断的启动失败",
+  "flags": { "skip_fix": false, "skip_generalize": false, "auto": true, "auto_confirm": false },
+  "current_state": "COMPLETED",
+  "diagnosis_retries": 0,
+  "root_cause": "Tauri CommandChild API 缺失 wait() + Node.js listen() 错误传播缺失 + parseInt NaN 语义陷阱，三者叠加导致启动链在异常条件下静默挂起或崩溃",
+  "patterns": [
+    { "id": "P1", "source": "EG-21/EG-23", "layer": "syntax", "signature": "parseInt(\\w+, 10) 无 Number.isFinite 校验", "description": "parseInt 返回 NaN/Infinity 时无声通过后续数值比较", "risk": "HIGH", "fix_template": "parseIntSafe() 或 !Number.isFinite() guard" },
+    { "id": "P2", "source": "EG-08", "layer": "semantic", "signature": "kill() 后无退出确认", "description": "进程 kill 后未等待退出，端口/资源未释放", "risk": "HIGH", "fix_template": "kill 后轮询 PID / 监听 close 事件 / wait()" },
+    { "id": "P3", "source": "EG-15", "layer": "structural", "signature": "fs.writeFileSync / mkdirSync 无 try-catch", "description": "同步文件操作在不可写路径下抛未捕获异常", "risk": "MEDIUM", "fix_template": "包裹 try-catch + log.warn fallback" }
+  ],
+  "confirmation": {
+    "test_result": "8/8 passed (gateway-bootstrap + config), TypeScript tsc --noEmit 0 errors, Rust cargo check pass",
+    "cli_review": "skipped (auto mode, no delegate tool)",
+    "overall": "confirmed",
+    "timestamp": "2026-06-20T16:45:00Z"
+  },
+  "phase_goals": [
+    { "id": "G1", "goal": "Root cause identified", "done_when": "evidence has phase=diagnosis result=confirmed", "phase": "S_DIAGNOSE", "status": "done", "completion_confirmed": true },
+    { "id": "G2", "goal": "Explore context gathered", "done_when": "explore.json populated", "phase": "S_EXPLORE", "status": "done", "completion_confirmed": true },
+    { "id": "G3", "goal": "Fix applied and confirmed", "done_when": "confirmation.overall == confirmed", "phase": "S_CONFIRM", "status": "done", "completion_confirmed": true },
+    { "id": "G4", "goal": "Pattern generalized", "done_when": "patterns[] >=1 entry", "phase": "S_GENERALIZE", "status": "done", "completion_confirmed": true },
+    { "id": "G5", "goal": "Discoveries triaged", "done_when": "all hits classified", "phase": "S_DISCOVER", "status": "done", "completion_confirmed": true },
+    { "id": "G6", "goal": "Learnings persisted", "done_when": "spec entries created or no actionable learnings", "phase": "S_RECORD", "status": "done", "completion_confirmed": true }
+  ],
+  "phase_goals_all_done": true,
+  "self_iteration_log": [],
+  "generalization_stats": {
+    "patterns_extracted": 3,
+    "total_hits": 21,
+    "cross_layer_confirmed": 0,
+    "regression_risks": 0,
+    "by_layer": { "syntax": 15, "semantic": 2, "structural": 5 },
+    "deepening_triggered": false
+  },
+  "cross_phase_loops": 0,
+  "max_loops": 3,
+  "created_at": "2026-06-20T15:00:00Z",
+  "updated_at": "2026-06-20T17:10:00Z"
+}

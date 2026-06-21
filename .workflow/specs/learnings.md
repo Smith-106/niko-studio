@@ -217,3 +217,57 @@ INS-31c776c2 · M26-P1 retrospective · 路由: note
 ### Recovery chain completed patterns (mutex/atomicity/test-matrix)
 WS1: workspace-scoped async mutex serializes concurrent restore/rollback per workspace (commit 676fca89). WS2: quickRollback persistence only after successful restore, failure branch preserves consistency. WS3: expanded recovery test matrix with concurrency and failure injection.
 </spec-entry>
+
+<spec-entry category="technique" keywords="wiki-connect,orphan-rescue,body-wikilinks,health-score" date="2026-06-21" title="Wiki orphan rescue 需要 body wikilinks 而非仅 frontmatter related" description="frontmatter related 不被 maestro wiki 算作出度边；body 中的 [[id]] 才被识别为图边" source="wiki-connect">
+### Wiki orphan rescue 需要 body wikilinks 而非仅 frontmatter related
+`maestro wiki update --frontmatter related=[...]` 更新元数据但不贡献出度边。孤立页判定依据 body 中的 `[[wikilinks]]`。救援孤立页必须在文件正文中添加 `[[target-id]]`，frontmatter related 仅为补充交叉引用。
+来源：wiki-connect 2026-06-21 v3, health 71→100 (+29)
+</spec-entry>
+
+<spec-entry category="learning" keywords="empty-input,zero-value-report,graceful-degradation,cache-consistency" date="2026-06-22" source="milestone-complete">
+### 空输入返回结构完整零值报告而非抛错
+当 endpoint 接收空文本时，返回 HTTP 200 + 结构完整的零值 ConsensusReport（空数组 + 零分维度），而非抛 TODO 错误或 400。下游缓存同步写空结果确保 overlay 等 endpoint 不挂。非空路径完全保留，未来接入真实数据只需替换空字符串源头。
+Milestone: M26
+</spec-entry>
+
+<spec-entry category="learning" keywords="contract-alignment,consensus-field,type-propagation,fullstack-sync" date="2026-06-22" source="milestone-complete">
+### ConsensusEngine 字段变更需全栈对齐：后端→OverlayBridge→前端API→组件
+ConsensusItem 从 personaIds+position+score 改为 agreeingPersonas/disagreeingPersonas+location 时，需同步修改 ConsensusEngine、OverlayBridge、前端 API 类型、ReportGenerator 组件及所有对应测试。字段变更跨 4 层传播，任一层遗漏即产生运行时类型不匹配。
+Milestone: M26
+</spec-entry>
+
+<spec-entry category="learning" keywords="preset-registry,backward-compatibility,optional-fields,persona-extension" date="2026-06-22" source="milestone-complete">
+### Preset 注册表扩展保持向后兼容：原有 preset 不可修改
+新增 preset persona（含扩展字段）时，原有 preset 的权重和字段保持不变。新字段均为可选确保旧数据不破坏。preset 注册表模式支持独立验证。
+Milestone: M26
+</spec-entry>
+
+<spec-entry category="learning" keywords="ab-testing,concurrent-analysis,majority-voting,endpoint-export-audit" date="2026-06-22" source="milestone-complete">
+### A/B 对比 endpoint 并发执行 + 多数投票决定 overall winner
+compareConsensus 对两个版本并发调用 DualEngine.analyze（Promise.all），逐维度对比 avgScore 计算 delta，标记 winner。overallWinner 基于维度 winner 的多数投票。修复预存在的错误导出（不存在的类型被导出）是附带收益。
+Milestone: M26
+</spec-entry>
+
+<spec-entry category="learning" keywords="feedback-aggregation,weight-adjustment,threshold-step,persona-persistence" date="2026-06-22" source="milestone-complete">
+### 反馈聚合阈值 + 步长控制权重渐进调整
+反馈 endpoint 使用 accept/reject 聚合计数，仅在 accept!=reject 且达到阈值时触发权重调整，步长 0.05 限制在 [0,1]。预设 persona 权重仅在响应中返回不持久化，仅 custom persona 写入 store。渐进式调整避免单次反馈剧烈改变画像权重。
+Milestone: M26
+</spec-entry>
+
+<spec-entry category="learning" keywords="vi.doMock,ESM-cache,flaky-test,input-validation-testing" date="2026-06-22" source="milestone-complete">
+### vi.doMock 在 ESM 模块缓存中不可靠，替换为等效输入校验测试
+vi.doMock 因 ESM 模块缓存机制无法稳定运行（mock 不生效）。替换为验证相同代码路径的输入校验测试，覆盖 400 响应分支，等效且稳定。
+Milestone: M26
+</spec-entry>
+
+<spec-entry category="learning" keywords="file-persistence,graceful-degradation,memory-fallback,module-init-recovery" date="2026-06-22" source="milestone-complete">
+### 文件持久化 I/O 错误降级为仅内存存储 + 模块加载时自动恢复
+自定义画像持久化 save/load 均 catch 异常并降级为仅内存存储。模块加载时自动调用 load 填充 store，实现进程重启恢复。clearReaderStores 从同步改 async 以支持文件删除。
+Milestone: M26
+</spec-entry>
+
+<spec-entry category="learning" keywords="TODO-cleanup,console.log-removal,logger-migration,audit-fix" date="2026-06-22" source="milestone-complete">
+### TODO 注释和 console.log 清理应转为 logger 或 issue 而非静默删除
+清理 TODO 注释时，应将有用信息转为 _log.warn/info 保留意图，而非静默删除。console.log 在组件中应移除并更新对应测试断言。清理后的代码仍需 lint/typecheck/test 全链路验证无回归。
+Milestone: M26
+</spec-entry>

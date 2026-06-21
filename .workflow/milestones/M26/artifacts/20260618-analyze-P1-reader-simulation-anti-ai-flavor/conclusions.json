@@ -1,0 +1,227 @@
+{
+  "session_id": "ANL-m26-p1-reader-simulation-anti-ai-flavor-2026-06-18",
+  "scope": "phase",
+  "phase": 1,
+  "milestone": "M26",
+  "recommendation": "GO",
+  "overall_confidence": 0.78,
+  "pressure_pass": {
+    "completed": true,
+    "target": "A/B 测试可复用 ConsensusEngine",
+    "result": "passed"
+  },
+  "residual_risks": [
+    {
+      "title": "/reader/analyze 空文本 TODO",
+      "severity": "high",
+      "probability": "high",
+      "mitigation": "Phase 1 Wave 0 修复，接入 workspace/manuscript 服务"
+    },
+    {
+      "title": "前后端 ConsensusReport / OverlayMarker 数据契约漂移",
+      "severity": "high",
+      "probability": "medium",
+      "mitigation": "统一 /reader/analyze 返回后端 ConsensusReport，前端删除本地聚合"
+    },
+    {
+      "title": "自定义画像与缓存仅存内存",
+      "severity": "medium",
+      "probability": "medium",
+      "mitigation": "迁移到 .niko-studio/reader-personas.json 或 SQLite"
+    },
+    {
+      "title": "RevisionService writerFn 当前为 identity 函数",
+      "severity": "high",
+      "probability": "medium",
+      "mitigation": "Plan 阶段安排 writerFn 实现，复用 Model Router"
+    }
+  ],
+  "dimension_scores": [
+    { "dimension": "Feasibility", "score": 4, "confidence": 0.80, "evidence": "PersonaDefinition factory pattern, DualEngine Promise.all, clear MCP endpoint integration points" },
+    { "dimension": "Impact", "score": 5, "confidence": 0.85, "evidence": "Reader simulation is unique moat; anti-AI-flavor closes QMAI gap; i18n strengthens Chinese market" },
+    { "dimension": "Risk", "score": 3, "confidence": 0.70, "evidence": "Empty-text TODO, type drift, identity writerFn" },
+    { "dimension": "Complexity", "score": 3, "confidence": 0.75, "evidence": "Four-module integration, UI+backend+MCP coordination for weight feedback" },
+    { "dimension": "Dependencies", "score": 3, "confidence": 0.75, "evidence": "Depends on M23 reader-state and M25 IRevisionService/style model" },
+    { "dimension": "Alternatives", "score": 4, "confidence": 0.80, "evidence": "Independent detector vs new QualityDimension; RevisionService vs Co-Writing; least-invasive options selected" }
+  ],
+  "recommendations": [
+    {
+      "id": "REC-001",
+      "priority": "high",
+      "action": "修复 /reader/analyze 空文本 TODO",
+      "rationale": "所有上层功能依赖真实文本输入，当前 endpoint 返回无意义结果。",
+      "target_files": ["src-ts/reader/mcp/reader-endpoints.ts"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-002",
+      "priority": "high",
+      "action": "统一前后端 ConsensusReport 数据契约",
+      "rationale": "避免后端变更静默破坏 UI，减少前端重复聚合逻辑。",
+      "target_files": ["src-ts/reader/ConsensusEngine.ts", "src-ts/reader/OverlayBridge.ts", "desktop/src/components/reader/ReportGenerator.tsx"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-003",
+      "priority": "high",
+      "action": "扩展 PersonaDefinition 并新增 4+ presets",
+      "rationale": "R-M26-001 核心交付，利用现有工厂模式低成本实现。",
+      "target_files": ["src-ts/reader/PersonaDefinition.ts", "desktop/src/components/reader/PersonaSelector.tsx"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-004",
+      "priority": "high",
+      "action": "新增独立 anti-AI-flavor detector 与 /reader/ai-flavor endpoint",
+      "rationale": "R-M26-003 核心交付，独立 detector 避免破坏 QualityDimension 契约。",
+      "target_files": ["src-ts/reader/ai-flavor-detector.ts", "src-ts/reader/DualEngine.ts", "src-ts/reader/mcp/reader-endpoints.ts"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-005",
+      "priority": "high",
+      "action": "De-AI rewrite 复用 RevisionService 并新增 /reader/de-ai endpoint",
+      "rationale": "R-M26-004 核心交付，复用现有 revision 循环与 session tracking。",
+      "target_files": ["src-ts/services/revision-service.ts", "src-ts/protocols/revision.ts", "src-ts/reader/mcp/reader-endpoints.ts"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-006",
+      "priority": "medium",
+      "action": "新增 /reader/compare endpoint 实现 A/B 测试",
+      "rationale": "R-M26-005 核心交付，复用 DualEngine + ConsensusEngine。",
+      "target_files": ["src-ts/reader/mcp/reader-endpoints.ts", "src-ts/reader/ConsensusEngine.ts"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-007",
+      "priority": "medium",
+      "action": "新增 /reader/feedback endpoint 实现分析权重反馈",
+      "rationale": "R-M26-002 核心交付，闭环 分析 → 模拟 → 修订。",
+      "target_files": ["src-ts/reader/mcp/reader-endpoints.ts", "src-ts/analysis/personalized-craft-profile.ts", "desktop/src/components/reader/DetailPanel.tsx"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-008",
+      "priority": "medium",
+      "action": "新建 desktop/src/api/reader.ts 统一前端 API 层",
+      "rationale": "消除裸 fetch，复用 callApi/ApiResponse 模式，降低 API 签名漂移风险。",
+      "target_files": ["desktop/src/api/reader.ts", "desktop/src/components/reader/ReportGenerator.tsx"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-009",
+      "priority": "low",
+      "action": "持久化自定义画像",
+      "rationale": "进程重启不丢失，提升用户体验。",
+      "target_files": ["src-ts/reader/mcp/reader-endpoints.ts"],
+      "status": "accepted"
+    },
+    {
+      "id": "REC-010",
+      "priority": "medium",
+      "action": "中文 i18n 审核与网文维度增强",
+      "rationale": "R-M26-006 核心交付，补齐术语并增强 hook/cliffhanger。",
+      "target_files": ["desktop/src/i18n/translations*.ts", "desktop/src/api/writing-craft.ts"],
+      "status": "accepted"
+    }
+  ],
+  "implementation_scope": [
+    {
+      "objective": "修复 /reader/analyze 空文本 TODO",
+      "rationale": "所有上层功能依赖真实文本输入",
+      "priority": "P0",
+      "target_files": ["src-ts/reader/mcp/reader-endpoints.ts"],
+      "acceptance_criteria": "/reader/analyze 能读取真实小说内容并返回非空分析"
+    },
+    {
+      "objective": "统一前后端 reader API 层与 ConsensusReport 契约",
+      "rationale": "避免数据契约漂移和前端重复聚合",
+      "priority": "P0",
+      "target_files": ["desktop/src/api/reader.ts", "desktop/src/components/reader/ReportGenerator.tsx", "src-ts/reader/OverlayBridge.ts"],
+      "acceptance_criteria": "新建 reader.ts API 层，ReportGenerator 消费后端 ConsensusReport"
+    },
+    {
+      "objective": "扩展 PersonaDefinition 与 PersonaSelector",
+      "rationale": "R-M26-001 读者 Persona 扩展",
+      "priority": "P0",
+      "target_files": ["src-ts/reader/PersonaDefinition.ts", "desktop/src/components/reader/PersonaSelector.tsx"],
+      "acceptance_criteria": "新增 ≥4 presets，含 age/culture/genre/reading preference 字段；前端可选"
+    },
+    {
+      "objective": "实现 Anti-AI-Flavor Detector",
+      "rationale": "R-M26-003 反 AI 味检测",
+      "priority": "P0",
+      "target_files": ["src-ts/reader/ai-flavor-detector.ts", "src-ts/reader/DualEngine.ts", "src-ts/reader/mcp/reader-endpoints.ts"],
+      "acceptance_criteria": "覆盖 ≥3 种子类型，输出 confidence/evidence/suggestions，/reader/ai-flavor endpoint 暴露"
+    },
+    {
+      "objective": "实现 De-AI rewrite",
+      "rationale": "R-M26-004 De-AI / 风格变换重写",
+      "priority": "P0",
+      "target_files": ["src-ts/services/revision-service.ts", "src-ts/reader/mcp/reader-endpoints.ts"],
+      "acceptance_criteria": "RevisionService writerFn 实现，/reader/de-ai 可返回重写文本"
+    },
+    {
+      "objective": "实现 A/B 测试 compare endpoint",
+      "rationale": "R-M26-005 读者模拟 A/B 测试",
+      "priority": "P1",
+      "target_files": ["src-ts/reader/mcp/reader-endpoints.ts", "src-ts/reader/ConsensusEngine.ts"],
+      "acceptance_criteria": "/reader/compare 接受 A/B 文本+personas，返回差异共识"
+    },
+    {
+      "objective": "实现分析权重反馈",
+      "rationale": "R-M26-002 读者模拟与写作分析联动",
+      "priority": "P1",
+      "target_files": ["src-ts/reader/mcp/reader-endpoints.ts", "src-ts/analysis/personalized-craft-profile.ts", "desktop/src/components/reader/DetailPanel.tsx"],
+      "acceptance_criteria": "/reader/feedback 接收反馈并回写 persona weight"
+    },
+    {
+      "objective": "中文 i18n 与网文维度增强",
+      "rationale": "R-M26-006 中文市场适配优化",
+      "priority": "P1",
+      "target_files": ["desktop/src/i18n/translations*.ts", "desktop/src/api/writing-craft.ts"],
+      "acceptance_criteria": "关键术语中文覆盖，webnovel/hook/cliffhanger 维度增强"
+    },
+    {
+      "objective": "持久化自定义画像",
+      "rationale": "提升用户体验，进程重启不丢失",
+      "priority": "P2",
+      "target_files": ["src-ts/reader/mcp/reader-endpoints.ts"],
+      "acceptance_criteria": "自定义画像进程重启不丢失"
+    },
+    {
+      "objective": "新增功能测试覆盖率 ≥80% 且无回归",
+      "rationale": "M26 Phase 1 success criteria",
+      "priority": "P0",
+      "target_files": ["src-ts/tests/reader/*", "desktop/src/api/reader.test.ts", "desktop/src/components/reader/*.test.tsx"],
+      "acceptance_criteria": "新增功能测试覆盖率 ≥80%，现有测试无回归"
+    }
+  ],
+  "decision_trail": [
+    {
+      "decision": "Anti-AI-flavor 采用独立 detector 层",
+      "context": "避免破坏现有 9 维度分析契约",
+      "options": ["新增 QualityDimension", "独立 detector"],
+      "chosen": "独立 detector",
+      "reason": "最小侵入，避免扩散改动",
+      "status": "locked"
+    },
+    {
+      "decision": "De-AI rewrite 复用 RevisionService",
+      "context": "M25 已建立 IRevisionService + RevisionServiceImpl",
+      "options": ["reader endpoint 直接调用 LLM writer", "复用 RevisionService"],
+      "chosen": "复用 RevisionService",
+      "reason": "保持 reader 模块只读分析职责，复用 revision 循环",
+      "status": "locked"
+    },
+    {
+      "decision": "Phase 1 必须修复 /reader/analyze 空文本 TODO",
+      "context": "当前 endpoint 分析空字符串，上层功能虚假",
+      "options": ["Phase 1 修复", "延后到 plan/execute"],
+      "chosen": "Phase 1 修复",
+      "reason": "否则所有功能无法验证",
+      "status": "locked"
+    }
+  ]
+}

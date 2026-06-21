@@ -1,0 +1,119 @@
+{
+  "id": "TASK-004",
+  "title": "语义分块提交工作树变更",
+  "description": "将 Wave 1 完成后的所有工作树变更按语义拆分为 <=5 个 commit：deps（依赖修复）、cleanup（TODO/console 清理）、docs（监控文档）、governance（如有脚本/配置更新）。确保无未跟踪临时文件残留，git status 干净。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "执行 git status 查看所有变更，按语义分组：1) deps 组包含 package-lock.json 变更；2) cleanup 组包含 CoWritingPanel.tsx、story-bible-endpoints.ts、qc-endpoints.ts 的 TODO/console 清理；3) docs 组包含 MONITORING.md 和 INDEX.md 更新；4) 如有其他变更归入 governance 或 misc 组。每组一个 commit，使用中文提交信息，格式为 '类型: 简短描述'。",
+  "scope": "git worktree",
+  "focus_paths": ["desktop/package-lock.json", "src-ts/package-lock.json", "desktop/src/components/cowriting/CoWritingPanel.tsx", "src-ts/knowledge/mcp/story-bible-endpoints.ts", "src-ts/knowledge/mcp/qc-endpoints.ts", "docs/operations/MONITORING.md", "docs/INDEX.md"],
+  "read_first": [
+    "desktop/package-lock.json",
+    "src-ts/package-lock.json",
+    "desktop/src/components/cowriting/CoWritingPanel.tsx",
+    "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+    "src-ts/knowledge/mcp/qc-endpoints.ts",
+    "docs/operations/MONITORING.md",
+    "docs/INDEX.md"
+  ],
+  "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "git log --oneline -n 5 显示 <=5 个新 commit",
+      "git status 显示无未跟踪文件（Untracked files: 0）",
+      "git status 显示无未暂存修改（Changes not staged for commit: 0）",
+      "每个 commit 信息使用中文，格式为 '类型: 简短描述'",
+      "commit 按语义分组：deps / cleanup / docs / governance"
+    ],
+    "verification": "执行 git log --oneline -n 5 和 git status，验证 commit 数量 <=5 且工作树干净",
+    "definition_of_done": "所有变更已按语义分块提交，工作树干净，无残留未跟踪文件"
+  },
+  "files": [
+    {
+      "path": "desktop/package-lock.json",
+      "action": "modify",
+      "target": "git staging",
+      "change": "归入 deps 组提交"
+    },
+    {
+      "path": "src-ts/package-lock.json",
+      "action": "modify",
+      "target": "git staging",
+      "change": "归入 deps 组提交"
+    },
+    {
+      "path": "desktop/src/components/cowriting/CoWritingPanel.tsx",
+      "action": "modify",
+      "target": "git staging",
+      "change": "归入 cleanup 组提交"
+    },
+    {
+      "path": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "action": "modify",
+      "target": "git staging",
+      "change": "归入 cleanup 组提交"
+    },
+    {
+      "path": "src-ts/knowledge/mcp/qc-endpoints.ts",
+      "action": "modify",
+      "target": "git staging",
+      "change": "归入 cleanup 组提交"
+    },
+    {
+      "path": "docs/operations/MONITORING.md",
+      "action": "create",
+      "target": "git staging",
+      "change": "归入 docs 组提交"
+    },
+    {
+      "path": "docs/INDEX.md",
+      "action": "modify",
+      "target": "git staging",
+      "change": "归入 docs 组提交"
+    }
+  ],
+  "implementation": [
+    "git status 和 git diff --stat 查看所有变更",
+    "跳过 node_modules、.workflow/.cache、build 输出等不应提交的临时文件",
+    "git add desktop/package-lock.json src-ts/package-lock.json && git commit -m 'fix: 修复 desktop 和 src-ts 低/中危依赖漏洞'",
+    "git add desktop/src/components/cowriting/CoWritingPanel.tsx src-ts/knowledge/mcp/story-bible-endpoints.ts src-ts/knowledge/mcp/qc-endpoints.ts && git commit -m 'cleanup: 清理 TODO 注释和 console.log 输出'",
+    "git add docs/operations/MONITORING.md docs/INDEX.md && git commit -m 'docs: 补充监控检查清单文档'",
+    "如有其他应提交的变更（如 governance 文件），单独分组提交",
+    "git status 验证工作树干净"
+  ],
+  "test": {
+    "commands": [
+      "git log --oneline -n 5",
+      "git status"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["<=5 个 commit", "工作树干净"]
+  },
+  "reference": {
+    "pattern": "语义分块提交规范",
+    "files": [],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "按语义分块提交便于回滚和代码审查，避免一次性大杂烩提交",
+    "decision_factors": ["约束要求 <=5 个语义 commit", "工作树必须干净", "中文提交信息"],
+    "tradeoffs": null
+  },
+  "risks": [
+    "Wave 1 任务可能产生额外变更文件，需动态调整分组",
+    "2088 个变更文件中可能包含不应提交的临时文件，需仔细筛选"
+  ],
+  "meta": {
+    "estimated_time": "15m",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 2,
+    "execution_group": null
+  }
+}
