@@ -7,6 +7,7 @@ import {
   projectWorkspaceToWorkflowAuthority,
   type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot } from '../input-validation.js';
 import {
   analyzeRevisionText,
   compareRevisionAnalyses,
@@ -31,8 +32,7 @@ function utcNowIso(): string {
 }
 
 function resolveWorkflowWorkspace(): string {
-  const override = String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim();
-  return override || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 function resolveWorkspaceRootForRequest(workspace?: ProjectWorkspaceContext | null): string {

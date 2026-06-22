@@ -10,6 +10,7 @@ import type { WorkflowRecommendationInput } from '../../workflow/engine/engine-c
 
 import { jsonResponse, parseBody } from '../http-types';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot } from '../input-validation.js';
 import {
   workflowRoute,
   workflowPlan,
@@ -40,7 +41,7 @@ import {
 // ---------------------------------------------------------------
 
 function resolveWorkspaceRoot(): string {
-  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 function resolveWorkspace(body: Record<string, unknown>) {

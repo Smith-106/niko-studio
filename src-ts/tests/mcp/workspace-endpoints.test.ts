@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolve as pathResolve } from 'node:path';
 
 import type { HttpRequest } from '../../mcp/http-types';
 
@@ -15,6 +16,7 @@ function makeRequest(body: Record<string, unknown>): HttpRequest {
 
 describe('workspace endpoints', () => {
   const originalWorkspace = process.env['NIKO_WORKFLOW_WORKSPACE'];
+  const originalAllowOutside = process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
 
   afterEach(() => {
     vi.clearAllMocks();
@@ -23,6 +25,11 @@ describe('workspace endpoints', () => {
       delete process.env['NIKO_WORKFLOW_WORKSPACE'];
     } else {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = originalWorkspace;
+    }
+    if (originalAllowOutside === undefined) {
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
+    } else {
+      process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = originalAllowOutside;
     }
   });
 
@@ -153,6 +160,7 @@ describe('workspace endpoints', () => {
 
     it('respects NIKO_WORKFLOW_WORKSPACE env var for workspaceRoot', async () => {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = '/custom/workspace/path';
+      process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
       vi.resetModules();
       const { workspaceContextEndpoint } = await import('../../mcp/endpoints/workspace.js');
@@ -163,11 +171,12 @@ describe('workspace endpoints', () => {
       const body = response.body as Record<string, unknown>;
       const workspace = body.workspace as Record<string, unknown>;
       const identity = workspace.identity as Record<string, unknown>;
-      expect(identity.workspaceRoot).toBe('/custom/workspace/path');
+      expect(identity.workspaceRoot).toBe(pathResolve('/custom/workspace/path'));
     });
 
     it('derives workspaceId from workspaceRoot basename when no identity provided', async () => {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = '/some/nice-project';
+      process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
       vi.resetModules();
       const { workspaceContextEndpoint } = await import('../../mcp/endpoints/workspace.js');

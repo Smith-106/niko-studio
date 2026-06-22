@@ -1,0 +1,92 @@
+{
+  "id": "TASK-002",
+  "title": "Add text length limits to Reader 7 endpoints (SEC-001)",
+  "description": "All 7 Reader endpoints accept arbitrary-length text with no size check. Add validateStringLength guards for novelId (max 256), text content (max 100000), and name fields (max 200). Return 413 on overflow.",
+  "issue_id": "ISS-20260620-007",
+  "issue_refs": ["ISS-20260620-007"],
+  "type": "fix",
+  "priority": "high",
+  "effort": "M",
+  "action": "In src-ts/reader/mcp/reader-endpoints.ts, import { validateStringLength } from '../../mcp/input-validation.js'. Add validateStringLength guards to 7 endpoints: rsSimulateEndpoint (novelId<=256, text<=100000), rsCreateCustomPersonaEndpoint (name<=200), rsGetFeedbackEndpoint (novelId<=256), rsGetOverlayEndpoint (novelId<=256), rsCompareEndpoint (novelId<=256, versionA.text<=100000, versionB.text<=100000), rsDetectAIFlavorEndpoint (text<=100000), rsGetPersonaEndpoint (id<=256). Each guard: const err = validateStringLength(value, MAX, 'fieldName'); if (err) return err;",
+  "status": "completed",
+  "scope": "src-ts/reader/mcp/",
+  "focus_paths": ["src-ts/reader/mcp/"],
+  "read_first": [
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/mcp/input-validation.ts",
+    "src-ts/mcp/http-types.ts"
+  ],
+  "depends_on": ["TASK-001"],
+  "wave": 2,
+  "convergence": {
+    "criteria": [
+      "src-ts/reader/mcp/reader-endpoints.ts contains 'import { validateStringLength }' with path '../../mcp/input-validation'",
+      "grep -c 'validateStringLength' src-ts/reader/mcp/reader-endpoints.ts returns >= 7",
+      "src-ts/reader/mcp/reader-endpoints.ts contains '413' in at least one error response path",
+      "src-ts/reader/mcp/reader-endpoints.ts contains 'novelId' near validateStringLength call",
+      "src-ts/reader/mcp/reader-endpoints.ts contains 'text' near validateStringLength call"
+    ],
+    "verification": "npx tsc --noEmit && grep -c 'validateStringLength' src-ts/reader/mcp/reader-endpoints.ts",
+    "definition_of_done": "All 7 Reader endpoints have length guards that return 413 on oversized input"
+  },
+  "files": [
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.ts",
+      "action": "modify",
+      "target": "Reader endpoints",
+      "change": "Add validateStringLength guards to 7 endpoints for novelId, text, and name fields"
+    }
+  ],
+  "implementation": [
+    "Add import: import { validateStringLength } from '../../mcp/input-validation.js'",
+    "Add constants at top: const MAX_NOVEL_ID_LENGTH = 256; const MAX_TEXT_LENGTH = 100_000; const MAX_NAME_LENGTH = 200;",
+    "In rsSimulateEndpoint: after extracting novelId and text, add const err = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId'); if (err) return err; and validateStringLength(text, MAX_TEXT_LENGTH, 'text'); if (err) return err;",
+    "In rsCreateCustomPersonaEndpoint: add validateStringLength(name, MAX_NAME_LENGTH, 'name') guard after name extraction",
+    "In rsGetFeedbackEndpoint: add validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId') guard",
+    "In rsGetOverlayEndpoint: add validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId') guard",
+    "In rsCompareEndpoint: add validateStringLength for novelId, versionA.text, versionB.text",
+    "In rsDetectAIFlavorEndpoint: add validateStringLength(text, MAX_TEXT_LENGTH, 'text') guard",
+    "In rsGetPersonaEndpoint: add validateStringLength(id, MAX_NOVEL_ID_LENGTH, 'id') guard (reuses MAX_NOVEL_ID_LENGTH for ID fields)",
+    "Verify npx tsc --noEmit passes"
+  ],
+  "test": {
+    "commands": ["npx vitest run src-ts/tests/reader/"],
+    "unit": [],
+    "integration": ["src-ts/tests/reader/reader-endpoints.test.ts"],
+    "success_metrics": ["existing reader tests still pass", "no TypeScript errors"]
+  },
+  "reference": {
+    "pattern": "chat.ts validateChatMessagesLimits — early-return guard pattern with jsonResponse",
+    "files": ["src-ts/mcp/endpoints/chat.ts", "src-ts/mcp/input-validation.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Import shared validateStringLength from input-validation.ts rather than inlining checks; constants at file top for easy tuning; 413 status code per HTTP spec for payload too large",
+    "decision_factors": [
+      "SEC-001 explicitly requires length limits",
+      "DoS prevention via size caps",
+      "Consistent error format across endpoints"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "risk": "Existing legitimate requests with text near 100k may be rejected",
+      "severity": "low",
+      "mitigation": "100k is generous for narrative text input; unlikely to break real usage. Can raise if needed."
+    }
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["Reader Simulation MCP endpoints"],
+    "affected_components": ["reader-endpoints.ts"],
+    "affected_requirements": ["SEC-001"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "30m",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

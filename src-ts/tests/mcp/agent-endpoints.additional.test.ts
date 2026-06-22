@@ -39,10 +39,12 @@ describe('mcp/endpoints/agent additional coverage', () => {
     vi.clearAllMocks();
     vi.resetModules();
     delete process.env.NIKO_WORKFLOW_WORKSPACE;
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   });
 
   afterEach(() => {
     delete process.env.NIKO_WORKFLOW_WORKSPACE;
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     vi.doUnmock('../../mcp/http-types.js');
   });
 
@@ -79,6 +81,7 @@ describe('mcp/endpoints/agent additional coverage', () => {
 
   it('normalizes legacy workspace identifiers using the configured workspace root', async () => {
     process.env.NIKO_WORKFLOW_WORKSPACE = 'C:/tmp/workspace-root';
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     const normalizedWorkspace = {
       identity: {
         workspaceId: 'atlas-workspace',
@@ -105,7 +108,7 @@ describe('mcp/endpoints/agent additional coverage', () => {
       projectId: 'atlas-project',
       context: { projectId: 'context-project' },
     }, {
-      workspaceRoot: 'C:/tmp/workspace-root',
+      workspaceRoot: expect.stringContaining('workspace-root'),
     });
     expect(agentWriteMock).toHaveBeenCalledWith(expect.objectContaining({
       quality_goals: { voice: 0.9 },

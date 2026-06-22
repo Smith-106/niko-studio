@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 describe('mcp critic service', () => {
   afterEach(() => {
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     vi.resetModules();
     vi.doUnmock('../../narrative/evaluators/critic-engine.js');
   });

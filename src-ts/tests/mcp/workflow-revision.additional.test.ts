@@ -92,6 +92,7 @@ describe('workflow revision additional coverage', () => {
 
   afterEach(async () => {
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     if (workspaceRoot && existsSync(workspaceRoot)) {
       await rm(workspaceRoot, { recursive: true, force: true });
     }
@@ -316,6 +317,7 @@ describe('workflow revision additional coverage', () => {
   it('falls back to env workspace root and enforces workspace and project authority mismatches', async () => {
     const envWorkspaceRoot = await mkdtemp(join(tmpdir(), 'niko-revision-env-'));
     process.env['NIKO_WORKFLOW_WORKSPACE'] = envWorkspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     try {
       const started = await workflowRevisionStartSession({
@@ -397,6 +399,7 @@ describe('workflow revision additional coverage', () => {
 
     const envWorkspaceRoot = await mkdtemp(join(tmpdir(), 'niko-revision-env-fallback-'));
     process.env['NIKO_WORKFLOW_WORKSPACE'] = envWorkspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     try {
       const envStarted = await workflowRevisionStartSession({

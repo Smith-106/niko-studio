@@ -39,10 +39,12 @@ describe('mcp/endpoints/agent tail additional coverage', () => {
     vi.clearAllMocks();
     vi.resetModules();
     delete process.env.NIKO_WORKFLOW_WORKSPACE;
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   });
 
   afterEach(() => {
     delete process.env.NIKO_WORKFLOW_WORKSPACE;
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   });
 
   it('falls back to context project ids and default scene cards when workspace ids are blank', async () => {

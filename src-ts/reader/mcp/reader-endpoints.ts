@@ -25,6 +25,7 @@ import { detectAIFlavor } from '../ai-flavor-detector';
 import type { AIFlavorResult } from '../ai-flavor-detector';
 import { createLogger } from '../../logger';
 import { RevisionServiceImpl } from '../../services/revision-service';
+import { validateStringLength, MAX_NOVEL_ID_LENGTH, MAX_TEXT_LENGTH, MAX_NAME_LENGTH, safeResolveWorkspaceRoot, validateWeight } from '../../mcp/input-validation.js';
 
 const _log = createLogger('reader-endpoint');
 
@@ -36,7 +37,7 @@ const PERSONAS_FILE = 'reader-personas.json';
 const NIKO_STUDIO_DIR = '.niko-studio';
 
 function getWorkspaceRoot(): string {
-  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 function getPersonasFilePath(): string {
@@ -378,6 +379,9 @@ export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpRespo
     return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
   }
 
+  const novelIdLengthError = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId');
+  if (novelIdLengthError) return novelIdLengthError;
+
   // Validate persona IDs if provided
   if (personaIds !== undefined) {
     if (!Array.isArray(personaIds)) {
@@ -398,6 +402,12 @@ export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpRespo
     // Use provided text for analysis, otherwise fall back to empty placeholder
     // (production callers will fetch manuscript text from persistent storage).
     const manuscriptText = (body.text as string | undefined) ?? '';
+
+    // Length guard for text field
+    if (manuscriptText) {
+      const textError = validateStringLength(manuscriptText, MAX_TEXT_LENGTH, 'text');
+      if (textError) return textError;
+    }
 
     // Handle empty text gracefully — return empty consensus report
     if (!manuscriptText || manuscriptText.trim().length === 0) {
@@ -537,6 +547,9 @@ export async function rsCreateCustomPersonaEndpoint(request: HttpRequest): Promi
     return jsonResponse({ error: 'name is required and must be a string' }, 400);
   }
 
+  const nameLengthError = validateStringLength(name, MAX_NAME_LENGTH, 'name');
+  if (nameLengthError) return nameLengthError;
+
   if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
     return jsonResponse({ error: 'parameters is required and must be an object' }, 400);
   }
@@ -547,6 +560,10 @@ export async function rsCreateCustomPersonaEndpoint(request: HttpRequest): Promi
     const value = parameters[field];
     if (value !== undefined && typeof value !== 'number') {
       return jsonResponse({ error: `parameters.${field} must be a number` }, 400);
+    }
+    if (value !== undefined) {
+      const weightErr = validateWeight(value, 0, 1, `parameters.${field}`);
+      if (weightErr) return weightErr;
     }
   }
 
@@ -603,6 +620,9 @@ export async function rsGetOverlayEndpoint(request: HttpRequest): Promise<HttpRe
     return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
   }
 
+  const novelIdLengthError = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId');
+  if (novelIdLengthError) return novelIdLengthError;
+
   const cachedResult = analysisResultCache.get(novelId);
 
   if (!cachedResult) {
@@ -640,6 +660,15 @@ export async function rsAIFlavorEndpoint(request: HttpRequest): Promise<HttpResp
 
   if (!novelId || typeof novelId !== 'string') {
     return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
+  }
+
+  const novelIdLengthError = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId');
+  if (novelIdLengthError) return novelIdLengthError;
+
+  // Length guard for text field
+  if (text !== undefined && typeof text === 'string') {
+    const textError = validateStringLength(text, MAX_TEXT_LENGTH, 'text');
+    if (textError) return textError;
   }
 
   // Use provided text or fall back to empty string
@@ -727,6 +756,12 @@ export async function rsFeedbackEndpoint(request: HttpRequest): Promise<HttpResp
   if (!action || !['helpful', 'not_helpful', 'ignore'].includes(action)) {
     return jsonResponse({ error: "action must be 'helpful', 'not_helpful', or 'ignore'" }, 400);
   }
+
+  const novelIdLengthError = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId');
+  if (novelIdLengthError) return novelIdLengthError;
+
+  const feedbackIdLengthError = validateStringLength(feedbackId, MAX_NOVEL_ID_LENGTH, 'feedbackId');
+  if (feedbackIdLengthError) return feedbackIdLengthError;
 
   _log.info('Reader feedback received', { novelId, personaId, feedbackId, action, dimension });
 
@@ -838,7 +873,8 @@ function adjustPersonaWeights(
     };
   }
 
-  const currentWeight = (persona.parameters[paramKey] as number | undefined) ?? 0.5;
+  const raw = persona.parameters[paramKey];
+  const currentWeight = (typeof raw === 'number' && Number.isFinite(raw)) ? raw : 0.5;
   let newWeight = currentWeight;
 
   // Decision logic: accept vs reject

@@ -7,6 +7,7 @@ import {
   projectWorkspaceToLegacyChatContext,
   projectWorkspaceToNarrativeAuthority,
 } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot, validateStringLength } from '../input-validation.js';
 import {
   queryProjectWikiCanon,
   type ProjectWikiQueryAuthorityMetadata,
@@ -75,9 +76,8 @@ function validateChatMessagesLimits(messages: unknown[]): HttpResponse | null {
     if (typeof content !== 'string') {
       return jsonResponse({ error: `Invalid message.content at index ${idx}. Expected string` }, 400);
     }
-    if (content.length > MAX_MESSAGE_CHARS) {
-      return jsonResponse({ error: `Message too long at index ${idx}. Max ${MAX_MESSAGE_CHARS} chars` }, 400);
-    }
+    const lengthErr = validateStringLength(content, MAX_MESSAGE_CHARS, `message.content at index ${idx}`);
+    if (lengthErr) return lengthErr;
   }
 
   if (countTotalChars(messages) > MAX_TOTAL_CHARS) {
@@ -209,8 +209,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function resolveWorkflowWorkspace(): string {
-  const override = String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim();
-  return override || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 interface ChatWorkflowEngine {

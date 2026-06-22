@@ -100,6 +100,7 @@ describe('mcp workflow service deeper branch coverage', () => {
     vi.clearAllMocks();
     vi.resetModules();
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     await Promise.all(
       workspaceRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
     );
@@ -324,6 +325,7 @@ describe('mcp workflow service deeper branch coverage', () => {
     );
 
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     const originalParse = JSON.parse.bind(JSON);
     const parseSpy = vi.spyOn(JSON, 'parse');
     parseSpy.mockImplementation(((text: string, reviver?: (this: unknown, key: string, value: unknown) => unknown) => {

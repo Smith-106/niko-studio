@@ -28,6 +28,7 @@ import { RevisionDecision, runRevisionLoop } from '../../workflow/revision-loop'
 
 describe('RevisionServiceImpl additional coverage', () => {
   const originalWorkspace = process.env['NIKO_WORKFLOW_WORKSPACE'];
+  const originalAllowOutside = process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -51,8 +52,15 @@ describe('RevisionServiceImpl additional coverage', () => {
     vi.restoreAllMocks();
     if (originalWorkspace == null) {
       delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     } else {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = originalWorkspace;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
+    if (originalAllowOutside === undefined) {
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
+    } else {
+      process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = originalAllowOutside;
+    }
     }
   });
 
@@ -172,6 +180,7 @@ describe('RevisionServiceImpl additional coverage', () => {
     const sessionDir = join(workspaceRoot, 'revision-store');
     const service = new RevisionServiceImpl({ sessionStoreDir: 'revision-store' });
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     await mkdir(sessionDir, { recursive: true });
     await mkdir(join(sessionDir, 'nested-dir'));
@@ -205,6 +214,7 @@ describe('RevisionServiceImpl additional coverage', () => {
     const missingRoot = await mkdtemp(join(tmpdir(), 'revision-missing-'));
     const missingService = new RevisionServiceImpl({ sessionStoreDir: 'missing-store' });
     process.env['NIKO_WORKFLOW_WORKSPACE'] = missingRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     await expect(missingService.getSessionHistory('chapter-1')).resolves.toEqual([]);
 
@@ -212,6 +222,7 @@ describe('RevisionServiceImpl additional coverage', () => {
     const throwingPath = join(throwingRoot, 'existing-store');
     const throwingService = new RevisionServiceImpl({ sessionStoreDir: 'existing-store' });
     process.env['NIKO_WORKFLOW_WORKSPACE'] = throwingRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     await writeFile(throwingPath, 'not a directory', 'utf8');
 
     await expect(throwingService.getSessionHistory('chapter-1')).resolves.toEqual([]);

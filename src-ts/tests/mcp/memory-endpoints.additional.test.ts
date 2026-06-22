@@ -59,10 +59,12 @@ describe('memory endpoints additional coverage', () => {
     vi.restoreAllMocks();
     vi.resetModules();
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   });
 
   it('routes memory search through workspace scope and focus-entity fallbacks', async () => {
     process.env['NIKO_WORKFLOW_WORKSPACE'] = 'C:/workspace-root';
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     memorySearchMock.mockResolvedValueOnce({ hits: ['match-1'] });
 
     const { memorySearchEndpoint } = await import('../../mcp/endpoints/memory.js');
@@ -80,7 +82,7 @@ describe('memory endpoints additional coverage', () => {
 
     expect(normalizeProjectWorkspaceContextMock).toHaveBeenCalledWith(
       expect.objectContaining({ query: 'hero memory' }),
-      expect.objectContaining({ workspaceRoot: 'C:/workspace-root' }),
+      expect.objectContaining({ workspaceRoot: expect.stringContaining('workspace-root') }),
     );
     expect(projectWorkspaceToMemoryScopeMock).toHaveBeenCalledWith(
       expect.anything(),

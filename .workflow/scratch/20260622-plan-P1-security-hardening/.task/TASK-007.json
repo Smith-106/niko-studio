@@ -1,0 +1,91 @@
+{
+  "id": "TASK-007",
+  "title": "Write integration tests for Reader endpoint security guards",
+  "description": "Add integration tests to verify Reader endpoints reject oversized payloads (413), path traversal (safeResolveWorkspaceRoot throws), and NaN/Infinity weights (400). Also fix any existing tests broken by the new validation.",
+  "issue_id": null,
+  "issue_refs": ["ISS-20260620-007", "ISS-20260620-008", "ISS-20260620-009"],
+  "type": "test",
+  "priority": "medium",
+  "effort": "M",
+  "action": "Add integration test cases to src-ts/tests/reader/reader-endpoints.test.ts: (1) rsSimulateEndpoint with text > 100000 chars returns 413; (2) rsSimulateEndpoint with novelId > 256 chars returns 413; (3) rsCreateCustomPersonaEndpoint with NaN weight returns 400; (4) rsCreateCustomPersonaEndpoint with Infinity weight returns 400; (5) rsCreateCustomPersonaEndpoint with weight 1.5 returns 400; (6) rsCreateCustomPersonaEndpoint with name > 200 chars returns 413. Also fix any existing tests that break due to safeResolveWorkspaceRoot containment check by ensuring test fixture directories are subdirectories of cwd.",
+  "status": "completed",
+  "scope": "src-ts/tests/reader/",
+  "focus_paths": ["src-ts/tests/reader/"],
+  "read_first": [
+    "src-ts/tests/reader/reader-endpoints.test.ts",
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/mcp/input-validation.ts"
+  ],
+  "depends_on": ["TASK-004"],
+  "wave": 5,
+  "convergence": {
+    "criteria": [
+      "src-ts/tests/reader/reader-endpoints.test.ts contains at least one test case with '413' expectation",
+      "src-ts/tests/reader/reader-endpoints.test.ts contains at least one test case with 'NaN' in weight input",
+      "npx vitest run src-ts/tests/reader/reader-endpoints.test.ts passes with 0 failures",
+      "npx vitest run src-ts/reader/ passes with 0 failures"
+    ],
+    "verification": "npx vitest run src-ts/tests/reader/reader-endpoints.test.ts --reporter=verbose",
+    "definition_of_done": "Reader endpoint security integration tests pass; existing tests still pass"
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/reader/reader-endpoints.test.ts",
+      "action": "modify",
+      "target": "Reader endpoint integration tests",
+      "change": "Add 6+ integration test cases for length/NaN/Infinity/range validation; fix any broken existing tests"
+    }
+  ],
+  "implementation": [
+    "Read existing test file to understand patterns and fixture setup",
+    "Add describe('Security validation', ...) block with security-focused test cases",
+    "Test: rsSimulateEndpoint with text of 100001 chars returns statusCode 413",
+    "Test: rsSimulateEndpoint with novelId of 257 chars returns statusCode 413",
+    "Test: rsCreateCustomPersonaEndpoint with plotWeight=NaN returns statusCode 400",
+    "Test: rsCreateCustomPersonaEndpoint with plotWeight=Infinity returns statusCode 400",
+    "Test: rsCreateCustomPersonaEndpoint with plotWeight=1.5 returns statusCode 400",
+    "Test: rsCreateCustomPersonaEndpoint with name of 201 chars returns statusCode 413",
+    "Fix any existing tests broken by new validation (e.g., tests using overly long strings or invalid weights)",
+    "Verify all reader tests pass: npx vitest run src-ts/reader/"
+  ],
+  "test": {
+    "commands": ["npx vitest run src-ts/tests/reader/reader-endpoints.test.ts"],
+    "unit": [],
+    "integration": ["src-ts/tests/reader/reader-endpoints.test.ts"],
+    "success_metrics": ["6+ new security test cases", "all pass", "existing tests unbroken"]
+  },
+  "reference": {
+    "pattern": "Existing reader-endpoints.test.ts patterns for request construction and assertion",
+    "files": ["src-ts/tests/reader/reader-endpoints.test.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Integration tests verify end-to-end that security guards work at the HTTP layer, not just the function level. Also fixes any tests broken by the new validation to prevent CI red.",
+    "decision_factors": [
+      "Security bugs must be tested at the integration level",
+      "Existing tests may break and need fixing proactively",
+      "6 test cases cover the three validation categories' critical paths"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "risk": "Existing reader tests may use workspace paths outside cwd that fail containment",
+      "severity": "medium",
+      "mitigation": "Adjust test NIKO_WORKFLOW_WORKSPACE values to be subdirectories of cwd, or use process.cwd() as the workspace root in tests"
+    }
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["Reader endpoint security testing"],
+    "affected_components": ["reader-endpoints.test.ts"],
+    "affected_requirements": ["SEC-001", "SEC-004"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "30m",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

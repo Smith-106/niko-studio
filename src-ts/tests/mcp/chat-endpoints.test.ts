@@ -19,11 +19,13 @@ function makeRequest(body: Record<string, unknown>): HttpRequest {
 
 describe('chat endpoints', () => {
   const originalWorkspace = process.env['NIKO_WORKFLOW_WORKSPACE'];
+  const originalAllowOutside = process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   let workspace = '';
 
   beforeEach(async () => {
     workspace = await mkdtemp(join(tmpdir(), 'niko-chat-endpoint-'));
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspace;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     vi.resetModules();
   });
 
@@ -32,6 +34,11 @@ describe('chat endpoints', () => {
       delete process.env['NIKO_WORKFLOW_WORKSPACE'];
     } else {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = originalWorkspace;
+    }
+    if (originalAllowOutside === undefined) {
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
+    } else {
+      process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = originalAllowOutside;
     }
     const { resetWorkflowEngineRuntimeProvider } = await import('../../container/workflow-runtime-provider.js');
     resetWorkflowEngineRuntimeProvider();

@@ -267,6 +267,80 @@ describe('reader/mcp/reader-endpoints', () => {
     });
   });
 
+  // ============================================================
+  // Security validation (SEC-001, SEC-004)
+  // ============================================================
+
+  describe('Security validation', () => {
+    it('rejects oversized novelId (>256 chars) with 413', async () => {
+      const response = await rsAnalyzeEndpoint(
+        mockRequest({ body: { novelId: 'x'.repeat(257) } }),
+      );
+      expect(response.statusCode).toBe(413);
+      expect(getBody(response).error).toContain('novelId');
+    });
+
+    it('rejects oversized text (>100000 chars) with 413', async () => {
+      const response = await rsAnalyzeEndpoint(
+        mockRequest({ body: { novelId: 'novel-1', text: 'a'.repeat(100_001) } }),
+      );
+      expect(response.statusCode).toBe(413);
+      expect(getBody(response).error).toContain('text');
+    });
+
+    it('rejects oversized persona name (>200 chars) with 413', async () => {
+      const response = await rsCreateCustomPersonaEndpoint(
+        mockRequest({
+          body: {
+            name: 'x'.repeat(201),
+            parameters: { plotWeight: 0.5 },
+          },
+        }),
+      );
+      expect(response.statusCode).toBe(413);
+      expect(getBody(response).error).toContain('name');
+    });
+
+    it('rejects NaN weight with 400', async () => {
+      const response = await rsCreateCustomPersonaEndpoint(
+        mockRequest({
+          body: {
+            name: 'NaN Persona',
+            parameters: { plotWeight: NaN },
+          },
+        }),
+      );
+      expect(response.statusCode).toBe(400);
+      expect(getBody(response).error).toContain('finite number');
+    });
+
+    it('rejects Infinity weight with 400', async () => {
+      const response = await rsCreateCustomPersonaEndpoint(
+        mockRequest({
+          body: {
+            name: 'Infinity Persona',
+            parameters: { characterWeight: Infinity },
+          },
+        }),
+      );
+      expect(response.statusCode).toBe(400);
+      expect(getBody(response).error).toContain('finite number');
+    });
+
+    it('rejects out-of-range weight (1.5) with 400', async () => {
+      const response = await rsCreateCustomPersonaEndpoint(
+        mockRequest({
+          body: {
+            name: 'OutOfRange Persona',
+            parameters: { styleWeight: 1.5 },
+          },
+        }),
+      );
+      expect(response.statusCode).toBe(400);
+      expect(getBody(response).error).toContain('between 0 and 1');
+    });
+  });
+
   it('builds overlay markers from cached reader reactions', async () => {
     const cached: DualEngineResult = {
       readerReactions: [

@@ -125,6 +125,7 @@ describe('mcp workflow service scheduler fallback additional coverage', () => {
     vi.clearAllMocks();
     vi.resetModules();
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     await Promise.all(
       workspaceRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
     );
@@ -142,6 +143,7 @@ describe('mcp workflow service scheduler fallback additional coverage', () => {
     ]);
 
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     const { workflowSchedulerPause } = await import('../../mcp/services/workflow.js');
 
@@ -196,6 +198,7 @@ describe('mcp workflow service scheduler fallback additional coverage', () => {
     ]);
 
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     const planMock = vi.fn().mockResolvedValue({ error: 'planner unavailable' });
     const executeMock = vi.fn();
@@ -238,6 +241,7 @@ describe('mcp workflow service scheduler fallback additional coverage', () => {
     ]);
 
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     const {
       setWorkflowEngineRuntimeProvider,
@@ -312,6 +316,7 @@ describe('mcp workflow service scheduler fallback additional coverage', () => {
     ]);
 
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     const planMock = vi.fn();
     const executeMock = vi.fn();
@@ -345,6 +350,7 @@ describe('mcp workflow service scheduler fallback additional coverage', () => {
     ]);
 
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     const planMock = vi.fn().mockResolvedValue({});
     const executeMock = vi.fn();

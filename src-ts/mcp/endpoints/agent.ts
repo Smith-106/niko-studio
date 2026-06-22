@@ -8,6 +8,7 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot } from '../input-validation.js';
 import {
   agentRoute,
   agentWrite,
@@ -28,7 +29,7 @@ function readString(value: unknown): string | null {
 }
 
 function resolveWorkspaceRoot(): string {
-  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 function resolveAgentWriteWorkspace(body: Record<string, unknown>) {

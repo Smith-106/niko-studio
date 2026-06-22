@@ -40,19 +40,28 @@ function parseSseEvents(body: unknown): Array<{ event: string; data: Record<stri
 
 describe('chat endpoint branch coverage', () => {
   const originalWorkspace = process.env['NIKO_WORKFLOW_WORKSPACE'];
+  const originalAllowOutside = process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   let workspace = '';
 
   beforeEach(async () => {
     workspace = await mkdtemp(join(tmpdir(), 'niko-chat-branches-'));
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspace;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     vi.resetModules();
   });
 
   afterEach(async () => {
     if (originalWorkspace === undefined) {
       delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     } else {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = originalWorkspace;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
+    if (originalAllowOutside === undefined) {
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
+    } else {
+      process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = originalAllowOutside;
+    }
     }
 
     try {
@@ -130,6 +139,7 @@ describe('chat endpoint branch coverage', () => {
 
   it('builds non-stream fallback content, default comparison models, and step-array counts', async () => {
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     const runWithExecutionContext = vi.fn().mockResolvedValue({
       result: {
         processed_text: 'nested processed response',

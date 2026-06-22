@@ -17,6 +17,7 @@ import {
 import type { GraphReadScope } from '../services/graph';
 import { getConfigValue } from '../config';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot } from '../input-validation.js';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -33,7 +34,7 @@ function readString(value: unknown): string | null {
 }
 
 function resolveWorkspaceRoot(): string {
-  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 function resolveGraphScope(body: Record<string, unknown>): GraphReadScope | null {

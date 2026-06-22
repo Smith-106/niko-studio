@@ -123,6 +123,7 @@ describe('mcp workflow service project authority additional coverage', () => {
     vi.clearAllMocks();
     vi.resetModules();
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   });
 
   it('rejects scheduler run-now when the stored project authority differs', async () => {

@@ -37,6 +37,7 @@ import type {
 } from '../protocols/revision';
 
 import { createLogger } from '../logger/index';
+import { safeResolveWorkspaceRoot } from '../mcp/input-validation.js';
 
 import {
   AI_TEMPLATE_REPLACEMENTS_ZH as AI_TEMPLATE_REPLACEMENTS,
@@ -395,7 +396,7 @@ export class RevisionServiceImpl implements IRevisionService {
       const { readdir, readFile } = await import('node:fs/promises');
       const { join } = await import('node:path');
       const { existsSync } = await import('node:fs');
-      const workspaceRoot = process.env['NIKO_WORKFLOW_WORKSPACE']?.trim() || process.cwd();
+      const workspaceRoot = safeResolveWorkspaceRoot();
       const dir = join(workspaceRoot, this.sessionStoreDir);
 
       if (!existsSync(dir)) return [];

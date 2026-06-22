@@ -103,6 +103,7 @@ describe('mcp workflow service authority additional coverage', () => {
       workspaceRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
     );
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   });
 
   it('restores unbound checkpoints when the request workspace resolves to no authority', async () => {

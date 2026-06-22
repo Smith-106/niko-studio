@@ -12,6 +12,7 @@ import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToNarrativeAuthority,
 } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot } from '../input-validation.js';
 import { normalizeProjectNarrativeRecordSetId } from '../../project/narrative-records.js';
 import { createLogger } from '../../logger/index.js';
 import {
@@ -136,7 +137,7 @@ export async function runConsistencyCheck(
   input: ConsistencyCheckRequest & Record<string, unknown>,
 ): Promise<ConsistencyCheckResult> {
   const workspace = normalizeProjectWorkspaceContext(input, {
-    workspaceRoot: String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd(),
+    workspaceRoot: safeResolveWorkspaceRoot(),
   });
   const chapters: string[] = Array.isArray(input.chapters) ? input.chapters : [];
   const chapterMetaRaw: Array<Record<string, unknown>> = Array.isArray(input.chapterMeta)

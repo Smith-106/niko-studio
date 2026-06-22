@@ -1,0 +1,88 @@
+{
+  "id": "TASK-008",
+  "title": "Regression verification + TypeScript strict check across all modified files",
+  "description": "Final verification wave: run full test suite, TypeScript strict check, and verify no regressions from the security hardening changes. Fix any remaining test failures caused by validation changes.",
+  "issue_id": null,
+  "issue_refs": ["ISS-20260620-007", "ISS-20260620-008", "ISS-20260620-009"],
+  "type": "test",
+  "priority": "high",
+  "effort": "M",
+  "action": "Run npx tsc --noEmit to verify zero TypeScript errors. Run npx vitest run to verify zero test regressions. If any tests fail due to validation changes (e.g., 400→413 status code changes, path containment rejects), fix the test expectations to match the new correct behavior. Verify grep confirms zero NIKO_WORKFLOW_WORKSPACE references in source files.",
+  "status": "completed",
+  "scope": "src-ts/",
+  "focus_paths": ["src-ts/"],
+  "read_first": [
+    "src-ts/mcp/input-validation.ts",
+    "src-ts/mcp/endpoints/chat.ts",
+    "src-ts/reader/mcp/reader-endpoints.ts"
+  ],
+  "depends_on": ["TASK-005", "TASK-006", "TASK-007"],
+  "wave": 6,
+  "convergence": {
+    "criteria": [
+      "npx tsc --noEmit exits with code 0 (zero TypeScript errors)",
+      "npx vitest run exits with code 0 (zero test failures)",
+      "grep -r 'NIKO_WORKFLOW_WORKSPACE' src-ts/mcp/endpoints/ src-ts/mcp/services/ src-ts/reader/mcp/ src-ts/services/ --include='*.ts' --exclude='*.test.ts' returns 0 matches",
+      "grep -r 'safeResolveWorkspaceRoot' src-ts/mcp/endpoints/ src-ts/mcp/services/ src-ts/reader/mcp/ src-ts/services/ --include='*.ts' returns >= 11 matches",
+      "grep -c 'validateStringLength' src-ts/reader/mcp/reader-endpoints.ts returns >= 7"
+    ],
+    "verification": "npx tsc --noEmit && npx vitest run",
+    "definition_of_done": "Zero TypeScript errors, zero test failures, all security validators in place across codebase"
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/",
+      "action": "modify",
+      "target": "Test expectations",
+      "change": "Fix any test expectations broken by validation changes (status code 400→413, path containment errors)"
+    }
+  ],
+  "implementation": [
+    "Run npx tsc --noEmit — fix any TypeScript errors",
+    "Run npx vitest run — capture any test failures",
+    "For each failing test, determine if failure is caused by: (a) status code change 400→413 for length overflow — update test expectation to 413; (b) safeResolveWorkspaceRoot rejecting test workspace path — update test to use cwd subdirectory or mock safeResolveWorkspaceRoot; (c) validateWeight rejecting NaN/Infinity in existing test data — update test to use valid weight values or add explicit NaN test cases",
+    "Run npx vitest run again after fixes to confirm green",
+    "Run grep verification: zero NIKO_WORKFLOW_WORKSPACE in source files, 11+ safeResolveWorkspaceRoot references, 7+ validateStringLength in reader-endpoints.ts",
+    "Final npx tsc --noEmit + npx vitest run — both must exit 0"
+  ],
+  "test": {
+    "commands": ["npx tsc --noEmit", "npx vitest run"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["zero TypeScript errors", "zero test failures", "grep verifications pass"]
+  },
+  "reference": {
+    "pattern": "Standard CI verification — TypeScript + Vitest",
+    "files": [],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Final wave ensures everything integrates cleanly. Wide-scope refactors (11 file workspace path change, 7 endpoint length guards, weight validation) can cause cascading test failures that need targeted fixes.",
+    "decision_factors": [
+      "Safety net — catch regressions before declaring done",
+      "Status code changes from 400→413 need test expectation updates",
+      "Path containment may reject existing test fixture paths"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "risk": "Full test suite may reveal failures in files not directly modified (e.g., tests that mock resolveWorkspaceRoot but don't expect the new function name)",
+      "severity": "medium",
+      "mitigation": "Search for resolveWorkspaceRoot and resolveWorkflowWorkspace mocks in test files and update to mock safeResolveWorkspaceRoot instead"
+    }
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["All MCP endpoints and services"],
+    "affected_components": ["Test suite"],
+    "affected_requirements": ["SEC-001", "SEC-002", "SEC-004"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45m",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

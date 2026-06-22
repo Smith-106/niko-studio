@@ -14,9 +14,10 @@ import {
 } from '../../project/workspace-model.js';
 import { DocumentLoadError, DocumentLoader } from '../../services/document-loader';
 import { recursiveCharacterSplit } from '../../ui/file-utils';
+import { safeResolveWorkspaceRoot } from '../input-validation.js';
 
 function resolveWorkspaceRoot(): string {
-  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 function readOptionalString(value: unknown): string | undefined {

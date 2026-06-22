@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolve as pathResolve } from 'node:path';
 
 import type { HttpRequest } from '../../mcp/http-types';
 
@@ -142,6 +143,7 @@ describe('workflow endpoints additional coverage', () => {
     vi.clearAllMocks();
     vi.resetModules();
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
 
     normalizeProjectWorkspaceContextMock.mockImplementation((body: unknown) =>
       buildNormalizedWorkspace((body ?? {}) as Record<string, unknown>),
@@ -150,12 +152,14 @@ describe('workflow endpoints additional coverage', () => {
 
   afterEach(() => {
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     vi.clearAllMocks();
     vi.resetModules();
   });
 
   it('maps workflow endpoint payloads and defaults with the configured workspace root', async () => {
     process.env['NIKO_WORKFLOW_WORKSPACE'] = '  C:/tmp/workflow-root  ';
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     workflowRouteMock.mockResolvedValue({ level: 'L2', route: 'route-result' });
     workflowPlanMock.mockResolvedValue({ plan_id: 'plan-1' });
     workflowExecuteMock.mockResolvedValue({ status: 'executed' });
@@ -172,16 +176,16 @@ describe('workflow endpoints additional coverage', () => {
 
     const routeResponse = await workflowRouteEndpoint(makeRequest({}));
     expect(routeResponse.statusCode).toBe(200);
-    expect(workflowRouteMock).toHaveBeenCalledWith('', expectWorkspace('C:/tmp/workflow-root'));
+    expect(workflowRouteMock).toHaveBeenCalledWith('', expectWorkspace(pathResolve('C:/tmp/workflow-root')));
     expect(normalizeProjectWorkspaceContextMock).toHaveBeenNthCalledWith(
       1,
       {},
-      { workspaceRoot: 'C:/tmp/workflow-root' },
+      { workspaceRoot: pathResolve('C:/tmp/workflow-root') },
     );
     expect(routeResponse.body).toEqual(
       expect.objectContaining({
         level: 'L2',
-        workspace: expectWorkspace('C:/tmp/workflow-root'),
+        workspace: expectWorkspace(pathResolve('C:/tmp/workflow-root')),
       }),
     );
 
@@ -200,7 +204,7 @@ describe('workflow endpoints additional coverage', () => {
       recommendations: { mode: 'careful' },
       traceContext: null,
       genre: 'mystery',
-      workspace: expectWorkspace('C:/tmp/workflow-root'),
+      workspace: expectWorkspace(pathResolve('C:/tmp/workflow-root')),
     });
 
     const executeResponse = await workflowExecuteEndpoint(makeRequest({ plan_id: 'plan-1' }));
@@ -210,7 +214,7 @@ describe('workflow endpoints additional coverage', () => {
       stepId: undefined,
       recommendations: undefined,
       confirmToken: undefined,
-      workspace: expectWorkspace('C:/tmp/workflow-root'),
+      workspace: expectWorkspace(pathResolve('C:/tmp/workflow-root')),
     });
 
     const lifecycleResponse = await workflowLifecycleEndpoint(makeRequest({ plan_id: 'plan-1' }));
@@ -218,7 +222,7 @@ describe('workflow endpoints additional coverage', () => {
     expect(workflowLifecycleMock).toHaveBeenCalledWith(
       'plan-1',
       'status',
-      expectWorkspace('C:/tmp/workflow-root'),
+      expectWorkspace(pathResolve('C:/tmp/workflow-root')),
     );
 
     const rollbackResponse = await workflowQuickRollbackEndpoint(
@@ -232,12 +236,13 @@ describe('workflow endpoints additional coverage', () => {
       planId: 'plan-1',
       checkpointId: 'checkpoint-1',
       reason: '',
-      workspace: expectWorkspace('C:/tmp/workflow-root'),
+      workspace: expectWorkspace(pathResolve('C:/tmp/workflow-root')),
     });
   });
 
   it('maps revision endpoints, filters weak point ids, and falls back to process.cwd for workspace root', async () => {
     process.env['NIKO_WORKFLOW_WORKSPACE'] = '   ';
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     workflowRevisionStartSessionMock.mockResolvedValue({ session_id: 'revision-1' });
     workflowRevisionAnalyzeWeakPointsMock.mockResolvedValue({ weak_points: [] });
     workflowRevisionGenerateSuggestionsMock

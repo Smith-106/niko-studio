@@ -18,19 +18,28 @@ function makeRequest(body: Record<string, unknown>, url = '/integration/test'): 
 
 describe('workflow + critic smoke integration', () => {
   const originalWorkspace = process.env['NIKO_WORKFLOW_WORKSPACE'];
+  const originalAllowOutside = process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   let workspace = '';
 
   beforeEach(async () => {
     workspace = await mkdtemp(join(tmpdir(), 'niko-workflow-critic-'));
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspace;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
     vi.resetModules();
   });
 
   afterEach(async () => {
     if (originalWorkspace === undefined) {
       delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     } else {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = originalWorkspace;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
+    if (originalAllowOutside === undefined) {
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
+    } else {
+      process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = originalAllowOutside;
+    }
     }
     vi.resetModules();
     if (workspace) {

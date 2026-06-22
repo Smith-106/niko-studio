@@ -13,6 +13,7 @@ import {
   projectWorkspaceToWorkflowAuthority,
   type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot } from '../input-validation.js';
 import { normalizeWorkflowAuthority } from '../../workflow/engine/authority.js';
 import type {
   WorkflowRecommendationInput,
@@ -199,8 +200,7 @@ function utcNowIso(): string {
 }
 
 function resolveWorkflowWorkspace(): string {
-  const override = String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim();
-  return override || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 function resolveWorkspaceRootForRequest(workspace?: ProjectWorkspaceContext | null): string {

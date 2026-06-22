@@ -142,6 +142,7 @@ describe('mcp workflow service tail branches additional coverage', () => {
     vi.clearAllMocks();
     vi.resetModules();
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     await Promise.all(
       workspaceRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
     );

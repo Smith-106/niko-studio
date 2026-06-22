@@ -1,0 +1,77 @@
+{
+  "summary": "M27 P1 Security Hardening — Fix 3 HIGH security issues (SEC-001 text length DoS, SEC-002 path traversal, SEC-004 NaN/Infinity weight injection) by creating a shared input-validation module and rolling it out across all MCP endpoints and services.",
+  "approach": "Create a centralized input-validation.ts module exporting three reusable validators (validateStringLength, safeResolveWorkspaceRoot, validateWeight). Wave 1 creates the module. Wave 2 applies all three HIGH fixes in parallel (reader endpoints length guards, workspace path traversal guards, weight NaN/Infinity guards). Wave 3 rolls out shared validation to remaining chat.ts. Waves 4-5 add unit and integration tests. Wave 6 verifies no regressions. Collision risk on reader-endpoints.ts is managed via TASK-004 depending on TASK-002.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008"],
+  "task_count": 8,
+  "complexity": "medium",
+  "estimated_time": "3-4 hours",
+  "recommended_execution": "Agent",
+  "waves": [
+    { "wave": 1, "tasks": ["TASK-001"] },
+    { "wave": 2, "tasks": ["TASK-002", "TASK-003", "TASK-004"] },
+    { "wave": 3, "tasks": ["TASK-005"] },
+    { "wave": 4, "tasks": ["TASK-006"] },
+    { "wave": 5, "tasks": ["TASK-007"] },
+    { "wave": 6, "tasks": ["TASK-008"] }
+  ],
+  "data_flow": {
+    "diagram": null,
+    "stages": [
+      "input-validation.ts exports 3 shared validators",
+      "Endpoints import and call validators on incoming request data",
+      "Validators return HttpResponse | null (error response or pass-through null)",
+      "Invalid input returns 413/400 immediately; valid input flows to business logic"
+    ]
+  },
+  "design_decisions": [
+    "Centralized module over per-endpoint ad-hoc validation — single source of truth, easier audit",
+    "Validators return HttpResponse | null matching chat.ts pattern — early-return guard, no exception throwing",
+    "safeResolveWorkspaceRoot returns string (resolved root) or throws — callers use try/catch for 400 response",
+    "validateWeight uses Number.isFinite() before range check per parseInt NaN semantic trap spec",
+    "chat.ts validateChatMessagesLimits refactored to delegate to shared module internally but keep same public signature — backward compatible",
+    "Reader endpoints use 413 Payload Too Large for length overflow (per HTTP spec), 400 for other validation errors"
+  ],
+  "shared_context": {
+    "patterns": [
+      "Guard-return pattern: validator returns HttpResponse on error, null on pass",
+      "jsonResponse({ error: '...' }, statusCode) for error responses",
+      "resolveWorkspaceRoot() local function pattern repeated across 11 files — consolidate to safeResolveWorkspaceRoot()"
+    ],
+    "conventions": [
+      "ESM imports with .js extension",
+      "TypeScript strict mode",
+      "Vitest test framework",
+      "Constants at top of file",
+      "Error responses use jsonResponse helper from http-types.ts"
+    ],
+    "dependencies": [
+      "node:path (path.resolve, path.normalize)",
+      "node:fs (existsSync for workspace validation)",
+      "src-ts/mcp/http-types.ts (jsonResponse, parseBody)"
+    ]
+  },
+  "confidence": {
+    "overall": 0.88,
+    "dimensions": {
+      "clarity": 0.92,
+      "completeness": 0.85,
+      "feasibility": 0.92,
+      "testability": 0.88,
+      "risk": 0.82
+    },
+    "pressure_pass": {
+      "task": "TASK-003",
+      "concern": "Replacing NIKO_WORKFLOW_WORKSPACE across 11 source files is a wide-spanning change; existing tests set this env var directly and may break if safeResolveWorkspaceRoot adds containment checks that reject previously-accepted paths",
+      "mitigation": "safeResolveWorkspaceRoot accepts process.cwd() as default allowed root; existing tests that set NIKO_WORKFLOW_WORKSPACE to absolute paths within or equal to cwd will pass. Tests using paths like 'C:/tmp/workspace-root' may fail containment if cwd is different — those tests will need updating in TASK-007 to set a contained test fixture directory"
+    }
+  },
+  "collision_notes": "reader-endpoints.ts is edited by TASK-002 (length guards on 7 endpoints) and TASK-004 (weight validation on rsCreateCustomPersonaEndpoint + adjustPersonaWeights NaN safety). TASK-004 depends on TASK-002 to serialize edits. TASK-007 (integration tests for reader) depends on TASK-004 completing first. chat.ts optional refactor (TASK-005) depends on TASK-001 for the shared module import.",
+  "_metadata": {
+    "timestamp": "2026-06-22T02:30:00Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

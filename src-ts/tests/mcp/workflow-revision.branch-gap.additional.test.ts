@@ -80,6 +80,7 @@ describe('workflow revision branch-gap coverage', () => {
 
   afterEach(async () => {
     delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     process.chdir(originalCwd);
     if (workspaceRoot && existsSync(workspaceRoot)) {
       await rm(workspaceRoot, { recursive: true, force: true });
@@ -117,6 +118,7 @@ describe('workflow revision branch-gap coverage', () => {
   it('supports omitted workspace across suggestion, compare, and revised flows via env root fallback', async () => {
     const envWorkspaceRoot = await mkdtemp(join(tmpdir(), 'niko-revision-env-branch-gap-'));
     process.env['NIKO_WORKFLOW_WORKSPACE'] = envWorkspaceRoot;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
 
     try {
       const started = await workflowRevisionStartSession({

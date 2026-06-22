@@ -4,9 +4,10 @@ import {
   normalizeProjectWorkspaceContext,
   summarizeProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot } from '../input-validation.js';
 
 function resolveWorkspaceRoot(): string {
-  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+  return safeResolveWorkspaceRoot();
 }
 
 export async function workspaceContextEndpoint(request: HttpRequest): Promise<HttpResponse> {

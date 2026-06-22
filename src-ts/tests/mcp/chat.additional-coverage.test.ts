@@ -30,18 +30,27 @@ async function loadChatModule(options?: { failCanonQuery?: boolean }) {
 
 describe('chat additional coverage', () => {
   const originalWorkspace = process.env['NIKO_WORKFLOW_WORKSPACE'];
+  const originalAllowOutside = process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
   let workspace = '';
 
   beforeEach(async () => {
     workspace = await mkdtemp(join(tmpdir(), 'niko-chat-additional-'));
     process.env['NIKO_WORKFLOW_WORKSPACE'] = workspace;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
   });
 
   afterEach(async () => {
     if (originalWorkspace === undefined) {
       delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
     } else {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = originalWorkspace;
+    process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = 'true';
+    if (originalAllowOutside === undefined) {
+      delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
+    } else {
+      process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'] = originalAllowOutside;
+    }
     }
 
     try {
@@ -100,9 +109,9 @@ describe('chat additional coverage', () => {
     const longMessage = await chatEndpoint(
       makeRequest({ messages: [{ role: 'user', content: 'x'.repeat(24_001) }] }),
     );
-    expect(longMessage.statusCode).toBe(400);
+    expect(longMessage.statusCode).toBe(413);
     expect(longMessage.body).toEqual({
-      error: 'Message too long at index 0. Max 24000 chars',
+      error: 'message.content at index 0 exceeds maximum length of 24000 characters (got 24001)',
     });
 
     const totalTooLong = await chatEndpoint(
