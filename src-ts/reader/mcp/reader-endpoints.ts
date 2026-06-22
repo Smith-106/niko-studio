@@ -927,6 +927,9 @@ export async function rsCompareEndpoint(request: HttpRequest): Promise<HttpRespo
     return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
   }
 
+  const novelIdOverflow = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId');
+  if (novelIdOverflow) return novelIdOverflow;
+
   if (!versionA || typeof versionA !== 'object' || Array.isArray(versionA)) {
     return jsonResponse({ error: 'versionA is required and must be an object with a text field' }, 400);
   }
@@ -942,9 +945,15 @@ export async function rsCompareEndpoint(request: HttpRequest): Promise<HttpRespo
     return jsonResponse({ error: 'versionA.text is required and must be a string' }, 400);
   }
 
+  const textAOverflow = validateStringLength(textA, MAX_TEXT_LENGTH, 'versionA.text');
+  if (textAOverflow) return textAOverflow;
+
   if (!textB || typeof textB !== 'string') {
     return jsonResponse({ error: 'versionB.text is required and must be a string' }, 400);
   }
+
+  const textBOverflow = validateStringLength(textB, MAX_TEXT_LENGTH, 'versionB.text');
+  if (textBOverflow) return textBOverflow;
 
   // Validate persona IDs if provided
   if (personaIds !== undefined) {
@@ -1043,6 +1052,9 @@ export async function rsDeAIEndpoint(request: HttpRequest): Promise<HttpResponse
     return jsonResponse({ error: 'novelId is required and must be a string' }, 400);
   }
 
+  const novelIdOverflow = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId');
+  if (novelIdOverflow) return novelIdOverflow;
+
   const analysisText = text ?? '';
 
   _log.info('De-AI rewrite requested', { novelId, textLength: analysisText.length, mode, hasTargetStyle: !!targetStyle });
@@ -1058,6 +1070,10 @@ export async function rsDeAIEndpoint(request: HttpRequest): Promise<HttpResponse
       mode,
     });
   }
+
+  // SEC-001: cap text length before detection/rewrite to prevent DoS
+  const textOverflow = validateStringLength(analysisText, MAX_TEXT_LENGTH, 'text');
+  if (textOverflow) return textOverflow;
 
   try {
     // Step 1: Detect AI flavor

@@ -86,16 +86,16 @@ export function safeResolveWorkspaceRoot(allowedRoot?: string): string {
     return resolved;
   }
 
-  // Containment check: resolved must be within root
-  // On Windows, normalize both paths for case-insensitive comparison
-  const normalizedResolved = path.normalize(resolved);
-  const normalizedRoot = path.normalize(root);
+  // Containment check: resolved must be within root. path.resolve already
+  // collapses lexical '..' segments, so a prefix check suffices. On Windows
+  // (case-insensitive NTFS) the comparison must be case-insensitive, or a
+  // workspace whose path case differs from cwd gets rejected as a false
+  // positive path traversal.
+  const isWindows = process.platform === 'win32';
+  const cmpResolved = isWindows ? resolved.toLowerCase() : resolved;
+  const cmpRoot = isWindows ? root.toLowerCase() : root;
 
-  // Check if resolved starts with root (either exactly or as a subdirectory)
-  if (
-    normalizedResolved !== normalizedRoot &&
-    !normalizedResolved.startsWith(normalizedRoot + path.sep)
-  ) {
+  if (cmpResolved !== cmpRoot && !cmpResolved.startsWith(cmpRoot + path.sep)) {
     throw new Error(
       `Workspace path traversal detected: "${resolved}" is outside allowed root "${root}"`,
     );

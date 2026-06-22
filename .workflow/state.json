@@ -252,6 +252,20 @@
       "completed_at": "2026-06-22T03:50:00Z",
       "description": "Execute: completed 8 tasks — shared input-validation.ts module (validateStringLength/safeResolveWorkspaceRoot/validateWeight), 12-file safeResolveWorkspaceRoot rollout, Reader 7-endpoint length guards, persona weight NaN/Infinity/range validation, chat.ts refactor, 26 unit tests, 6 integration tests, regression verification. Resolves ISS-20260620-007/008/009.",
       "harvested": false
+    },
+    {
+      "id": "REV-20260622-P1-security-hardening",
+      "type": "review",
+      "milestone": "M27",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260622-review-P1-security-hardening",
+      "status": "completed",
+      "depends_on": "EXC-20260622-P1-security-hardening",
+      "created_at": "2026-06-22T04:00:00Z",
+      "completed_at": "2026-06-22T04:32:00Z",
+      "harvested": false,
+      "description": "Deep review (6 dimensions + deep-dive) of M27 P1 Security Hardening. Verdict WARN: 0 critical, 4 HIGH (2 Reader endpoints missing text guards -- SEC-001 incomplete, Windows case-sensitivity false-positive, services->mcp layering), 20 MEDIUM, 18 LOW. Deep-dive downgraded SEC-001 resolveWorkspaceRootForRequest HIGH->MEDIUM (endpoint sanitizer contains user value). 10 issues auto-created (ISS-20260622-001..010)."
     }
   ],
   "current_milestone": "M27",

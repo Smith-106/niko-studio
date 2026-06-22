@@ -7,7 +7,9 @@ import {
   getAnalysisResultCache,
   getCustomPersonaStore,
   rsAnalyzeEndpoint,
+  rsCompareEndpoint,
   rsCreateCustomPersonaEndpoint,
+  rsDeAIEndpoint,
   rsGetOverlayEndpoint,
   rsGetPersonasEndpoint,
 } from '../../reader/mcp/reader-endpoints.js';
@@ -338,6 +340,64 @@ describe('reader/mcp/reader-endpoints', () => {
       );
       expect(response.statusCode).toBe(400);
       expect(getBody(response).error).toContain('between 0 and 1');
+    });
+
+    it('rsCompare rejects oversized novelId with 413', async () => {
+      const response = await rsCompareEndpoint(
+        mockRequest({
+          body: {
+            novelId: 'x'.repeat(257),
+            versionA: { text: 'a' },
+            versionB: { text: 'b' },
+          },
+        }),
+      );
+      expect(response.statusCode).toBe(413);
+      expect(getBody(response).error).toContain('novelId');
+    });
+
+    it('rsCompare rejects oversized versionA.text with 413', async () => {
+      const response = await rsCompareEndpoint(
+        mockRequest({
+          body: {
+            novelId: 'novel-1',
+            versionA: { text: 'a'.repeat(100_001) },
+            versionB: { text: 'b' },
+          },
+        }),
+      );
+      expect(response.statusCode).toBe(413);
+      expect(getBody(response).error).toContain('versionA.text');
+    });
+
+    it('rsCompare rejects oversized versionB.text with 413', async () => {
+      const response = await rsCompareEndpoint(
+        mockRequest({
+          body: {
+            novelId: 'novel-1',
+            versionA: { text: 'a' },
+            versionB: { text: 'b'.repeat(100_001) },
+          },
+        }),
+      );
+      expect(response.statusCode).toBe(413);
+      expect(getBody(response).error).toContain('versionB.text');
+    });
+
+    it('rsDeAI rejects oversized novelId with 413', async () => {
+      const response = await rsDeAIEndpoint(
+        mockRequest({ body: { novelId: 'x'.repeat(257), text: 'sample text' } }),
+      );
+      expect(response.statusCode).toBe(413);
+      expect(getBody(response).error).toContain('novelId');
+    });
+
+    it('rsDeAI rejects oversized text with 413', async () => {
+      const response = await rsDeAIEndpoint(
+        mockRequest({ body: { novelId: 'novel-1', text: 'a'.repeat(100_001) } }),
+      );
+      expect(response.statusCode).toBe(413);
+      expect(getBody(response).error).toContain('text');
     });
   });
 

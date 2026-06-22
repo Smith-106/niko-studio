@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import path from 'node:path';
 import {
   validateStringLength,
   safeResolveWorkspaceRoot,
@@ -121,6 +122,26 @@ describe('safeResolveWorkspaceRoot', () => {
     const result = safeResolveWorkspaceRoot();
     expect(result).toContain('outside');
   });
+
+  // Windows NTFS is case-insensitive: a workspace whose path case differs
+  // from cwd must not be rejected as a false-positive path traversal.
+  // Pre-fix the comparison was case-sensitive (path.normalize doesn't
+  // lowercase), so legitimate Windows workspaces threw. Skipped on POSIX.
+  (process.platform === 'win32' ? it : it.skip)(
+    'Windows: tolerates case mismatch between env workspace and cwd',
+    () => {
+      const cwd = process.cwd();
+      const idx = cwd.lastIndexOf(path.sep);
+      if (idx <= 0) return; // root drive — no segment to flip
+      const head = cwd.slice(0, idx);
+      const tail = cwd.slice(idx + 1);
+      const flippedTail =
+        tail === tail.toUpperCase() ? tail.toLowerCase() : tail.toUpperCase();
+      process.env['NIKO_WORKFLOW_WORKSPACE'] = head + path.sep + flippedTail;
+      expect(() => safeResolveWorkspaceRoot()).not.toThrow();
+      expect(safeResolveWorkspaceRoot().toLowerCase()).toBe(cwd.toLowerCase());
+    },
+  );
 });
 
 // ============================================================
