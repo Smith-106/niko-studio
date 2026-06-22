@@ -7,8 +7,9 @@ import {
 } from '../services/wiki.js';
 import {
   normalizeProjectWorkspaceContext,
+  type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
-import { safeResolveWorkspaceRoot } from '../input-validation.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot } from '../input-validation.js';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -22,13 +23,16 @@ function readString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
-function resolveWorkspaceRoot(): string {
-  return safeResolveWorkspaceRoot();
+function resolveWorkspaceRoot(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
-function resolveWorkspace(body: Record<string, unknown>) {
+function resolveWorkspace(body: Record<string, unknown>): ProjectWorkspaceContext | HttpResponse {
+  const workspaceRoot = resolveWorkspaceRoot();
+  if (typeof workspaceRoot !== 'string') return workspaceRoot;
   return normalizeProjectWorkspaceContext(body, {
-    workspaceRoot: resolveWorkspaceRoot(),
+    workspaceRoot,
   });
 }
 
@@ -45,8 +49,9 @@ function resolveRawEvidence(body: Record<string, unknown>) {
 export async function wikiPromoteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in (workspace as unknown as Record<string, unknown>)) return workspace as HttpResponse;
   const result = await promoteProjectWikiCanon({
-    workspace,
+    workspace: workspace as ProjectWorkspaceContext,
     title: (body.title as string) ?? '',
     body: (body.body as string) ?? '',
     slug: readString(body.slug) ?? undefined,
@@ -70,8 +75,9 @@ export async function wikiPromoteEndpoint(request: HttpRequest): Promise<HttpRes
 export async function wikiListEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in (workspace as unknown as Record<string, unknown>)) return workspace as HttpResponse;
   const result = await listProjectWikiCanonPages({
-    workspace,
+    workspace: workspace as ProjectWorkspaceContext,
     status: (readString(body.status) as 'curated' | 'draft' | null) ?? undefined,
     limit: typeof body.limit === 'number' ? body.limit : undefined,
   });
@@ -81,8 +87,9 @@ export async function wikiListEndpoint(request: HttpRequest): Promise<HttpRespon
 export async function wikiReadPageEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in (workspace as unknown as Record<string, unknown>)) return workspace as HttpResponse;
   const result = await readProjectWikiCanonPage({
-    workspace,
+    workspace: workspace as ProjectWorkspaceContext,
     slug: (body.slug as string) ?? '',
   });
   return jsonResponse({ ...result, workspace });

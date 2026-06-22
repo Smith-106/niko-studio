@@ -12,6 +12,7 @@ import path from 'node:path';
 import {
   validateStringLength,
   safeResolveWorkspaceRoot,
+  tryResolveWorkspaceRoot,
   validateWeight,
   MAX_NOVEL_ID_LENGTH,
   MAX_TEXT_LENGTH,
@@ -142,6 +143,56 @@ describe('safeResolveWorkspaceRoot', () => {
       expect(safeResolveWorkspaceRoot().toLowerCase()).toBe(cwd.toLowerCase());
     },
   );
+});
+
+// ============================================================
+// tryResolveWorkspaceRoot (ISS-007)
+// ============================================================
+
+describe('tryResolveWorkspaceRoot', () => {
+  beforeEach(() => {
+    delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+    delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
+  });
+
+  afterEach(() => {
+    delete process.env['NIKO_WORKFLOW_WORKSPACE'];
+    delete process.env['NIKO_WORKSPACE_ALLOW_OUTSIDE'];
+  });
+
+  it('returns ok:true with cwd when workspace root is valid', () => {
+    const result = tryResolveWorkspaceRoot();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(typeof result.value).toBe('string');
+      expect(result.value.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('returns ok:false with 400 HttpResponse on path traversal', () => {
+    process.env['NIKO_WORKFLOW_WORKSPACE'] = '/etc/passwd/../../etc/shadow';
+    const result = tryResolveWorkspaceRoot();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.statusCode).toBe(400);
+      // Verify no path information is leaked in the error
+      const body = result.error.body as Record<string, unknown>;
+      expect(body.error).toBe('Invalid workspace configuration');
+      expect(body.error).not.toContain('/etc');
+      expect(body.error).not.toContain('shadow');
+    }
+  });
+
+  it('returns generic error message without path disclosure', () => {
+    process.env['NIKO_WORKFLOW_WORKSPACE'] = '/some/absolute/outside/path';
+    const result = tryResolveWorkspaceRoot();
+    if (!result.ok) {
+      const body = result.error.body as Record<string, unknown>;
+      expect(body.error).toBe('Invalid workspace configuration');
+      // Error must NOT contain the attempted path
+      expect(body.error).not.toContain('/some/absolute/outside/path');
+    }
+  });
 });
 
 // ============================================================

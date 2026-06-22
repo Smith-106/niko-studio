@@ -66,6 +66,10 @@ export async function analysisNarrativeVisualizationEndpoint(request: HttpReques
     })),
   });
 
+  if ('error' in consistencyResult) {
+    return jsonResponse(consistencyResult, 400);
+  }
+
   const relationshipRoot = String(body.relationshipRoot ?? '').trim();
   const relationshipData = await graphGetRelationships(relationshipRoot, null, 2);
   const nodeSet = new Map<string, { id: string; name: string; role: string }>();

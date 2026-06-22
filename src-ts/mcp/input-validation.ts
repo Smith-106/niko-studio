@@ -105,6 +105,32 @@ export function safeResolveWorkspaceRoot(allowedRoot?: string): string {
 }
 
 /**
+ * Try to resolve the workspace root, returning a Result instead of throwing.
+ *
+ * Wraps safeResolveWorkspaceRoot in a try/catch so callers can handle
+ * path-traversal errors as HTTP 400 responses instead of unhandled 500s.
+ * The original error message (containing absolute paths) is NOT exposed
+ * to the client — only a generic "Invalid workspace configuration" is
+ * returned, preventing information disclosure of host filesystem layout.
+ *
+ * @param allowedRoot - Optional allowed root directory (defaults to process.cwd())
+ * @returns `{ ok: true, value: string }` on success,
+ *          `{ ok: false, error: HttpResponse(400) }` on traversal detection
+ */
+export function tryResolveWorkspaceRoot(allowedRoot?: string):
+  | { ok: true; value: string }
+  | { ok: false; error: HttpResponse } {
+  try {
+    return { ok: true, value: safeResolveWorkspaceRoot(allowedRoot) };
+  } catch {
+    return {
+      ok: false,
+      error: jsonResponse({ error: 'Invalid workspace configuration' }, 400),
+    };
+  }
+}
+
+/**
  * Validate that a numeric weight value is finite and within a specified range.
  *
  * Uses Number.isFinite() to explicitly reject NaN and Infinity values,

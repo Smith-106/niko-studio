@@ -17,7 +17,7 @@ import {
 import type { GraphReadScope } from '../services/graph';
 import { getConfigValue } from '../config';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
-import { safeResolveWorkspaceRoot } from '../input-validation.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot } from '../input-validation.js';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -33,8 +33,9 @@ function readString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
-function resolveWorkspaceRoot(): string {
-  return safeResolveWorkspaceRoot();
+function resolveWorkspaceRoot(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
 function resolveGraphScope(body: Record<string, unknown>): GraphReadScope | null {
@@ -55,8 +56,13 @@ function resolveGraphScope(body: Record<string, unknown>): GraphReadScope | null
     return null;
   }
 
+  const workspaceRoot = resolveWorkspaceRoot();
+  if (typeof workspaceRoot !== 'string') {
+    return null;
+  }
+
   const normalizedWorkspace = normalizeProjectWorkspaceContext(body, {
-    workspaceRoot: resolveWorkspaceRoot(),
+    workspaceRoot,
   });
 
   return {

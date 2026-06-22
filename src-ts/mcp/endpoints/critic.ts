@@ -12,7 +12,7 @@ import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToNarrativeAuthority,
 } from '../../project/workspace-model.js';
-import { safeResolveWorkspaceRoot } from '../input-validation.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot } from '../input-validation.js';
 import { normalizeProjectNarrativeRecordSetId } from '../../project/narrative-records.js';
 import { createLogger } from '../../logger/index.js';
 import {
@@ -135,9 +135,11 @@ export interface ConsistencyCheckResult {
 
 export async function runConsistencyCheck(
   input: ConsistencyCheckRequest & Record<string, unknown>,
-): Promise<ConsistencyCheckResult> {
+): Promise<ConsistencyCheckResult | { error: string }> {
+  const wsResult = tryResolveWorkspaceRoot();
+  if (!wsResult.ok) return { error: 'Invalid workspace configuration' };
   const workspace = normalizeProjectWorkspaceContext(input, {
-    workspaceRoot: safeResolveWorkspaceRoot(),
+    workspaceRoot: wsResult.value,
   });
   const chapters: string[] = Array.isArray(input.chapters) ? input.chapters : [];
   const chapterMetaRaw: Array<Record<string, unknown>> = Array.isArray(input.chapterMeta)
@@ -328,7 +330,7 @@ export interface ConsistencyCheckCliOptions {
 
 export async function runConsistencyCheckCli(
   options: ConsistencyCheckCliOptions,
-): Promise<ConsistencyCheckResult> {
+): Promise<ConsistencyCheckResult | { error: string }> {
   const workspaceRoot = options.workspaceRoot?.trim() || process.cwd();
 
   let payload: ConsistencyCheckRequest & Record<string, unknown>;
@@ -390,7 +392,7 @@ export async function runConsistencyCheckCli(
   if (options.output?.trim()) {
     const { writeFile } = await import('node:fs/promises');
     const content = options.format === 'text'
-      ? formatConsistencyCheckText(result)
+      ? ('error' in result ? result.error : formatConsistencyCheckText(result))
       : `${JSON.stringify(result, null, 2)}\n`;
     await writeFile(options.output, content, 'utf8');
   }
@@ -462,7 +464,7 @@ export async function mainConsistencyCheckCli(argv: string[] = process.argv.slic
 
   const result = await runConsistencyCheckCli(options);
   const output = options.format === 'text'
-    ? formatConsistencyCheckText(result)
+    ? ('error' in result ? result.error : formatConsistencyCheckText(result))
     : `${JSON.stringify(result, null, 2)}\n`;
   process.stdout.write(output);
 }

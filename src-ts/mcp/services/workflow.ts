@@ -13,7 +13,8 @@ import {
   projectWorkspaceToWorkflowAuthority,
   type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
-import { safeResolveWorkspaceRoot } from '../input-validation.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot } from '../input-validation.js';
+import type { HttpResponse } from '../http-types.js';
 import { normalizeWorkflowAuthority } from '../../workflow/engine/authority.js';
 import type {
   WorkflowRecommendationInput,
@@ -199,17 +200,25 @@ function utcNowIso(): string {
   return new Date().toISOString();
 }
 
-function resolveWorkflowWorkspace(): string {
-  return safeResolveWorkspaceRoot();
+function resolveWorkflowWorkspace(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
-function resolveWorkspaceRootForRequest(workspace?: ProjectWorkspaceContext | null): string {
+function resolveWorkspaceRootForRequest(workspace?: ProjectWorkspaceContext | null): string | HttpResponse {
   const requestedWorkspaceRoot = readString(workspace?.identity?.workspaceRoot);
   if (requestedWorkspaceRoot && existsSync(requestedWorkspaceRoot)) {
     return requestedWorkspaceRoot;
   }
   return resolveWorkflowWorkspace();
 }
+
+function guardWorkspaceRoot(root: string | HttpResponse): string | null {
+  if (typeof root === 'string') return root;
+  return null;
+}
+
+const INVALID_WORKSPACE_ERROR = { error: 'Invalid workspace configuration' };
 
 function resolveWorkflowAuthority(
   workspace?: ProjectWorkspaceContext | null,
@@ -921,7 +930,9 @@ export async function workflowRoute(
   task: string,
   workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const engine = getEngine(workspaceRoot);
   return engine.route(task);
 }
@@ -936,7 +947,9 @@ export async function workflowPlan(params: {
 }): Promise<Record<string, unknown>> {
   let mergedRecommendations = params.recommendations ?? [];
 
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const engine = getEngine(workspaceRoot);
   const result = await engine.plan(params.task, params.level, {
     recommendations: mergedRecommendations,
@@ -957,7 +970,9 @@ export async function workflowExecute(params: {
   confirmToken?: string | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const engine = getEngine(workspaceRoot);
   const authority = resolveWorkflowAuthority(params.workspace);
   return engine.execute(params.planId, params.stepId ?? null, {
@@ -972,7 +987,9 @@ export async function workflowQuickRollback(params: {
   reason?: string;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const engine = getEngine(workspaceRoot);
   const authority = resolveWorkflowAuthority(params.workspace);
   return engine.quickRollback({
@@ -987,7 +1004,9 @@ export async function workflowLifecycle(
   action = 'status',
   workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const engine = getEngine(workspaceRoot);
   const authority = resolveWorkflowAuthority(workspace);
 
@@ -1019,7 +1038,9 @@ export async function workflowSchedulerRegister(params: {
   enabled?: boolean | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const caches = getOrCreateWorkspaceCaches(workspaceRoot);
   await loadSchedulerEntriesFromStore({ workspaceRoot });
 
@@ -1077,7 +1098,9 @@ export async function workflowSchedulerImportLitePlan(params: {
   enabled?: boolean | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   await loadSchedulerEntriesFromStore({ workspaceRoot });
 
   const baseDir = join(workspaceRoot, '.workflow', '.lite-plan');
@@ -1173,7 +1196,9 @@ export async function workflowSchedulerList(params: {
   limit?: number;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const hasWorkspace = Boolean(params.workspace);
 
   if (hasWorkspace) {
@@ -1224,7 +1249,9 @@ export async function workflowSchedulerPause(params: {
   taskId: string;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const caches = getOrCreateWorkspaceCaches(workspaceRoot);
   await loadSchedulerEntriesFromStore({ workspaceRoot });
 
@@ -1258,7 +1285,9 @@ export async function workflowSchedulerResume(params: {
   taskId: string;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const caches = getOrCreateWorkspaceCaches(workspaceRoot);
   await loadSchedulerEntriesFromStore({ workspaceRoot });
 
@@ -1294,7 +1323,9 @@ export async function workflowSchedulerRunNow(params: {
   recommendations?: WorkflowRecommendationInput | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const caches = getOrCreateWorkspaceCaches(workspaceRoot);
   await loadSchedulerEntriesFromStore({ workspaceRoot });
 
@@ -1365,7 +1396,9 @@ export async function checkpointCreate(
   autoCommit = true,
   workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const caches = getOrCreateWorkspaceCaches(workspaceRoot);
   const engine = getEngine(workspaceRoot);
   const result = await engine.createCheckpoint(description, autoCommit);
@@ -1382,7 +1415,9 @@ export async function checkpointRestore(
   confirmToken?: string | null,
   workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const engine = getEngine(workspaceRoot);
   const checkpoint = engine.getCheckpoint?.(checkpointId) ?? null;
   if (!checkpoint) {
@@ -1405,7 +1440,9 @@ export async function checkpointList(
   limit = 10,
   workspace?: ProjectWorkspaceContext,
 ): Promise<WorkflowCheckpointSummary[]> {
-  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(workspace);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return [];
   const engine = getEngine(workspaceRoot);
   const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
   const checkpoints = await engine.listCheckpoints(limit) as WorkflowCheckpointSummary[];

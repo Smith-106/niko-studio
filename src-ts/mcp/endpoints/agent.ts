@@ -8,7 +8,7 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
-import { safeResolveWorkspaceRoot } from '../input-validation.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot } from '../input-validation.js';
 import {
   agentRoute,
   agentWrite,
@@ -28,8 +28,9 @@ function readString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
-function resolveWorkspaceRoot(): string {
-  return safeResolveWorkspaceRoot();
+function resolveWorkspaceRoot(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
 function resolveAgentWriteWorkspace(body: Record<string, unknown>) {
@@ -50,6 +51,11 @@ function resolveAgentWriteWorkspace(body: Record<string, unknown>) {
     return undefined;
   }
 
+  const workspaceRoot = resolveWorkspaceRoot();
+  if (typeof workspaceRoot !== 'string') {
+    return undefined;
+  }
+
   return normalizeProjectWorkspaceContext({
     workspace: workspace ?? undefined,
     workspace_id: workspaceId ?? undefined,
@@ -58,7 +64,7 @@ function resolveAgentWriteWorkspace(body: Record<string, unknown>) {
     projectId: projectId ?? undefined,
     context: context ?? undefined,
   }, {
-    workspaceRoot: resolveWorkspaceRoot(),
+    workspaceRoot,
   });
 }
 

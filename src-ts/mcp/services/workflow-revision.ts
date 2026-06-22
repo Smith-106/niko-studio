@@ -7,7 +7,8 @@ import {
   projectWorkspaceToWorkflowAuthority,
   type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
-import { safeResolveWorkspaceRoot } from '../input-validation.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot } from '../input-validation.js';
+import type { HttpResponse } from '../http-types.js';
 import {
   analyzeRevisionText,
   compareRevisionAnalyses,
@@ -31,11 +32,12 @@ function utcNowIso(): string {
   return new Date().toISOString();
 }
 
-function resolveWorkflowWorkspace(): string {
-  return safeResolveWorkspaceRoot();
+function resolveWorkflowWorkspace(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
-function resolveWorkspaceRootForRequest(workspace?: ProjectWorkspaceContext | null): string {
+function resolveWorkspaceRootForRequest(workspace?: ProjectWorkspaceContext | null): string | HttpResponse {
   const requestedWorkspaceRoot = readString(workspace?.identity?.workspaceRoot);
   if (requestedWorkspaceRoot && existsSync(requestedWorkspaceRoot)) {
     return requestedWorkspaceRoot;
@@ -157,6 +159,13 @@ function createResponseWorkspace(workspaceRoot: string): ProjectWorkspaceContext
   return createWorkspaceFromRoot(workspaceRoot);
 }
 
+function guardWorkspaceRoot(root: string | HttpResponse): string | null {
+  if (typeof root === 'string') return root;
+  return null;
+}
+
+const INVALID_WORKSPACE_ERROR = { error: 'Invalid workspace configuration' };
+
 export async function workflowRevisionStartSession(params: {
   chapterId: string;
   content: string;
@@ -171,7 +180,9 @@ export async function workflowRevisionStartSession(params: {
     return { error: 'content is required' };
   }
 
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const authority = resolveWorkflowAuthority(params.workspace ?? createResponseWorkspace(workspaceRoot));
   const baselineAnalysis = analyzeRevisionText(content);
   const session: RevisionSession = {
@@ -208,7 +219,9 @@ export async function workflowRevisionAnalyzeWeakPoints(params: {
     return { error: 'session_id is required' };
   }
 
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const session = await readSession(workspaceRoot, sessionId);
   if (!session) {
     return { error: `Revision session '${sessionId}' not found` };
@@ -276,7 +289,9 @@ export async function workflowRevisionGenerateSuggestions(params: {
     return { error: 'session_id is required' };
   }
 
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const session = await readSession(workspaceRoot, sessionId);
   if (!session) {
     return { error: `Revision session '${sessionId}' not found` };
@@ -330,7 +345,9 @@ export async function workflowRevisionMarkRevised(params: {
     return { error: 'revised_text is required' };
   }
 
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const session = await readSession(workspaceRoot, sessionId);
   if (!session) {
     return { error: `Revision session '${sessionId}' not found` };
@@ -375,7 +392,9 @@ export async function workflowRevisionCompare(params: {
     return { error: 'session_id is required' };
   }
 
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const session = await readSession(workspaceRoot, sessionId);
   if (!session) {
     return { error: `Revision session '${sessionId}' not found` };
@@ -440,7 +459,9 @@ export async function workflowRevisionHistory(params: {
     return { error: 'chapter_id is required' };
   }
 
-  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRootRaw = resolveWorkspaceRootForRequest(params.workspace ?? null);
+  const workspaceRoot = guardWorkspaceRoot(workspaceRootRaw);
+  if (!workspaceRoot) return INVALID_WORKSPACE_ERROR;
   const authority = resolveWorkflowAuthority(params.workspace ?? createResponseWorkspace(workspaceRoot));
   const sessions = (await readAllSessions(workspaceRoot))
     .filter((session) => session.chapterId === chapterId)

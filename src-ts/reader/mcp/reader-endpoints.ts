@@ -25,7 +25,7 @@ import { detectAIFlavor } from '../ai-flavor-detector';
 import type { AIFlavorResult } from '../ai-flavor-detector';
 import { createLogger } from '../../logger';
 import { RevisionServiceImpl } from '../../services/revision-service';
-import { validateStringLength, MAX_NOVEL_ID_LENGTH, MAX_TEXT_LENGTH, MAX_NAME_LENGTH, safeResolveWorkspaceRoot, validateWeight } from '../../mcp/input-validation.js';
+import { validateStringLength, MAX_NOVEL_ID_LENGTH, MAX_TEXT_LENGTH, MAX_NAME_LENGTH, safeResolveWorkspaceRoot, tryResolveWorkspaceRoot, validateWeight } from '../../mcp/input-validation.js';
 
 const _log = createLogger('reader-endpoint');
 
@@ -36,13 +36,16 @@ const _log = createLogger('reader-endpoint');
 const PERSONAS_FILE = 'reader-personas.json';
 const NIKO_STUDIO_DIR = '.niko-studio';
 
-function getWorkspaceRoot(): string {
-  return safeResolveWorkspaceRoot();
+function getWorkspaceRoot(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
-function getPersonasFilePath(): string {
+function getPersonasFilePath(): string | null {
   const { join } = require('node:path');
-  return join(getWorkspaceRoot(), NIKO_STUDIO_DIR, PERSONAS_FILE);
+  const root = getWorkspaceRoot();
+  if (typeof root !== 'string') return null;
+  return join(root, NIKO_STUDIO_DIR, PERSONAS_FILE);
 }
 
 /**
@@ -52,9 +55,11 @@ function getPersonasFilePath(): string {
 async function loadCustomPersonas(): Promise<Map<string, ReaderPersona>> {
   const store = new Map<string, ReaderPersona>();
   try {
+    const path = getPersonasFilePath();
+    if (!path) return store;
+
     const { readFile } = await import('node:fs/promises');
     const { existsSync } = await import('node:fs');
-    const path = getPersonasFilePath();
 
     if (!existsSync(path)) {
       return store;
@@ -89,9 +94,11 @@ async function loadCustomPersonas(): Promise<Map<string, ReaderPersona>> {
  */
 async function saveCustomPersonas(store: Map<string, ReaderPersona>): Promise<void> {
   try {
+    const path = getPersonasFilePath();
+    if (!path) return;
+
     const { writeFile, mkdir } = await import('node:fs/promises');
     const { dirname } = await import('node:path');
-    const path = getPersonasFilePath();
 
     // Ensure directory exists
     await mkdir(dirname(path), { recursive: true });
@@ -116,8 +123,8 @@ async function deletePersonasFile(): Promise<void> {
     const { existsSync } = await import('node:fs');
     const path = getPersonasFilePath();
 
-    if (existsSync(path)) {
-      await unlink(path);
+    if (path && existsSync(path)) {
+      await unlink(path!);
       _log.info('Deleted custom personas file', { path });
     }
   } catch (exc) {

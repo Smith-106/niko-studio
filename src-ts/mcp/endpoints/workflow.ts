@@ -9,8 +9,8 @@ import type { HttpRequest, HttpResponse, HttpRequestTraceContext } from '../http
 import type { WorkflowRecommendationInput } from '../../workflow/engine/engine-contracts.js';
 
 import { jsonResponse, parseBody } from '../http-types';
-import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
-import { safeResolveWorkspaceRoot } from '../input-validation.js';
+import { normalizeProjectWorkspaceContext, type ProjectWorkspaceContext } from '../../project/workspace-model.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot } from '../input-validation.js';
 import {
   workflowRoute,
   workflowPlan,
@@ -40,12 +40,14 @@ import {
 // Workflow endpoints
 // ---------------------------------------------------------------
 
-function resolveWorkspaceRoot(): string {
-  return safeResolveWorkspaceRoot();
+function resolveWorkspaceRoot(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
-function resolveWorkspace(body: Record<string, unknown>) {
+function resolveWorkspace(body: Record<string, unknown>): ProjectWorkspaceContext | HttpResponse {
   const workspaceRoot = resolveWorkspaceRoot();
+  if (typeof workspaceRoot !== 'string') return workspaceRoot;
   const workspace = normalizeProjectWorkspaceContext(body, {
     workspaceRoot,
   });
@@ -56,6 +58,11 @@ function resolveWorkspace(body: Record<string, unknown>) {
       workspaceRoot,
     },
   };
+}
+
+/** If resolveWorkspace returned an error HttpResponse, return it; otherwise get the workspace context. */
+function guardWorkspace(ws: ProjectWorkspaceContext | HttpResponse): ProjectWorkspaceContext | HttpResponse {
+  return ws;
 }
 
 function resolveTraceContext(request: HttpRequest): HttpRequestTraceContext | null {
@@ -74,6 +81,7 @@ function resolveTraceContext(request: HttpRequest): HttpRequestTraceContext | nu
 export async function workflowRouteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowRoute((body.task as string) ?? '', workspace);
   return jsonResponse({ ...result, workspace });
 }
@@ -81,6 +89,7 @@ export async function workflowRouteEndpoint(request: HttpRequest): Promise<HttpR
 export async function workflowPlanEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowPlan({
     task: (body.task as string) ?? '',
     level: body.level as string | undefined,
@@ -95,6 +104,7 @@ export async function workflowPlanEndpoint(request: HttpRequest): Promise<HttpRe
 export async function workflowExecuteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowExecute({
     planId: (body.plan_id as string) ?? '',
     stepId: body.step_id as string | undefined,
@@ -108,6 +118,7 @@ export async function workflowExecuteEndpoint(request: HttpRequest): Promise<Htt
 export async function workflowLifecycleEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowLifecycle(
     (body.plan_id as string) ?? '',
     (body.action as string) ?? 'status',
@@ -119,6 +130,7 @@ export async function workflowLifecycleEndpoint(request: HttpRequest): Promise<H
 export async function workflowQuickRollbackEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowQuickRollback({
     planId: (body.plan_id as string) ?? '',
     checkpointId: (body.checkpoint_id as string) ?? '',
@@ -131,6 +143,7 @@ export async function workflowQuickRollbackEndpoint(request: HttpRequest): Promi
 export async function workflowRevisionStartSessionEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowRevisionStartSession({
     chapterId: (body.chapter_id as string) ?? '',
     content: (body.content as string) ?? '',
@@ -142,6 +155,7 @@ export async function workflowRevisionStartSessionEndpoint(request: HttpRequest)
 export async function workflowRevisionAnalyzeEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowRevisionAnalyzeWeakPoints({
     sessionId: (body.session_id as string) ?? '',
     content: body.content as string | null | undefined,
@@ -153,6 +167,7 @@ export async function workflowRevisionAnalyzeEndpoint(request: HttpRequest): Pro
 export async function workflowRevisionSuggestEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const weakPointIds = Array.isArray(body.weak_point_ids)
     ? body.weak_point_ids.filter((item): item is string => typeof item === 'string')
     : null;
@@ -167,6 +182,7 @@ export async function workflowRevisionSuggestEndpoint(request: HttpRequest): Pro
 export async function workflowRevisionMarkRevisedEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowRevisionMarkRevised({
     sessionId: (body.session_id as string) ?? '',
     revisedText: (body.revised_text as string) ?? '',
@@ -178,6 +194,7 @@ export async function workflowRevisionMarkRevisedEndpoint(request: HttpRequest):
 export async function workflowRevisionCompareEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowRevisionCompare({
     sessionId: (body.session_id as string) ?? '',
     revisedText: body.revised_text as string | null | undefined,
@@ -189,6 +206,7 @@ export async function workflowRevisionCompareEndpoint(request: HttpRequest): Pro
 export async function workflowRevisionHistoryEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowRevisionHistory({
     chapterId: (body.chapter_id as string) ?? '',
     workspace,
@@ -203,6 +221,7 @@ export async function workflowRevisionHistoryEndpoint(request: HttpRequest): Pro
 export async function workflowSchedulerRegisterEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowSchedulerRegister({
     definition: body.task,
     enabled: body.enabled as boolean | undefined,
@@ -214,6 +233,7 @@ export async function workflowSchedulerRegisterEndpoint(request: HttpRequest): P
 export async function workflowSchedulerListEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowSchedulerList({
     limit: body.limit as number | undefined,
     workspace,
@@ -224,6 +244,7 @@ export async function workflowSchedulerListEndpoint(request: HttpRequest): Promi
 export async function workflowSchedulerPauseEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowSchedulerPause({
     taskId: (body.task_id as string) ?? '',
     workspace,
@@ -234,6 +255,7 @@ export async function workflowSchedulerPauseEndpoint(request: HttpRequest): Prom
 export async function workflowSchedulerResumeEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowSchedulerResume({
     taskId: (body.task_id as string) ?? '',
     workspace,
@@ -244,6 +266,7 @@ export async function workflowSchedulerResumeEndpoint(request: HttpRequest): Pro
 export async function workflowSchedulerRunNowEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowSchedulerRunNow({
     taskId: (body.task_id as string) ?? '',
     confirmToken: body.confirm_token as string | undefined,
@@ -256,6 +279,7 @@ export async function workflowSchedulerRunNowEndpoint(request: HttpRequest): Pro
 export async function workflowSchedulerImportLitePlanEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await workflowSchedulerImportLitePlan({
     sessionId: (body.session_id as string | null | undefined) ?? null,
     forceLevel: (body.force_level as string | null | undefined) ?? null,
@@ -336,6 +360,7 @@ export async function uiBridgeWorkflowSchedulerImportLitePlanEndpoint(request: H
 export async function checkpointCreateEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await checkpointCreate(
     (body.description as string) ?? '',
     (body.auto_commit as boolean) ?? true,
@@ -347,6 +372,7 @@ export async function checkpointCreateEndpoint(request: HttpRequest): Promise<Ht
 export async function checkpointRestoreEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await checkpointRestore(
     (body.checkpoint_id as string) ?? '',
     body.confirm_token as string | undefined,
@@ -358,6 +384,7 @@ export async function checkpointRestoreEndpoint(request: HttpRequest): Promise<H
 export async function checkpointListEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
+  if ('statusCode' in workspace) return workspace;
   const result = await checkpointList((body.limit as number) ?? 10, workspace);
   return jsonResponse(result);
 }

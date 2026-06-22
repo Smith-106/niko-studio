@@ -14,10 +14,11 @@ import {
 } from '../../project/workspace-model.js';
 import { DocumentLoadError, DocumentLoader } from '../../services/document-loader';
 import { recursiveCharacterSplit } from '../../ui/file-utils';
-import { safeResolveWorkspaceRoot } from '../input-validation.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot } from '../input-validation.js';
 
-function resolveWorkspaceRoot(): string {
-  return safeResolveWorkspaceRoot();
+function resolveWorkspaceRoot(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
 function readOptionalString(value: unknown): string | undefined {
@@ -34,8 +35,10 @@ function resolveMemoryScope(
   body: Record<string, unknown>,
   options: { includeFocusEntity?: boolean } = {},
 ) {
+  const workspaceRoot = resolveWorkspaceRoot();
+  const root = typeof workspaceRoot === 'string' ? workspaceRoot : process.cwd();
   const workspace = normalizeProjectWorkspaceContext(body, {
-    workspaceRoot: resolveWorkspaceRoot(),
+    workspaceRoot: root,
   });
   return projectWorkspaceToMemoryScope(workspace, {
     includeFocusEntity: options.includeFocusEntity,

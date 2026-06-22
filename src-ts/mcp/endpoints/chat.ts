@@ -7,7 +7,7 @@ import {
   projectWorkspaceToLegacyChatContext,
   projectWorkspaceToNarrativeAuthority,
 } from '../../project/workspace-model.js';
-import { safeResolveWorkspaceRoot, validateStringLength } from '../input-validation.js';
+import { safeResolveWorkspaceRoot, tryResolveWorkspaceRoot, validateStringLength } from '../input-validation.js';
 import {
   queryProjectWikiCanon,
   type ProjectWikiQueryAuthorityMetadata,
@@ -208,8 +208,9 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? value as Record<string, unknown> : null;
 }
 
-function resolveWorkflowWorkspace(): string {
-  return safeResolveWorkspaceRoot();
+function resolveWorkflowWorkspace(): string | HttpResponse {
+  const result = tryResolveWorkspaceRoot();
+  return result.ok ? result.value : result.error;
 }
 
 interface ChatWorkflowEngine {
@@ -229,15 +230,19 @@ interface ChatWorkflowEngine {
 }
 
 function createWorkflowEngine(sessionNamespace: string): ChatWorkflowEngine {
+  const workspace = resolveWorkflowWorkspace();
+  const root = typeof workspace === 'string' ? workspace : process.cwd();
   return getWorkflowEngineRuntimeProvider()({
-    workspace: resolveWorkflowWorkspace(),
+    workspace: root,
     sessionNamespace,
   }) as unknown as ChatWorkflowEngine;
 }
 
 function resolveWorkspaceContext(body: ChatBody) {
+  const workspace = resolveWorkflowWorkspace();
+  const root = typeof workspace === 'string' ? workspace : process.cwd();
   return normalizeProjectWorkspaceContext(body as Record<string, unknown>, {
-    workspaceRoot: resolveWorkflowWorkspace(),
+    workspaceRoot: root,
   });
 }
 
