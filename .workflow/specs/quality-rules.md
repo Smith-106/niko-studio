@@ -1,4 +1,16 @@
 ---
+title: "Quality Rules"
+readMode: required
+priority: medium
+category: review
+keywords:
+  - quality
+  - lint
+  - rule
+  - enforcement
+---
+
+---
 title: Quality Rules
 readMode: required
 priority: medium

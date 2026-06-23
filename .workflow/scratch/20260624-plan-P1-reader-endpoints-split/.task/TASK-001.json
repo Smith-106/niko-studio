@@ -1,0 +1,90 @@
+{
+  "id": "TASK-001",
+  "title": "扩展共享输入校验并补齐 Reader 剩余字段校验",
+  "description": "在 src-ts/mcp/input-validation.ts 新增 Reader 专用 MAX_* 常量与通用 helper（validateStringArray、validateEnum），然后在 reader-endpoints.ts 的 rsAnalyze/rsFeedback/rsCompare/rsCreateCustomPersona/rsDeAI 中补齐 personaId、personaIds[]、dimension、targetStyle、version labels、focusAreas、biases 的边界校验。关闭 ISS-20260622-006。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "新增 MAX_PERSONA_ID_LENGTH=256、MAX_FEEDBACK_ID_LENGTH=256、MAX_DIMENSION_LENGTH=100、MAX_TARGET_STYLE_LENGTH=200、MAX_LABEL_LENGTH=200、MAX_ARRAY_LENGTH=64、MAX_ARRAY_ITEM_LENGTH=200 到 input-validation.ts；新增 validateStringArray(items, opts) 拒绝非数组/超长数组/非字符串元素/超长元素；新增 validateEnum(value, allowedSet, label) 用于 action 枚举校验。在 reader-endpoints.ts 的 rsAnalyze 中 personaIds 元素使用 MAX_PERSONA_ID_LENGTH；rsFeedback 中 feedbackId 使用 MAX_FEEDBACK_ID_LENGTH、dimension 使用 MAX_DIMENSION_LENGTH；rsCompare 中 versionA.label/versionB.label 使用 MAX_LABEL_LENGTH、personaIds 元素使用 MAX_PERSONA_ID_LENGTH；rsCreateCustomPersona 中 focusAreas/biases 通过 validateStringArray 校验；rsDeAI 中 targetStyle 使用 MAX_TARGET_STYLE_LENGTH。",
+  "scope": "src-ts/mcp/input-validation.ts, src-ts/reader/mcp/reader-endpoints.ts",
+  "focus_paths": ["src-ts/mcp/input-validation.ts", "src-ts/reader/mcp/reader-endpoints.ts"],
+  "read_first": [
+    "src-ts/mcp/input-validation.ts",
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/mcp/routes/content.ts"
+  ],
+  "depends_on": [],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "grep -n 'MAX_PERSONA_ID_LENGTH' src-ts/mcp/input-validation.ts 命中定义",
+      "grep -n 'validateStringArray' src-ts/mcp/input-validation.ts 命中函数签名",
+      "grep -n 'validateEnum' src-ts/mcp/input-validation.ts 命中函数签名",
+      "grep -n 'MAX_FEEDBACK_ID_LENGTH' src-ts/reader/mcp/reader-endpoints.ts 命中 feedbackId 校验行",
+      "grep -n 'MAX_DIMENSION_LENGTH' src-ts/reader/mcp/reader-endpoints.ts 命中 dimension 校验行",
+      "grep -n 'MAX_TARGET_STYLE_LENGTH' src-ts/reader/mcp/reader-endpoints.ts 命中 targetStyle 校验行",
+      "grep -n 'MAX_LABEL_LENGTH' src-ts/reader/mcp/reader-endpoints.ts 命中 versionA.label / versionB.label 校验行",
+      "grep -n 'validateStringArray' src-ts/reader/mcp/reader-endpoints.ts 命中 focusAreas 或 biases 校验调用",
+      "npm test -- --grep 'reader' 全部通过"
+    ],
+    "verification": "npm run build && npm test -- --grep 'reader'",
+    "definition_of_done": "Reader 端点所有剩余无界字段均已接入长度/类型/范围校验，input-validation.ts 新增 helper 通过单元测试。"
+  },
+  "files": [
+    {
+      "path": "src-ts/mcp/input-validation.ts",
+      "action": "modify",
+      "target": "Shared validators module",
+      "change": "新增 MAX_PERSONA_ID_LENGTH / MAX_FEEDBACK_ID_LENGTH / MAX_DIMENSION_LENGTH / MAX_TARGET_STYLE_LENGTH / MAX_LABEL_LENGTH / MAX_ARRAY_LENGTH / MAX_ARRAY_ITEM_LENGTH；新增 validateStringArray(items, opts) 与 validateEnum(value, allowedSet, label) 函数"
+    },
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.ts",
+      "action": "modify",
+      "target": "8 endpoint handlers",
+      "change": "在 rsAnalyze/rsFeedback/rsCompare/rsCreateCustomPersona/rsDeAI 中调用新增 helper 补齐字段校验"
+    }
+  ],
+  "implementation": [
+    "在 input-validation.ts 顶部追加 MAX_* 常量",
+    "实现 validateStringArray：检查 Array.isArray、长度 <= MAX_ARRAY_LENGTH、每项为 string、每项长度 <= MAX_ARRAY_ITEM_LENGTH",
+    "实现 validateEnum：检查 value 在 allowedSet 中，否则返回 400 jsonResponse",
+    "在 reader-endpoints.ts 的 rsAnalyze 中 personaIds 循环内添加 validateStringLength(id, MAX_PERSONA_ID_LENGTH, 'personaId')",
+    "在 rsFeedback 中 feedbackId 校验改为 MAX_FEEDBACK_ID_LENGTH；dimension 添加 validateStringLength(dimension, MAX_DIMENSION_LENGTH, 'dimension')",
+    "在 rsCompare 中 versionA.label 和 versionB.label 添加 validateStringLength(label, MAX_LABEL_LENGTH, 'versionX.label')；personaIds 元素使用 MAX_PERSONA_ID_LENGTH",
+    "在 rsCreateCustomPersona 中 focusAreas 和 biases 使用 validateStringArray",
+    "在 rsDeAI 中 targetStyle 添加 validateStringLength(targetStyle, MAX_TARGET_STYLE_LENGTH, 'targetStyle')",
+    "运行 reader 相关测试确认无回归"
+  ],
+  "test": {
+    "commands": ["npm test -- --grep 'reader'", "npm run build"],
+    "unit": ["src-ts/tests/reader/reader-endpoints.test.ts"],
+    "integration": [],
+    "success_metrics": ["所有 reader 测试通过", "tsc 无错误"]
+  },
+  "reference": {
+    "pattern": "M27 已建立的 input-validation.ts 校验 trio 模式",
+    "files": ["src-ts/mcp/input-validation.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "通用 helper 放入共享模块，避免 ad-hoc 内联；按字段逐一补齐，最小改动范围",
+    "decision_factors": ["复用 M27 校验模式", "避免重复代码", "保护既有测试路径"],
+    "tradeoffs": null
+  },
+  "risks": [
+    "validateStringArray 的 opts 接口设计需兼顾 reader 与其他端点复用"
+  ],
+  "issue_id": "ISS-20260622-006",
+  "issue_refs": ["ISS-20260621-013"],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "45m",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 1,
+    "execution_group": null,
+    "executor": "agent",
+    "completed_at": "2026-06-24T04:45:00.000Z"
+  }
+}

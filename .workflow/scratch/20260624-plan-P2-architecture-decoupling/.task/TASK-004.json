@@ -1,0 +1,179 @@
+{
+  "id": "TASK-004",
+  "title": "craft-catalog 18 个 eager const 导出转为 lazy getter 函数",
+  "description": "将 craft-catalog.ts 中 18 个 eager const 导出（如 `export const SATISFACTION_PATTERNS = getSatisfactionPatterns()`）改为 lazy getter 函数（如 `export function getSatisfactionPatterns(): Record<...>`），使 reloadCatalog 能真正刷新缓存。更新所有消费者：dialogue-analyzer.ts、suspense-analyzer.ts、reader-satisfaction-analyzer.ts 以及测试文件，将 `import { X } from './writing-craft/craft-catalog'` 改为 `import { getX } from './writing-craft/craft-catalog'` 并在使用处调用函数。",
+  "issue_id": "ISS-20260613-035",
+  "issue_refs": ["ISS-20260613-035"],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "1) 在 craft-catalog.ts 中，将每个 `export const FOO = getFoo()` 改为 `export function getFoo(): FooType { return getFooFromLoader(); }`，其中 getFooFromLoader 从 catalog-loader 导入的同名 getter 函数。使用 catalog-loader 中已有的 getter 名称：getSatisfactionPatterns, getForeshadowHierarchy, getForeshadowRecoveryMethods, getSubgenreRules, getNarrativeTechniques, getGenreBeats, getDialogueRules, getStoryStructures, getWebNovelPsychology, getUpgradeSystems, getGoldenFingers, getAntiPatterns, getNarrativePrinciples, getMysterySubtypes, getInteractiveNarrativeTypes, getGameNarrativeStructures, getComicNarrativeTechniques, getWritingGuideRules, getCommentaryTechniques, getOralNarrativeSkills。2) 修改 dialogue-analyzer.ts：将 `import { DIALOGUE_RULES } from './writing-craft/craft-catalog'` 改为 `import { getDialogueRules } from './writing-craft/craft-catalog'`，并将使用处 `DIALOGUE_RULES` 改为 `getDialogueRules()`。3) 修改 suspense-analyzer.ts：将所有 `import { SuspenseSubgenre, SUBGENRE_RULES, ... }` 改为对应的 getter import，并将使用处改为函数调用。4) 修改 reader-satisfaction-analyzer.ts：同理替换 UPGRADE_SYSTEMS / GOLDEN_FINGERS。5) 更新测试文件中的 import 和引用。\n\nBackward compatibility assessment: const -> function 改变了导出值的类型（从 Record 变为 () => Record），因此所有消费者必须同步修改 import 和 usage。这是内部 API 变更，受影响消费者已在本 task 中列出（dialogue-analyzer, suspense-analyzer, reader-satisfaction-analyzer, 5 个测试文件）。如需过渡，可在 index.ts 中保留 deprecated const 别名一个 wave，但本 plan 选择直接迁移（所有消费者已知且在同一 task 中处理）。",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "src-ts/narrative/writing-craft, src-ts/narrative/dialogue-analyzer.ts, src-ts/narrative/suspense-analyzer.ts, src-ts/narrative/reader-satisfaction-analyzer.ts, src-ts/tests/narrative",
+  "focus_paths": [
+    "src-ts/narrative/writing-craft/craft-catalog.ts",
+    "src-ts/narrative/dialogue-analyzer.ts",
+    "src-ts/narrative/suspense-analyzer.ts",
+    "src-ts/narrative/reader-satisfaction-analyzer.ts",
+    "src-ts/tests/narrative/writing-craft.test.ts",
+    "src-ts/tests/narrative/craft-catalog-m15.test.ts",
+    "src-ts/tests/narrative/suspense-analyzer-m13.test.ts",
+    "src-ts/tests/narrative/suspense-analyzer-m16.test.ts",
+    "src-ts/tests/narrative/m13-remaining.test.ts"
+  ],
+
+  "read_first": [
+    "src-ts/narrative/writing-craft/craft-catalog.ts",
+    "src-ts/narrative/writing-craft/catalog-loader.ts",
+    "src-ts/narrative/dialogue-analyzer.ts",
+    "src-ts/narrative/suspense-analyzer.ts",
+    "src-ts/narrative/reader-satisfaction-analyzer.ts",
+    "src-ts/tests/narrative/writing-craft.test.ts",
+    "src-ts/tests/narrative/craft-catalog-m15.test.ts",
+    "src-ts/tests/narrative/suspense-analyzer-m13.test.ts",
+    "src-ts/tests/narrative/suspense-analyzer-m16.test.ts",
+    "src-ts/tests/narrative/m13-remaining.test.ts"
+  ],
+
+  "depends_on": ["TASK-003"],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "grep -c \"export const [A-Z]\" src-ts/narrative/writing-craft/craft-catalog.ts 返回 0（所有 const 导出已移除）",
+      "grep -c \"export function get\" src-ts/narrative/writing-craft/craft-catalog.ts 返回 18（18 个 getter 函数已导出）",
+      "grep -rn \"from '.*craft-catalog'\" src-ts/tests/narrative/ --include='*.ts' | grep -vE 'get[A-Z]|craft-types' 返回空（测试文件不再 import const）",
+      "grep -n 'DIALOGUE_RULES' src-ts/narrative/dialogue-analyzer.ts 返回空（常量引用已移除）",
+      "grep -n 'getDialogueRules()' src-ts/narrative/dialogue-analyzer.ts 返回非空",
+      "grep -n 'SUBGENRE_RULES' src-ts/narrative/suspense-analyzer.ts 返回空",
+      "grep -n 'getSubgenreRules()' src-ts/narrative/suspense-analyzer.ts 返回非空",
+      "grep -n 'UPGRADE_SYSTEMS' src-ts/narrative/reader-satisfaction-analyzer.ts 返回空",
+      "grep -n 'getUpgradeSystems()' src-ts/narrative/reader-satisfaction-analyzer.ts 返回非空"
+    ],
+    "verification": "npm run typecheck && npm test -- --grep 'craft|dialogue|suspense|reader|satisfaction'",
+    "definition_of_done": "craft-catalog.ts 中所有 18 个 eager const 已转为 getter 函数（使用 catalog-loader 中的同名 getter）；所有消费者（dialogue-analyzer, suspense-analyzer, reader-satisfaction-analyzer, 5 个测试文件）已更新为调用 getter；reloadCatalog 语义正确。"
+  },
+
+  "files": [
+    {
+      "path": "src-ts/narrative/writing-craft/craft-catalog.ts",
+      "action": "modify",
+      "target": "18 const exports -> getter functions",
+      "change": "将 export const FOO = getFoo() 改为 export function getFoo() { return getFooFromLoader(); }"
+    },
+    {
+      "path": "src-ts/narrative/dialogue-analyzer.ts",
+      "action": "modify",
+      "target": "DIALOGUE_RULES import and usage",
+      "change": "import { getDialogueRules } from './writing-craft/craft-catalog'，使用处改为 getDialogueRules()"
+    },
+    {
+      "path": "src-ts/narrative/suspense-analyzer.ts",
+      "action": "modify",
+      "target": "SUBGENRE_RULES, NARRATIVE_TECHNIQUES, GENRE_BEATS, STORY_STRUCTURES, ANTI_PATTERNS, MYSTERY_SUBTYPES imports and usages",
+      "change": "替换所有相关常量为对应的 getter 函数调用"
+    },
+    {
+      "path": "src-ts/narrative/reader-satisfaction-analyzer.ts",
+      "action": "modify",
+      "target": "UPGRADE_SYSTEMS, GOLDEN_FINGERS imports and usages",
+      "change": "替换为 getUpgradeSystems() 和 getGoldenFingers()"
+    },
+    {
+      "path": "src-ts/tests/narrative/writing-craft.test.ts",
+      "action": "modify",
+      "target": "craft-catalog const imports",
+      "change": "替换所有 `import { X } from './craft-catalog'` 或 `import { X } from '../writing-craft/craft-catalog'` 为对应的 `import { getX }`，并将所有 `X` 使用处改为 `getX()`"
+    },
+    {
+      "path": "src-ts/tests/narrative/craft-catalog-m15.test.ts",
+      "action": "modify",
+      "target": "craft-catalog const imports",
+      "change": "替换所有 craft-catalog const imports 为对应的 getter imports，并将所有常量使用处改为 getter 调用"
+    },
+    {
+      "path": "src-ts/tests/narrative/suspense-analyzer-m13.test.ts",
+      "action": "modify",
+      "target": "craft-catalog const imports",
+      "change": "替换所有 craft-catalog const imports 为对应的 getter imports，并将所有常量使用处改为 getter 调用"
+    },
+    {
+      "path": "src-ts/tests/narrative/suspense-analyzer-m16.test.ts",
+      "action": "modify",
+      "target": "craft-catalog const imports",
+      "change": "替换所有 craft-catalog const imports 为对应的 getter imports，并将所有常量使用处改为 getter 调用"
+    },
+    {
+      "path": "src-ts/tests/narrative/m13-remaining.test.ts",
+      "action": "modify",
+      "target": "craft-catalog const imports",
+      "change": "替换所有 craft-catalog const imports 为对应的 getter imports，并将所有常量使用处改为 getter 调用"
+    }
+  ],
+
+  "implementation": [
+    "Discovery: 运行 `grep -rn \"from '.*craft-catalog'\" src-ts/narrative/ src-ts/tests/narrative/ --include='*.ts' -l` 列出所有消费者文件",
+    "在 craft-catalog.ts 中逐一替换 18 个 const 导出为 getter 函数，确保函数体调用 catalog-loader 中的同名 getter（getSatisfactionPatterns, getForeshadowHierarchy, getForeshadowRecoveryMethods, getSubgenreRules, getNarrativeTechniques, getGenreBeats, getDialogueRules, getStoryStructures, getWebNovelPsychology, getUpgradeSystems, getGoldenFingers, getAntiPatterns, getNarrativePrinciples, getMysterySubtypes, getInteractiveNarrativeTypes, getGameNarrativeStructures, getComicNarrativeTechniques, getWritingGuideRules, getCommentaryTechniques, getOralNarrativeSkills）",
+    "更新 dialogue-analyzer.ts 的 import 和 usage：将 DIALOGUE_RULES 替换为 getDialogueRules()",
+    "更新 suspense-analyzer.ts 的 import 和 usage：将 SUBGENRE_RULES, NARRATIVE_TECHNIQUES, GENRE_BEATS, STORY_STRUCTURES, ANTI_PATTERNS, MYSTERY_SUBTYPES 替换为对应的 getter 调用",
+    "更新 reader-satisfaction-analyzer.ts 的 import 和 usage：将 UPGRADE_SYSTEMS, GOLDEN_FINGERS 替换为 getUpgradeSystems(), getGoldenFingers()",
+    "更新 writing-craft.test.ts：将所有 craft-catalog const imports（如 SATISFACTION_PATTERNS, FORESHADOW_HIERARCHY 等）替换为对应的 getter imports 和调用",
+    "更新 craft-catalog-m15.test.ts：同上，替换所有 craft-catalog const imports 为 getter imports 和调用",
+    "更新 suspense-analyzer-m13.test.ts：替换所有 craft-catalog const imports（如 SUBGENRE_RULES, NARRATIVE_TECHNIQUES 等）为 getter imports 和调用",
+    "更新 suspense-analyzer-m16.test.ts：同上，替换所有 craft-catalog const imports 为 getter imports 和调用",
+    "更新 m13-remaining.test.ts：同上，替换所有 craft-catalog const imports 为 getter imports 和调用",
+    "运行 typecheck 和 narrative 相关测试"
+  ],
+
+  "test": {
+    "commands": ["npm run typecheck", "npm test -- --grep 'craft|dialogue|suspense|reader|satisfaction'"],
+    "unit": [
+      "src-ts/tests/narrative/writing-craft.test.ts",
+      "src-ts/tests/narrative/craft-catalog-m15.test.ts",
+      "src-ts/tests/narrative/suspense-analyzer-m13.test.ts",
+      "src-ts/tests/narrative/suspense-analyzer-m16.test.ts",
+      "src-ts/tests/narrative/m13-remaining.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": ["typecheck 通过", "所有 narrative 相关测试通过"]
+  },
+
+  "reference": {
+    "pattern": "catalog-loader 中已有 getSatisfactionPatterns() 等内部 getter，craft-catalog 只需包装导出",
+    "files": ["src-ts/narrative/writing-craft/craft-catalog.ts", "src-ts/narrative/writing-craft/catalog-loader.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "将 eager const 改为 lazy getter 使 reloadCatalog 能真正刷新缓存。使用 catalog-loader 中已有的同名 getter 函数，craft-catalog 只需薄包装导出。所有消费者已知且在本 task 中同步更新。",
+    "decision_factors": ["修复 reloadCatalog 语义", "catalog-loader 已有 18 个 getter 可供复用", "消费者改动机械且可验证", "const->function 是 breaking change，但所有消费者已在本 task 中覆盖"],
+    "tradeoffs": "导出类型从 Record 变为 () => Record，所有消费者必须同步修改。选择直接迁移而非保留 deprecated 别名，因为受影响消费者数量可控（3 个 analyzer + 5 个测试文件）且全部在本 task 范围内。"
+  },
+
+  "risks": [
+    "消费者数量较多，可能遗漏某些 import 点",
+    "getter 函数在热路径中可能引入微小性能开销（可通过内部缓存缓解）"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["Writing craft catalog", "Dialogue analysis", "Suspense analysis", "Reader satisfaction analysis"],
+    "affected_components": ["narrative/writing-craft/craft-catalog", "narrative/dialogue-analyzer", "narrative/suspense-analyzer", "narrative/reader-satisfaction-analyzer"],
+    "affected_requirements": [],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "60m",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "summary": "M28 Phase 2 Architecture Decoupling — 将三个架构耦合点分解为 4 个可执行 task：Wave 1 修复 Container/MCP 启动路径 + GatewayDeps ISP 拆分；Wave 2 提取 craft-types 并转换 craft-catalog 为 lazy getter。",
+  "approach": "增量式重构：先修复跨层 import 路径和接口契约，再处理循环依赖。每个 wave 保证测试编译通过。GatewayDeps 作为 backward-compatible alias 保留。",
+  "task_ids": [
+    "TASK-001",
+    "TASK-002",
+    "TASK-003",
+    "TASK-004"
+  ],
+  "task_count": 4,
+  "complexity": "medium",
+  "estimated_time": "3h",
+  "recommended_execution": "Agent",
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": [
+        "TASK-001",
+        "TASK-002"
+      ]
+    },
+    {
+      "wave": 2,
+      "tasks": [
+        "TASK-003",
+        "TASK-004"
+      ]
+    }
+  ],
+  "data_flow": {
+    "diagram": null,
+    "stages": [
+      "fix cross-layer import paths (container↔mcp)",
+      "split GatewayDeps monolith into role interfaces",
+      "extract craft-types.ts to break type cycle",
+      "convert eager const exports to lazy getters"
+    ]
+  },
+  "design_decisions": [
+    "Keep GatewayDeps as a backward-compatible alias (type intersection) so existing consumers compile without change",
+    "No new DI framework — use existing interface + composition-root patterns",
+    "craft-catalog.ts barrel export remains stable; internal const->getter changes are breaking for direct consumers but all affected consumers are updated in TASK-004",
+    "mcp/engine.ts getContainer() usage is out of scope for TASK-001; requires separate parameter-injection or factory approach"
+  ],
+  "shared_context": {
+    "patterns": [
+      "interface segregation",
+      "lazy getter",
+      "barrel export stability",
+      "backward-compatible alias"
+    ],
+    "conventions": [
+      "ESM imports",
+      "strict TypeScript",
+      "composition-root wiring"
+    ],
+    "dependencies": [
+      "src-ts/container/types.ts",
+      "src-ts/mcp/endpoints/health.ts",
+      "src-ts/narrative/writing-craft/craft-catalog.ts"
+    ]
+  },
+  "confidence": {
+    "overall": 0.85,
+    "dimensions": {
+      "coverage": 0.9,
+      "feasibility": 0.85,
+      "dependency_correctness": 0.85,
+      "convergence": 0.85,
+      "read_first": 0.85,
+      "action_concreteness": 0.85
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-06-24T06:00:00Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

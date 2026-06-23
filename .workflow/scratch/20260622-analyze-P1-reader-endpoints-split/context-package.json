@@ -1,0 +1,160 @@
+{
+  "$schema": "context-package/1.0",
+  "source": {
+    "type": "analyze",
+    "artifact_id": "ANL-20260622-P1-reader-endpoints-split",
+    "session_path": ".workflow/scratch/20260622-analyze-P1-reader-endpoints-split",
+    "generated_at": "2026-06-24T00:00:00.000Z"
+  },
+  "requirements": [
+    {
+      "id": "S1",
+      "title": "扩展共享输入校验模块并补齐 Reader 剩余字段校验",
+      "acceptance": [
+        "新增 MAX_PERSONA_ID_LENGTH / MAX_FEEDBACK_ID_LENGTH / MAX_DIMENSION_LENGTH / MAX_TARGET_STYLE_LENGTH / MAX_LABEL_LENGTH / MAX_ARRAY_LENGTH / MAX_ARRAY_ITEM_LENGTH",
+        "新增 validateStringArray 与 validateEnum helper 并通过单元测试",
+        "personaId / personaIds[] / dimension / targetStyle / version labels / focusAreas / biases 均有边界校验",
+        "reader 相关测试新增对应异常用例并全部通过"
+      ],
+      "ref": "conclusions.json#implementation_scope"
+    },
+    {
+      "id": "S2",
+      "title": "拆分 reader-endpoints.ts 为 4 个子模块并保留兼容性 shim",
+      "acceptance": [
+        "reader-types.ts 包含所有类型定义",
+        "reader-services.ts 包含 singleton/store/persistence/clearReaderStores",
+        "reader-validation.ts 包含 resolvePersonas/buildOverlayMarkers/adjustPersonaWeights/DIMENSION_TO_PARAM",
+        "reader-routes.ts 包含 8 个 endpoint handler",
+        "reader-endpoints.ts 为纯 re-export",
+        "tsc 无错误，reader + mcp 测试全部通过"
+      ],
+      "ref": "conclusions.json#implementation_scope"
+    },
+    {
+      "id": "S3",
+      "title": "保证 customPersonaStore 初始化顺序与测试隔离",
+      "acceptance": [
+        "reader-services.ts 提供 getCustomPersonaStoreReady() 或等效机制",
+        "所有读取 customPersonaStore 的 endpoint 在 ready 后执行",
+        "clearReaderStores 与 reload 测试无 flaky",
+        "新增回归测试：模块导入后立即调用 rsGetPersonasEndpoint 返回包含 custom persona"
+      ],
+      "ref": "conclusions.json#implementation_scope"
+    },
+    {
+      "id": "S4",
+      "title": "调整 barrel 文件并规划 shim 移除",
+      "acceptance": [
+        "endpoints/index.ts 仍导出全部 8 个 handler",
+        "reader/mcp/index.ts 保持当前公共子集",
+        "无 import cycle",
+        "记录 shim 移除条件（所有测试迁移完成）"
+      ],
+      "ref": "conclusions.json#implementation_scope"
+    }
+  ],
+  "constraints": [
+    {
+      "status": "locked",
+      "title": "保留 reader-endpoints.ts 作为 re-export shim 直到测试迁移完成",
+      "rationale": "8 个测试文件直接 import 该路径；硬拆会立即破坏 CI",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "新增校验必须优先扩展 src-ts/mcp/input-validation.ts",
+      "rationale": "保持与 M27 一致，便于统一测试和维护",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "DIMENSION_TO_PARAM 必须作为单一真相源从 reader-validation.ts 导出",
+      "rationale": "避免重复映射和隐藏依赖",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "loadCustomPersonas() 的 ready 语义必须保留",
+      "rationale": "防止模块拆分后出现 custom persona 丢失的 race",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "open",
+      "title": "Reader 专用常量具体取值",
+      "rationale": "需平衡 DoS 防护与正常用例；建议默认值已给出",
+      "ref": "context.md#Free"
+    },
+    {
+      "status": "open",
+      "title": "ready guard 的具体实现形式",
+      "rationale": "Promise 变量 / getter 包装 / 显式函数均可，满足 Locked #4 即可",
+      "ref": "context.md#Free"
+    },
+    {
+      "status": "open",
+      "title": "barrel 文件 import 源选择",
+      "rationale": "指向子模块或 shim 均可，最终目标是 shim 移除前外部 import 稳定",
+      "ref": "context.md#Free"
+    }
+  ],
+  "domain": {},
+  "non_goals": [
+    {
+      "title": "彻底移除 reader-endpoints.ts shim",
+      "rationale": "需测试文件迁移完成后执行；已记录为 deferred",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "buildPersonalizedCraftProfile MCP endpoint 升级",
+      "rationale": "roadmap Deferred / ISS-20260622-011",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "workspace.ts 桥接模式重构",
+      "rationale": "roadmap Deferred / ISS-20260622-012",
+      "ref": "context.md#Deferred"
+    }
+  ],
+  "insights": [
+    {
+      "role": "analyzer",
+      "area": "architecture",
+      "summary": "reader-endpoints.ts 是典型 god module，按 routes/validation/services/types 拆分可降低维护成本并提升可测试性"
+    },
+    {
+      "role": "analyzer",
+      "area": "security",
+      "summary": "剩余 6 个字段校验缺口可通过扩展 input-validation.ts 的 validateStringArray / validateEnum 统一关闭"
+    },
+    {
+      "role": "analyzer",
+      "area": "risk",
+      "summary": "保留 re-export shim 是避免 8 个测试文件和 barrel 调用方断裂的关键过渡手段"
+    },
+    {
+      "role": "analyzer",
+      "area": "testing",
+      "summary": "customPersonaStore 的模块初始化 race 需在 reader-services.ts 中通过 ready guard 保护"
+    }
+  ],
+  "open_questions": [
+    {
+      "area": "constants",
+      "question": "MAX_ARRAY_LENGTH / MAX_ARRAY_ITEM_LENGTH / MAX_LABEL_LENGTH 等常量最终取值是多少？",
+      "options": ["采用建议默认值", "根据前端 UI 限制调整", "与现有 MAX_NAME_LENGTH 对齐"]
+    },
+    {
+      "area": "init-guard",
+      "question": "customPersonaStore ready guard 采用何种实现？",
+      "options": ["顶层 promise 变量 + getter 等待", "显式 getCustomPersonaStoreReady() 函数", "每个 endpoint 手动 await"]
+    }
+  ],
+  "references": [
+    { "type": "analysis", "path": "context.md" },
+    { "type": "conclusions", "path": "conclusions.json" },
+    { "type": "discussion", "path": "discussion.md" },
+    { "type": "scoring", "path": "analysis.md" },
+    { "type": "exploration", "path": "exploration-codebase.json" }
+  ]
+}

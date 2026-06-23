@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 
-import { initializeGatewayControlPlane, prewarmGatewayControlPlane, shutdownGatewayControlPlane } from '../container/gateway-control-plane';
+import { initializeGatewayControlPlane, prewarmGatewayControlPlane, shutdownGatewayControlPlane } from '../composition-root/gateway-control-plane';
 import { resolveGatewayHostPort } from './config';
 import { createGatewayRequestHandler } from './gateway-request-handler';
 import { gatewayRoutes } from './routes';

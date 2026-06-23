@@ -1,0 +1,456 @@
+{
+  "relevant_files": [
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.ts",
+      "role": "modify_target",
+      "notes": "God module (1147 lines) containing 8 exported endpoint handlers, 10+ interfaces/types, 5 singletons, 3 mutable stores, file persistence helpers, and feedback weight logic. Must be split into reader-routes.ts, reader-validation.ts, reader-services.ts, reader-types.ts."
+    },
+    {
+      "path": "src-ts/mcp/routes/content.ts",
+      "role": "dependency",
+      "notes": "Route registration table. Lines 151-158 import and register all 8 reader endpoints. After split, imports will come from reader/mcp/index.ts or new barrel. No structural changes needed."
+    },
+    {
+      "path": "src-ts/mcp/input-validation.ts",
+      "role": "dependency",
+      "notes": "Shared validation module. Exports validateStringLength, validateWeight, MAX_NOVEL_ID_LENGTH, MAX_TEXT_LENGTH, MAX_NAME_LENGTH. Used by reader-endpoints at line 28. Covers novelId, text, name, weight validation. Missing: focusAreas/biases item length, dimension enum, targetStyle length, personaId length."
+    },
+    {
+      "path": "src-ts/tests/mcp/input-validation.test.ts",
+      "role": "test_target",
+      "notes": "Unit tests for shared validators. 284 lines. Tests validateStringLength, safeResolveWorkspaceRoot, tryResolveWorkspaceRoot, validateWeight, constants. Does NOT test reader-specific validations (focusAreas, biases, dimension, targetStyle)."
+    },
+    {
+      "path": "src-ts/reader/PersonaDefinition.ts",
+      "role": "dependency",
+      "notes": "Defines ReaderPersona interface with parameters (plotWeight, characterWeight, styleWeight, pacingWeight, toleranceThreshold, focusAreas[], biases[]). Used by reader-endpoints at lines 12-18. focusAreas and biases are string[] without max length constraints."
+    },
+    {
+      "path": "src-ts/reader/DualEngine.ts",
+      "role": "dependency",
+      "notes": "DualEngine class with analyze() method. Called by reader-endpoints at lines 473-475 (rsAnalyze) and 991-992 (rsCompare). ReaderEngine generates ReaderReaction[] with highlights; EditorEngine produces EditorialAnalysis."
+    },
+    {
+      "path": "src-ts/reader/ConsensusEngine.ts",
+      "role": "dependency",
+      "notes": "ConsensusEngine class with buildConsensus() and compareConsensus(). Called by reader-endpoints at lines 479 (rsAnalyze), 996-997 (rsCompare), 1000 (rsCompare). Used for consensus report generation and A/B comparison."
+    },
+    {
+      "path": "src-ts/reader/DimensionAnalyzer.ts",
+      "role": "dependency",
+      "notes": "DimensionAnalyzer class with analyzeAllDimensions(). Called by reader-endpoints at line 490 (rsAnalyze). Returns DimensionScore[] per persona. No input validation on dimension values themselves."
+    },
+    {
+      "path": "src-ts/reader/ai-flavor-detector.ts",
+      "role": "dependency",
+      "notes": "detectAIFlavor() function. Called by reader-endpoints at line 687 (rsAIFlavor) and line 1087 (rsDeAI). Returns AIFlavorResult with score, indicators, suggestions. No input validation on text content beyond length."
+    },
+    {
+      "path": "src-ts/reader/mcp/index.ts",
+      "role": "modify_target",
+      "notes": "Barrel file exporting 4 endpoints and 5 types from reader-endpoints.ts. After split, must re-export from new submodules. Lines 5-14 and 16-23."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/index.ts",
+      "role": "dependency",
+      "notes": "Re-exports all 8 reader endpoints from reader/mcp/reader-endpoints.ts at lines 218-227. After split, import source changes to barrel or new files."
+    },
+    {
+      "path": "src-ts/tests/reader/reader-endpoints.test.ts",
+      "role": "test_target",
+      "notes": "Main test file (499 lines). Tests rsAnalyze, rsGetPersonas, rsCreateCustomPersona, rsGetOverlay, rsDeAI, rsCompare validation. Security tests for novelId (>256), text (>100k), name (>200), NaN/Infinite weights, out-of-range weights. Covers lines 276-402 of reader-endpoints."
+    },
+    {
+      "path": "src-ts/tests/reader/reader-feedback-endpoint.test.ts",
+      "role": "test_target",
+      "notes": "Feedback-specific tests (461 lines). Tests rsFeedbackEndpoint validation, aggregation, weight adjustment at threshold, clamping, preset vs custom persona behavior, dimension fallback. Covers feedback logic lines 744-856 of reader-endpoints."
+    },
+    {
+      "path": "src-ts/tests/reader/reader-compare-endpoint.test.ts",
+      "role": "test_target",
+      "notes": "Compare-specific tests (241 lines). Tests rsCompareEndpoint validation, persona resolution, dimension structure, winner logic, custom persona support. Covers compare logic lines 925-1038 of reader-endpoints."
+    },
+    {
+      "path": "src-ts/tests/reader/reader-endpoints-de-ai.test.ts",
+      "role": "test_target",
+      "notes": "De-AI specific tests (197 lines). Tests rsDeAIEndpoint validation, empty text, AI template detection, style-shift mode, English templates, error handling. Covers de-ai logic lines 1050-1146 of reader-endpoints."
+    },
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.test.ts",
+      "role": "test_target",
+      "notes": "Custom persona persistence tests (211 lines). Tests file I/O for reader-personas.json: create, load, clear, list, process restart simulation, malformed JSON handling. Covers persistence logic lines 36-134 of reader-endpoints."
+    },
+    {
+      "path": "src-ts/tests/reader/reader-endpoints.branch-gap.additional.test.ts",
+      "role": "test_target",
+      "notes": "Branch-gap tests targeting uncovered branches: catch block non-Error path, adjustPersonaWeights ?? 0.5 fallback, rsDeAIEndpoint text fallback. Uses vi.doMock extensively."
+    },
+    {
+      "path": "src-ts/tests/reader/reader-endpoints.coverage.test.ts",
+      "role": "test_target",
+      "notes": "Comprehensive coverage tests using vi.mock for all dependencies. Tests error paths, edge cases, and branch coverage for all endpoints. Heavy use of vi.doMock and dynamic imports."
+    },
+    {
+      "path": "src-ts/tests/reader/reader-endpoints.branch-gap.more.additional.test.ts",
+      "role": "test_target",
+      "notes": "Additional branch-gap tests for rsCompareEndpoint non-Error exception path, persona resolution errors, and other edge cases."
+    },
+    {
+      "path": "src-ts/services/revision-service.ts",
+      "role": "dependency",
+      "notes": "RevisionServiceImpl used by rsDeAIEndpoint at line 1103. Singleton pattern at line 137-144. Provides revise() method with quality_goals, target_style, revision_mode. Not directly part of split but is a dependency."
+    }
+  ],
+  "call_chains": [
+    {
+      "name": "rsAnalyzeEndpoint",
+      "chain": [
+        "src-ts/mcp/routes/content.ts:151 -> rsAnalyzeEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:379 -> rsAnalyzeEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:407 -> resolvePersonas()",
+        "src-ts/reader/mcp/reader-endpoints.ts:473 -> getDualEngine().analyze()",
+        "src-ts/reader/DualEngine.ts:96 -> DualEngine.analyze()",
+        "src-ts/reader/DualEngine.ts:103 -> Promise.all([runReaderEngine, runEditorEngine])",
+        "src-ts/reader/DualEngine.ts:125 -> runReaderEngine() -> simulateReaderReaction()",
+        "src-ts/reader/DualEngine.ts:148 -> dimensionAnalyzer.analyzeAllDimensions()",
+        "src-ts/reader/DimensionAnalyzer.ts:86 -> analyzeAllDimensions()",
+        "src-ts/reader/mcp/reader-endpoints.ts:479 -> getConsensusEngine().buildConsensus()",
+        "src-ts/reader/ConsensusEngine.ts:87 -> buildConsensus()",
+        "src-ts/reader/mcp/reader-endpoints.ts:489 -> getDimensionAnalyzer().analyzeAllDimensions()"
+      ]
+    },
+    {
+      "name": "rsCompareEndpoint",
+      "chain": [
+        "src-ts/mcp/routes/content.ts:157 -> rsCompareEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:925 -> rsCompareEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:985 -> resolvePersonas()",
+        "src-ts/reader/mcp/reader-endpoints.ts:991 -> getDualEngine().analyze(textA, personas)",
+        "src-ts/reader/mcp/reader-endpoints.ts:991 -> getDualEngine().analyze(textB, personas)",
+        "src-ts/reader/mcp/reader-endpoints.ts:996 -> getConsensusEngine().buildConsensus(resultA.readerReactions)",
+        "src-ts/reader/mcp/reader-endpoints.ts:997 -> getConsensusEngine().buildConsensus(resultB.readerReactions)",
+        "src-ts/reader/mcp/reader-endpoints.ts:1000 -> getConsensusEngine().compareConsensus(consensusA, consensusB)"
+      ]
+    },
+    {
+      "name": "rsDeAIEndpoint",
+      "chain": [
+        "src-ts/mcp/routes/content.ts:158 -> rsDeAIEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:1050 -> rsDeAIEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:1087 -> detectAIFlavor(analysisText)",
+        "src-ts/reader/ai-flavor-detector.ts:381 -> detectAIFlavor()",
+        "src-ts/reader/mcp/reader-endpoints.ts:1103 -> getRevisionService().revise()",
+        "src-ts/services/revision-service.ts:RevisionServiceImpl.revise()"
+      ]
+    },
+    {
+      "name": "rsFeedbackEndpoint",
+      "chain": [
+        "src-ts/mcp/routes/content.ts:156 -> rsFeedbackEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:744 -> rsFeedbackEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:779 -> resolvePersonas([personaId])",
+        "src-ts/reader/mcp/reader-endpoints.ts:816 -> adjustPersonaWeights(persona, effectiveDimension, aggregate)",
+        "src-ts/reader/mcp/reader-endpoints.ts:824 -> customPersonaStore.set(personaId, updatedPersona)",
+        "src-ts/reader/mcp/reader-endpoints.ts:827 -> saveCustomPersonas(customPersonaStore)"
+      ]
+    },
+    {
+      "name": "rsCreateCustomPersonaEndpoint",
+      "chain": [
+        "src-ts/mcp/routes/content.ts:153 -> rsCreateCustomPersonaEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:547 -> rsCreateCustomPersonaEndpoint",
+        "src-ts/reader/mcp/reader-endpoints.ts:587 -> createCustomPersona({name, parameters})",
+        "src-ts/reader/PersonaDefinition.ts:344 -> createCustomPersona()",
+        "src-ts/reader/mcp/reader-endpoints.ts:600 -> customPersonaStore.set(persona.id, persona)",
+        "src-ts/reader/mcp/reader-endpoints.ts:603 -> saveCustomPersonas(customPersonaStore)"
+      ]
+    }
+  ],
+  "data_flows": [
+    {
+      "name": "analyze-flow",
+      "steps": [
+        "HTTP POST /reader/analyze -> body: {novelId, personaIds?, text?}",
+        "Validation: novelId required + string + length <= 256; personaIds optional array of strings; text optional string + length <= 100000",
+        "resolvePersonas(personaIds): map ids to ReaderPersona[] from PRESET_PERSONAS or customPersonaStore",
+        "getDualEngine().analyze(text, personas): runs ReaderEngine + EditorEngine in parallel",
+        "ReaderEngine: per persona, DimensionAnalyzer.analyzeAllDimensions() -> DimensionScore[]",
+        "ReaderEngine: generateHighlights() from dimension findings -> ReaderReaction[]",
+        "EditorEngine: heuristic analysis -> EditorialAnalysis {structuralIssues, styleNotes, pacingAssessment, recommendations}",
+        "getConsensusEngine().buildConsensus(readerReactions) -> ConsensusReport",
+        "Cache: analysisResultCache.set(novelId, result) for overlay endpoint",
+        "Response: {novelId, readerReactions, editorialAnalysis, consensus, dimensionScores, timestamp}"
+      ]
+    },
+    {
+      "name": "feedback-flow",
+      "steps": [
+        "HTTP POST /reader/feedback -> body: {novelId, personaId, feedbackId, action, dimension?}",
+        "Validation: novelId, personaId, feedbackId required strings; action in ['helpful','not_helpful','ignore']",
+        "resolvePersonas([personaId]) -> ReaderPersona",
+        "effectiveDimension = dimension || 'general'",
+        "feedbackAggregateStore: personaId -> dimension -> FeedbackAggregate {accept, reject, modify, lastUpdated}",
+        "Update aggregate based on action",
+        "If totalFeedback >= FEEDBACK_THRESHOLD (5): adjustPersonaWeights()",
+        "adjustPersonaWeights: DIMENSION_TO_PARAM mapping -> paramKey; accept>reject -> +0.05, reject>accept -> -0.05",
+        "If custom persona: update customPersonaStore and saveCustomPersonas()",
+        "Response: {novelId, personaId, feedbackId, action, dimension, updatedWeights?, weightsChanged}"
+      ]
+    },
+    {
+      "name": "de-ai-flow",
+      "steps": [
+        "HTTP POST /reader/de-ai -> body: {novelId, text?, mode?, targetStyle?}",
+        "Validation: novelId required + string + length <= 256; text optional string + length <= 100000",
+        "Empty text -> early return with empty response",
+        "detectAIFlavor(analysisText) -> AIFlavorResult {aiFlavorScore, indicators, suggestions}",
+        "Build qualityGoals from suggestions + AI flavor score",
+        "If mode='style-shift' and targetStyle: add style shift goal",
+        "getRevisionService().revise(text, {quality_goals, target_style, revision_mode, max_revisions: 2, pass_score: 7.0})",
+        "Response: {novelId, originalText, revisedText, aiFlavorScore, improvements?, suggestions, mode}"
+      ]
+    },
+    {
+      "name": "custom-persona-persistence-flow",
+      "steps": [
+        "rsCreateCustomPersonaEndpoint: validate name (required, string, <=200) and parameters (object)",
+        "Validate numeric fields: plotWeight, characterWeight, styleWeight, pacingWeight, toleranceThreshold -> finite number in [0,1]",
+        "Validate array fields: focusAreas, biases -> arrays (no element validation)",
+        "createCustomPersona({name, parameters}) -> ReaderPersona with auto-generated id",
+        "customPersonaStore.set(persona.id, persona)",
+        "saveCustomPersonas(store): write to .niko-studio/reader-personas.json",
+        "Module init: loadCustomPersonas() -> populate customPersonaStore from file",
+        "rsGetPersonasEndpoint: return presets + custom personas from store"
+      ]
+    }
+  ],
+  "code_anchors": [
+    {
+      "finding": "8 exported endpoint handlers in single file (god module)",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 379,
+      "snippet": "export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpResponse> { ... }"
+    },
+    {
+      "finding": "Module-level mutable stores (3 Maps)",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 254,
+      "snippet": "const customPersonaStore = new Map<string, ReaderPersona>();\nconst analysisResultCache = new Map<string, DualEngineResult>();"
+    },
+    {
+      "finding": "Lazy singleton pattern (5 instances)",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 137,
+      "snippet": "let revisionServiceInstance: RevisionServiceImpl | null = null;\nlet consensusEngineInstance: ConsensusEngine | null = null;\nlet dualEngineInstance: DualEngine | null = null;\nlet dimensionAnalyzerInstance: DimensionAnalyzer | null = null;"
+    },
+    {
+      "finding": "File persistence helpers (load/save/delete)",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 55,
+      "snippet": "async function loadCustomPersonas(): Promise<Map<string, ReaderPersona>> { ... }\nasync function saveCustomPersonas(store: Map<string, ReaderPersona>): Promise<void> { ... }"
+    },
+    {
+      "finding": "Request/response type definitions (10 interfaces/types)",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 160,
+      "snippet": "export interface AnalyzeRequest { novelId: string; personaIds?: string[]; text?: string; }\nexport interface CreatePersonaRequest { name: string; parameters: Record<string, any>; }\nexport interface DeAIRequest { novelId: string; text?: string; mode?: 'de-ai' | 'style-shift'; targetStyle?: string; }"
+    },
+    {
+      "finding": "Feedback weight adjustment logic with DIMENSION_TO_PARAM mapping",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 278,
+      "snippet": "const DIMENSION_TO_PARAM: Record<string, keyof ReaderPersona['parameters']> = {\n  plotCoherence: 'plotWeight',\n  characterConsistency: 'characterWeight',\n  styleConsistency: 'styleWeight',\n  pacingTension: 'pacingWeight',\n  'Plot Coherence': 'plotWeight',\n  ...\n};"
+    },
+    {
+      "finding": "focusAreas/biases array validation only checks Array.isArray, no element validation",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 578,
+      "snippet": "const arrayFields = ['focusAreas', 'biases'];\nfor (const field of arrayFields) {\n  const value = parameters[field];\n  if (value !== undefined && !Array.isArray(value)) {\n    return jsonResponse({ error: `parameters.${field} must be an array` }, 400);\n  }\n}"
+    },
+    {
+      "finding": "dimension parameter in feedback has no length validation or enum check",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 785,
+      "snippet": "const effectiveDimension = dimension && typeof dimension === 'string' ? dimension : 'general';"
+    },
+    {
+      "finding": "targetStyle in DeAI request has no length validation",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 1056,
+      "snippet": "const targetStyle = body.targetStyle as string | undefined;"
+    },
+    {
+      "finding": "personaIds array elements have no length validation",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 397,
+      "snippet": "for (const id of personaIds) {\n  if (typeof id !== 'string') {\n    return jsonResponse({ error: 'Each personaId must be a string' }, 400);\n  }\n}"
+    },
+    {
+      "finding": "feedbackId uses MAX_NOVEL_ID_LENGTH (256) instead of dedicated constant",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 770,
+      "snippet": "const feedbackIdLengthError = validateStringLength(feedbackId, MAX_NOVEL_ID_LENGTH, 'feedbackId');"
+    },
+    {
+      "finding": "versionA.label and versionB.label in compare have no validation",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "line": 1030,
+      "snippet": "versionALabel: (versionA.label as string | undefined) ?? undefined,\nversionBLabel: (versionB.label as string | undefined) ?? undefined,"
+    },
+    {
+      "finding": "Route registrations for all 8 reader endpoints in content.ts",
+      "file": "src-ts/mcp/routes/content.ts",
+      "line": 151,
+      "snippet": "{ method: 'POST', pattern: /^\\/reader\\/analyze$/, handler: rsAnalyzeEndpoint },\n{ method: 'GET', pattern: /^\\/reader\\/personas$/, handler: rsGetPersonasEndpoint },\n{ method: 'POST', pattern: /^\\/reader\\/personas\\/custom$/, handler: rsCreateCustomPersonaEndpoint },\n{ method: 'POST', pattern: /^\\/reader\\/overlay$/, handler: rsGetOverlayEndpoint },\n{ method: 'POST', pattern: /^\\/reader\\/ai-flavor$/, handler: rsAIFlavorEndpoint },\n{ method: 'POST', pattern: /^\\/reader\\/feedback$/, handler: rsFeedbackEndpoint },\n{ method: 'POST', pattern: /^\\/reader\\/compare$/, handler: rsCompareEndpoint },\n{ method: 'POST', pattern: /^\\/reader\\/de-ai$/, handler: rsDeAIEndpoint },"
+    },
+    {
+      "finding": "Barrel file reader/mcp/index.ts re-exports subset of endpoints and types",
+      "file": "src-ts/reader/mcp/index.ts",
+      "line": 5,
+      "snippet": "export { rsAnalyzeEndpoint, rsGetPersonasEndpoint, rsCreateCustomPersonaEndpoint, rsGetOverlayEndpoint, rsCompareEndpoint, clearReaderStores, ... } from './reader-endpoints';"
+    },
+    {
+      "finding": "ConsensusEngine.compareConsensus used only by rsCompareEndpoint",
+      "file": "src-ts/reader/ConsensusEngine.ts",
+      "line": 469,
+      "snippet": "compareConsensus(reportA: ConsensusReport, reportB: ConsensusReport): ConsensusComparisonItem[] { ... }"
+    }
+  ],
+  "risks": [
+    {
+      "area": "focusAreas/biases element validation gap",
+      "description": "rsCreateCustomPersonaEndpoint validates that focusAreas and biases are arrays, but does NOT validate array element types (should be strings), max array length, or max element string length. Could accept malicious payloads like focusAreas: [10000-char-string].",
+      "severity": "medium"
+    },
+    {
+      "area": "dimension parameter validation gap",
+      "description": "rsFeedbackEndpoint accepts any string as dimension (falls back to 'general'). No length cap, no enum validation against known dimensions. Could inject arbitrary dimension names into feedbackAggregateStore.",
+      "severity": "medium"
+    },
+    {
+      "area": "targetStyle length validation gap",
+      "description": "rsDeAIEndpoint accepts targetStyle without any length validation. Could receive extremely long strings causing memory pressure in RevisionService quality_goals array.",
+      "severity": "low"
+    },
+    {
+      "area": "personaId element length validation gap",
+      "description": "rsAnalyzeEndpoint and rsCompareEndpoint validate that personaIds array elements are strings, but do not cap element length. Malicious personaIds could be very long strings.",
+      "severity": "low"
+    },
+    {
+      "area": "versionA.label/versionB.label validation gap",
+      "description": "rsCompareEndpoint accepts label fields without any validation. Could receive extremely long strings.",
+      "severity": "low"
+    },
+    {
+      "area": "Split breaking test imports",
+      "description": "7 test files directly import from reader-endpoints.ts. Splitting into submodules will require updating all import paths. The branch-gap and coverage tests use dynamic imports (await import(...)) which are harder to trace.",
+      "severity": "medium"
+    },
+    {
+      "area": "Singleton state isolation during tests",
+      "description": "Lazy singletons (dualEngineInstance, consensusEngineInstance, etc.) are module-level mutable state. Splitting into separate files may change initialization order and affect test isolation. Tests rely on clearReaderStores() to reset state.",
+      "severity": "medium"
+    },
+    {
+      "area": "Barrel file re-export drift",
+      "description": "reader/mcp/index.ts only re-exports 4 of 8 endpoints and 5 of 10 types. After split, must ensure all consumers (content.ts, endpoints/index.ts) continue to resolve correctly.",
+      "severity": "low"
+    },
+    {
+      "area": "File persistence path during module init",
+      "description": "loadCustomPersonas() is called at module initialization (line 258). If split into reader-services.ts, the async init must still run before any endpoint uses customPersonaStore. Race condition risk if not handled.",
+      "severity": "medium"
+    }
+  ],
+  "split_recommendation": {
+    "groups": [
+      {
+        "name": "reader-types.ts",
+        "exports": [
+          "AnalyzeRequest",
+          "CreatePersonaRequest",
+          "DeAIRequest",
+          "DeAIResponse",
+          "FeedbackAction",
+          "FeedbackRequest",
+          "FeedbackAggregate",
+          "FeedbackResponse",
+          "CompareVersionInput",
+          "CompareRequest",
+          "CompareResult",
+          "OverlayMarker"
+        ],
+        "files_to_move": [
+          "src-ts/reader/mcp/reader-endpoints.ts lines 160-249 (all interfaces/types)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 359-367 (OverlayMarker)"
+        ]
+      },
+      {
+        "name": "reader-validation.ts",
+        "exports": [
+          "resolvePersonas",
+          "buildOverlayMarkers",
+          "adjustPersonaWeights",
+          "extractCurrentWeights",
+          "DIMENSION_TO_PARAM"
+        ],
+        "files_to_move": [
+          "src-ts/reader/mcp/reader-endpoints.ts lines 315-333 (resolvePersonas)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 335-353 (buildOverlayMarkers)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 868-913 (adjustPersonaWeights + extractCurrentWeights + DIMENSION_TO_PARAM)"
+        ]
+      },
+      {
+        "name": "reader-services.ts",
+        "exports": [
+          "loadCustomPersonas",
+          "saveCustomPersonas",
+          "deletePersonasFile",
+          "getRevisionService",
+          "getConsensusEngine",
+          "getDualEngine",
+          "getDimensionAnalyzer",
+          "customPersonaStore",
+          "analysisResultCache",
+          "feedbackAggregateStore",
+          "clearReaderStores",
+          "getCustomPersonaStore",
+          "getAnalysisResultCache",
+          "getFeedbackAggregateStore",
+          "clearFeedbackAggregateStore"
+        ],
+        "files_to_move": [
+          "src-ts/reader/mcp/reader-endpoints.ts lines 36-134 (file persistence: load/save/delete)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 137-154 (singletons: revisionService, consensusEngine)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 251-276 (stores + constants + DIMENSION_TO_PARAM)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 293-309 (dualEngine + dimensionAnalyzer singletons)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 711-732 (clear/getters)"
+        ]
+      },
+      {
+        "name": "reader-routes.ts",
+        "exports": [
+          "rsAnalyzeEndpoint",
+          "rsGetPersonasEndpoint",
+          "rsCreateCustomPersonaEndpoint",
+          "rsGetOverlayEndpoint",
+          "rsAIFlavorEndpoint",
+          "rsFeedbackEndpoint",
+          "rsCompareEndpoint",
+          "rsDeAIEndpoint"
+        ],
+        "files_to_move": [
+          "src-ts/reader/mcp/reader-endpoints.ts lines 379-520 (rsAnalyzeEndpoint)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 527-540 (rsGetPersonasEndpoint)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 547-613 (rsCreateCustomPersonaEndpoint)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 621-654 (rsGetOverlayEndpoint)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 662-709 (rsAIFlavorEndpoint)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 744-856 (rsFeedbackEndpoint)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 925-1038 (rsCompareEndpoint)",
+          "src-ts/reader/mcp/reader-endpoints.ts lines 1050-1146 (rsDeAIEndpoint)"
+        ]
+      }
+    ]
+  }
+}

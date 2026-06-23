@@ -116,3 +116,6 @@ skipped: 0
   root_cause: "writing-craft.ts was not updated when the header-based API key transmission pattern was introduced in writing.ts"
   fix_direction: "Refactor analyzeWritingCraftLLM to extract api_key/base_url from llmConfig and send via X-LLM-API-Key/X-LLM-Base-Url headers, matching the pattern in writing.ts processWritingHelper"
   affected_files: ["desktop/src/api/writing-craft.ts"]
+
+## Related
+- [[spec:project:test-conventions]]

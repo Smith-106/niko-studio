@@ -1,0 +1,16 @@
+{
+  "perspectives": [
+    {
+      "lens": "architectural-coupling",
+      "summary": "Phase 2 addresses three concrete decoupling targets with measurable edges. Container/MCP coupling is already partially mitigated by composition-root but residual edges remain, especially container/adapters.ts importing mcp/gateway-ws.ts. GatewayDeps is a 17-method fat interface consumed differently by each health endpoint. craft-catalog and catalog-loader form a type/runtime cycle and 18 eager const exports break reloadCatalog semantics.",
+      "key_points": [
+        "container/gateway-control-plane.ts is a re-export shim; point gateway-bootstrap.ts to composition-root",
+        "WorkflowEventRelay in container/adapters.ts should be abstracted behind container-level interface",
+        "GatewayDeps should be split into role-specific interfaces while keeping a backward-compatible alias",
+        "craft-catalog should extract types to craft-types.ts and convert const exports to lazy getters"
+      ],
+      "confidence": "high",
+      "source": "cli-explore-agent"
+    }
+  ]
+}

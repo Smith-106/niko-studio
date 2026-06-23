@@ -94,7 +94,7 @@ import type { DocumentMetadata } from '../protocols/knowledge';
 import type { IKnowledgeService } from './types';
 import { PhaseOrchestrator } from '../workflow/team/phase-orchestrator';
 import { createLogger } from '../logger/index.js';
-import { WorkflowEventRelay } from '../mcp/gateway-ws';
+import type { IWorkflowEventRelay } from './types';
 import { DistillationNowledgeBridge } from '../services/distillation-nowledge-bridge';
 import { ConflictNowledgeBridge } from '../services/conflict-nowledge-bridge';
 import { NowledgeGraphSync } from '../services/nowledge-graph-sync';
@@ -1294,11 +1294,13 @@ export class PhaseOrchestratorAdapter implements IPhaseOrchestrator {
 // ---------------------------------------------------------------------------
 
 export class WebSocketRelayServiceAdapter implements IWebSocketRelayService {
-  private relay: WorkflowEventRelay | null = null;
+  private relay: IWorkflowEventRelay | null = null;
   private readonly handlers: Map<string, Set<(payload: unknown) => void>> = new Map();
 
   /** Create the relay when an HTTP server becomes available */
   initialize(server: import('node:http').Server): void {
+    // Dynamic import to avoid static cross-layer dependency (container -> mcp)
+    const { WorkflowEventRelay } = require('../mcp/gateway-ws');
     this.relay = new WorkflowEventRelay(server);
   }
 

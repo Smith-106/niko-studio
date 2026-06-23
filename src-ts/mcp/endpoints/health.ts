@@ -19,11 +19,11 @@ interface EngineGetter {
   healthCheck?: () => Promise<Record<string, unknown>>;
 }
 
-interface HealthEngineAccess {
+interface IHealthEngineAccess {
   getEngine(name: string): EngineGetter | null;
 }
 
-interface ServiceRegistryAccess {
+interface IServiceRegistryAccess {
   readonly mcpServiceConfigs: Map<string, { enabled: boolean }>;
   readonly runtimeServerOrder: string[];
   serviceRuntimeStatus(name: string, services: Record<string, string>): string;
@@ -31,7 +31,7 @@ interface ServiceRegistryAccess {
   serializeServiceConfig(config: unknown, services?: Record<string, string> | null): unknown;
 }
 
-interface RuntimeStateAccess {
+interface IRuntimeStateAccess {
   readonly runtimeSessionId: string;
   toRuntimeConnectionState(status: string, services: Record<string, string>): string;
   toRuntimeReconnectState(connectionState: string): string;
@@ -42,7 +42,7 @@ interface RuntimeStateAccess {
   ): Record<string, Record<string, unknown>>;
 }
 
-interface ObservabilityAccess {
+interface IObservabilityAccess {
   getMetricsSnapshot(): Record<string, unknown>;
   getObservabilitySnapshot(
     services: Record<string, string>,
@@ -50,16 +50,18 @@ interface ObservabilityAccess {
   ): Record<string, unknown>;
 }
 
-interface ConfigAccess {
+interface IConfigAccess {
   getConfigValue(key: string, defaultValue?: unknown): unknown;
   loadServicesConfig(): unknown;
 }
 
-interface GatewayDeps extends HealthEngineAccess, ServiceRegistryAccess, RuntimeStateAccess, ObservabilityAccess, ConfigAccess {
+interface IGatewayMetadata {
   version: string;
   utcNowIso(): string;
   runtimeTracker: GatewayRuntimeTracker;
 }
+
+export type GatewayDeps = IHealthEngineAccess & IServiceRegistryAccess & IRuntimeStateAccess & IObservabilityAccess & IConfigAccess & IGatewayMetadata;
 
 export class GatewayRuntimeTracker {
   lastProbeAt: string | null = null;

@@ -1,6 +1,10 @@
 ---
 title: BookWorld scene-based simulation 鏄犲皠鍒?workflow engine
 createdBy: harvest
+related:
+- "knowhow-doc-harvest-debug-camelcase-api"
+- "knowhow-doc-harvest-other-bookworld-worldview"
+- "knowhow-doc-harvest-debug-logger-noop"
 ---
 ---
 type: knowhow

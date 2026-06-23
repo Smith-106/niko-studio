@@ -1,0 +1,108 @@
+{
+  "artifact_id": "ANL-20260622-P1-reader-endpoints-split",
+  "scope": "phase",
+  "phase": 1,
+  "milestone": "M28",
+  "generated_at": "2026-06-24T00:00:00.000Z",
+  "exploration_sources": [
+    {
+      "name": "cli-explore-agent",
+      "output": "exploration-codebase.json",
+      "focus": "module discovery, call chains, data flows, code anchors, split recommendation"
+    },
+    {
+      "name": "maestro delegate (claude/analysis)",
+      "exec_id": "cld-p1-reader-20260622",
+      "focus": "multi-dimensional assessment, risks, implementation order"
+    }
+  ],
+  "synthesis": {
+    "convergent_themes": [
+      "reader-endpoints.ts 是 1147 行 god module，需要按 routes/validation/services/types 拆分",
+      "ISS-20260622-006 的 6 个字段校验缺口可通过扩展 input-validation.ts 统一补齐",
+      "保留 reader-endpoints.ts 作为 re-export shim 是避免测试与 barrel 断裂的必要过渡",
+      "customPersonaStore 的模块初始化顺序是拆分后的主要风险点"
+    ],
+    "conflicting_views": [],
+    "unique_contributions": {
+      "cli-explore-agent": "详细的代码锚点、调用链、数据流、split_recommendation 分组",
+      "maestro delegate": "6 维度评分、3 个替代方案对比、10 步实施顺序、风险缓解措施"
+    }
+  },
+  "technical_solutions": [
+    {
+      "round": 1,
+      "solution": "保留 reader-endpoints.ts 作为 re-export-only 兼容 shim，子模块承担实际实现",
+      "problem": "8 个测试文件和多个 barrel 直接依赖原文件路径，硬拆会立即破坏 CI",
+      "rationale": "符合项目已存在的 barrel/re-export 模式，允许测试和调用方渐进迁移",
+      "alternatives": [
+        "校验优先，拆分后续",
+        "拆分优先，校验后续"
+      ],
+      "status": "validated",
+      "evidence_refs": [
+        "src-ts/reader/mcp/index.ts:5",
+        "src-ts/mcp/endpoints/index.ts:218-227",
+        "src-ts/tests/reader/*.test.ts"
+      ],
+      "next_action": "执行阶段创建子模块后将 reader-endpoints.ts 改写为 re-export"
+    },
+    {
+      "round": 1,
+      "solution": "在 src-ts/mcp/input-validation.ts 新增 validateStringArray 和 validateEnum，并定义 Reader 专用 MAX_* 常量",
+      "problem": "数组字段、维度、标签等缺少长度/基数边界，存在 DoS / Map key 膨胀风险",
+      "rationale": "M27 已建立共享校验模块，扩展比内联更一致、可测试",
+      "alternatives": [
+        "每个 endpoint 单独写校验"
+      ],
+      "status": "validated",
+      "evidence_refs": [
+        "src-ts/mcp/input-validation.ts",
+        "src-ts/reader/mcp/reader-endpoints.ts:578"
+      ],
+      "next_action": "规划阶段将常量和 helper 签名写入 task acceptance criteria"
+    },
+    {
+      "round": 1,
+      "solution": "将 DIMENSION_TO_PARAM 迁移至 reader-validation.ts 作为单一真相源",
+      "problem": "该映射被 feedback 权重调整逻辑使用，放在 services 会导致 routes/validation 隐藏依赖",
+      "rationale": "数据映射属于 validation 层，services 只消费结果",
+      "alternatives": [
+        "保留在 reader-services.ts"
+      ],
+      "status": "proposed",
+      "evidence_refs": [
+        "src-ts/reader/mcp/reader-endpoints.ts:278",
+        "src-ts/reader/mcp/reader-endpoints.ts:816"
+      ],
+      "next_action": "拆分时先移动该常量，再调整 reader-services.ts 中的反馈逻辑 import"
+    },
+    {
+      "round": 1,
+      "solution": "reader-services.ts 提供 customPersonaStore ready guard / getter 链式调用",
+      "problem": "loadCustomPersonas() 在模块顶层调用，拆分后不能丢失 ready 语义",
+      "rationale": "最小改动，保持现有调用语义，避免每个 endpoint 重复 await",
+      "alternatives": [
+        "每个 endpoint 手动 await load promise"
+      ],
+      "status": "proposed",
+      "evidence_refs": [
+        "src-ts/reader/mcp/reader-endpoints.ts:258",
+        "exploration-codebase.json risks: File persistence path during module init"
+      ],
+      "next_action": "执行阶段实现 ready guard 并新增回归测试"
+    }
+  ],
+  "key_code_anchors": [
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 379, "finding": "8 exported endpoint handlers" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 160, "finding": "10+ request/response types" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 137, "finding": "5 lazy singletons" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 254, "finding": "3 mutable stores" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 578, "finding": "focusAreas/biases 仅 Array.isArray" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 785, "finding": "dimension 无长度上限" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 1056, "finding": "targetStyle 无校验" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 397, "finding": "personaIds 元素无长度上限" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 770, "finding": "feedbackId 复用 MAX_NOVEL_ID_LENGTH" },
+    { "file": "src-ts/reader/mcp/reader-endpoints.ts", "line": 1030, "finding": "version labels 无校验" }
+  ]
+}

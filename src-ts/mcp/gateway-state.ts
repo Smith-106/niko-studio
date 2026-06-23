@@ -2,7 +2,7 @@ import { ConfigManager, getConfig as getAppConfig, getConfigValue as getAppConfi
 import { ServiceContainer } from '../container/ServiceContainer';
 import { loadConfig as loadServicesConfig } from '../knowledge/config';
 import { setConfigAccess } from './endpoints/config';
-import { setGatewayDeps, GatewayRuntimeTracker } from './endpoints/health';
+import { setGatewayDeps, GatewayRuntimeTracker, type GatewayDeps } from './endpoints/health';
 import { getMetricsSnapshot, utcNowIso } from './metrics';
 import {
   RUNTIME_SESSION_ID,
@@ -21,7 +21,7 @@ import {
   type McpServiceConfig,
 } from './service-config';
 
-export type GatewayDeps = Parameters<typeof setGatewayDeps>[0];
+export type { GatewayDeps } from './endpoints/health';
 export type ConfigAccess = Parameters<typeof setConfigAccess>[0];
 
 export interface GatewayRuntimeState {

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "HRV-1111e871",
+    "source_type": "session",
+    "source_id": "session-20260621-iss002-iss010-fix",
+    "title": "Foreshadow API 键名统一: state 而非 status",
+    "content": "graphForeshadowsEndpoint 接受 body.status 但 Foreshadow 接口、数据库 $.state、foreshadowPlantEndpoint 写入 state — 全链路必须统一为 state。修复: endpoint→service→engine 三层 status→state 重命名，测试同步更新。",
+    "tags": [
+      "foreshadow",
+      "api-consistency",
+      "state-key"
+    ],
+    "category": "decision",
+    "confidence": 0.9,
+    "routed_to": "spec",
+    "spec_type": "arch",
+    "spec_file": "architecture-constraints.md"
+  },
+  {
+    "id": "HRV-7c22b102",
+    "source_id": "session-20260621-iss002-iss010-fix",
+    "source_type": "session",
+    "title": "Endpoint 读取嵌套属性必须加顶层 fallback",
+    "content": "characterProfileEndpoint 仅读 props.role 忽略 data.role，当 graph engine 返回扁平形状时丢失属性。修复: props.xxx ?? data.xxx ?? default 双层 fallback 模式，兼容嵌套和扁平两种数据形状。此模式适用于所有从 graph engine 读取嵌套 properties 的 endpoint。",
+    "tags": [
+      "endpoint",
+      "fallback",
+      "nested-properties"
+    ],
+    "category": "pattern",
+    "confidence": 0.85,
+    "routed_to": "spec",
+    "spec_type": "arch",
+    "spec_file": "architecture-constraints.md"
+  },
+  {
+    "id": "HRV-f98a9224",
+    "source_id": "session-20260621-iss002-iss010-fix",
+    "source_type": "session",
+    "title": "foreshadowPlant planted_at = scene_id, planted_time = timestamp",
+    "content": "foreshadowPlantEndpoint 原 planted_at 存时间戳但 foreshadowFromDict 期望 scene ID — 语义冲突。修复: planted_at 存 scene_id（场景标识符），新增 planted_time 存时间戳，response 增加 scene_id 字段。与 Foreshadow 接口 plantedAt=sceneId / plantedTime=timestamp 语义一致。",
+    "tags": [
+      "foreshadow",
+      "api-shape",
+      "semantic"
+    ],
+    "category": "decision",
+    "confidence": 0.9,
+    "routed_to": "spec",
+    "spec_type": "arch",
+    "spec_file": "architecture-constraints.md"
+  },
+  {
+    "id": "HRV-9e6fc7a0",
+    "source_id": "session-20260621-iss002-iss010-fix",
+    "source_type": "session",
+    "title": "共享常量模块加 Set 去重守卫使重复条目 fail loudly",
+    "content": "ai-templates.ts 提取为共享模块时加入 assertNoDuplicates() — 用 Set 检测 label 重复，模块加载即抛错。原 detector 有 14 条重复 entry（更加重要的是 x4 等），静默虚增匹配计数。Set-based dedup guard 确保未来新增条目不会静默重复。",
+    "tags": [
+      "dedup",
+      "shared-module",
+      "fail-loudly"
+    ],
+    "category": "pattern",
+    "confidence": 0.85,
+    "routed_to": "spec",
+    "spec_type": "coding",
+    "spec_file": "coding-conventions.md"
+  }
+]

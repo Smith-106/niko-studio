@@ -1,0 +1,49 @@
+{
+  "artifact_id": "ANL-20260624-P2-architecture-decoupling",
+  "artifact_type": "analyze",
+  "milestone": "M28",
+  "phase": 2,
+  "scope": "phase",
+  "title": "Architecture Decoupling",
+  "verdict": "GO",
+  "confidence": "medium",
+  "overall_score": 4.08,
+  "scope_verdict": "medium",
+  "implementation_scope": "phase",
+  "files": {
+    "discussion": ".workflow/scratch/20260624-analyze-P2-architecture-decoupling/discussion.md",
+    "analysis": ".workflow/scratch/20260624-analyze-P2-architecture-decoupling/analysis.md",
+    "conclusions": ".workflow/scratch/20260624-analyze-P2-architecture-decoupling/conclusions.json",
+    "context": ".workflow/scratch/20260624-analyze-P2-architecture-decoupling/context.md",
+    "exploration_codebase": ".workflow/scratch/20260624-analyze-P2-architecture-decoupling/exploration-codebase.json",
+    "perspectives": ".workflow/scratch/20260624-analyze-P2-architecture-decoupling/perspectives.json"
+  },
+  "recommendations": [
+    {
+      "target": "Container/MCP coupling",
+      "action": "Point mcp/gateway-bootstrap.ts to composition-root/gateway-control-plane.ts; abstract WorkflowEventRelay behind IWorkflowEventRelay in container/types.ts",
+      "priority": "high",
+      "risk": "medium"
+    },
+    {
+      "target": "GatewayDeps ISP violation",
+      "action": "Split GatewayDeps into 6 role-specific interfaces while retaining GatewayDeps alias for backward compatibility",
+      "priority": "high",
+      "risk": "low"
+    },
+    {
+      "target": "craft-catalog circular dependency",
+      "action": "Extract craft-types.ts; convert eager const exports to lazy getters; update consumers and tests",
+      "priority": "high",
+      "risk": "medium"
+    }
+  ],
+  "linked_issues": [
+    "ISS-20260613-032",
+    "ISS-20260613-033",
+    "ISS-20260613-035",
+    "ISS-20260613-036"
+  ],
+  "next_step": "/maestro-plan 2",
+  "created_at": "2026-06-24T05:10:00Z"
+}

@@ -17,7 +17,7 @@ metadata:
 ## Actions Applied
 
 ### 1. Broken Link Cleanup (0 remaining)
-- Fixed uppercase `[[KNW-...]]` wikilinks → `[[knowhow-knw-...]]` in 4 retro knowhow body text (6 links)
+- Fixed uppercase `` wikilinks → `` in 4 retro knowhow body text (6 links)
 - Fixed frontmatter closing `---` merged with last related entry in `KNW-retro-reuse-callapi-wrapper-2026-06-21.md`
 - Removed non-existent `spec:project:test-conventions-002/003/004/005` references from `test-conventions.md`
 

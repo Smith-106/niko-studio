@@ -578,6 +578,16 @@ export interface IWebSocketRelayService {
   isConnected(): boolean;
 }
 
+export interface IWorkflowEventRelay {
+  initialize(server: import('node:http').Server): void;
+  broadcast(event: {
+    type: string;
+    timestamp: string;
+    payload: Record<string, unknown>;
+  }): void;
+  close(): Promise<void>;
+}
+
 export interface IDistillationNowledgeBridge {
   distill(knowledgeId: string, targetVaultPath?: string): Promise<string>;
   getDistillationStatus(knowledgeId: string): Promise<'pending' | 'completed' | 'failed' | 'not_found'>;

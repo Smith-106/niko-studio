@@ -10,16 +10,16 @@ keywords:
   - component
   - shadcn
 related:
-  - "spec:project:ui-conventions-005"
-  - "spec:project:ui-conventions-006"
-  - "spec:project:ui-conventions-007"
-  - "spec:project:ui-conventions-008"
   - "spec:project:architecture-constraints"
-  - "spec:project:coding-conventions"---
+  - "spec:project:coding-conventions"
+---
 
 
 
 # UI Conventions
+
+- [[spec:project:coding-conventions]]
+- [[spec:project:architecture-constraints]]
 
 Auto-generated from project analysis. Update manually as patterns evolve.
 

@@ -214,3 +214,6 @@
 | Phase 2 | P1 | 3-4 天 | m10-revision/style/worldview + plugins + writing API |
 | Phase 3 | P1-P2 | 3-4 天 | 剩余 store slices + 深化浅层测试 + top 10 hooks |
 | Phase 4 | P2 | 5-7 天 | 业务流程 E2E + API bridge 集成 + Playwright 评估 |
+
+## Related
+- [[spec:project:test-conventions]]

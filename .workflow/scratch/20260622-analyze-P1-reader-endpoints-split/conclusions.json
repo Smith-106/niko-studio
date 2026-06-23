@@ -1,0 +1,273 @@
+{
+  "artifact_id": "ANL-20260622-P1-reader-endpoints-split",
+  "scope": "phase",
+  "milestone": "M28",
+  "phase": 1,
+  "title": "Reader Endpoints Split + Remaining Input Validation",
+  "verdict": "GO",
+  "overall_confidence": 0.84,
+  "confidence_by_dimension": {
+    "feasibility": { "score": 4, "confidence": 0.85 },
+    "impact": { "score": 4, "confidence": 0.85 },
+    "risk": { "score": 3, "confidence": 0.80 },
+    "complexity": { "score": 3, "confidence": 0.80 },
+    "dependencies": { "score": 2, "confidence": 0.85 },
+    "alternatives": { "score": 3, "confidence": 0.90 }
+  },
+  "key_conclusions": [
+    {
+      "id": "C1",
+      "title": "reader-endpoints.ts 已形成典型 god module，拆分时机成熟",
+      "evidence": [
+        "src-ts/reader/mcp/reader-endpoints.ts:379 8 endpoint handlers",
+        "src-ts/reader/mcp/reader-endpoints.ts:160 10+ types",
+        "src-ts/reader/mcp/reader-endpoints.ts:137 5 lazy singletons",
+        "src-ts/reader/mcp/reader-endpoints.ts:254 3 mutable stores"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "C2",
+      "title": "ISS-20260622-006 剩余校验缺口可统一补齐",
+      "evidence": [
+        "reader-endpoints.ts:578 focusAreas/biases 仅 Array.isArray",
+        "reader-endpoints.ts:785 dimension 无长度上限",
+        "reader-endpoints.ts:1056 targetStyle 无校验",
+        "reader-endpoints.ts:397 personaIds 元素无长度上限",
+        "reader-endpoints.ts:770 feedbackId 复用 MAX_NOVEL_ID_LENGTH",
+        "reader-endpoints.ts:1030-1031 version labels 无校验"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "C3",
+      "title": "保留 reader-endpoints.ts 作为 re-export shim 是避免 CI 断裂的关键",
+      "evidence": [
+        "8 test files import from reader-endpoints.ts",
+        "src-ts/mcp/endpoints/index.ts:218-227 re-export",
+        "src-ts/reader/mcp/index.ts barrel export"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "C4",
+      "title": "loadCustomPersonas() 的模块初始化顺序需在 reader-services.ts 中显式保护",
+      "evidence": [
+        "reader-endpoints.ts:258 module-top loadCustomPersonas()",
+        "custom-persona-persistence-flow in exploration-codebase.json"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "R1",
+      "priority": "high",
+      "review_status": "accepted",
+      "action": "扩展 src-ts/mcp/input-validation.ts，新增 validateStringArray / validateEnum 及 Reader 专用 MAX_* 常量，补齐剩余字段校验",
+      "rationale": "复用 M27 已建立的共享校验模块，避免 ad-hoc 内联，关闭 ISS-20260622-006",
+      "target_files": [
+        "src-ts/mcp/input-validation.ts",
+        "src-ts/reader/mcp/reader-endpoints.ts"
+      ],
+      "acceptance_criteria": [
+        "MAX_PERSONA_ID_LENGTH / MAX_FEEDBACK_ID_LENGTH / MAX_DIMENSION_LENGTH / MAX_TARGET_STYLE_LENGTH / MAX_LABEL_LENGTH / MAX_ARRAY_LENGTH / MAX_ARRAY_ITEM_LENGTH 定义",
+        "validateStringArray(items, opts) 拒绝非数组、超长数组、非字符串元素、超长元素",
+        "validateEnum(value, allowedSet, label) 用于 action 等枚举校验",
+        "feedbackId 使用 MAX_FEEDBACK_ID_LENGTH",
+        "targetStyle 使用 MAX_TARGET_STYLE_LENGTH",
+        "versionA.label / versionB.label 使用 MAX_LABEL_LENGTH",
+        "focusAreas / biases 通过 validateStringArray 校验",
+        "personaId 及 personaIds 元素使用 MAX_PERSONA_ID_LENGTH"
+      ]
+    },
+    {
+      "id": "R2",
+      "priority": "high",
+      "review_status": "accepted",
+      "action": "拆分 reader-endpoints.ts 为 reader-routes.ts / reader-validation.ts / reader-services.ts / reader-types.ts，并保留 reader-endpoints.ts 作为 re-export shim",
+      "rationale": "降低 god module 复杂度，同时保护 8 个测试文件和 barrel 调用方零修改",
+      "target_files": [
+        "src-ts/reader/mcp/reader-endpoints.ts",
+        "src-ts/reader/mcp/reader-routes.ts",
+        "src-ts/reader/mcp/reader-validation.ts",
+        "src-ts/reader/mcp/reader-services.ts",
+        "src-ts/reader/mcp/reader-types.ts",
+        "src-ts/tests/reader/*.test.ts"
+      ],
+      "acceptance_criteria": [
+        "reader-routes.ts 仅包含 8 个 endpoint handler",
+        "reader-validation.ts 包含 resolvePersonas / buildOverlayMarkers / adjustPersonaWeights / DIMENSION_TO_PARAM",
+        "reader-services.ts 包含 singletons / stores / persistence / clearReaderStores / getters",
+        "reader-types.ts 包含所有 request/response 类型与 OverlayMarker",
+        "reader-endpoints.ts 仅 re-export，不保留实现",
+        "既有测试从 reader-endpoints.ts 导入仍可通过"
+      ]
+    },
+    {
+      "id": "R3",
+      "priority": "medium",
+      "review_status": "accepted",
+      "action": "将 DIMENSION_TO_PARAM 迁移至 reader-validation.ts 作为单一真相源",
+      "rationale": "避免 routes/services 之间的隐藏依赖，符合数据优先原则",
+      "target_files": [
+        "src-ts/reader/mcp/reader-validation.ts",
+        "src-ts/reader/mcp/reader-services.ts"
+      ],
+      "acceptance_criteria": [
+        "DIMENSION_TO_PARAM 从 reader-validation.ts 导出",
+        "reader-services.ts 的反馈权重逻辑从 reader-validation.ts 导入",
+        "无重复映射常量"
+      ]
+    },
+    {
+      "id": "R4",
+      "priority": "medium",
+      "review_status": "accepted",
+      "action": "在 reader-services.ts 中保护 customPersonaStore 的初始化顺序",
+      "rationale": "loadCustomPersonas() 在模块顶层调用，拆分后不能丢失 ready 语义",
+      "target_files": [
+        "src-ts/reader/mcp/reader-services.ts",
+        "src-ts/reader/mcp/reader-routes.ts"
+      ],
+      "acceptance_criteria": [
+        "loadCustomPersonas promise 在 endpoint 读取 store 前 resolve",
+        "测试在 clear/reload 后仍稳定通过",
+        "新增回归测试验证模块导入后立即调用 endpoint 不丢 custom persona"
+      ]
+    },
+    {
+      "id": "R5",
+      "priority": "low",
+      "review_status": "accepted",
+      "action": "更新 mcp/endpoints/index.ts 与 reader/mcp/index.ts 的 import 源，最终移除 shim",
+      "rationale": "集中公共 API 表面，匹配其他 endpoint 家族的 barrel 模式",
+      "target_files": [
+        "src-ts/mcp/endpoints/index.ts",
+        "src-ts/reader/mcp/index.ts"
+      ],
+      "acceptance_criteria": [
+        "8 个 endpoint handler 仍从 endpoints/index.ts 导出",
+        "reader/mcp/index.ts 保持与当前一致的公共子集",
+        "reader-routes / reader-validation / reader-services 之间无 import cycle"
+      ]
+    }
+  ],
+  "implementation_scope": [
+    {
+      "id": "S1",
+      "objective": "扩展共享输入校验模块并补齐 Reader 剩余字段校验",
+      "rationale": "复用 M27 input-validation.ts，关闭 ISS-20260622-006",
+      "priority": "high",
+      "target_files": [
+        "src-ts/mcp/input-validation.ts",
+        "src-ts/reader/mcp/reader-endpoints.ts"
+      ],
+      "acceptance_criteria": [
+        "新增 MAX_PERSONA_ID_LENGTH / MAX_FEEDBACK_ID_LENGTH / MAX_DIMENSION_LENGTH / MAX_TARGET_STYLE_LENGTH / MAX_LABEL_LENGTH / MAX_ARRAY_LENGTH / MAX_ARRAY_ITEM_LENGTH",
+        "新增 validateStringArray 与 validateEnum helper 并通过单元测试",
+        "personaId / personaIds[] / dimension / targetStyle / version labels / focusAreas / biases 均有边界校验",
+        "reader 相关测试新增对应异常用例并全部通过"
+      ],
+      "change_summary": "input-validation.ts: 新增常量与 helper；reader-endpoints.ts: 在 rsAnalyze/rsFeedback/rsCompare/rsCreateCustomPersona/rsDeAI 中调用新 helper"
+    },
+    {
+      "id": "S2",
+      "objective": "拆分 reader-endpoints.ts 为 4 个子模块并保留兼容性 shim",
+      "rationale": "消除 god module，保护既有 import",
+      "priority": "high",
+      "target_files": [
+        "src-ts/reader/mcp/reader-types.ts",
+        "src-ts/reader/mcp/reader-services.ts",
+        "src-ts/reader/mcp/reader-validation.ts",
+        "src-ts/reader/mcp/reader-routes.ts",
+        "src-ts/reader/mcp/reader-endpoints.ts"
+      ],
+      "acceptance_criteria": [
+        "reader-types.ts 包含所有类型定义",
+        "reader-services.ts 包含 singleton/store/persistence/clearReaderStores",
+        "reader-validation.ts 包含 resolvePersonas/buildOverlayMarkers/adjustPersonaWeights/DIMENSION_TO_PARAM",
+        "reader-routes.ts 包含 8 个 endpoint handler",
+        "reader-endpoints.ts 为纯 re-export",
+        "tsc 无错误，reader + mcp 测试全部通过"
+      ],
+      "change_summary": "按 exploration-codebase.json split_recommendation 迁移代码块；reader-endpoints.ts 改写为 shim"
+    },
+    {
+      "id": "S3",
+      "objective": "保证 customPersonaStore 初始化顺序与测试隔离",
+      "rationale": "防止模块拆分后丢失异步加载语义",
+      "priority": "medium",
+      "target_files": [
+        "src-ts/reader/mcp/reader-services.ts",
+        "src-ts/reader/mcp/reader-routes.ts",
+        "src-ts/tests/reader/reader-endpoints.test.ts"
+      ],
+      "acceptance_criteria": [
+        "reader-services.ts 提供 getCustomPersonaStoreReady() 或等效机制",
+        "所有读取 customPersonaStore 的 endpoint 在 ready 后执行",
+        "clearReaderStores 与 reload 测试无 flaky",
+        "新增回归测试：模块导入后立即调用 rsGetPersonasEndpoint 返回包含 custom persona"
+      ],
+      "change_summary": "reader-services.ts: 将 loadCustomPersonas promise 与 getter 绑定；reader-routes.ts: endpoint 通过 getter 隐式等待"
+    },
+    {
+      "id": "S4",
+      "objective": "调整 barrel 文件并规划 shim 移除",
+      "rationale": "统一公共 API 入口",
+      "priority": "low",
+      "target_files": [
+        "src-ts/mcp/endpoints/index.ts",
+        "src-ts/reader/mcp/index.ts"
+      ],
+      "acceptance_criteria": [
+        "endpoints/index.ts 仍导出全部 8 个 handler",
+        "reader/mcp/index.ts 保持当前公共子集",
+        "无 import cycle",
+        "记录 shim 移除条件（所有测试迁移完成）"
+      ],
+      "change_summary": "barrel 文件 import 源指向新子模块；保留 reader-endpoints.ts shim"
+    }
+  ],
+  "decision_trail": [
+    {
+      "decision": "采用混合方案：拆分 + 补齐校验 + 兼容性 shim",
+      "context": "M27 遗留两个 issue 要求同时完成文件拆分和字段校验",
+      "options": ["校验优先，拆分后续", "拆分优先，校验后续", "混合 + shim"],
+      "chosen": "混合 + shim",
+      "reason": "一次 phase 内收敛两个 issue，shim 保护既有调用方",
+      "evidence_source": "cli-explore-agent + maestro delegate (claude/analysis)"
+    },
+    {
+      "decision": "新增通用校验 helper 放入 input-validation.ts，Reader 领域校验放入 reader-validation.ts",
+      "context": "需要为数组、枚举、标签等新增校验",
+      "options": ["全部放入 reader-validation.ts", "通用 helper 放入 input-validation.ts，领域校验留在 reader-validation.ts"],
+      "chosen": "通用 helper 放入 input-validation.ts，领域校验留在 reader-validation.ts",
+      "reason": "避免通用逻辑散落，便于其他 endpoint 复用",
+      "evidence_source": "cli-explore-agent relevant_files for src-ts/mcp/input-validation.ts"
+    },
+    {
+      "decision": "DIMENSION_TO_PARAM 放入 reader-validation.ts 作为单一真相源",
+      "context": "反馈权重调整依赖维度到参数的映射",
+      "options": ["保留在 reader-services.ts", "迁移到 reader-validation.ts"],
+      "chosen": "迁移到 reader-validation.ts",
+      "reason": "数据映射属于 validation 层，避免 services 反向依赖 routes/validation",
+      "evidence_source": "exploration-codebase.json split_recommendation"
+    }
+  ],
+  "intent_coverage": [
+    { "intent": "拆分 reader-endpoints.ts", "status": "addressed" },
+    { "intent": "补齐剩余输入校验", "status": "addressed" },
+    { "intent": "保持向后兼容", "status": "addressed" },
+    { "intent": "输出 implementation scope", "status": "addressed" }
+  ],
+  "residual_risks": [
+    {
+      "risk": "customPersonaStore 初始化 race",
+      "mitigation": "reader-services.ts ready guard / getter 链式调用",
+      "owner": "S3"
+    }
+  ],
+  "next_step": "maestro-plan 1",
+  "generated_at": "2026-06-24T00:00:00.000Z"
+}

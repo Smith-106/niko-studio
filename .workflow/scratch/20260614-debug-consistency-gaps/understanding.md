@@ -108,3 +108,7 @@ resolved
 
 ## Fix
 See maestro-plan --gaps for prioritized fix plan.
+
+## Related
+- [[spec:project:coding-conventions-025]]
+- [[spec:project:coding-conventions-026]]

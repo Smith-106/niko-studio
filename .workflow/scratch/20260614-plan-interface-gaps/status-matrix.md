@@ -1,5 +1,8 @@
 # 前后端接口状态矩阵 + 修复建议
 
+- [[spec:project:coding-conventions-025]]
+- [[spec:project:coding-conventions-026]]
+
 ## 安全回归状态
 
 | 原始 Issue | 修复状态 | 验证结果 | 残留缺口 |

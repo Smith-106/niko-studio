@@ -331,3 +331,29 @@ Milestone: M27
 Milestone: M27
 
 </spec-entry>
+
+<spec-entry category="learning" keywords="input-validation,shared-validator,reader-endpoints,max-length,array-bounds" date="2026-06-24" source="execute">
+
+### Reader 端点剩余无界字段通过共享校验模块收口
+
+M28 Phase 1 将 Reader 端点中 personaId、personaIds[] 元素、dimension、targetStyle、version labels、focusAreas、biases 等无界字段统一接入共享校验模块 input-validation.ts 的新增常量与 helper（validateStringArray / validateEnum）。关键经验：
+- 领域相关的 MAX_* 常量应放在共享校验模块，避免端点内硬编码
+- 数组字段需要同时校验数组长度、元素类型、元素长度（validateStringArray 一次性覆盖）
+- 校验 helper 应保持返回 jsonResponse 400 的现有约定，避免测试断言断裂
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="god-module-split,re-export-shim,ready-guard,async-init,barrel" date="2026-06-24" source="execute">
+
+### God module 拆分 + 兼容性 shim + ready guard 的组合模式
+
+reader-endpoints.ts（1173 行）拆分为 types / services / validation / routes 四个子模块，保留 reader-endpoints.ts 作为纯 re-export shim，实现零破坏迁移。针对模块顶层异步初始化（loadCustomPersonas）引入 ready guard：
+- 将顶层 Promise 绑定到模块变量 customPersonaStoreReady
+- 导出 getCustomPersonaStoreReady() 供路由层 await
+- 在读取 customPersonaStore 的 endpoint 开头统一 await，消除 race condition
+- barrel 文件从 shim 切换到新子模块，并在 shim 上记录 TODO 移除条件
+该模式可在其他含模块级异步 init 的 god module 拆分中复用。
+Milestone: M28
+
+</spec-entry>

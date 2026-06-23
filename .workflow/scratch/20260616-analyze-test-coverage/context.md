@@ -96,3 +96,6 @@
 - **评分**: 72/100
 - **风险等级**: MEDIUM-HIGH
 - **当前标准**: MVP ✅ | 上线 ❌ (差 7%) | 生产 ❌ (差 12%)
+
+## Related
+- [[spec:project:test-conventions]]

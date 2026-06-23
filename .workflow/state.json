@@ -212,11 +212,83 @@
       "completed_at": "2026-06-16T20:35:00+08:00",
       "description": "Execute: 6/6 tasks completed — P0 regression guards (skillsSlice+conversationSlice+learning+workspace endpoints), P1 M25 endpoints (revision+style+worldview), P1 frontend stores+API (writing bridge+3 slices), P1-P2 depth (3 store companions+3 hook tests), coverage baseline (frontend 95-99%, backend ~100%). Also fixed 27 pre-existing failing tests from API evolution.",
       "harvested": true
+    },
+    {
+      "id": "ANL-20260622-P1-reader-endpoints-split",
+      "type": "analyze",
+      "milestone": "M28",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260622-analyze-P1-reader-endpoints-split",
+      "status": "completed",
+      "depends_on": null,
+      "created_at": "2026-06-22T00:00:00+08:00",
+      "completed_at": "2026-06-24T00:00:00.000Z",
+      "description": "Analyze M28 Phase 1 — Reader Endpoints Split + Remaining Input Validation. GO (84% confidence), 4 implementation scope items, 4 Locked / 3 Free / 3 Deferred decisions.",
+      "harvested": false,
+      "context_package": ".workflow/scratch/20260622-analyze-P1-reader-endpoints-split/context-package.json"
+    },
+    {
+      "id": "PLN-20260624-P1-reader-endpoints-split",
+      "type": "plan",
+      "milestone": "M28",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260624-plan-P1-reader-endpoints-split",
+      "status": "completed",
+      "depends_on": "ANL-20260622-P1-reader-endpoints-split",
+      "created_at": "2026-06-24T00:00:00.000Z",
+      "completed_at": "2026-06-24T00:10:00.000Z",
+      "description": "Plan M28 Phase 1 — 3 tasks in 3 waves: extend shared validators + fill Reader validation gaps; split reader-endpoints.ts into 4 submodules with shim; protect customPersonaStore init order and adjust barrels. Confidence 88%.",
+      "harvested": false
+    },
+    {
+      "id": "EXC-20260624-P1-reader-endpoints-split",
+      "type": "execute",
+      "milestone": "M28",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260624-plan-P1-reader-endpoints-split",
+      "status": "completed",
+      "depends_on": "PLN-20260624-P1-reader-endpoints-split",
+      "created_at": "2026-06-24T05:05:00.000Z",
+      "completed_at": "2026-06-24T05:05:00.000Z",
+      "description": "Execute: 3/3 tasks completed — shared validators extended (TASK-001), reader-endpoints.ts split into 4 submodules with backward-compatible shim (TASK-002), customPersonaStore init race protected and barrels adjusted (TASK-003). Reader tests pass, tsc clean.",
+      "harvested": true
+    },
+    {
+      "id": "ANL-20260624-P2-architecture-decoupling",
+      "type": "analyze",
+      "milestone": "M28",
+      "phase": 2,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260624-analyze-P2-architecture-decoupling",
+      "status": "completed",
+      "depends_on": null,
+      "harvested": false,
+      "created_at": "2026-06-24T05:10:00Z",
+      "completed_at": "2026-06-24T05:10:00Z",
+      "description": "M28 Phase 2 architecture decoupling analysis: Container/MCP residual coupling, GatewayDeps ISP split, craft-catalog circular dependency + reload fix. Verdict GO, confidence medium.",
+      "context_package": ".workflow/scratch/20260624-analyze-P2-architecture-decoupling/context-package.json"
+    },
+    {
+      "id": "PLN-20260624-P2-architecture-decoupling",
+      "type": "plan",
+      "milestone": "M28",
+      "phase": 2,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260624-plan-P2-architecture-decoupling",
+      "status": "completed",
+      "depends_on": "ANL-20260624-P2-architecture-decoupling",
+      "harvested": false,
+      "created_at": "2026-06-24T05:10:00Z",
+      "completed_at": "2026-06-24T05:10:00Z",
+      "description": "M28 Phase 2 architecture decoupling plan: 4 tasks in 2 waves (Container/MCP bootstrap + GatewayDeps ISP; craft-types extraction + lazy getters). Checker PASS iteration 3, confidence 0.92."
     }
   ],
-  "current_milestone": null,
+  "current_milestone": "M28",
   "initialized": true,
-  "last_updated": "2026-06-23T19:18:39.739Z",
+  "last_updated": "2026-06-24T05:05:00.000Z",
   "milestone_history": [
     {
       "id": "M26",
@@ -628,6 +700,12 @@
           "harvested": true
         }
       ]
+    },
+    {
+      "id": "M28",
+      "name": "Architecture Hardening + UI Completion + Test Coverage",
+      "status": "active",
+      "started_at": "2026-06-23T20:07:56.086Z"
     }
   ],
   "milestones": [
@@ -780,6 +858,35 @@
         }
       ],
       "completed_at": "2026-06-23T19:18:39.739Z"
+    },
+    {
+      "id": "M28",
+      "name": "Architecture Hardening + UI Completion + Test Coverage",
+      "type": "standard",
+      "status": "active",
+      "started_at": "2026-06-23T20:07:56.086Z",
+      "phases": [
+        {
+          "number": 1,
+          "title": "Reader Endpoints Split + Remaining Input Validation",
+          "status": "completed"
+        },
+        {
+          "number": 2,
+          "title": "Architecture Decoupling",
+          "status": "pending"
+        },
+        {
+          "number": 3,
+          "title": "UI Component Completion",
+          "status": "pending"
+        },
+        {
+          "number": 4,
+          "title": "MCP Endpoint Test Coverage",
+          "status": "pending"
+        }
+      ]
     }
   ],
   "project": "niko-studio",

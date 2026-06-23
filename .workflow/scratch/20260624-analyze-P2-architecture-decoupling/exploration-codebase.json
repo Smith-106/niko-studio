@@ -1,0 +1,137 @@
+{
+  "subsystem_findings": [
+    {
+      "subsystem": "Container/MCP coupling",
+      "files_examined": [
+        "src-ts/container/gateway-control-plane.ts",
+        "src-ts/composition-root/gateway-control-plane.ts",
+        "src-ts/container/ServiceContainer.ts",
+        "src-ts/container/types.ts",
+        "src-ts/container/adapters.ts",
+        "src-ts/container/workflow-runtime-provider.ts",
+        "src-ts/mcp/gateway-bootstrap.ts",
+        "src-ts/mcp/index.ts",
+        "src-ts/mcp/gateway-state.ts",
+        "src-ts/mcp/gateway-request-handler.ts",
+        "src-ts/mcp/engine.ts",
+        "src-ts/mcp/endpoints/health.ts",
+        "src-ts/mcp/endpoints/config.ts",
+        "src-ts/mcp/endpoints/mcp-admin.ts",
+        "src-ts/mcp/endpoints/workflow.ts",
+        "src-ts/mcp/gateway-http-adapter.ts"
+      ],
+      "coupling_score": 4,
+      "cycles": [
+        {
+          "path": "mcp/gateway-bootstrap.ts -> container/gateway-control-plane.ts (re-export) -> composition-root/gateway-control-plane.ts -> mcp/*",
+          "severity": "medium",
+          "note": "container/gateway-control-plane.ts is a re-export shim; gateway-bootstrap still points at the old path."
+        },
+        {
+          "path": "container/adapters.ts -> mcp/gateway-ws.ts -> container/types.ts",
+          "severity": "high",
+          "note": "Container adapter directly imports WorkflowEventRelay from MCP layer."
+        }
+      ],
+      "decoupling_options": [
+        { "approach": "Point gateway-bootstrap.ts to composition-root/gateway-control-plane.ts", "effort": "low", "risk": "low" },
+        { "approach": "Abstract WorkflowEventRelay behind IWorkflowEventRelay in container/types.ts", "effort": "medium", "risk": "medium" },
+        { "approach": "Remove mcp/engine.ts getContainer usage, use GatewayDeps.getEngine", "effort": "medium", "risk": "low" },
+        { "approach": "Refactor gateway-state.ts buildGatewayDeps to accept IEngineProvider interface", "effort": "high", "risk": "medium" }
+      ],
+      "evidence_files": [
+        "src-ts/container/gateway-control-plane.ts",
+        "src-ts/composition-root/gateway-control-plane.ts",
+        "src-ts/mcp/gateway-bootstrap.ts",
+        "src-ts/mcp/gateway-state.ts",
+        "src-ts/mcp/engine.ts",
+        "src-ts/mcp/gateway-request-handler.ts",
+        "src-ts/container/adapters.ts"
+      ]
+    },
+    {
+      "subsystem": "GatewayDeps ISP violation",
+      "files_examined": [
+        "src-ts/mcp/endpoints/health.ts",
+        "src-ts/mcp/gateway-state.ts",
+        "src-ts/composition-root/gateway-control-plane.ts",
+        "src-ts/mcp/endpoints/config.ts",
+        "src-ts/mcp/endpoints/index.ts",
+        "src-ts/mcp/index.ts",
+        "src-ts/gateway-server.ts",
+        "src-ts/tests/mcp/health-endpoints.test.ts",
+        "src-ts/tests/mcp/health-endpoints.additional.test.ts",
+        "src-ts/tests/mcp/health-endpoints.branch-gap.additional.test.ts",
+        "src-ts/tests/mcp/gateway-state.test.ts",
+        "src-ts/tests/gateway-e2e/helpers.ts",
+        "src-ts/tests/benchmark/gateway-benchmark.ts",
+        "src-ts/tests/gateway-server.runtime.test.ts"
+      ],
+      "gateway_deps_definition": {
+        "file": "src-ts/mcp/endpoints/health.ts",
+        "line": 58,
+        "methods": [
+          "version", "getEngine", "mcpServiceConfigs", "runtimeServerOrder",
+          "serviceRuntimeStatus", "refreshServiceHealthCache", "serializeServiceConfig",
+          "runtimeSessionId", "toRuntimeConnectionState", "toRuntimeReconnectState",
+          "buildRuntimeServers", "getMetricsSnapshot", "getObservabilitySnapshot",
+          "getConfigValue", "loadServicesConfig", "utcNowIso", "runtimeTracker"
+        ]
+      },
+      "usage_matrix": {
+        "healthCheck": { "methods_used_count": 14 },
+        "metricsEndpoint": { "methods_used_count": 5 },
+        "listModels": { "methods_used_count": 1 },
+        "listTools": { "methods_used_count": 0 }
+      },
+      "split_proposal": [
+        { "new_interface": "IHealthEngineAccess", "methods": ["getEngine"], "consumers": ["healthCheck"] },
+        { "new_interface": "IServiceRegistryAccess", "methods": ["mcpServiceConfigs", "runtimeServerOrder", "serviceRuntimeStatus", "refreshServiceHealthCache", "serializeServiceConfig"], "consumers": ["healthCheck"] },
+        { "new_interface": "IRuntimeStateAccess", "methods": ["runtimeSessionId", "toRuntimeConnectionState", "toRuntimeReconnectState", "buildRuntimeServers"], "consumers": ["healthCheck", "metricsEndpoint"] },
+        { "new_interface": "IObservabilityAccess", "methods": ["getMetricsSnapshot", "getObservabilitySnapshot"], "consumers": ["healthCheck", "metricsEndpoint"] },
+        { "new_interface": "IConfigAccess", "methods": ["getConfigValue", "loadServicesConfig"], "consumers": ["metricsEndpoint", "listModels"] },
+        { "new_interface": "IGatewayMetadata", "methods": ["version", "utcNowIso", "runtimeTracker"], "consumers": ["healthCheck", "metricsEndpoint"] }
+      ],
+      "migration_risk": "low",
+      "evidence_files": [
+        "src-ts/mcp/endpoints/health.ts",
+        "src-ts/mcp/gateway-state.ts",
+        "src-ts/composition-root/gateway-control-plane.ts",
+        "src-ts/mcp/endpoints/config.ts",
+        "src-ts/tests/mcp/health-endpoints.test.ts"
+      ]
+    },
+    {
+      "subsystem": "craft-catalog circular dependency",
+      "files_examined": [
+        "src-ts/narrative/writing-craft/craft-catalog.ts",
+        "src-ts/narrative/writing-craft/catalog-loader.ts",
+        "src-ts/narrative/writing-craft/index.ts",
+        "src-ts/narrative/dialogue-analyzer.ts",
+        "src-ts/narrative/reader-satisfaction-analyzer.ts",
+        "src-ts/narrative/suspense-analyzer.ts",
+        "src-ts/tests/narrative/writing-craft.test.ts",
+        "src-ts/tests/narrative/craft-catalog-m15.test.ts",
+        "src-ts/tests/narrative/suspense-analyzer-*.test.ts",
+        "src-ts/tests/narrative/m13-remaining.test.ts"
+      ],
+      "cycle_edges": [
+        { "from": "src-ts/narrative/writing-craft/craft-catalog.ts", "to": "src-ts/narrative/writing-craft/catalog-loader.ts", "what": "imports 18 getters and reloadCatalog alias", "lineno": 1 },
+        { "from": "src-ts/narrative/writing-craft/catalog-loader.ts", "to": "src-ts/narrative/writing-craft/craft-catalog.ts", "what": "import type { 18 enums/interfaces }", "lineno": 5 }
+      ],
+      "eager_const_exports_count": 18,
+      "reload_broken_reason": "reloadCatalog clears catalog-loader internal cache, but craft-catalog.ts const exports captured snapshots at module load time and never re-read.",
+      "refactor_plan": [
+        { "step": "Extract craft-types.ts containing all enums/interfaces", "files": ["src-ts/narrative/writing-craft/craft-types.ts", "src-ts/narrative/writing-craft/craft-catalog.ts", "src-ts/narrative/writing-craft/catalog-loader.ts"], "risk": "low" },
+        { "step": "Convert craft-catalog.ts const exports to lazy getter functions", "files": ["src-ts/narrative/writing-craft/craft-catalog.ts", "src-ts/narrative/dialogue-analyzer.ts", "src-ts/narrative/reader-satisfaction-analyzer.ts", "src-ts/narrative/suspense-analyzer.ts"], "risk": "medium" },
+        { "step": "Update tests and barrel export", "files": ["src-ts/narrative/writing-craft/index.ts", "src-ts/tests/narrative/*.test.ts"], "risk": "low" }
+      ],
+      "evidence_files": [
+        "src-ts/narrative/writing-craft/craft-catalog.ts",
+        "src-ts/narrative/writing-craft/catalog-loader.ts",
+        "src-ts/tests/narrative/writing-craft.test.ts"
+      ]
+    }
+  ],
+  "exploration_time": "2026-06-24T05:10:00Z"
+}

@@ -143,3 +143,6 @@ Low   │ Test debt growth  │ Coverage gaming    │
 | **Overall** | | | **75.8%** |
 
 **Pressure Pass Result**: 最高置信度发现 F-001/F-002（store + endpoint 零覆盖）经压力测试 — 证据来源为 cli-explore-agent 直接文件扫描，不受单模型偏差影响。最低置信度发现 F-004/F-007（浅层测试识别 + 标准差距估算）标记为 MEDIUM CONFIDENCE，需运行 `vitest run --coverage` 获取实际行覆盖率数据验证。
+
+## Related
+- [[spec:project:test-conventions]]

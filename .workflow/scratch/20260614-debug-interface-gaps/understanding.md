@@ -69,3 +69,7 @@ All gaps share a common pattern: **safety/context features were applied to some 
 | SEC-003 | Add Cypher safety check in graphQueryEndpoint: block destructive patterns (DETACH DELETE, DROP, CREATE constraint) or restrict to READ-only | src-ts/mcp/endpoints/graph.ts |
 | ARCH-004 | Add workspace param + appendWorkspacePayload to plantForeshadow, getForeshadowStats, analyzeCharacterDepth, getCharacterProfile, getCharacterRelationships | desktop/src/api/knowledge.ts |
 | ARCH-005 | Wire _workspace via appendWorkspacePayload in all sb* functions | desktop/src/api/story-bible.ts |
+
+## Related
+- [[spec:project:coding-conventions-025]]
+- [[spec:project:review-standards-001]]

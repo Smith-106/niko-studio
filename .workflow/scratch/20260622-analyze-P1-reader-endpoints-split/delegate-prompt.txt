@@ -1,0 +1,35 @@
+PURPOSE: Analyze M28 Phase 1 "Reader Endpoints Split + Remaining Input Validation". Provide an independent multi-dimensional assessment and concrete implementation recommendations.
+
+TASK:
+1. Read the codebase exploration results at C:\Users\niko\Desktop\工作目录\niko-studio\.workflow\scratch\20260622-analyze-P1-reader-endpoints-split\exploration-codebase.json.
+2. Assess the proposed file split: reader-routes.ts / reader-validation.ts / reader-services.ts / reader-types.ts. Identify any grouping risks, import cycles, or backward-compatibility concerns.
+3. Evaluate the remaining input-validation gaps: personaId, dimension, focusAreas[], biases[], personaIds[], targetStyle, version labels, feedbackId. Propose concrete validators/helpers and constants.
+4. Identify test-impact (7+ test files import reader-endpoints.ts) and regression risks.
+5. Recommend implementation order and acceptance criteria for planning.
+
+MODE: analysis
+
+CONTEXT: This phase continues M27 deferred issues ISS-20260621-013 (reader-endpoints.ts split) and ISS-20260622-006 (unbounded Reader fields). M27 already added validateStringLength / validateWeight / safeResolveWorkspaceRoot in src-ts/mcp/input-validation.ts. Current file is src-ts/reader/mcp/reader-endpoints.ts (1147 lines). Routes registered in src-ts/mcp/routes/content.ts.
+
+EXPECTED: Return a structured JSON object only (no markdown prose) with this shape:
+{
+  "assessment": {
+    "feasibility": {"score": 1-5, "reason": "..."},
+    "impact": {"score": 1-5, "reason": "..."},
+    "risk": {"score": 1-5, "reason": "..."},
+    "complexity": {"score": 1-5, "reason": "..."},
+    "dependencies": {"score": 1-5, "reason": "..."},
+    "alternatives": ["Option A: ...", "Option B: ..."]
+  },
+  "split_verdict": "recommended|conditional|not recommended",
+  "validation_verdict": "ready to implement|needs helper design|deferred",
+  "recommendations": [
+    {"priority": "high|medium|low", "action": "...", "rationale": "...", "target_files": [...], "acceptance_criteria": [...]}
+  ],
+  "risks": [
+    {"area": "...", "severity": "high|medium|low", "description": "...", "mitigation": "..."}
+  ],
+  "implementation_order": ["..."]
+}
+
+CONSTRAINTS: Read-only analysis; do not modify code. Be concise; prioritize actionable findings over broad descriptions.
