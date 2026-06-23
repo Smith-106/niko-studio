@@ -33,38 +33,13 @@ import type {
   CommentaryDef,
   OralNarrativeSkill,
   OralNarrativeDef,
-} from './craft-catalog';
-
-export interface ForeshadowHierarchyData {
-  core: { label: string; description: string; maxCount: number };
-  subplot: { label: string; description: string; maxCount: number };
-  decorative: { label: string; description: string; maxCount: number };
-}
-
-export type ForeshadowRecoveryMethodsData = string[];
-
-export interface DialogueRulesData {
-  mckeeThreeFunctions: { functions: string[]; minimumRequired: number };
-  showDontTell: { badPatterns: string[]; goodPatterns: string[] };
-  characterVoiceDifferentiation: { dimensions: string[] };
-}
-
-export interface StoryStructureBeat {
-  name: string;
-  position: number;
-  description: string;
-}
-
-export interface StoryStructureData {
-  [key: string]: { name: string; beats: StoryStructureBeat[] };
-}
-
-export interface WebNovelPsychologyData {
-  satisfactionLayers: Record<string, { label: string; description: string; keywords: string[] }>;
-  expectDelayRelease: { description: string; timing: { expectRatio: number; delayRatio: number; releaseRatio: number } };
-  chapterHooks: Record<string, string>;
-  retentionRules: string[];
-}
+  ForeshadowHierarchyData,
+  ForeshadowRecoveryMethodsData,
+  DialogueRulesData,
+  StoryStructureData,
+  StoryStructureBeat,
+  WebNovelPsychologyData,
+} from './craft-types';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(MODULE_DIR, 'catalog-data');

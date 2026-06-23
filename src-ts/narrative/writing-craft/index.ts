@@ -7,6 +7,7 @@
  */
 
 export * from './archetype-catalog';
+export * from './craft-types';
 export * from './craft-catalog';
 export * from './emotion-craft';
 export * from './genre-templates';
