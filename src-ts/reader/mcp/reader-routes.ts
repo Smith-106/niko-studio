@@ -55,6 +55,7 @@ import {
   feedbackAggregateStore,
   FEEDBACK_THRESHOLD,
   saveCustomPersonas,
+  getCustomPersonaStoreReady,
 } from './reader-services';
 import {
   resolvePersonas,
@@ -225,6 +226,8 @@ export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpRespo
  * Returns all preset persona definitions with their parameters.
  */
 export async function rsGetPersonasEndpoint(_request: HttpRequest): Promise<HttpResponse> {
+  await getCustomPersonaStoreReady();
+
   const presetIds = listPresetPersonas();
   const presets = presetIds.map((id) => getPresetPersona(id));
 
@@ -245,6 +248,8 @@ export async function rsGetPersonasEndpoint(_request: HttpRequest): Promise<Http
  * Creates a new custom reader persona with user-defined parameters.
  */
 export async function rsCreateCustomPersonaEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  await getCustomPersonaStoreReady();
+
   const body = parseBody(request) as Record<string, unknown>;
 
   const name = body.name as string | undefined;
@@ -420,6 +425,8 @@ export async function rsAIFlavorEndpoint(request: HttpRequest): Promise<HttpResp
  * Response: { novelId, personaId, feedbackId, action, dimension?, updatedWeights?, weightsChanged }
  */
 export async function rsFeedbackEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  await getCustomPersonaStoreReady();
+
   const body = parseBody(request) as Record<string, unknown>;
 
   const novelId = body.novelId as string | undefined;

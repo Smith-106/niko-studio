@@ -401,6 +401,29 @@ describe('reader/mcp/reader-endpoints', () => {
     });
   });
 
+  it('custom persona store is ready immediately after module import without manual clearReaderStores', async () => {
+    // Regression test for ISS-20260621-013: ensure getCustomPersonaStoreReady()
+    // resolves before rsGetPersonasEndpoint reads customPersonaStore, so that
+    // persisted personas are visible even when clearReaderStores() is not called.
+    // We create a custom persona first (via the endpoint, which awaits the ready guard),
+    // then call rsGetPersonasEndpoint and verify it is listed.
+    const created = await rsCreateCustomPersonaEndpoint(
+      mockRequest({
+        body: {
+          name: 'Regression Test Persona',
+          parameters: { plotWeight: 0.7 },
+        },
+      }),
+    );
+    expect(created.statusCode).toBe(201);
+    const personaId = getBody(created).persona.id as string;
+
+    // Now call rsGetPersonasEndpoint — it should await the ready guard and see the persona
+    const listed = await rsGetPersonasEndpoint(mockRequest({ method: 'GET' }));
+    expect(listed.statusCode).toBe(200);
+    const customPersonas = getBody(listed).custom as Array<{ id: string; name: string }>;
+    expect(customPersonas.some((p) => p.id === personaId)).toBe(true);
+  });
   it('builds overlay markers from cached reader reactions', async () => {
     const cached: DualEngineResult = {
       readerReactions: [

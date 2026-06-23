@@ -5,6 +5,8 @@
  * All implementations have been moved to reader-routes.ts, reader-types.ts,
  * reader-services.ts, and reader-validation.ts.
  *
+ * TODO: remove shim after all tests migrated (ISS-20260621-013)
+ *
  * Related: T-036, SME-02, ISS-20260621-013
  */
 

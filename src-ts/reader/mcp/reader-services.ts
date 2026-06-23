@@ -173,12 +173,21 @@ export function getDimensionAnalyzer(): DimensionAnalyzer {
 export const customPersonaStore = new Map<string, ReaderPersona>();
 export const analysisResultCache = new Map<string, import('../DualEngine').DualEngineResult>();
 
-// Load persisted personas on module initialization
-loadCustomPersonas().then((loaded) => {
+// Load persisted personas on module initialization — bind promise for ready guard
+let customPersonaStoreReady: Promise<void> = loadCustomPersonas().then((loaded) => {
   for (const [id, persona] of loaded) {
     customPersonaStore.set(id, persona);
   }
 });
+
+/**
+ * Return the promise that resolves when customPersonaStore has finished loading
+ * from the persistence file. Endpoint handlers that read the store should await
+ * this before accessing customPersonaStore to avoid race conditions.
+ */
+export function getCustomPersonaStoreReady(): Promise<void> {
+  return customPersonaStoreReady;
+}
 
 // Feedback aggregate store: personaId -> dimension -> FeedbackAggregate
 export const feedbackAggregateStore = new Map<string, Map<string, FeedbackAggregate>>();

@@ -224,4 +224,5 @@ export {
   rsFeedbackEndpoint,
   rsCompareEndpoint,
   rsDeAIEndpoint,
-} from '../../reader/mcp/reader-endpoints';
+  // TODO: remove shim import after all tests migrated (ISS-20260621-013)
+} from '../../reader/mcp/reader-routes';

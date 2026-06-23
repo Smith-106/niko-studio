@@ -8,10 +8,13 @@ export {
   rsCreateCustomPersonaEndpoint,
   rsGetOverlayEndpoint,
   rsCompareEndpoint,
+} from './reader-routes';
+
+export {
   clearReaderStores,
   getCustomPersonaStore,
   getAnalysisResultCache,
-} from './reader-endpoints';
+} from './reader-services';
 
 export type {
   AnalyzeRequest,
@@ -20,4 +23,4 @@ export type {
   CompareRequest,
   CompareResult,
   CompareVersionInput,
-} from './reader-endpoints';
+} from './reader-types';
