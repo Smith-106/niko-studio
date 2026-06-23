@@ -1,0 +1,117 @@
+{
+  "id": "TASK-003",
+  "title": "Replace NIKO_WORKFLOW_WORKSPACE with safeResolveWorkspaceRoot across 11 files (SEC-002)",
+  "description": "11 source files directly read NIKO_WORKFLOW_WORKSPACE env var with only trim() — no path traversal validation. Replace all with safeResolveWorkspaceRoot() from shared module which does path.resolve + containment check.",
+  "issue_id": "ISS-20260620-008",
+  "issue_refs": ["ISS-20260620-008"],
+  "type": "fix",
+  "priority": "high",
+  "effort": "L",
+  "action": "In each of the 11 source files, replace local resolveWorkspaceRoot()/getWorkspaceRoot()/resolveWorkflowWorkspace() functions with import { safeResolveWorkspaceRoot } from '../mcp/input-validation.js' (adjusting relative path per file location). Remove the local function definition. Call safeResolveWorkspaceRoot() where the local function was called. Files: reader-endpoints.ts, agent.ts, chat.ts, critic.ts, graph.ts, memory.ts, workflow.ts, wiki.ts, workspace.ts, workflow-revision.ts, workflow.ts (services), revision-service.ts",
+  "status": "completed",
+  "scope": "src-ts/",
+  "focus_paths": ["src-ts/mcp/endpoints/", "src-ts/mcp/services/", "src-ts/reader/mcp/", "src-ts/services/"],
+  "read_first": [
+    "src-ts/mcp/input-validation.ts",
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/mcp/endpoints/agent.ts",
+    "src-ts/mcp/endpoints/chat.ts",
+    "src-ts/mcp/endpoints/critic.ts",
+    "src-ts/mcp/endpoints/graph.ts",
+    "src-ts/mcp/endpoints/memory.ts",
+    "src-ts/mcp/endpoints/wiki.ts",
+    "src-ts/mcp/endpoints/workflow.ts",
+    "src-ts/mcp/endpoints/workspace.ts",
+    "src-ts/mcp/services/workflow.ts",
+    "src-ts/mcp/services/workflow-revision.ts",
+    "src-ts/services/revision-service.ts"
+  ],
+  "depends_on": ["TASK-001"],
+  "wave": 2,
+  "convergence": {
+    "criteria": [
+      "grep -r 'NIKO_WORKFLOW_WORKSPACE' src-ts/mcp/endpoints/ src-ts/mcp/services/ src-ts/reader/mcp/ src-ts/services/ returns 0 matches (excluding test files)",
+      "grep -r 'safeResolveWorkspaceRoot' src-ts/mcp/endpoints/ src-ts/mcp/services/ src-ts/reader/mcp/ src-ts/services/ returns >= 11 matches",
+      "No file in src-ts/mcp/endpoints/ contains a local function 'resolveWorkspaceRoot' or 'resolveWorkflowWorkspace' or 'getWorkspaceRoot' definition",
+      "src-ts/mcp/endpoints/chat.ts contains 'import { safeResolveWorkspaceRoot }'",
+      "src-ts/reader/mcp/reader-endpoints.ts contains 'import { safeResolveWorkspaceRoot }'"
+    ],
+    "verification": "npx tsc --noEmit && grep -rc 'NIKO_WORKFLOW_WORKSPACE' src-ts/mcp/endpoints/ src-ts/mcp/services/ src-ts/reader/mcp/ src-ts/services/ --include='*.ts' --exclude='*.test.ts'",
+    "definition_of_done": "All 11 source files use safeResolveWorkspaceRoot(); no direct NIKO_WORKFLOW_WORKSPACE reads remain in source (test files excluded)"
+  },
+  "files": [
+    { "path": "src-ts/reader/mcp/reader-endpoints.ts", "action": "modify", "target": "getWorkspaceRoot()", "change": "Replace local getWorkspaceRoot() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/endpoints/agent.ts", "action": "modify", "target": "resolveWorkspaceRoot()", "change": "Replace local resolveWorkspaceRoot() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/endpoints/chat.ts", "action": "modify", "target": "resolveWorkflowWorkspace()", "change": "Replace local resolveWorkflowWorkspace() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/endpoints/critic.ts", "action": "modify", "target": "inline NIKO_WORKFLOW_WORKSPACE", "change": "Replace inline env read with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/endpoints/graph.ts", "action": "modify", "target": "resolveWorkspaceRoot()", "change": "Replace local resolveWorkspaceRoot() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/endpoints/memory.ts", "action": "modify", "target": "resolveWorkspaceRoot()", "change": "Replace local resolveWorkspaceRoot() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/endpoints/wiki.ts", "action": "modify", "target": "resolveWorkspaceRoot()", "change": "Replace local resolveWorkspaceRoot() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/endpoints/workflow.ts", "action": "modify", "target": "resolveWorkspaceRoot()", "change": "Replace local resolveWorkspaceRoot() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/endpoints/workspace.ts", "action": "modify", "target": "resolveWorkspaceRoot()", "change": "Replace local resolveWorkspaceRoot() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/services/workflow.ts", "action": "modify", "target": "resolveWorkflowWorkspace()", "change": "Replace local resolveWorkflowWorkspace() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/mcp/services/workflow-revision.ts", "action": "modify", "target": "resolveWorkflowWorkspace()", "change": "Replace local resolveWorkflowWorkspace() with imported safeResolveWorkspaceRoot()" },
+    { "path": "src-ts/services/revision-service.ts", "action": "modify", "target": "inline NIKO_WORKFLOW_WORKSPACE", "change": "Replace inline env read with imported safeResolveWorkspaceRoot()" }
+  ],
+  "implementation": [
+    "For each of the 11 source files:",
+    "  1. Add import: import { safeResolveWorkspaceRoot } from '<relative-path>/mcp/input-validation.js' — adjust relative path: endpoints/* uses '../input-validation.js', services/* uses '../input-validation.js', reader/mcp uses '../../mcp/input-validation.js', services/revision uses '../mcp/input-validation.js'",
+    "  2. Remove the local resolveWorkspaceRoot()/getWorkspaceRoot()/resolveWorkflowWorkspace() function definition",
+    "  3. Replace all call sites with safeResolveWorkspaceRoot() — for files that pass the result to normalizeProjectWorkspaceContext, use safeResolveWorkspaceRoot() as the workspaceRoot value",
+    "  4. In chat.ts line 212: replace 'const override = String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim(); return override || process.cwd();' with 'return safeResolveWorkspaceRoot();'",
+    "  5. In revision-service.ts line 398: replace inline env read with safeResolveWorkspaceRoot() call",
+    "After all replacements: grep to confirm zero NIKO_WORKFLOW_WORKSPACE references in source files (test files excluded)",
+    "Verify npx tsc --noEmit passes"
+  ],
+  "test": {
+    "commands": ["npx tsc --noEmit", "npx vitest run src-ts/tests/mcp/ src-ts/tests/reader/ src-ts/tests/services/ --reporter=verbose 2>&1 | tail -20"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["TypeScript compiles", "existing tests pass (some may need fixture path adjustments)"]
+  },
+  "reference": {
+    "pattern": "All 11 files follow the same pattern: String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd()",
+    "files": [
+      "src-ts/mcp/endpoints/agent.ts",
+      "src-ts/mcp/endpoints/workspace.ts",
+      "src-ts/mcp/endpoints/chat.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Replace all 11 local functions with one shared safeResolveWorkspaceRoot() that adds path.resolve + containment check. This eliminates the entire class of path traversal vulnerabilities at the source.",
+    "decision_factors": [
+      "SEC-002 requires path containment validation",
+      "11 duplicate implementations are a maintenance burden",
+      "Single import change per file is low-risk"
+    ],
+    "tradeoffs": [
+      "Wide blast radius — 11 files modified at once; mitigated by mechanical find-replace pattern"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Existing tests that set NIKO_WORKFLOW_WORKSPACE to paths outside cwd will fail the containment check",
+      "severity": "medium",
+      "mitigation": "safeResolveWorkspaceRoot uses process.cwd() as default allowed root; tests can set env to subdirectories of cwd or pass explicit allowedRoot. Adjust test fixtures in TASK-007."
+    },
+    {
+      "risk": "Import path differs per file location — easy to get wrong",
+      "severity": "low",
+      "mitigation": "Use consistent relative paths: endpoints/ -> '../input-validation.js', services/ -> '../input-validation.js', reader/mcp/ -> '../../mcp/input-validation.js', services/ -> '../mcp/input-validation.js'"
+    }
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["All MCP endpoints and services using workspace paths"],
+    "affected_components": ["11 source files across endpoints, services, and reader"],
+    "affected_requirements": ["SEC-002"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45m",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

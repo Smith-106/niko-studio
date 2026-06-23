@@ -212,122 +212,11 @@
       "completed_at": "2026-06-16T20:35:00+08:00",
       "description": "Execute: 6/6 tasks completed — P0 regression guards (skillsSlice+conversationSlice+learning+workspace endpoints), P1 M25 endpoints (revision+style+worldview), P1 frontend stores+API (writing bridge+3 slices), P1-P2 depth (3 store companions+3 hook tests), coverage baseline (frontend 95-99%, backend ~100%). Also fixed 27 pre-existing failing tests from API evolution.",
       "harvested": true
-    },
-    {
-      "id": "RMAP-20260622-m27-security-frontend",
-      "type": "roadmap",
-      "milestone": "M27",
-      "phase": null,
-      "scope": "milestone",
-      "path": ".workflow/roadmap.md",
-      "status": "completed",
-      "depends_on": null,
-      "created_at": "2026-06-22T02:30:00Z",
-      "completed_at": "2026-06-22T02:30:00Z",
-      "description": "M27 roadmap: Security Hardening (3 HIGH fixes + shared validation module) + Frontend Integration Completion (cross-boundary import elimination)"
-    },
-    {
-      "id": "PLN-20260622-P1-security-hardening",
-      "type": "plan",
-      "milestone": "M27",
-      "phase": 1,
-      "scope": "phase",
-      "path": ".workflow/scratch/20260622-plan-P1-security-hardening",
-      "status": "completed",
-      "depends_on": "RMAP-20260622-m27-security-frontend",
-      "created_at": "2026-06-22T02:31:00Z",
-      "completed_at": "2026-06-22T02:42:00Z",
-      "description": "M27 P1 plan: 8 tasks in 6 waves — shared input-validation.ts module + 3 HIGH security fixes (SEC-001/002/004) + endpoint rollout + 18+ unit tests + integration tests + regression verification. Confidence 0.88."
-    },
-    {
-      "id": "EXC-20260622-P1-security-hardening",
-      "type": "execute",
-      "milestone": "M27",
-      "phase": 1,
-      "scope": "phase",
-      "path": ".workflow/scratch/20260622-plan-P1-security-hardening",
-      "status": "completed",
-      "depends_on": "PLN-20260622-P1-security-hardening",
-      "created_at": "2026-06-22T02:45:00Z",
-      "completed_at": "2026-06-22T03:50:00Z",
-      "description": "Execute: completed 8 tasks — shared input-validation.ts module (validateStringLength/safeResolveWorkspaceRoot/validateWeight), 12-file safeResolveWorkspaceRoot rollout, Reader 7-endpoint length guards, persona weight NaN/Infinity/range validation, chat.ts refactor, 26 unit tests, 6 integration tests, regression verification. Resolves ISS-20260620-007/008/009.",
-      "harvested": false
-    },
-    {
-      "id": "REV-20260622-P1-security-hardening",
-      "type": "review",
-      "milestone": "M27",
-      "phase": 1,
-      "scope": "phase",
-      "path": "scratch/20260622-review-P1-security-hardening",
-      "status": "completed",
-      "depends_on": "EXC-20260622-P1-security-hardening",
-      "created_at": "2026-06-22T04:00:00Z",
-      "completed_at": "2026-06-22T04:32:00Z",
-      "harvested": false,
-      "description": "Deep review (6 dimensions + deep-dive) of M27 P1 Security Hardening. Verdict WARN: 0 critical, 4 HIGH (2 Reader endpoints missing text guards -- SEC-001 incomplete, Windows case-sensitivity false-positive, services->mcp layering), 20 MEDIUM, 18 LOW. Deep-dive downgraded SEC-001 resolveWorkspaceRootForRequest HIGH->MEDIUM (endpoint sanitizer contains user value). 10 issues auto-created (ISS-20260622-001..010)."
-    },
-    {
-      "id": "TST-20260622-P1-security-hardening",
-      "type": "test",
-      "milestone": "M27",
-      "phase": 1,
-      "scope": "phase",
-      "path": "scratch/20260622-test-P1-security-hardening",
-      "status": "completed",
-      "depends_on": "REV-20260622-P1-security-hardening",
-      "created_at": "2026-06-22T08:00:00Z",
-      "completed_at": "2026-06-22T08:20:00Z",
-      "harvested": false,
-      "description": "UAT: 22 scenarios (11 Reader length guards, 3 weight guards, 3 path guards, 2 unit, 3 e2e). All 22 passed. Confidence 0.905. Coverage 100%. Zero new test regressions (5895 passed / 7 pre-existing)."
-    },
-    {
-      "id": "ANL-20260622-P2-frontend-integration",
-      "type": "analyze",
-      "milestone": "M27",
-      "phase": 2,
-      "scope": "phase",
-      "path": ".workflow/scratch/20260622-analyze-P2-frontend-integration",
-      "status": "completed",
-      "depends_on": null,
-      "created_at": "2026-06-22T12:15:00+08:00",
-      "completed_at": "2026-06-22T13:10:00+08:00",
-      "description": "M27 Phase 2 前端集成完成分析 — 4 个跨边界 import 点（DocumentEditor P0 / narrative-visualization P1 / workspace P2 / writingSessionTelemetry P2）+ reader-endpoints 拆分方案；GO 85%；5 个 implementation_scope；7 Locked / 4 Free / 3 Deferred（2 新 issue + 既有 ISS-20260621-013）",
-      "harvested": false,
-      "context_package": ".workflow/scratch/20260622-analyze-P2-frontend-integration/context-package.json"
-    },
-    {
-      "id": "PLN-20260622-P2-frontend-integration",
-      "type": "plan",
-      "milestone": "M27",
-      "phase": 2,
-      "scope": "phase",
-      "path": ".workflow/scratch/20260622-plan-P2-frontend-integration",
-      "status": "completed",
-      "depends_on": "ANL-20260622-P2-frontend-integration",
-      "created_at": "2026-06-22T13:30:00Z",
-      "completed_at": "2026-06-22T13:55:00Z",
-      "description": "M27 P2 plan: 6 tasks in 3 waves — W1 types/narrative-visualization.ts 真相源 + api/analysis.ts re-export + 桥接注释 + reader-endpoints 拆分方案文档；W2 DocumentEditor import 重指向 + 4 测试 vi.mock 同步；W3 grep 验收 4 已批准桥接点 + tsc + 回归. Confidence 0.93.",
-      "harvested": true
-    },
-    {
-      "id": "EXC-20260622-P2-frontend-integration",
-      "type": "execute",
-      "milestone": "M27",
-      "phase": 2,
-      "scope": "phase",
-      "path": ".workflow/scratch/20260622-plan-P2-frontend-integration",
-      "status": "completed",
-      "depends_on": "PLN-20260622-P2-frontend-integration",
-      "created_at": "2026-06-22T13:30:00Z",
-      "completed_at": "2026-06-23T19:01:40.562Z",
-      "description": "M27 P2 execution: 6/6 tasks completed — W1 types/narrative-visualization.ts 真相源 + api/analysis.ts re-export + 桥接注释 + reader-endpoints 拆分方案文档; W2 DocumentEditor import 重指向 + 4 测试 mock 同步; W3 grep 验收 4 已批准点 + tsc 0 errors + 25/25 tests passed",
-      "harvested": true
     }
   ],
-  "current_milestone": "M27",
+  "current_milestone": null,
   "initialized": true,
-  "last_updated": "2026-06-23T19:01:40.562Z",
+  "last_updated": "2026-06-23T19:18:39.739Z",
   "milestone_history": [
     {
       "id": "M26",
@@ -601,7 +490,7 @@
       "id": "M27",
       "name": "Security Hardening + Frontend Integration Completion",
       "type": "standard",
-      "status": "active",
+      "status": "completed",
       "started_at": "2026-06-22T02:30:00Z",
       "phases": [
         {
@@ -613,6 +502,130 @@
           "number": 2,
           "title": "Frontend Integration Completion",
           "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "M27",
+      "name": "Security Hardening + Frontend Integration Completion",
+      "status": "completed",
+      "audit_status": "pass",
+      "audit_date": "2026-06-24",
+      "audit_gaps": 4,
+      "audit_high_gaps": 0,
+      "completed_at": "2026-06-23T19:18:39.738Z",
+      "archive_path": "milestones/M27/",
+      "archived_artifacts": [
+        {
+          "id": "RMAP-20260622-m27-security-frontend",
+          "type": "roadmap",
+          "milestone": "M27",
+          "phase": null,
+          "scope": "milestone",
+          "path": ".workflow/roadmap.md",
+          "status": "completed",
+          "depends_on": null,
+          "created_at": "2026-06-22T02:30:00Z",
+          "completed_at": "2026-06-22T02:30:00Z",
+          "description": "M27 roadmap: Security Hardening (3 HIGH fixes + shared validation module) + Frontend Integration Completion (cross-boundary import elimination)"
+        },
+        {
+          "id": "PLN-20260622-P1-security-hardening",
+          "type": "plan",
+          "milestone": "M27",
+          "phase": 1,
+          "scope": "phase",
+          "path": ".workflow/scratch/20260622-plan-P1-security-hardening",
+          "status": "completed",
+          "depends_on": "RMAP-20260622-m27-security-frontend",
+          "created_at": "2026-06-22T02:31:00Z",
+          "completed_at": "2026-06-22T02:42:00Z",
+          "description": "M27 P1 plan: 8 tasks in 6 waves — shared input-validation.ts module + 3 HIGH security fixes (SEC-001/002/004) + endpoint rollout + 18+ unit tests + integration tests + regression verification. Confidence 0.88."
+        },
+        {
+          "id": "EXC-20260622-P1-security-hardening",
+          "type": "execute",
+          "milestone": "M27",
+          "phase": 1,
+          "scope": "phase",
+          "path": ".workflow/scratch/20260622-plan-P1-security-hardening",
+          "status": "completed",
+          "depends_on": "PLN-20260622-P1-security-hardening",
+          "created_at": "2026-06-22T02:45:00Z",
+          "completed_at": "2026-06-22T03:50:00Z",
+          "description": "Execute: completed 8 tasks — shared input-validation.ts module (validateStringLength/safeResolveWorkspaceRoot/validateWeight), 12-file safeResolveWorkspaceRoot rollout, Reader 7-endpoint length guards, persona weight NaN/Infinity/range validation, chat.ts refactor, 26 unit tests, 6 integration tests, regression verification. Resolves ISS-20260620-007/008/009.",
+          "harvested": false
+        },
+        {
+          "id": "REV-20260622-P1-security-hardening",
+          "type": "review",
+          "milestone": "M27",
+          "phase": 1,
+          "scope": "phase",
+          "path": "scratch/20260622-review-P1-security-hardening",
+          "status": "completed",
+          "depends_on": "EXC-20260622-P1-security-hardening",
+          "created_at": "2026-06-22T04:00:00Z",
+          "completed_at": "2026-06-22T04:32:00Z",
+          "harvested": false,
+          "description": "Deep review (6 dimensions + deep-dive) of M27 P1 Security Hardening. Verdict WARN: 0 critical, 4 HIGH (2 Reader endpoints missing text guards -- SEC-001 incomplete, Windows case-sensitivity false-positive, services->mcp layering), 20 MEDIUM, 18 LOW. Deep-dive downgraded SEC-001 resolveWorkspaceRootForRequest HIGH->MEDIUM (endpoint sanitizer contains user value). 10 issues auto-created (ISS-20260622-001..010)."
+        },
+        {
+          "id": "TST-20260622-P1-security-hardening",
+          "type": "test",
+          "milestone": "M27",
+          "phase": 1,
+          "scope": "phase",
+          "path": "scratch/20260622-test-P1-security-hardening",
+          "status": "completed",
+          "depends_on": "REV-20260622-P1-security-hardening",
+          "created_at": "2026-06-22T08:00:00Z",
+          "completed_at": "2026-06-22T08:20:00Z",
+          "harvested": false,
+          "description": "UAT: 22 scenarios (11 Reader length guards, 3 weight guards, 3 path guards, 2 unit, 3 e2e). All 22 passed. Confidence 0.905. Coverage 100%. Zero new test regressions (5895 passed / 7 pre-existing)."
+        },
+        {
+          "id": "ANL-20260622-P2-frontend-integration",
+          "type": "analyze",
+          "milestone": "M27",
+          "phase": 2,
+          "scope": "phase",
+          "path": ".workflow/scratch/20260622-analyze-P2-frontend-integration",
+          "status": "completed",
+          "depends_on": null,
+          "created_at": "2026-06-22T12:15:00+08:00",
+          "completed_at": "2026-06-22T13:10:00+08:00",
+          "description": "M27 Phase 2 前端集成完成分析 — 4 个跨边界 import 点（DocumentEditor P0 / narrative-visualization P1 / workspace P2 / writingSessionTelemetry P2）+ reader-endpoints 拆分方案；GO 85%；5 个 implementation_scope；7 Locked / 4 Free / 3 Deferred（2 新 issue + 既有 ISS-20260621-013）",
+          "harvested": false,
+          "context_package": ".workflow/scratch/20260622-analyze-P2-frontend-integration/context-package.json"
+        },
+        {
+          "id": "PLN-20260622-P2-frontend-integration",
+          "type": "plan",
+          "milestone": "M27",
+          "phase": 2,
+          "scope": "phase",
+          "path": ".workflow/scratch/20260622-plan-P2-frontend-integration",
+          "status": "completed",
+          "depends_on": "ANL-20260622-P2-frontend-integration",
+          "created_at": "2026-06-22T13:30:00Z",
+          "completed_at": "2026-06-22T13:55:00Z",
+          "description": "M27 P2 plan: 6 tasks in 3 waves — W1 types/narrative-visualization.ts 真相源 + api/analysis.ts re-export + 桥接注释 + reader-endpoints 拆分方案文档；W2 DocumentEditor import 重指向 + 4 测试 vi.mock 同步；W3 grep 验收 4 已批准桥接点 + tsc + 回归. Confidence 0.93.",
+          "harvested": true
+        },
+        {
+          "id": "EXC-20260622-P2-frontend-integration",
+          "type": "execute",
+          "milestone": "M27",
+          "phase": 2,
+          "scope": "phase",
+          "path": ".workflow/scratch/20260622-plan-P2-frontend-integration",
+          "status": "completed",
+          "depends_on": "PLN-20260622-P2-frontend-integration",
+          "created_at": "2026-06-22T13:30:00Z",
+          "completed_at": "2026-06-23T19:01:40.562Z",
+          "description": "M27 P2 execution: 6/6 tasks completed — W1 types/narrative-visualization.ts 真相源 + api/analysis.ts re-export + 桥接注释 + reader-endpoints 拆分方案文档; W2 DocumentEditor import 重指向 + 4 测试 mock 同步; W3 grep 验收 4 已批准点 + tsc 0 errors + 25/25 tests passed",
+          "harvested": true
         }
       ]
     }
@@ -753,19 +766,20 @@
       "id": "M27",
       "name": "Security Hardening + Frontend Integration Completion",
       "type": "standard",
-      "status": "planned",
+      "status": "completed",
       "phases": [
         {
           "number": 1,
           "title": "Security Hardening",
-          "status": "planned"
+          "status": "completed"
         },
         {
           "number": 2,
           "title": "Frontend Integration Completion",
-          "status": "pending"
+          "status": "completed"
         }
-      ]
+      ],
+      "completed_at": "2026-06-23T19:18:39.739Z"
     }
   ],
   "project": "niko-studio",

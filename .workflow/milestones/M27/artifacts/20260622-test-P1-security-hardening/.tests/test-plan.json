@@ -1,0 +1,187 @@
+{
+  "target": "M27-P1-security-hardening",
+  "generated_at": "2026-06-22T08:00:00Z",
+  "source_artifacts": ["EXC-20260622-P1-security-hardening", "REV-20260622-P1-security-hardening"],
+  "tests": [
+    {
+      "id": "T-001",
+      "name": "rsAnalyze rejects oversized novelId (>256 chars) with 413",
+      "category": "integration",
+      "expected": "POST /reader/analyze with novelId of 257 chars → HTTP 413, body.error contains 'novelId exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "plan"
+    },
+    {
+      "id": "T-002",
+      "name": "rsAnalyze rejects oversized text (>100k chars) with 413",
+      "category": "integration",
+      "expected": "POST /reader/analyze with text of 100001 chars → HTTP 413, body.error contains 'text exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "plan"
+    },
+    {
+      "id": "T-003",
+      "name": "rsCreateCustomPersona rejects oversized name (>200 chars) with 413",
+      "category": "integration",
+      "expected": "POST /reader/personas/custom with name of 201 chars → HTTP 413, body.error contains 'name exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "plan"
+    },
+    {
+      "id": "T-004",
+      "name": "rsCreateCustomPersona rejects NaN weight with 400",
+      "category": "integration",
+      "expected": "POST /reader/personas/custom with plotWeight=NaN → HTTP 400, body.error contains 'finite number'",
+      "requirement_ref": "SEC-004",
+      "source": "plan"
+    },
+    {
+      "id": "T-005",
+      "name": "rsCreateCustomPersona rejects Infinity weight with 400",
+      "category": "integration",
+      "expected": "POST /reader/personas/custom with characterWeight=Infinity → HTTP 400, body.error contains 'finite number'",
+      "requirement_ref": "SEC-004",
+      "source": "plan"
+    },
+    {
+      "id": "T-006",
+      "name": "rsCreateCustomPersona rejects out-of-range weight with 400",
+      "category": "integration",
+      "expected": "POST /reader/personas/custom with styleWeight=1.5 → HTTP 400, body.error contains 'between 0 and 1'",
+      "requirement_ref": "SEC-004",
+      "source": "plan"
+    },
+    {
+      "id": "T-007",
+      "name": "rsCompare rejects oversized novelId with 413",
+      "category": "integration",
+      "expected": "POST /reader/compare with novelId of 257 chars → HTTP 413, body.error contains 'novelId exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "review_fix"
+    },
+    {
+      "id": "T-008",
+      "name": "rsCompare rejects oversized versionA.text with 413",
+      "category": "integration",
+      "expected": "POST /reader/compare with versionA.text of 100001 chars → HTTP 413, body.error contains 'versionA.text exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "review_fix"
+    },
+    {
+      "id": "T-009",
+      "name": "rsCompare rejects oversized versionB.text with 413",
+      "category": "integration",
+      "expected": "POST /reader/compare with versionB.text of 100001 chars → HTTP 413, body.error contains 'versionB.text exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "review_fix"
+    },
+    {
+      "id": "T-010",
+      "name": "rsDeAI rejects oversized novelId with 413",
+      "category": "integration",
+      "expected": "POST /reader/de-ai with novelId of 257 chars → HTTP 413, body.error contains 'novelId exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "review_fix"
+    },
+    {
+      "id": "T-011",
+      "name": "rsDeAI rejects oversized text with 413",
+      "category": "integration",
+      "expected": "POST /reader/de-ai with text of 100001 chars → HTTP 413, body.error contains 'text exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "review_fix"
+    },
+    {
+      "id": "T-012",
+      "name": "safeResolveWorkspaceRoot throws on path traversal",
+      "category": "unit",
+      "expected": "Setting NIKO_WORKFLOW_WORKSPACE='../etc/passwd' → safeResolveWorkspaceRoot() throws 'path traversal detected'",
+      "requirement_ref": "SEC-002",
+      "source": "plan"
+    },
+    {
+      "id": "T-013",
+      "name": "safeResolveWorkspaceRoot tolerates Windows case mismatch",
+      "category": "unit",
+      "expected": "On Windows, setting NIKO_WORKFLOW_WORKSPACE to a path differing only in case from cwd → no throw, returns resolved path",
+      "requirement_ref": "SEC-002",
+      "source": "review_fix"
+    },
+    {
+      "id": "T-014",
+      "name": "safeResolveWorkspaceRoot allows outside path with ALLOW_OUTSIDE=true",
+      "category": "unit",
+      "expected": "Setting NIKO_WORKFLOW_WORKSPACE='C:/outside' + NIKO_WORKSPACE_ALLOW_OUTSIDE='true' → returns resolved outside path",
+      "requirement_ref": "SEC-002",
+      "source": "plan"
+    },
+    {
+      "id": "T-015",
+      "name": "validateStringLength returns null for valid strings",
+      "category": "unit",
+      "expected": "validateStringLength('hello', 10, 'test') returns null — no error",
+      "requirement_ref": "SEC-001",
+      "source": "plan"
+    },
+    {
+      "id": "T-016",
+      "name": "validateWeight returns null for valid weights in [0,1]",
+      "category": "unit",
+      "expected": "validateWeight(0.5, 0, 1, 'weight') returns null — no error",
+      "requirement_ref": "SEC-004",
+      "source": "plan"
+    },
+    {
+      "id": "T-017",
+      "name": "Chat endpoint rejects oversized message with 413",
+      "category": "integration",
+      "expected": "POST /chat with message > MAX_MESSAGE_CHARS → HTTP 413, body.error contains 'exceeds maximum length'",
+      "requirement_ref": "SEC-001",
+      "source": "plan"
+    },
+    {
+      "id": "T-018",
+      "name": "All Reader endpoints still return 200 for valid short inputs",
+      "category": "integration",
+      "expected": "rsAnalyze/rsGetPersonas/rsCreateCustomPersona/rsGetOverlay with valid short inputs → HTTP 200/201",
+      "requirement_ref": "backward-compat",
+      "source": "plan"
+    },
+    {
+      "id": "T-019",
+      "name": "No TypeScript compilation errors from security hardening changes",
+      "category": "e2e",
+      "expected": "npx tsc --noEmit exits with code 0 — zero TypeScript errors across all modified files",
+      "requirement_ref": "quality-gate",
+      "source": "plan"
+    },
+    {
+      "id": "T-020",
+      "name": "No test regressions from security hardening changes",
+      "category": "e2e",
+      "expected": "npx vitest run shows 5895+ passed tests, zero new failures (7 pre-existing gateway failures are known)",
+      "requirement_ref": "quality-gate",
+      "source": "plan"
+    },
+    {
+      "id": "T-021",
+      "name": "NIKO_WORKFLOW_WORKSPACE no longer read directly in source files",
+      "category": "e2e",
+      "expected": "grep -r NIKO_WORKFLOW_WORKSPACE in mcp/endpoints/ mcp/services/ reader/mcp/ services/ source files (excluding tests + input-validation.ts) returns 0 matches",
+      "requirement_ref": "SEC-002",
+      "source": "plan"
+    },
+    {
+      "id": "T-022",
+      "name": "safeResolveWorkspaceRoot used consistently across endpoints/services",
+      "category": "e2e",
+      "expected": "grep safeResolveWorkspaceRoot across mcp/endpoints/ mcp/services/ reader/mcp/ services/ source files returns >=12 matches",
+      "requirement_ref": "SEC-002",
+      "source": "plan"
+    }
+  ],
+  "coverage": {
+    "requirements_mapped": ["SEC-001", "SEC-002", "SEC-004", "backward-compat", "quality-gate"],
+    "requirements_unmapped": []
+  }
+}

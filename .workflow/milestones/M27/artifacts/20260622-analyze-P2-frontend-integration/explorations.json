@@ -1,0 +1,69 @@
+{
+  "$schema": "explorations/1.0",
+  "session_id": "ANL-P2-frontend-integration-2026-06-22",
+  "perspective": "technical",
+  "findings": [
+    {
+      "id": "F-001",
+      "title": "DocumentEditor.tsx 直接跨边界调用后端纯函数",
+      "severity": "P0",
+      "description": "DocumentEditor.tsx:22-24 直接 import buildPersonalizedCraftProfile (value) + PersonalizedCraftRecommendation (type) from src-ts/analysis/personalized-craft-profile。这是唯一组件层直接调用后端实现函数的情况。",
+      "evidence_refs": ["anchor-1"],
+      "fix_direction": "在 api/analysis.ts 或新建 api/writing-craft-profile.ts re-export，组件改为从 api 层导入"
+    },
+    {
+      "id": "F-002",
+      "title": "api/narrative-visualization.ts API 层直接导入 src-ts 类型",
+      "severity": "P1",
+      "description": "api/narrative-visualization.ts:6+16 直接从 src-ts/narrative/types/visualization-types 导入 7 个类型。API 层不应直接依赖 src-ts。",
+      "evidence_refs": ["anchor-2"],
+      "fix_direction": "将类型移到 types/narrative-visualization.ts，api/ 从 types/ re-export"
+    },
+    {
+      "id": "F-003",
+      "title": "writingSessionTelemetry.ts 桥接模式评估",
+      "severity": "P2",
+      "description": "utils/writingSessionTelemetry.ts:5+7 封装 analyzeWritingSessionIntelligenceCore 为 summarizeWritingSessionTelemetry。桥接模式有效但桥接文件本身 import src-ts。",
+      "evidence_refs": ["anchor-3"],
+      "fix_direction": "考虑通过 api/ 层 re-export 纯函数，或保持现状但文档化为已知桥接模式"
+    },
+    {
+      "id": "F-004",
+      "title": "types/workspace.ts 成熟桥接模式",
+      "severity": "P2",
+      "description": "types/workspace.ts:12+35 导入 6 值 + 12 类型，提供 3 个 wrapper。23+ 消费者通过 @/types/workspace 导入。模式成熟且风险低。",
+      "evidence_refs": ["anchor-4"],
+      "fix_direction": "保持现状，文档化为已批准的桥接模式"
+    },
+    {
+      "id": "F-005",
+      "title": "reader-endpoints.ts 拆分方案",
+      "severity": "info",
+      "description": "1146 行，13 个导出函数，8 个接口。建议按功能分为 4 个文件：analyze+overlay, personas, feedback, compare+deai。拆分执行 deferred to M28+。",
+      "evidence_refs": ["anchor-5"],
+      "fix_direction": "Phase 2 仅文档化拆分方案，不执行拆分"
+    }
+  ],
+  "technical_solutions": [
+    {
+      "round": 1,
+      "solution": "api/analysis.ts 扩展为 buildPersonalizedCraftProfile 的 re-export 点",
+      "problem": "DocumentEditor.tsx 直接 import src-ts 后端函数",
+      "rationale": "api/analysis.ts 已存在且语义匹配，扩展它比新建文件更符合现有模式",
+      "alternatives": ["新建 api/writing-craft-profile.ts（更精确但多一个文件）", "通过 MCP endpoint 暴露（过度工程化，纯函数不需要网络调用）"],
+      "status": "proposed",
+      "evidence_refs": ["anchor-1"],
+      "next_action": "确认 api/analysis.ts 扩展方案"
+    },
+    {
+      "round": 1,
+      "solution": "新建 types/narrative-visualization.ts + api/ 从 types/ re-export",
+      "problem": "api/narrative-visualization.ts 直接 import src-ts 类型",
+      "rationale": "遵循 types/ → api/ 层级关系，types/ 是类型真相源，api/ 是函数/服务层",
+      "alternatives": ["在 api/ 层内定义类型副本（违反 DRY）"],
+      "status": "proposed",
+      "evidence_refs": ["anchor-2"],
+      "next_action": "确认类型迁移方案"
+    }
+  ]
+}

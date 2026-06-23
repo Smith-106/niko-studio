@@ -1,0 +1,29 @@
+{
+  "target": "M27-P1-security-hardening",
+  "completed_at": "2026-06-22T08:20:00Z",
+  "results": [
+    { "id": "T-001", "name": "rsAnalyze rejects oversized novelId (>256 chars) with 413", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(413) + expect(error).toContain('novelId')" },
+    { "id": "T-002", "name": "rsAnalyze rejects oversized text (>100k chars) with 413", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(413) + expect(error).toContain('text')" },
+    { "id": "T-003", "name": "rsCreateCustomPersona rejects oversized name (>200 chars) with 413", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(413) + expect(error).toContain('name')" },
+    { "id": "T-004", "name": "rsCreateCustomPersona rejects NaN weight with 400", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(400) + expect(error).toContain('finite number')" },
+    { "id": "T-005", "name": "rsCreateCustomPersona rejects Infinity weight with 400", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(400) + expect(error).toContain('finite number')" },
+    { "id": "T-006", "name": "rsCreateCustomPersona rejects out-of-range weight with 400", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(400) + expect(error).toContain('between 0 and 1')" },
+    { "id": "T-007", "name": "rsCompare rejects oversized novelId with 413", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(413) + expect(error).toContain('novelId')" },
+    { "id": "T-008", "name": "rsCompare rejects oversized versionA.text with 413", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(413) + expect(error).toContain('versionA.text')" },
+    { "id": "T-009", "name": "rsCompare rejects oversized versionB.text with 413", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(413) + expect(error).toContain('versionB.text')" },
+    { "id": "T-010", "name": "rsDeAI rejects oversized novelId with 413", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(413) + expect(error).toContain('novelId')" },
+    { "id": "T-011", "name": "rsDeAI rejects oversized text with 413", "status": "pass", "details": "reader-endpoints.test.ts — expect(statusCode).toBe(413) + expect(error).toContain('text')" },
+    { "id": "T-012", "name": "safeResolveWorkspaceRoot throws on path traversal", "status": "pass", "details": "input-validation.test.ts — expect(() => fn()).toThrow('path traversal')" },
+    { "id": "T-013", "name": "safeResolveWorkspaceRoot tolerates Windows case mismatch", "status": "pass", "details": "input-validation.test.ts — expect(() => fn()).not.toThrow() + toLowerCase equal" },
+    { "id": "T-014", "name": "safeResolveWorkspaceRoot allows outside path with ALLOW_OUTSIDE=true", "status": "pass", "details": "input-validation.test.ts — expect(result).toContain('outside')" },
+    { "id": "T-015", "name": "validateStringLength returns null for valid strings", "status": "pass", "details": "input-validation.test.ts — expect(result).toBeNull()" },
+    { "id": "T-016", "name": "validateWeight returns null for valid weights in [0,1]", "status": "pass", "details": "input-validation.test.ts — expect(validateWeight(0.5,...)).toBeNull()" },
+    { "id": "T-017", "name": "Chat endpoint rejects oversized message with 413", "status": "pass", "details": "chat.additional-coverage.test.ts — covers validateStringLength integration" },
+    { "id": "T-018", "name": "Reader endpoints still return 200/201 for valid short inputs", "status": "pass", "details": "reader-endpoints.test.ts — all basic scenarios return 200/201" },
+    { "id": "T-019", "name": "No TypeScript compilation errors from security hardening changes", "status": "pass", "details": "npx tsc --noEmit exit code 0 (live e2e)" },
+    { "id": "T-020", "name": "No test regressions from security hardening changes", "status": "pass", "details": "npx vitest run: 5895 passed / 7 pre-existing gateway failures / 0 new failures (live e2e)" },
+    { "id": "T-021", "name": "NIKO_WORKFLOW_WORKSPACE no longer read directly in source files", "status": "pass", "details": "grep returns 0 matches excluding input-validation.ts + tests (live e2e)" },
+    { "id": "T-022", "name": "safeResolveWorkspaceRoot used consistently across endpoints/services", "status": "pass", "details": "grep returns 12 files with matches (live e2e)" }
+  ],
+  "summary": { "total": 22, "passed": 22, "issues": 0, "skipped": 0 }
+}

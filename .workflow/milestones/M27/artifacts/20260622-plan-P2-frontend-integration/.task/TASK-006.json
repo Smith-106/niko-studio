@@ -1,0 +1,101 @@
+{
+  "id": "TASK-006",
+  "title": "Phase 2 验收：grep 跨边界 import 仅剩 4 个已批准 re-export/桥接点 + tsc --noEmit + DocumentEditor 回归",
+  "description": "依赖 TASK-001 + TASK-003 + TASK-005 完成。执行 Phase 2 success criteria 全量验收：(1) grep 验收 desktop/src/ 下 `from.*['\\\"]\\..*src-ts/` 返回的文件集合 ⊆ 4 个已批准 re-export/桥接点 {types/workspace.ts, utils/writingSessionTelemetry.ts, types/narrative-visualization.ts, api/analysis.ts}（2 个 pre-existing 桥接 + 2 个本次新建的类型/API re-export 真相源；排除注释中的 src-ts 引用）。(2) tsc --noEmit 零错误。(3) DocumentEditor 4 测试套件 exit 0。(4) narrative-visualization 下游消费者 import 仍有效（tsc 覆盖）。对应 REQ-005 + 全部 success criteria。",
+  "type": "verification",
+  "priority": "high",
+  "effort": "medium",
+  "action": "依次执行：(a) `grep -rnE \"from.*['\\\"]\\..*src-ts/\" desktop/src/` 列出所有匹配行，人工/脚本核对结果集 ⊆ {desktop/src/types/workspace.ts, desktop/src/utils/writingSessionTelemetry.ts, desktop/src/types/narrative-visualization.ts, desktop/src/api/analysis.ts} 4 个已批准 re-export/桥接点，且匹配均为 import/re-export 语句（非注释）。(b) `npx tsc --noEmit -p desktop` 或项目既定 tsc 命令，确认 exit 0。(c) `npx vitest run` 4 个 DocumentEditor 测试文件，确认 exit 0。(d) 汇总验收报告（直接返回，不写文件）：grep 结果集、tsc exit code、vitest 通过数。若任一失败，回溯对应 TASK 修复后重验。",
+  "scope": "desktop/src/",
+  "focus_paths": [],
+  "read_first": [
+    ".workflow/scratch/20260622-plan-P2-frontend-integration/plan.json",
+    ".workflow/scratch/20260622-analyze-P2-frontend-integration/context.md"
+  ],
+  "depends_on": [
+    "TASK-001",
+    "TASK-003",
+    "TASK-005"
+  ],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "grep -rnE \"from.*['\\\"]\\..*src-ts/\" desktop/src/ 返回的文件集合 ⊆ {desktop/src/types/workspace.ts, desktop/src/utils/writingSessionTelemetry.ts, desktop/src/types/narrative-visualization.ts, desktop/src/api/analysis.ts}（4 个已批准 re-export/桥接点：2 个 pre-existing 桥接 + 2 个本次新建的类型/API re-export 真相源）",
+      "npx tsc --noEmit exit code = 0（TypeScript 编译零错误）",
+      "npx vitest run 4 个 DocumentEditor 测试文件 exit code = 0（写作建议功能回归测试通过）",
+      "[UI-observable] vitest run desktop/src/components/DocumentEditor.*.test.tsx exits 0（写作建议功能端到端无回归）"
+    ],
+    "verification": "grep -rnE \"from.*['\\\"]\\..*src-ts/\" desktop/src/ | sort（命中文件须 ⊆ 4 个已批准点）；npx tsc --noEmit；npx vitest run desktop/src/components/DocumentEditor.additional.test.tsx desktop/src/components/DocumentEditor.branch-gap.additional.test.tsx desktop/src/components/DocumentEditor.branches.additional.test.tsx desktop/src/components/DocumentEditor.branches.extra.test.tsx",
+    "definition_of_done": "Phase 2 全部 success criteria 验证通过：跨边界 import 仅剩 4 个已批准 re-export/桥接点（2 pre-existing + 2 本次新建真相源）、tsc 零错误、DocumentEditor 测试套件零回归，M27 Phase 2 可宣告完成"
+  },
+  "files": [],
+  "implementation": [
+    "确认 TASK-001 + TASK-003 + TASK-005 已完成（前置依赖：TASK-001 提供 types/ 真相源，TASK-003 提供桥接注释作为排除 workspace.ts/writingSessionTelemetry.ts 的语义依据，TASK-005 完成组件 import 重指向）",
+    "运行 `grep -rnE \"from.*['\\\"]\\..*src-ts/\" desktop/src/` 收集全部匹配",
+    "核对匹配文件集合 ⊆ {desktop/src/types/workspace.ts, desktop/src/utils/writingSessionTelemetry.ts, desktop/src/types/narrative-visualization.ts, desktop/src/api/analysis.ts} 4 个已批准点，若多出其他文件则对应 TASK 未清干净，回溯修复",
+    "运行 `npx tsc --noEmit`（或项目既定类型检查命令），确认 exit 0；若有错误，定位是 TASK-001 类型链断裂还是 TASK-005 import 路径错误，回溯修复",
+    "运行 `npx vitest run` 4 个 DocumentEditor 测试文件，确认 exit 0；若失败，检查 vi.mock 路径是否与 DocumentEditor.tsx import 一致",
+    "汇总验收结果（grep 结果集 + tsc exit + vitest 通过数）直接返回，不写文件"
+  ],
+  "test": {
+    "commands": [
+      "grep -rnE \"from.*['\\\"]\\..*src-ts/\" desktop/src/",
+      "npx tsc --noEmit",
+      "npx vitest run desktop/src/components/DocumentEditor.additional.test.tsx desktop/src/components/DocumentEditor.branch-gap.additional.test.tsx desktop/src/components/DocumentEditor.branches.additional.test.tsx desktop/src/components/DocumentEditor.branches.extra.test.tsx"
+    ],
+    "unit": [
+      "desktop/src/components/DocumentEditor.additional.test.tsx",
+      "desktop/src/components/DocumentEditor.branch-gap.additional.test.tsx",
+      "desktop/src/components/DocumentEditor.branches.additional.test.tsx",
+      "desktop/src/components/DocumentEditor.branches.extra.test.tsx"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "grep 跨边界 import 仅 4 个已批准 re-export/桥接点",
+      "tsc --noEmit exit 0",
+      "DocumentEditor 4 测试 exit 0"
+    ]
+  },
+  "reference": {
+    "pattern": "grep 验收模式（from.*['\\\"]\\..*src-ts/ 精确匹配 import/re-export 语句，排除注释；命中文件集合须 ⊆ 4 个已批准点）",
+    "files": [
+      ".workflow/scratch/20260622-analyze-P2-frontend-integration/context.md"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Phase 2 收尾验收任务，不产生代码改动，仅验证 W1+W2 产出的跨边界 import 清除 + 类型链 + 回归。grep 模式用 from.*['\\\"]\\..*src-ts/ 精确匹配 import/re-export 语句（G-002 灰色地带），排除注释中的 src-ts 引用。已批准点集合为 4 个：types/workspace.ts + utils/writingSessionTelemetry.ts（L-004 pre-existing 桥接）+ types/narrative-visualization.ts + api/analysis.ts（本次 TASK-001/002 新建的 types/ 真相源 + api/ re-export 落点，属已批准的前端-后端边界模式）",
+    "decision_factors": [
+      "L-004 Locked（2 pre-existing 桥接点排除）",
+      "L-001/L-003（2 个本次新建 re-export 真相源为合法桥接）",
+      "G-002 grep 精确模式",
+      "context.md success criteria 1-4"
+    ],
+    "tradeoffs": "验收任务无代码产出，但 gate 住 Phase 2 完成判定"
+  },
+  "risks": [
+    {
+      "risk": "grep 命中 TASK-001/005 遗漏的 import 点（超出 4 个已批准点）",
+      "mitigation": "回溯对应 TASK 修复后重验；验收报告记录命中清单便于定位"
+    },
+    {
+      "risk": "TASK-003 桥接注释未落盘导致 workspace.ts/writingSessionTelemetry.ts 排除依据缺失",
+      "mitigation": "depends_on 含 TASK-003，确保注释先于验收落盘"
+    },
+    {
+      "risk": "tsc 报错源于 TASK-001 类型链断裂（types/ → api/ re-export）",
+      "mitigation": "回溯 TASK-001 检查 types/narrative-visualization.ts 7 类型导出与 api/ re-export 一致性"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "15m",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 3,
+    "execution_group": "P2-W3",
+    "executor": "agent"
+  },
+  "completed_at": "2026-06-23T19:01:05.606Z"
+}

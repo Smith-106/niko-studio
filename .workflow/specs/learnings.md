@@ -277,3 +277,57 @@ Milestone: M26
 纯计算函数跨边界 import 修复：api/analysis.ts 追加 re-export 块（带「纯计算直通，非网络 API」语义注释），types/ 层作为类型真相源下沉 src-ts 引用。vi.mock 路径必须与生产 import 路径一致，且测试文件的 import 路径也需同步迁移（否则 vi.mocked() 获取真实函数而非 mock 函数，导致 mockReturnValue 失败）。桥接模式（workspace.ts / writingSessionTelemetry.ts）作为已批准例外文档化 + grep 验收排除。grep 验收的「已批准桥接点」集合须包含本次新建的 re-export 桥接点（types/ + api/），不能仅列 pre-existing 桥接。
 Milestone: M27 Phase 2
 </spec-entry>
+
+<spec-entry category="learning" keywords="workspace-root,delegation-pattern,backward-compatibility,refactor,path-traversal" date="2026-06-24" source="milestone-complete">
+
+### safeResolveWorkspaceRoot 替换需区分三种委托模式以保后向兼容
+
+替换散落的 resolveWorkspaceRoot/resolveWorkflowWorkspace/内联 env 读取为统一 safeResolveWorkspaceRoot 时，需分三种模式处理：A) endpoint 本地函数委托、B) service 函数委托（保留有额外逻辑的变体如 resolveWorkspaceRootForRequest）、C) 内联模式直接替换。盲目统一会破坏有附加逻辑的调用点。
+Milestone: M27
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="status-code,http-semantics,refactor-regression,test-assertion,input-validation" date="2026-06-24" source="milestone-complete">
+
+### 校验模块共享后 HTTP 状态码变更需同步更新测试断言
+
+将 inline 校验重构为共享模块时，状态码可能隐式变更（如 per-message 长度溢出从 400→413 Payload Too Large）。重构后需 grep 全部断言该状态码的测试文件并同步更新，否则测试失败看似回归实则语义更正。
+Milestone: M27
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="defense-in-depth,NaN,Number.isFinite,persistence-corruption,fallback-value" date="2026-06-24" source="milestone-complete">
+
+### NaN/Infinity 防御需双层：入口校验 + 内部 fallback（defense-in-depth）
+
+adjustPersonaWeights 即使有入口 validateWeight 校验，内部仍需 Number.isFinite fallback 将损坏数据降级为默认值 0.5。原因：持久化数据可能在入口校验之前已损坏（旧版本写入、手动编辑 store），入口校验仅拦截新请求不覆盖存量。
+Milestone: M27
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="path-containment,tmpdir,ALLOW_OUTSIDE,Windows-path-normalization,security-regression" date="2026-06-24" source="milestone-complete">
+
+### path containment 安全重构触发批量测试环境变量注入
+
+safeResolveWorkspaceRoot 的路径收容检查导致使用 tmpdir 的测试全部失败（tmpdir 不在 cwd 内）。修复需在 14+ 测试文件添加 NIKO_WORKSPACE_ALLOW_OUTSIDE=true 环境变量，且 Windows 路径需 path.resolve 规范化才能通过比较。安全重构的测试修复量可能远超生产代码。
+Milestone: M27
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="regression-verification,git-stash,baseline,pre-existing-failure,security-hardening" date="2026-06-24" source="milestone-complete">
+
+### 安全加固回归验证须用 git stash 基线对照区分预存失败
+
+安全加固后测试套件从 46 失败降至 7，但 7 处全部是预存在的 gateway server.on 错误。通过 git stash 在 clean tree 运行同一测试集确认基线，避免将预存失败误归为本次引入。回归验证必须建立基线对照而非仅看绝对通过数。
+Milestone: M27
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="god-module,topological-sort,leaf-first,backward-compatibility,re-export-anchor" date="2026-06-24" source="milestone-complete">
+
+### reader-endpoints.ts 拆分按叶子组优先：B(personas)→C→A→D 最小破坏面
+
+1146 行 / 13 函数的 god module 拆分应按依赖拓扑排序从叶子组开始：B(personas) 和 C(feedback) 无下游依赖可先拆，A(analyze+overlay) 次之，D(compare+deai) 最末。跨组共享函数（clearReaderStores）最后处理。主文件瘦身放最后以保持向后兼容 re-export 锚。
+Milestone: M27
+
+</spec-entry>

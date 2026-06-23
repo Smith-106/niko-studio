@@ -1,0 +1,14 @@
+{
+  "pruned_at": "2026-06-24T00:00:00Z",
+  "pruned_from": "context-package.json",
+  "open_questions": [
+    {"area": "注释措辞", "question": "api/analysis.ts re-export 块的具体注释措辞？", "options": ["默认方案：纯计算直通 + 非网络 API 标注", "planner 可调整措辞但保留语义"]},
+    {"area": "文档位置", "question": "reader-endpoints.ts 拆分方案文档存放位置？", "options": ["scratch 目录", "knowhow/", "M28 milestone 目录"]}
+  ],
+  "constraints": [
+    {"id": "F-001", "title": "api/analysis.ts re-export 块注释措辞", "status": "open", "ref": "context.md#Free"},
+    {"id": "F-002", "title": "types/narrative-visualization.ts 是否包含额外类型", "status": "open", "ref": "context.md#Free"},
+    {"id": "F-003", "title": "测试 mock 路径迁移的验证方式", "status": "open", "ref": "context.md#Free"},
+    {"id": "F-004", "title": "reader-endpoints.ts 拆分方案文档存放位置", "status": "open", "ref": "context.md#Free"}
+  ]
+}

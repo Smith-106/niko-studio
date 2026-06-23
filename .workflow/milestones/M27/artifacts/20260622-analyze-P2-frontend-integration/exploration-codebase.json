@@ -1,0 +1,117 @@
+{
+  "$schema": "exploration-codebase/1.0",
+  "session_id": "ANL-P2-frontend-integration-2026-06-22",
+  "phase": 2,
+  "milestone": "M27",
+  "timestamp": "2026-06-22T12:15:00Z",
+  "relevant_files": [
+    "desktop/src/components/DocumentEditor.tsx",
+    "desktop/src/types/workspace.ts",
+    "desktop/src/utils/writingSessionTelemetry.ts",
+    "desktop/src/api/narrative-visualization.ts",
+    "desktop/src/api/reader.ts",
+    "desktop/src/api/analysis.ts",
+    "desktop/src/api/workspace.ts",
+    "desktop/src/types/reader.ts",
+    "src-ts/analysis/personalized-craft-profile.ts",
+    "src-ts/analysis/writing-session-intelligence-core.ts",
+    "src-ts/narrative/types/visualization-types.ts",
+    "src-ts/project/workspace-model.ts",
+    "src-ts/reader/mcp/reader-endpoints.ts"
+  ],
+  "call_chains": [
+    {
+      "from": "desktop/src/components/DocumentEditor.tsx:22-24",
+      "to": "src-ts/analysis/personalized-craft-profile.ts",
+      "imports": ["buildPersonalizedCraftProfile", "PersonalizedCraftRecommendation"],
+      "type": "value+type cross-boundary import",
+      "severity": "P0"
+    },
+    {
+      "from": "desktop/src/api/narrative-visualization.ts:6+16",
+      "to": "src-ts/narrative/types/visualization-types.ts",
+      "imports": ["NarrativeVisualizationBundle", "NarrativeVisualizationChapterInput", "NarrativeVisualizationTensionData", "NarrativeVisualizationCharacterData", "NarrativeVisualizationTimelineData", "NarrativeVisualizationTimelineEvent", "NarrativeVisualizationTensionPoint"],
+      "type": "type-only cross-boundary import in api layer",
+      "severity": "P1"
+    },
+    {
+      "from": "desktop/src/utils/writingSessionTelemetry.ts:5+7",
+      "to": "src-ts/analysis/writing-session-intelligence-core.ts",
+      "imports": ["analyzeWritingSessionIntelligenceCore", "WritingSessionIntelligenceResult", "WritingSessionTelemetry"],
+      "type": "value+type bridged import",
+      "severity": "P2"
+    },
+    {
+      "from": "desktop/src/types/workspace.ts:12+35",
+      "to": "src-ts/project/workspace-model.ts",
+      "imports": ["6 values + 12 types (normalizeProjectWorkspaceContext, projectWorkspaceToLegacyChatContext, etc.)"],
+      "type": "bridged import with wrapper functions",
+      "severity": "P2 (already bridged)"
+    }
+  ],
+  "data_flows": [
+    {
+      "source": "DocumentEditor.tsx",
+      "function": "buildPersonalizedCraftProfile",
+      "sink": "PersonalizedCraftRecommendation[] in editor UI",
+      "pattern": "Component → direct backend call → UI rendering"
+    },
+    {
+      "source": "DocumentEditor.tsx",
+      "function": "summarizeWritingSessionTelemetry",
+      "sink": "WritingSessionTelemetry in editor telemetry",
+      "pattern": "Component → utility wrapper → backend pure function"
+    }
+  ],
+  "code_anchors": [
+    {
+      "id": "anchor-1",
+      "file": "desktop/src/components/DocumentEditor.tsx",
+      "lines": "22-24",
+      "description": "P0 cross-boundary import: buildPersonalizedCraftProfile + PersonalizedCraftRecommendation from src-ts/analysis/personalized-craft-profile",
+      "severity": "critical"
+    },
+    {
+      "id": "anchor-2",
+      "file": "desktop/src/api/narrative-visualization.ts",
+      "lines": "6+16",
+      "description": "P1 api layer directly imports 7 visualization types from src-ts/narrative/types/visualization-types",
+      "severity": "medium"
+    },
+    {
+      "id": "anchor-3",
+      "file": "desktop/src/utils/writingSessionTelemetry.ts",
+      "lines": "5+7",
+      "description": "P2 bridged import: analyzeWritingSessionIntelligenceCore + 2 types from src-ts/analysis/writing-session-intelligence-core",
+      "severity": "low"
+    },
+    {
+      "id": "anchor-4",
+      "file": "desktop/src/types/workspace.ts",
+      "lines": "12+35",
+      "description": "P2 bridged import: 6 values + 12 types from src-ts/project/workspace-model. Already has wrapper pattern, consumers use @/types/workspace",
+      "severity": "low"
+    },
+    {
+      "id": "anchor-5",
+      "file": "src-ts/reader/mcp/reader-endpoints.ts",
+      "lines": "1-1146",
+      "description": "Split candidate: 1146 lines, 13 exports, 8 interfaces. Grouped into analyze+overlay, personas, feedback, compare+deai",
+      "severity": "info"
+    }
+  ],
+  "cross_boundary_count": {
+    "production_files": 4,
+    "test_files": 2,
+    "total_imports": 6,
+    "p0_critical": 1,
+    "p1_medium": 1,
+    "p2_low": 2
+  },
+  "reader_endpoints_split_readiness": {
+    "line_count": 1146,
+    "export_count": 13,
+    "interface_count": 8,
+    "proposed_groups": ["analyze+overlay", "personas", "feedback", "compare+deai"]
+  }
+}

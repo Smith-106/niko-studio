@@ -1,0 +1,7 @@
+{
+  "target": "M27-P1-security-hardening",
+  "generated_at": "2026-06-22T08:20:00Z",
+  "requirements_covered": ["SEC-001", "SEC-002", "SEC-004", "backward-compat", "quality-gate"],
+  "requirements_uncovered": [],
+  "coverage_percentage": 100.0
+}
