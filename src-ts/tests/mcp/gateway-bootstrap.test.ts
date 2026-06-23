@@ -5,7 +5,7 @@ import {
 } from '../../mcp/gateway-bootstrap';
 
 // Mock the container initialization so we can test pure config logic
-vi.mock('../../container/gateway-control-plane', () => ({
+vi.mock('../../composition-root/gateway-control-plane', () => ({
   initializeGatewayControlPlane: () => ({ container: { id: 'test-container' } }),
   prewarmGatewayControlPlane: vi.fn(),
 }));

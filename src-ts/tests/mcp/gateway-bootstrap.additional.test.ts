@@ -20,7 +20,7 @@ async function loadGatewayBootstrapModule() {
     createServer: createServerMock,
   }));
 
-  vi.doMock('../../container/gateway-control-plane', () => ({
+  vi.doMock('../../composition-root/gateway-control-plane', () => ({
     initializeGatewayControlPlane: initializeGatewayControlPlaneMock,
     prewarmGatewayControlPlane: prewarmGatewayControlPlaneMock,
     shutdownGatewayControlPlane: shutdownGatewayControlPlaneMock,
@@ -59,7 +59,7 @@ describe('gateway bootstrap additional coverage', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.doUnmock('node:http');
-    vi.doUnmock('../../container/gateway-control-plane');
+    vi.doUnmock('../../composition-root/gateway-control-plane');
     vi.doUnmock('../../mcp/config');
     vi.doUnmock('../../mcp/gateway-request-handler');
     vi.doUnmock('../../mcp/routes');
@@ -73,6 +73,7 @@ describe('gateway bootstrap additional coverage', () => {
     const server = {
       listen: vi.fn((port: number, host: string, callback: () => void) => callback()),
       close: vi.fn((callback: () => void) => callback()),
+      on: vi.fn(),
     };
     const wsInitializeMock = vi.fn();
 
@@ -164,6 +165,7 @@ describe('gateway bootstrap additional coverage', () => {
     const server = {
       listen: vi.fn((_port: number, _host: string, callback: () => void) => callback()),
       close: vi.fn((callback: () => void) => callback()),
+      on: vi.fn(),
     };
 
     resolveGatewayHostPortMock.mockReturnValue({ host: '0.0.0.0', port: 8787 });
@@ -203,6 +205,7 @@ describe('gateway bootstrap additional coverage', () => {
     const server = {
       listen: vi.fn((port: number, host: string, callback: () => void) => callback()),
       close: vi.fn(),
+      on: vi.fn(),
     };
 
     resolveGatewayHostPortMock.mockReturnValue({ host: '0.0.0.0', port: 8787 });
