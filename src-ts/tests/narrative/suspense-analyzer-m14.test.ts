@@ -9,17 +9,16 @@ import {
 } from '../../narrative/suspense-analyzer';
 import {
   NarrativeTechnique,
-  NARRATIVE_TECHNIQUES,
   GenreBeatType,
-  GENRE_BEATS,
 } from '../../narrative/writing-craft/craft-catalog';
+import { getNarrativeTechniquesCatalog, getGenreBeatsCatalog } from '../../narrative/writing-craft/craft-catalog';
 
 describe('SuspenseAnalyzer — M14 narrative techniques', () => {
   const analyzer = new SuspenseAnalyzer();
 
-  describe('NARRATIVE_TECHNIQUES catalog', () => {
+  describe('getNarrativeTechniquesCatalog() catalog', () => {
     it('has 8 technique entries with complete data', () => {
-      const entries = Object.values(NARRATIVE_TECHNIQUES);
+      const entries = Object.values(getNarrativeTechniquesCatalog());
       expect(entries).toHaveLength(8);
 
       for (const def of entries) {
@@ -33,17 +32,17 @@ describe('SuspenseAnalyzer — M14 narrative techniques', () => {
     });
 
     it('each technique has a unique label', () => {
-      const labels = Object.values(NARRATIVE_TECHNIQUES).map((d) => d.label);
+      const labels = Object.values(getNarrativeTechniquesCatalog()).map((d) => d.label);
       expect(new Set(labels).size).toBe(8);
     });
 
     it('ESCALATION_LADDER has upgrade/pressure keywords', () => {
-      const def = NARRATIVE_TECHNIQUES[NarrativeTechnique.ESCALATION_LADDER];
+      const def = getNarrativeTechniquesCatalog()[NarrativeTechnique.ESCALATION_LADDER];
       expect(def.detectionKeywords).toContain('升级');
     });
 
     it('RED_HERRING has misdirection keywords', () => {
-      const def = NARRATIVE_TECHNIQUES[NarrativeTechnique.RED_HERRING];
+      const def = getNarrativeTechniquesCatalog()[NarrativeTechnique.RED_HERRING];
       expect(def.detectionKeywords).toContain('误导');
     });
   });
@@ -115,9 +114,9 @@ describe('SuspenseAnalyzer — M14 narrative techniques', () => {
 describe('SuspenseAnalyzer — M14 genre beats', () => {
   const analyzer = new SuspenseAnalyzer();
 
-  describe('GENRE_BEATS catalog', () => {
+  describe('getGenreBeatsCatalog() catalog', () => {
     it('has 10 genre entries with complete data', () => {
-      const entries = Object.values(GENRE_BEATS);
+      const entries = Object.values(getGenreBeatsCatalog());
       expect(entries).toHaveLength(10);
 
       for (const def of entries) {
@@ -132,18 +131,18 @@ describe('SuspenseAnalyzer — M14 genre beats', () => {
     });
 
     it('each genre has a unique label', () => {
-      const labels = Object.values(GENRE_BEATS).map((d) => d.label);
+      const labels = Object.values(getGenreBeatsCatalog()).map((d) => d.label);
       expect(new Set(labels).size).toBe(10);
     });
 
     it('MONSTER_IN_THE_HOUSE has enclosed-space + monster keywords', () => {
-      const def = GENRE_BEATS[GenreBeatType.MONSTER_IN_THE_HOUSE];
+      const def = getGenreBeatsCatalog()[GenreBeatType.MONSTER_IN_THE_HOUSE];
       expect(def.typicalKeywords).toContain('封闭');
       expect(def.typicalKeywords).toContain('怪物');
     });
 
     it('beat positions are within 0-1 range', () => {
-      for (const def of Object.values(GENRE_BEATS)) {
+      for (const def of Object.values(getGenreBeatsCatalog())) {
         for (const beat of def.beatSequence) {
           expect(beat.position).toBeGreaterThanOrEqual(0);
           expect(beat.position).toBeLessThanOrEqual(1);

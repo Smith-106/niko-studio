@@ -8,7 +8,7 @@
   "priority": "high",
   "effort": "medium",
   "action": "1) 修改 src-ts/mcp/gateway-bootstrap.ts 第 3 行 import 路径：'../container/gateway-control-plane' -> '../composition-root/gateway-control-plane'。2) 在 src-ts/container/types.ts 新增 `export interface IWorkflowEventRelay { initialize(server: Server): void; close(): Promise<void>; }`。3) 修改 src-ts/container/adapters.ts 第 97 行：将 `import { WorkflowEventRelay } from '../mcp/gateway-ws'` 改为 `import type { IWorkflowEventRelay } from './types'`，并在 adapters.ts 中所有使用 WorkflowEventRelay 类型的地方替换为 IWorkflowEventRelay。engine.ts 保持原样，不做修改。",
-  "status": "pending",
+  "status": "completed",
   "completed_at": null,
   "actual_duration": null,
 

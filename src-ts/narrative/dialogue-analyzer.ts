@@ -1,13 +1,13 @@
 /**
  * Dialogue Quality Analyzer
  *
- * Based on McKee dialogue theory + DIALOGUE_RULES from craft-catalog:
+ * Based on McKee dialogue theory + getDialogueRulesCatalog() from craft-catalog:
  * - Three-function rule: each line should serve at least 2 of (plot, character, theme, conflict)
  * - Subtext detection: is dialogue saying what characters really mean?
  * - Voice differentiation: do different characters sound distinct?
  */
 
-import { DIALOGUE_RULES } from './writing-craft/craft-catalog';
+import { getDialogueRulesCatalog } from './writing-craft/craft-catalog';
 
 // ============================================================
 // Enums
@@ -121,7 +121,7 @@ export class DialogueAnalyzer {
       evidence: subtextHits,
     });
 
-    const onTheNose = DIALOGUE_RULES.showDontTell.badPatterns.filter((p) => text.includes(p));
+    const onTheNose = getDialogueRulesCatalog().showDontTell.badPatterns.filter((p) => text.includes(p));
     scores.push({
       dimension: DialogueQuality.ON_THE_NOSE,
       label: '直白对话',

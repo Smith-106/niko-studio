@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { SuspenseAnalyzer } from '../../narrative/suspense-analyzer';
-import { MysterySubtype, MYSTERY_SUBTYPES } from '../../narrative/writing-craft/craft-catalog';
+import { MysterySubtype, getMysterySubtypesCatalog } from '../../narrative/writing-craft/craft-catalog';
 
 describe('SuspenseAnalyzer — M16 mystery & deduction', () => {
   const analyzer = new SuspenseAnalyzer();
 
-  describe('MysterySubtype enum + MYSTERY_SUBTYPES', () => {
+  describe('MysterySubtype enum + getMysterySubtypesCatalog()', () => {
     it('has exactly 4 entries', () => {
       expect(Object.values(MysterySubtype)).toHaveLength(4);
     });
 
     it('each subtype has coreRules and representativeWorks', () => {
-      for (const def of Object.values(MYSTERY_SUBTYPES)) {
+      for (const def of Object.values(getMysterySubtypesCatalog())) {
         expect(def.coreRules.length).toBeGreaterThan(0);
         expect(def.representativeWorks.length).toBeGreaterThan(0);
         expect(def.detectionKeywords.length).toBeGreaterThan(0);

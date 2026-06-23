@@ -8,9 +8,9 @@
   "priority": "high",
   "effort": "medium",
   "action": "1) 在 craft-catalog.ts 中，将每个 `export const FOO = getFoo()` 改为 `export function getFoo(): FooType { return getFooFromLoader(); }`，其中 getFooFromLoader 从 catalog-loader 导入的同名 getter 函数。使用 catalog-loader 中已有的 getter 名称：getSatisfactionPatterns, getForeshadowHierarchy, getForeshadowRecoveryMethods, getSubgenreRules, getNarrativeTechniques, getGenreBeats, getDialogueRules, getStoryStructures, getWebNovelPsychology, getUpgradeSystems, getGoldenFingers, getAntiPatterns, getNarrativePrinciples, getMysterySubtypes, getInteractiveNarrativeTypes, getGameNarrativeStructures, getComicNarrativeTechniques, getWritingGuideRules, getCommentaryTechniques, getOralNarrativeSkills。2) 修改 dialogue-analyzer.ts：将 `import { DIALOGUE_RULES } from './writing-craft/craft-catalog'` 改为 `import { getDialogueRules } from './writing-craft/craft-catalog'`，并将使用处 `DIALOGUE_RULES` 改为 `getDialogueRules()`。3) 修改 suspense-analyzer.ts：将所有 `import { SuspenseSubgenre, SUBGENRE_RULES, ... }` 改为对应的 getter import，并将使用处改为函数调用。4) 修改 reader-satisfaction-analyzer.ts：同理替换 UPGRADE_SYSTEMS / GOLDEN_FINGERS。5) 更新测试文件中的 import 和引用。\n\nBackward compatibility assessment: const -> function 改变了导出值的类型（从 Record 变为 () => Record），因此所有消费者必须同步修改 import 和 usage。这是内部 API 变更，受影响消费者已在本 task 中列出（dialogue-analyzer, suspense-analyzer, reader-satisfaction-analyzer, 5 个测试文件）。如需过渡，可在 index.ts 中保留 deprecated const 别名一个 wave，但本 plan 选择直接迁移（所有消费者已知且在同一 task 中处理）。",
-  "status": "pending",
-  "completed_at": null,
-  "actual_duration": null,
+  "status": "completed",
+  "completed_at": "2026-06-24T06:03:00Z",
+  "actual_duration": "65m",
 
   "scope": "src-ts/narrative/writing-craft, src-ts/narrative/dialogue-analyzer.ts, src-ts/narrative/suspense-analyzer.ts, src-ts/narrative/reader-satisfaction-analyzer.ts, src-ts/tests/narrative",
   "focus_paths": [

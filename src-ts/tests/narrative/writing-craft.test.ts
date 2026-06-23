@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   SatisfactionPattern,
-  SATISFACTION_PATTERNS,
+  getSatisfactionPatternsCatalog,
   ForeshadowCategory,
-  FORESHADOW_HIERARCHY,
-  FORESHADOW_RECOVERY_METHODS,
-  DIALOGUE_RULES,
-  STORY_STRUCTURES,
-  WEB_NOVEL_PSYCHOLOGY,
+  getForeshadowHierarchyCatalog,
+  getForeshadowRecoveryMethodsCatalog,
+  getDialogueRulesCatalog,
+  getStoryStructuresCatalog,
+  getWebNovelPsychologyCatalog,
 } from '../../narrative/writing-craft/craft-catalog';
 import {
   getSatisfactionPatterns,
@@ -29,11 +29,11 @@ import { ClicheDetector } from '../../narrative/evaluators/cliche-detector';
 describe('Writing Craft — Craft Catalog', () => {
   describe('SatisfactionPattern', () => {
     it('has 10 patterns defined', () => {
-      expect(Object.keys(SATISFACTION_PATTERNS)).toHaveLength(10);
+      expect(Object.keys(getSatisfactionPatternsCatalog())).toHaveLength(10);
     });
 
     it('each pattern has 3-beat structure with correct proportions', () => {
-      for (const [key, def] of Object.entries(SATISFACTION_PATTERNS)) {
+      for (const [key, def] of Object.entries(getSatisfactionPatternsCatalog())) {
         expect(def.structure).toHaveLength(3);
         expect(def.proportion).toHaveLength(3);
         const total = def.proportion.reduce((a, b) => a + b, 0);
@@ -45,9 +45,9 @@ describe('Writing Craft — Craft Catalog', () => {
       }
     });
 
-    it('enums match keys in SATISFACTION_PATTERNS record', () => {
+    it('enums match keys in getSatisfactionPatternsCatalog() record', () => {
       const enumValues = Object.values(SatisfactionPattern);
-      const recordKeys = Object.keys(SATISFACTION_PATTERNS);
+      const recordKeys = Object.keys(getSatisfactionPatternsCatalog());
       expect(enumValues.sort()).toEqual(recordKeys.sort());
     });
 
@@ -72,40 +72,40 @@ describe('Writing Craft — Craft Catalog', () => {
 
   describe('ForeshadowHierarchy', () => {
     it('has core/subplot/decorative levels with max counts', () => {
-      expect(FORESHADOW_HIERARCHY.core.maxCount).toBe(2);
-      expect(FORESHADOW_HIERARCHY.subplot.maxCount).toBe(3);
-      expect(FORESHADOW_HIERARCHY.decorative.maxCount).toBe(3);
+      expect(getForeshadowHierarchyCatalog().core.maxCount).toBe(2);
+      expect(getForeshadowHierarchyCatalog().subplot.maxCount).toBe(3);
+      expect(getForeshadowHierarchyCatalog().decorative.maxCount).toBe(3);
     });
   });
 
   describe('ForeshadowRecoveryMethods', () => {
     it('has 4 recovery methods', () => {
-      expect(FORESHADOW_RECOVERY_METHODS).toHaveLength(4);
-      expect(FORESHADOW_RECOVERY_METHODS).toContain('direct');
-      expect(FORESHADOW_RECOVERY_METHODS).toContain('progressive');
+      expect(getForeshadowRecoveryMethodsCatalog()).toHaveLength(4);
+      expect(getForeshadowRecoveryMethodsCatalog()).toContain('direct');
+      expect(getForeshadowRecoveryMethodsCatalog()).toContain('progressive');
     });
   });
 
   describe('DialogueRules', () => {
     it('has McKee three functions', () => {
-      expect(DIALOGUE_RULES.mckeeThreeFunctions.minimumRequired).toBe(2);
-      expect(DIALOGUE_RULES.mckeeThreeFunctions.functions).toHaveLength(4);
+      expect(getDialogueRulesCatalog().mckeeThreeFunctions.minimumRequired).toBe(2);
+      expect(getDialogueRulesCatalog().mckeeThreeFunctions.functions).toHaveLength(4);
     });
 
     it('has show-dont-tell patterns', () => {
-      expect(DIALOGUE_RULES.showDontTell.badPatterns.length).toBeGreaterThan(0);
-      expect(DIALOGUE_RULES.showDontTell.goodPatterns.length).toBeGreaterThan(0);
+      expect(getDialogueRulesCatalog().showDontTell.badPatterns.length).toBeGreaterThan(0);
+      expect(getDialogueRulesCatalog().showDontTell.goodPatterns.length).toBeGreaterThan(0);
     });
 
     it('has character voice differentiation dimensions', () => {
-      expect(DIALOGUE_RULES.characterVoiceDifferentiation.dimensions.length).toBeGreaterThanOrEqual(3);
+      expect(getDialogueRulesCatalog().characterVoiceDifferentiation.dimensions.length).toBeGreaterThanOrEqual(3);
     });
   });
 
   describe('StoryStructures', () => {
     it('has Bell three-act structure', () => {
-      expect(STORY_STRUCTURES.bell_three_act.beats).toHaveLength(5);
-      const positions = STORY_STRUCTURES.bell_three_act.beats.map(b => b.position);
+      expect(getStoryStructuresCatalog().bell_three_act.beats).toHaveLength(5);
+      const positions = getStoryStructuresCatalog().bell_three_act.beats.map(b => b.position);
       for (const pos of positions) {
         expect(pos).toBeGreaterThan(0);
         expect(pos).toBeLessThan(1);
@@ -113,11 +113,11 @@ describe('Writing Craft — Craft Catalog', () => {
     });
 
     it('has Snyder beat sheet with 14 beats', () => {
-      expect(STORY_STRUCTURES.snyder_beat_sheet.beats).toHaveLength(14);
+      expect(getStoryStructuresCatalog().snyder_beat_sheet.beats).toHaveLength(14);
     });
 
     it('beats are ordered by position', () => {
-      for (const [, struct] of Object.entries(STORY_STRUCTURES)) {
+      for (const [, struct] of Object.entries(getStoryStructuresCatalog())) {
         const positions = struct.beats.map(b => b.position);
         for (let i = 1; i < positions.length; i++) {
           expect(positions[i]).toBeGreaterThan(positions[i - 1]);
@@ -128,7 +128,7 @@ describe('Writing Craft — Craft Catalog', () => {
 
   describe('WebNovelPsychology', () => {
     it('has 4 satisfaction layers', () => {
-      const layers = WEB_NOVEL_PSYCHOLOGY.satisfactionLayers;
+      const layers = getWebNovelPsychologyCatalog().satisfactionLayers;
       expect(Object.keys(layers)).toHaveLength(4);
       expect(layers.physical).toBeDefined();
       expect(layers.psychological).toBeDefined();
@@ -137,16 +137,16 @@ describe('Writing Craft — Craft Catalog', () => {
     });
 
     it('expect-delay-release has valid ratios', () => {
-      const { expectRatio, delayRatio, releaseRatio } = WEB_NOVEL_PSYCHOLOGY.expectDelayRelease.timing;
+      const { expectRatio, delayRatio, releaseRatio } = getWebNovelPsychologyCatalog().expectDelayRelease.timing;
       expect(expectRatio + delayRatio + releaseRatio).toBeCloseTo(1.0, 1);
     });
 
     it('has 5 chapter hook types', () => {
-      expect(Object.keys(WEB_NOVEL_PSYCHOLOGY.chapterHooks)).toHaveLength(5);
+      expect(Object.keys(getWebNovelPsychologyCatalog().chapterHooks)).toHaveLength(5);
     });
 
     it('has retention rules', () => {
-      expect(WEB_NOVEL_PSYCHOLOGY.retentionRules.length).toBeGreaterThan(0);
+      expect(getWebNovelPsychologyCatalog().retentionRules.length).toBeGreaterThan(0);
     });
   });
 });

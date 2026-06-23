@@ -8,9 +8,9 @@
   "priority": "high",
   "effort": "medium",
   "action": "1) 在 src-ts/mcp/endpoints/health.ts 中，将现有的 HealthEngineAccess / ServiceRegistryAccess / RuntimeStateAccess / ObservabilityAccess / ConfigAccess 重命名为 IHealthEngineAccess / IServiceRegistryAccess / IRuntimeStateAccess / IObservabilityAccess / IConfigAccess，并新增 IGatewayMetadata 接口（包含 version、utcNowIso、runtimeTracker）。2) 定义 `export type GatewayDeps = IHealthEngineAccess & IServiceRegistryAccess & IRuntimeStateAccess & IObservabilityAccess & IConfigAccess & IGatewayMetadata` — GatewayDeps 变为 6 个角色接口的交集 type alias（5 个重命名后的接口 + 1 个新增 IGatewayMetadata），保留 backward compatibility。3) 修改 src-ts/mcp/gateway-state.ts 中 `buildGatewayDeps` 的 JSDoc / 返回类型，使其显式返回 GatewayDeps（从 health.ts 导入的别名）。4) 更新 src-ts/tests/mcp/health-endpoints.test.ts 中所有 mock gatewayDeps 对象，确保它们仍然满足 GatewayDeps（由于别名，接口形状不变，但鼓励测试逐步使用更窄的接口）。",
-  "status": "pending",
-  "completed_at": null,
-  "actual_duration": null,
+  "status": "completed",
+  "completed_at": "2026-06-24T05:43:00+08:00",
+  "actual_duration": "45m",
 
   "scope": "src-ts/mcp/endpoints, src-ts/mcp/gateway-state.ts, src-ts/tests/mcp",
   "focus_paths": [

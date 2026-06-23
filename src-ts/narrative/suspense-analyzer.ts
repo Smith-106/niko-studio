@@ -9,7 +9,8 @@
  */
 
 import type { INarrativeLLMClient } from './types.js';
-import { SuspenseSubgenre, SUBGENRE_RULES, NarrativeTechnique, NARRATIVE_TECHNIQUES, GenreBeatType, GENRE_BEATS, STORY_STRUCTURES, AntiPattern, ANTI_PATTERNS, MysterySubtype, MYSTERY_SUBTYPES } from './writing-craft/craft-catalog';
+import { SuspenseSubgenre, NarrativeTechnique, GenreBeatType, AntiPattern, MysterySubtype } from './writing-craft/craft-catalog';
+import { getSubgenreRulesCatalog, getNarrativeTechniquesCatalog, getGenreBeatsCatalog, getStoryStructuresCatalog, getAntiPatternsCatalog, getMysterySubtypesCatalog } from './writing-craft/craft-catalog';
 
 // ============================================================
 // Enums
@@ -757,7 +758,7 @@ export class SuspenseAnalyzer {
     const allText = chapters.map((c) => c.content).join('\n');
     const results: Array<{ subgenre: SuspenseSubgenre; label: string; confidence: number; evidence: string[] }> = [];
 
-    for (const def of Object.values(SUBGENRE_RULES)) {
+    for (const def of Object.values(getSubgenreRulesCatalog())) {
       const typicalHits = def.keywords.typical.filter((kw) => allText.includes(kw));
       const atypicalHits = def.keywords.atypical.filter((kw) => allText.includes(kw));
       const requiredHits = def.requiredElements.filter((el) => allText.includes(el));
@@ -785,7 +786,7 @@ export class SuspenseAnalyzer {
     chapters: Array<{ content: string; chapterIndex: number }>,
     subgenre: SuspenseSubgenre,
   ): { violations: string[]; suggestions: string[]; ruleScore: number } {
-    const rules = SUBGENRE_RULES[subgenre];
+    const rules = getSubgenreRulesCatalog()[subgenre];
     if (!rules) return { violations: [], suggestions: ['未知流派'], ruleScore: 0 };
 
     const allText = chapters.map((c) => c.content).join('\n');
@@ -886,7 +887,7 @@ export class SuspenseAnalyzer {
     const totalChapters = chapters.length;
     const detections: NarrativeTechniqueDetection[] = [];
 
-    for (const def of Object.values(NARRATIVE_TECHNIQUES)) {
+    for (const def of Object.values(getNarrativeTechniquesCatalog())) {
       const matchedKeywords: string[] = [];
       let matchPositions: number[] = [];
 
@@ -932,7 +933,7 @@ export class SuspenseAnalyzer {
     const recommendations: string[] = [];
     for (const d of detections) {
       if (!d.detected) {
-        recommendations.push(`${d.label}未检测到，建议加入${NARRATIVE_TECHNIQUES[d.technique].effectDescription}`);
+        recommendations.push(`${d.label}未检测到，建议加入${getNarrativeTechniquesCatalog()[d.technique].effectDescription}`);
       }
     }
     if (overallScore < 0.3) {
@@ -951,7 +952,7 @@ export class SuspenseAnalyzer {
     chapters: Array<{ content: string; position: number }>,
     genreType: GenreBeatType,
   ): GenreBeatAnalysisResult {
-    const template = GENRE_BEATS[genreType];
+    const template = getGenreBeatsCatalog()[genreType];
     if (!template) {
       return {
         genreType,
@@ -1069,7 +1070,7 @@ export class SuspenseAnalyzer {
     missingBeats: string[];
     suggestions: string[];
   } {
-    const template = STORY_STRUCTURES.edson_23_sequence;
+    const template = getStoryStructuresCatalog().edson_23_sequence;
     if (!template) {
       return { alignments: [], overallAlignmentScore: 0, missingBeats: [], suggestions: ['Edson模板未找到'] };
     }
@@ -1164,7 +1165,7 @@ export class SuspenseAnalyzer {
     const allText = chapters.map((c) => c.content).join('\n');
     const detections: Array<{ pattern: AntiPattern; label: string; detected: boolean; severity: string; evidence: string[]; fixSuggestion: string }> = [];
 
-    for (const def of Object.values(ANTI_PATTERNS)) {
+    for (const def of Object.values(getAntiPatternsCatalog())) {
       const hits = def.detectionKeywords.filter((kw) => allText.includes(kw));
       detections.push({
         pattern: def.pattern,
@@ -1254,7 +1255,7 @@ export class SuspenseAnalyzer {
     const allText = chapters.map((c) => c.content).join('\n');
     const results: Array<{ subtype: MysterySubtype; label: string; confidence: number; evidence: string[] }> = [];
 
-    for (const def of Object.values(MYSTERY_SUBTYPES)) {
+    for (const def of Object.values(getMysterySubtypesCatalog())) {
       const keywordHits = def.detectionKeywords.filter((kw) => allText.includes(kw));
       const ruleHits = def.typicalElements.filter((el) => allText.includes(el));
       const forbiddenHits = def.forbiddenElements.filter((el) => allText.includes(el));

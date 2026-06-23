@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { STORY_STRUCTURES } from '../../narrative/writing-craft/craft-catalog';
+import { getStoryStructuresCatalog } from '../../narrative/writing-craft/craft-catalog';
 import { SubtextEvaluator } from '../../narrative/evaluators/subtext-evaluator';
 import { analyzeEmotionCraft } from '../../narrative/writing-craft/emotion-craft';
 import { detectUnreliableNarrator } from '../../narrative/writing-craft/unreliable-narrator';
@@ -11,24 +11,24 @@ describe('M13 Remaining Items', () => {
   // ── 1. Truby 22 Steps ──
 
   describe('Truby 22-step structure', () => {
-    it('has truby_22_steps in STORY_STRUCTURES', () => {
-      expect(STORY_STRUCTURES.truby_22_steps).toBeDefined();
-      expect(STORY_STRUCTURES.truby_22_steps.name).toContain('Truby');
+    it('has truby_22_steps in getStoryStructuresCatalog()', () => {
+      expect(getStoryStructuresCatalog().truby_22_steps).toBeDefined();
+      expect(getStoryStructuresCatalog().truby_22_steps.name).toContain('Truby');
     });
 
     it('has exactly 22 beats', () => {
-      expect(STORY_STRUCTURES.truby_22_steps.beats).toHaveLength(22);
+      expect(getStoryStructuresCatalog().truby_22_steps.beats).toHaveLength(22);
     });
 
     it('beats are ordered by position', () => {
-      const positions = STORY_STRUCTURES.truby_22_steps.beats.map((b) => b.position);
+      const positions = getStoryStructuresCatalog().truby_22_steps.beats.map((b) => b.position);
       for (let i = 1; i < positions.length; i++) {
         expect(positions[i]).toBeGreaterThan(positions[i - 1]);
       }
     });
 
     it('covers full story range', () => {
-      const positions = STORY_STRUCTURES.truby_22_steps.beats.map((b) => b.position);
+      const positions = getStoryStructuresCatalog().truby_22_steps.beats.map((b) => b.position);
       expect(positions[0]).toBeLessThanOrEqual(0.05);
       expect(positions[positions.length - 1]).toBeGreaterThanOrEqual(0.9);
     });

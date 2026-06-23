@@ -6,7 +6,7 @@ import {
   SetupPayoffState,
   SatisfactionType,
 } from '../../narrative/suspense-analyzer';
-import { SuspenseSubgenre, SUBGENRE_RULES } from '../../narrative/writing-craft/craft-catalog';
+import { SuspenseSubgenre, getSubgenreRulesCatalog } from '../../narrative/writing-craft/craft-catalog';
 
 describe('SuspenseAnalyzer — M13 enhancements', () => {
   const analyzer = new SuspenseAnalyzer();
@@ -153,9 +153,9 @@ describe('SuspenseAnalyzer — M13 enhancements', () => {
       expect(result.ruleScore).toBeGreaterThan(50);
     });
 
-    it('SUBGENRE_RULES has 4 entries with complete data', () => {
-      expect(Object.keys(SUBGENRE_RULES)).toHaveLength(4);
-      for (const rules of Object.values(SUBGENRE_RULES)) {
+    it('getSubgenreRulesCatalog() has 4 entries with complete data', () => {
+      expect(Object.keys(getSubgenreRulesCatalog())).toHaveLength(4);
+      for (const rules of Object.values(getSubgenreRulesCatalog())) {
         expect(rules.coreRules.length).toBeGreaterThanOrEqual(3);
         expect(rules.requiredElements.length).toBeGreaterThanOrEqual(3);
         expect(rules.keywords.typical.length).toBeGreaterThanOrEqual(3);

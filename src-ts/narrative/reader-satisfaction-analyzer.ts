@@ -10,7 +10,7 @@
  */
 
 import type { INarrativeLLMClient } from './types.js';
-import { UpgradeSystem, UPGRADE_SYSTEMS, GoldenFingerType, GOLDEN_FINGERS } from './writing-craft/craft-catalog';
+import { UpgradeSystem, GoldenFingerType, getUpgradeSystemsCatalog, getGoldenFingersCatalog } from './writing-craft/craft-catalog';
 
 // ============================================================
 // Enums
@@ -307,7 +307,7 @@ export class ReaderSatisfactionAnalyzer {
     const allText = chapters.map((c) => c.content).join('\n');
     const results: Array<{ system: UpgradeSystem; label: string; confidence: number; evidence: string[] }> = [];
 
-    for (const def of Object.values(UPGRADE_SYSTEMS)) {
+    for (const def of Object.values(getUpgradeSystemsCatalog())) {
       const keywordHits = def.detectionKeywords.filter((kw) => allText.includes(kw));
       const markerHits = def.progressionMarkers.filter((kw) => allText.includes(kw));
       const triggerHits = def.satisfactionTriggers.filter((kw) => allText.includes(kw));
@@ -337,7 +337,7 @@ export class ReaderSatisfactionAnalyzer {
     const allText = chapters.map((c) => c.content).join('\n');
     const results: Array<{ type: GoldenFingerType; label: string; confidence: number; evidence: string[]; growthPattern: string }> = [];
 
-    for (const def of Object.values(GOLDEN_FINGERS)) {
+    for (const def of Object.values(getGoldenFingersCatalog())) {
       const keywordHits = def.detectionKeywords.filter((kw) => allText.includes(kw));
       const manifestationHits = def.typicalManifestations.filter((kw) => allText.includes(kw));
 
@@ -373,7 +373,7 @@ export class ReaderSatisfactionAnalyzer {
     const goldenFingerDetections = this.analyzeGoldenFinger(chapters);
 
     const upgradeNodes: { chapterIndex: number; keyword: string }[] = [];
-    const upgradeKeywords = Object.values(UPGRADE_SYSTEMS).flatMap((d) => d.satisfactionTriggers);
+    const upgradeKeywords = Object.values(getUpgradeSystemsCatalog()).flatMap((d) => d.satisfactionTriggers);
 
     for (const chapter of chapters) {
       for (const kw of upgradeKeywords) {

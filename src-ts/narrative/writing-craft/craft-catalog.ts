@@ -6,8 +6,8 @@ import {
   getForeshadowRecoveryMethods,
   getSubgenreRules,
   getGenreBeats,
-  getStoryStructures,
   getDialogueRules,
+  getStoryStructures,
   getWebNovelPsychology,
   getUpgradeSystems,
   getGoldenFingers,
@@ -35,39 +35,85 @@ export { _reloadCatalog as reloadCatalog };
 
 export * from './craft-types';
 
-export const SATISFACTION_PATTERNS = getSatisfactionPatterns();
+// Lazy getter wrappers — calling these re-evaluates through catalog-loader
+// which respects reloadCatalog() cache invalidation.
 
-export const FORESHADOW_HIERARCHY = getForeshadowHierarchy();
-export const FORESHADOW_RECOVERY_METHODS = getForeshadowRecoveryMethods();
+export function getSatisfactionPatternsCatalog(): ReturnType<typeof getSatisfactionPatterns> {
+  return getSatisfactionPatterns();
+}
 
-export const SUBGENRE_RULES = getSubgenreRules();
+export function getForeshadowHierarchyCatalog(): ReturnType<typeof getForeshadowHierarchy> {
+  return getForeshadowHierarchy();
+}
 
-export const NARRATIVE_TECHNIQUES = getNarrativeTechniques();
+export function getForeshadowRecoveryMethodsCatalog(): ReturnType<typeof getForeshadowRecoveryMethods> {
+  return getForeshadowRecoveryMethods();
+}
 
-export const GENRE_BEATS = getGenreBeats();
+export function getSubgenreRulesCatalog(): ReturnType<typeof getSubgenreRules> {
+  return getSubgenreRules();
+}
 
-export const DIALOGUE_RULES = getDialogueRules();
-export const STORY_STRUCTURES = getStoryStructures();
-export const WEB_NOVEL_PSYCHOLOGY = getWebNovelPsychology();
+export function getNarrativeTechniquesCatalog(): ReturnType<typeof getNarrativeTechniques> {
+  return getNarrativeTechniques();
+}
 
-export const UPGRADE_SYSTEMS = getUpgradeSystems();
+export function getGenreBeatsCatalog(): ReturnType<typeof getGenreBeats> {
+  return getGenreBeats();
+}
 
-export const GOLDEN_FINGERS = getGoldenFingers();
+export function getDialogueRulesCatalog(): ReturnType<typeof getDialogueRules> {
+  return getDialogueRules();
+}
 
-export const ANTI_PATTERNS = getAntiPatterns();
+export function getStoryStructuresCatalog(): ReturnType<typeof getStoryStructures> {
+  return getStoryStructures();
+}
 
-export const NARRATIVE_PRINCIPLES = getNarrativePrinciples();
+export function getWebNovelPsychologyCatalog(): ReturnType<typeof getWebNovelPsychology> {
+  return getWebNovelPsychology();
+}
 
-export const MYSTERY_SUBTYPES = getMysterySubtypes();
+export function getUpgradeSystemsCatalog(): ReturnType<typeof getUpgradeSystems> {
+  return getUpgradeSystems();
+}
 
-export const INTERACTIVE_NARRATIVE_TYPES = getInteractiveNarrativeTypes();
+export function getGoldenFingersCatalog(): ReturnType<typeof getGoldenFingers> {
+  return getGoldenFingers();
+}
 
-export const GAME_NARRATIVE_STRUCTURES = getGameNarrativeStructures();
+export function getAntiPatternsCatalog(): ReturnType<typeof getAntiPatterns> {
+  return getAntiPatterns();
+}
 
-export const COMIC_NARRATIVE_TECHNIQUES = getComicNarrativeTechniques();
+export function getNarrativePrinciplesCatalog(): ReturnType<typeof getNarrativePrinciples> {
+  return getNarrativePrinciples();
+}
 
-export const WRITING_GUIDE_RULES = getWritingGuideRules();
+export function getMysterySubtypesCatalog(): ReturnType<typeof getMysterySubtypes> {
+  return getMysterySubtypes();
+}
 
-export const COMMENTARY_TECHNIQUES = getCommentaryTechniques();
+export function getInteractiveNarrativeTypesCatalog(): ReturnType<typeof getInteractiveNarrativeTypes> {
+  return getInteractiveNarrativeTypes();
+}
 
-export const ORAL_NARRATIVE_SKILLS = getOralNarrativeSkills();
+export function getGameNarrativeStructuresCatalog(): ReturnType<typeof getGameNarrativeStructures> {
+  return getGameNarrativeStructures();
+}
+
+export function getComicNarrativeTechniquesCatalog(): ReturnType<typeof getComicNarrativeTechniques> {
+  return getComicNarrativeTechniques();
+}
+
+export function getWritingGuideRulesCatalog(): ReturnType<typeof getWritingGuideRules> {
+  return getWritingGuideRules();
+}
+
+export function getCommentaryTechniquesCatalog(): ReturnType<typeof getCommentaryTechniques> {
+  return getCommentaryTechniques();
+}
+
+export function getOralNarrativeSkillsCatalog(): ReturnType<typeof getOralNarrativeSkills> {
+  return getOralNarrativeSkills();
+}

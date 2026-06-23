@@ -8,9 +8,9 @@
   "priority": "high",
   "effort": "medium",
   "action": "1) 新建 src-ts/narrative/writing-craft/craft-types.ts，将 craft-catalog.ts 中所有被 catalog-loader.ts 引用的 enum 和 interface 定义移入该文件并导出。具体类型列表来自 exploration-codebase.json 分析结果：SatisfactionPattern, SatisfactionPatternDef, SuspenseSubgenre, SubgenreRules, NarrativeTechnique, NarrativeTechniqueDef, GenreBeatType, GenreBeatTemplate, UpgradeSystem, UpgradeSystemDef, GoldenFingerType, GoldenFingerDef, AntiPattern, AntiPatternDef, NarrativePrinciple, NarrativePrincipleDef, MysterySubtype, MysterySubtypeDef, InteractiveNarrativeType, InteractiveNarrativeDef, GameNarrativeStructure, GameNarrativeDef, ComicNarrativeTechnique, ComicNarrativeDef, WritingGuideRule, WritingGuideDef, CommentaryTechnique, CommentaryDef, OralNarrativeSkill, OralNarrativeDef, ForeshadowHierarchyData, ForeshadowRecoveryMethodsData, DialogueRulesData, StoryStructureData, WebNovelPsychologyData。2) 修改 craft-catalog.ts：移除已提取的类型定义，改为 `import type { ... } from './craft-types'` 和 `export * from './craft-types'`。3) 修改 catalog-loader.ts：将 `import type { ... } from './craft-catalog'` 改为 `import type { ... } from './craft-types'`。4) 修改 index.ts：在 barrel export 中新增 `export * from './craft-types'`。",
-  "status": "pending",
-  "completed_at": null,
-  "actual_duration": null,
+  "status": "completed",
+  "completed_at": "2026-06-24T05:50:00Z",
+  "actual_duration": "15m",
 
   "scope": "src-ts/narrative/writing-craft",
   "focus_paths": [

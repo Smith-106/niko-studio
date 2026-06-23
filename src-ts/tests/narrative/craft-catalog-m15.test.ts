@@ -3,17 +3,17 @@ import { describe, expect, it } from 'vitest';
 import {
   UpgradeSystem,
   UpgradeSystemDef,
-  UPGRADE_SYSTEMS,
+  getUpgradeSystemsCatalog,
   GoldenFingerType,
   GoldenFingerDef,
-  GOLDEN_FINGERS,
+  getGoldenFingersCatalog,
   AntiPattern,
   AntiPatternDef,
-  ANTI_PATTERNS,
+  getAntiPatternsCatalog,
   NarrativePrinciple,
   NarrativePrincipleDef,
-  NARRATIVE_PRINCIPLES,
-  STORY_STRUCTURES,
+  getNarrativePrinciplesCatalog,
+  getStoryStructuresCatalog,
 } from '../../narrative/writing-craft/craft-catalog';
 
 describe('Craft Catalog — M15', () => {
@@ -31,14 +31,14 @@ describe('Craft Catalog — M15', () => {
     });
   });
 
-  describe('UPGRADE_SYSTEMS Record', () => {
+  describe('getUpgradeSystemsCatalog() Record', () => {
     it('has exactly 5 entries matching UpgradeSystem', () => {
-      const keys = Object.keys(UPGRADE_SYSTEMS);
+      const keys = Object.keys(getUpgradeSystemsCatalog());
       expect(keys.sort()).toEqual(Object.values(UpgradeSystem).sort());
     });
 
     it('each entry has required fields', () => {
-      for (const def of Object.values(UPGRADE_SYSTEMS)) {
+      for (const def of Object.values(getUpgradeSystemsCatalog())) {
         expect(def.label).toBeTruthy();
         expect(def.detectionKeywords.length).toBeGreaterThan(0);
         expect(def.progressionMarkers.length).toBeGreaterThan(0);
@@ -53,14 +53,14 @@ describe('Craft Catalog — M15', () => {
     });
   });
 
-  describe('GOLDEN_FINGERS Record', () => {
+  describe('getGoldenFingersCatalog() Record', () => {
     it('has exactly 6 entries matching GoldenFingerType', () => {
-      const keys = Object.keys(GOLDEN_FINGERS);
+      const keys = Object.keys(getGoldenFingersCatalog());
       expect(keys.sort()).toEqual(Object.values(GoldenFingerType).sort());
     });
 
     it('each entry has powerGrowthPattern', () => {
-      for (const def of Object.values(GOLDEN_FINGERS)) {
+      for (const def of Object.values(getGoldenFingersCatalog())) {
         expect(def.powerGrowthPattern).toBeTruthy();
       }
     });
@@ -78,14 +78,14 @@ describe('Craft Catalog — M15', () => {
     });
   });
 
-  describe('ANTI_PATTERNS Record', () => {
+  describe('getAntiPatternsCatalog() Record', () => {
     it('has exactly 10 entries matching AntiPattern', () => {
-      const keys = Object.keys(ANTI_PATTERNS);
+      const keys = Object.keys(getAntiPatternsCatalog());
       expect(keys.sort()).toEqual(Object.values(AntiPattern).sort());
     });
 
     it('each entry has severity and fixSuggestion', () => {
-      for (const def of Object.values(ANTI_PATTERNS)) {
+      for (const def of Object.values(getAntiPatternsCatalog())) {
         expect(['critical', 'warning', 'minor']).toContain(def.severity);
         expect(def.fixSuggestion).toBeTruthy();
         expect(def.detectionKeywords.length).toBeGreaterThan(0);
@@ -99,27 +99,27 @@ describe('Craft Catalog — M15', () => {
     });
   });
 
-  describe('NARRATIVE_PRINCIPLES Record', () => {
+  describe('getNarrativePrinciplesCatalog() Record', () => {
     it('has exactly 6 entries', () => {
-      expect(Object.keys(NARRATIVE_PRINCIPLES)).toHaveLength(6);
+      expect(Object.keys(getNarrativePrinciplesCatalog())).toHaveLength(6);
     });
 
     it('each entry has source and applicationGuide', () => {
-      for (const def of Object.values(NARRATIVE_PRINCIPLES)) {
+      for (const def of Object.values(getNarrativePrinciplesCatalog())) {
         expect(def.source).toBeTruthy();
         expect(def.applicationGuide).toBeTruthy();
       }
     });
   });
 
-  describe('STORY_STRUCTURES — edson_23_sequence', () => {
-    it('exists in STORY_STRUCTURES', () => {
-      expect(STORY_STRUCTURES.edson_23_sequence).toBeDefined();
-      expect(STORY_STRUCTURES.edson_23_sequence.name).toContain('Edson');
+  describe('getStoryStructuresCatalog() — edson_23_sequence', () => {
+    it('exists in getStoryStructuresCatalog()', () => {
+      expect(getStoryStructuresCatalog().edson_23_sequence).toBeDefined();
+      expect(getStoryStructuresCatalog().edson_23_sequence.name).toContain('Edson');
     });
 
     it('has beat sequence', () => {
-      const beats = STORY_STRUCTURES.edson_23_sequence.beats;
+      const beats = getStoryStructuresCatalog().edson_23_sequence.beats;
       expect(beats.length).toBeGreaterThan(10);
     });
   });

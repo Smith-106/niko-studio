@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { SuspenseAnalyzer } from '../../narrative/suspense-analyzer';
 import {
   AntiPattern,
-  ANTI_PATTERNS,
-  GENRE_BEATS,
   GenreBeatType,
-  NARRATIVE_TECHNIQUES,
-  STORY_STRUCTURES,
-  SUBGENRE_RULES,
-  type GenreBeatTemplate,
-  type SubgenreRules,
+} from '../../narrative/writing-craft/craft-catalog';
+import {
+  getAntiPatternsCatalog,
+  getGenreBeatsCatalog,
+  getNarrativeTechniquesCatalog,
+  getStoryStructuresCatalog,
+  getSubgenreRulesCatalog,
 } from '../../narrative/writing-craft/craft-catalog';
 
 describe('SuspenseAnalyzer tail branch coverage', () => {
@@ -26,7 +26,7 @@ describe('SuspenseAnalyzer tail branch coverage', () => {
 
   it('covers subgenre clean and forbidden branches with temporary rules', () => {
     const analyzer = new SuspenseAnalyzer();
-    const rules = SUBGENRE_RULES as unknown as Record<string, SubgenreRules>;
+    const rules = getSubgenreRulesCatalog() as unknown as Record<string, SubgenreRules>;
     const cleanKey = 'tail_clean';
     const forbiddenKey = 'tail_forbidden';
 
@@ -80,7 +80,7 @@ describe('SuspenseAnalyzer tail branch coverage', () => {
 
   it('covers empty narrative technique catalog branch', () => {
     const analyzer = new SuspenseAnalyzer();
-    const techniques = NARRATIVE_TECHNIQUES as unknown as Record<string, unknown>;
+    const techniques = getNarrativeTechniquesCatalog() as unknown as Record<string, unknown>;
     const saved = { ...techniques };
 
     try {
@@ -98,7 +98,7 @@ describe('SuspenseAnalyzer tail branch coverage', () => {
 
   it('covers no-required genre beat scoring branch', () => {
     const analyzer = new SuspenseAnalyzer();
-    const genreMap = GENRE_BEATS as unknown as Record<string, GenreBeatTemplate>;
+    const genreMap = getGenreBeatsCatalog() as unknown as Record<string, GenreBeatTemplate>;
     const genreKey = 'tail_no_required';
 
     genreMap[genreKey] = {
@@ -125,7 +125,7 @@ describe('SuspenseAnalyzer tail branch coverage', () => {
 
   it('covers Edson missing-template, empty-template, and good-alignment branches', () => {
     const analyzer = new SuspenseAnalyzer();
-    const structures = STORY_STRUCTURES as Record<string, typeof STORY_STRUCTURES.edson_23_sequence | undefined>;
+    const structures = getStoryStructuresCatalog() as Record<string, unknown>;
     const saved = structures.edson_23_sequence;
 
     try {
@@ -157,7 +157,7 @@ describe('SuspenseAnalyzer tail branch coverage', () => {
 
   it('covers warning anti-pattern suggestion branch', () => {
     const analyzer = new SuspenseAnalyzer();
-    const warningKeyword = ANTI_PATTERNS[AntiPattern.ON_THE_NOSE_DIALOGUE].detectionKeywords[0];
+    const warningKeyword = getAntiPatternsCatalog()[AntiPattern.ON_THE_NOSE_DIALOGUE].detectionKeywords[0];
 
     const result = analyzer.detectAntiPatterns([{ content: warningKeyword, chapterIndex: 1 }]);
 
