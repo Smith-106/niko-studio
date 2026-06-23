@@ -3,7 +3,7 @@ import { appendWorkspacePayload, type ProjectWorkspaceContext } from './workspac
 import type {
   NarrativeVisualizationChapterInput,
   NarrativeVisualizationBundle,
-} from '../../../src-ts/narrative/types/visualization-types'
+} from '../types/narrative-visualization'
 
 export type {
   NarrativeVisualizationChapterInput,
@@ -13,7 +13,7 @@ export type {
   NarrativeVisualizationTensionData,
   NarrativeVisualizationCharacterData,
   NarrativeVisualizationBundle,
-} from '../../../src-ts/narrative/types/visualization-types'
+} from '../types/narrative-visualization'
 
 export async function getNarrativeVisualization(
   payload: {

@@ -118,7 +118,7 @@ vi.mock('../utils/writingSessionTelemetry', () => ({
   summarizeWritingSessionTelemetry: summarizeMock,
 }))
 
-vi.mock('../../../src-ts/analysis/personalized-craft-profile', () => ({
+vi.mock('../api/analysis', () => ({
   buildPersonalizedCraftProfile: buildProfileMock,
 }))
 

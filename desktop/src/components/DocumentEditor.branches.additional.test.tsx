@@ -128,7 +128,7 @@ vi.mock('../services/versionService', () => ({
   autoSaveSnapshot: vi.fn(),
 }))
 
-vi.mock('../../../src-ts/analysis/personalized-craft-profile', () => ({
+vi.mock('../api/analysis', () => ({
   buildPersonalizedCraftProfile: vi.fn(() => ({
     dominantWeaknesses: [],
     growthTrajectory: { summary: 'steady' },

@@ -1,0 +1,77 @@
+{
+  "$schema": "context-package/1.0",
+  "source": {
+    "type": "analyze",
+    "artifact_id": "ANL-20260622-P2-frontend-integration",
+    "session_path": "scratch/20260622-analyze-P2-frontend-integration",
+    "generated_at": "2026-06-22T13:00:00Z"
+  },
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "title": "消除 DocumentEditor.tsx 跨边界 import",
+      "acceptance": ["grep 'from.*src-ts' desktop/src/components/DocumentEditor.tsx 返回 0 结果", "TypeScript 编译通过"],
+      "ref": "conclusions.json#implementation_scope[0]"
+    },
+    {
+      "id": "REQ-002",
+      "title": "消除 api/narrative-visualization.ts 跨边界 import",
+      "acceptance": ["grep 'from.*src-ts' desktop/src/api/narrative-visualization.ts 返回 0 结果", "9 个下游消费者 import 有效"],
+      "ref": "conclusions.json#implementation_scope[1]"
+    },
+    {
+      "id": "REQ-003",
+      "title": "迁移测试 mock 路径",
+      "acceptance": ["4 个测试文件 vi.mock 路径指向新 api 层", "测试通过"],
+      "ref": "conclusions.json#implementation_scope[2]"
+    },
+    {
+      "id": "REQ-004",
+      "title": "文档化 reader-endpoints.ts 拆分方案",
+      "acceptance": ["拆分方案文档存在", "4 个功能组划分明确"],
+      "ref": "conclusions.json#implementation_scope[3]"
+    },
+    {
+      "id": "REQ-005",
+      "title": "grep 验收零跨边界 import（排除已批准桥接）",
+      "acceptance": ["grep -r 'from.*src-ts' desktop/src/ 返回仅包含 types/workspace.ts + utils/writingSessionTelemetry.ts（已批准桥接）"],
+      "ref": "conclusions.json#implementation_scope[4]"
+    }
+  ],
+  "constraints": [
+    {"id": "L-001", "title": "buildPersonalizedCraftProfile 通过 api/analysis.ts re-export 修复（Option A）", "status": "locked", "ref": "context.md#Locked"},
+    {"id": "L-002", "title": "api/analysis.ts re-export 块必须带语义边界注释（纯计算直通，非网络 API）", "status": "locked", "ref": "context.md#Locked"},
+    {"id": "L-003", "title": "narrative-visualization 7 类型迁移到 types/narrative-visualization.ts，api/ 从 types/ re-export", "status": "locked", "ref": "context.md#Locked"},
+    {"id": "L-004", "title": "workspace.ts 和 writingSessionTelemetry.ts 桥接模式保留现状，不改代码", "status": "locked", "ref": "context.md#Locked"},
+    {"id": "L-005", "title": "reader-endpoints.ts 本次不拆分，仅文档化拆分方案", "status": "locked", "ref": "context.md#Locked"},
+    {"id": "L-006", "title": "Option C（MCP endpoint）本次不实施", "status": "locked", "ref": "context.md#Locked"},
+    {"id": "L-007", "title": "错误消息使用通用文案 'Invalid workspace configuration'（延续 ISS-007 安全修复）", "status": "locked", "ref": "context.md#Locked"},
+    {"id": "F-001", "title": "api/analysis.ts re-export 块注释措辞", "status": "open", "ref": "context.md#Free"},
+    {"id": "F-002", "title": "types/narrative-visualization.ts 是否包含额外类型", "status": "open", "ref": "context.md#Free"},
+    {"id": "F-003", "title": "测试 mock 路径迁移的验证方式", "status": "open", "ref": "context.md#Free"},
+    {"id": "F-004", "title": "reader-endpoints.ts 拆分方案文档存放位置", "status": "open", "ref": "context.md#Free"}
+  ],
+  "domain": {},
+  "non_goals": [
+    {"title": "Deferred: reader-endpoints.ts 实际拆分执行（1146 行 → 4 文件）", "rationale": "独立大动作，需 M28 milestone 规划；本次仅文档化方案。既有 issue：ISS-20260621-013", "ref": "context.md#Deferred"},
+    {"title": "Deferred: buildPersonalizedCraftProfile 升级为 MCP endpoint（Option C）", "rationale": "后端 IPersonalizationService 已就绪，但前端缺 preferenceProfile 累积，属另一个 feature", "ref": "context.md#Deferred"},
+    {"title": "Deferred: workspace.ts 桥接模式重构为 types/ 真相源 + api/ wrapper", "rationale": "23+ 消费者依赖，风险高，收益低；保持现状", "ref": "context.md#Deferred"}
+  ],
+  "insights": [
+    {"role": "analyzer", "area": "frontend-integration", "summary": "api/analysis.ts re-export + 注释块是纯函数跨边界修复最轻量方案，有 writingSessionTelemetry.ts:68 桥接先例"},
+    {"role": "analyzer", "area": "frontend-integration", "summary": "narrative-visualization 类型应放 types/，api/ 从 types/ re-export，遵循 types/ → api/ 层级"},
+    {"role": "analyzer", "area": "frontend-integration", "summary": "workspace.ts 23+ 消费者桥接模式保留现状，文档化为已批准模式"},
+    {"role": "analyzer", "area": "frontend-integration", "summary": "Option C MCP endpoint 基础设施已存在但前端缺 preferenceProfile，属另一个 feature 范围"},
+    {"role": "analyzer", "area": "frontend-integration", "summary": "4 个测试文件 vi.mock 路径需同步迁移至新 api 层"}
+  ],
+  "open_questions": [
+    {"area": "注释措辞", "question": "api/analysis.ts re-export 块的具体注释措辞？", "options": ["默认方案：纯计算直通 + 非网络 API 标注", "planner 可调整措辞但保留语义"]},
+    {"area": "文档位置", "question": "reader-endpoints.ts 拆分方案文档存放位置？", "options": ["scratch 目录", "knowhow/", "M28 milestone 目录"]}
+  ],
+  "references": [
+    {"type": "analysis", "path": "context.md"},
+    {"type": "conclusions", "path": "conclusions.json"},
+    {"type": "explorations", "path": "explorations.json"},
+    {"type": "discussion", "path": "discussion.md"}
+  ]
+}

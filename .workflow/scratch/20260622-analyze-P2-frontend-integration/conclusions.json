@@ -1,0 +1,167 @@
+{
+  "$schema": "conclusions/1.0",
+  "session_id": "ANL-P2-frontend-integration-2026-06-22",
+  "phase": 2,
+  "milestone": "M27",
+  "overall_recommendation": "GO",
+  "confidence": 0.85,
+  "intent_coverage": [
+    {"item": "清除 DocumentEditor.tsx 跨边界 import", "status": "addressed", "where": "Round 2, F-001"},
+    {"item": "清除 api/narrative-visualization.ts 跨边界 import", "status": "addressed", "where": "Round 1, F-002"},
+    {"item": "清除 writingSessionTelemetry.ts 跨边界 import", "status": "addressed", "where": "Round 1, F-003 (保持桥接模式)"},
+    {"item": "清除 types/workspace.ts 跨边界 import", "status": "addressed", "where": "Round 1, F-004 (保持桥接模式)"},
+    {"item": "reader-endpoints.ts 拆分方案", "status": "addressed", "where": "Round 1, F-005 (文档化 only)"},
+    {"item": "grep 验收：零个 from.*src-ts", "status": "deferred", "where": "执行时验证"}
+  ],
+  "key_conclusions": [
+    {
+      "id": "C-001",
+      "title": "Option A (api/analysis.ts re-export) 是 buildPersonalizedCraftProfile 跨边界修复最佳方案",
+      "confidence": "high",
+      "evidence": ["anchor-1", "Round 2 deep-dive: api/analysis.ts 当前是纯 HTTP 封装，re-export 可附加末尾；writingSessionTelemetry.ts:68 桥接先例"]
+    },
+    {
+      "id": "C-002",
+      "title": "Option C (MCP endpoint) 基础设施已存在但本次不应实施",
+      "confidence": "high",
+      "evidence": ["Round 2: IPersonalizationService protocol + PersonalizationServiceImpl + DI 绑定已就绪；但前端缺 preferenceProfile 是另一个 feature"]
+    },
+    {
+      "id": "C-003",
+      "title": "workspace.ts 和 writingSessionTelemetry.ts 桥接模式保留现状",
+      "confidence": "high",
+      "evidence": ["anchor-4: workspace.ts 23+ 消费者通过 @/types/workspace 导入；writingSessionTelemetry.ts 已有 wrapper 封装"]
+    },
+    {
+      "id": "C-004",
+      "title": "reader-endpoints.ts 拆分仅文档化，执行 deferred 到 M28+",
+      "confidence": "high",
+      "evidence": ["anchor-5: 1146 行，4 个功能组（analyze+overlay/personas/feedback/compare+deai）"]
+    },
+    {
+      "id": "C-005",
+      "title": "测试 mock 路径需同步迁移",
+      "confidence": "high",
+      "evidence": ["Round 2: 4 个测试文件 vi.mock('../../../src-ts/analysis/personalized-craft-profile') 需改为新路径"]
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "R-001",
+      "priority": "high",
+      "action": "在 api/analysis.ts 末尾追加 buildPersonalizedCraftProfile + 3 个类型的 re-export，带语义边界注释块",
+      "rationale": "消除 P0 跨边界 import，与 writingSessionTelemetry.ts 桥接先例同构但更轻",
+      "target_files": ["desktop/src/api/analysis.ts", "desktop/src/components/DocumentEditor.tsx"],
+      "steps": [
+        "api/analysis.ts 追加 re-export 块（带注释标注纯计算直通）",
+        "DocumentEditor.tsx:22-24 import 改为 from '../api/analysis'",
+        "验证 TypeScript 编译通过"
+      ]
+    },
+    {
+      "id": "R-002",
+      "priority": "high",
+      "action": "将 narrative-visualization 的 7 个类型迁移到 types/narrative-visualization.ts，api/ 从 types/ re-export",
+      "rationale": "遵循 types/ → api/ 层级关系，types/ 是类型真相源",
+      "target_files": ["desktop/src/types/narrative-visualization.ts (new)", "desktop/src/api/narrative-visualization.ts"],
+      "steps": [
+        "创建 types/narrative-visualization.ts，从 src-ts 导入 7 个类型并 re-export",
+        "api/narrative-visualization.ts 改为从 types/narrative-visualization re-export",
+        "验证 9 个下游消费者的 import 仍有效"
+      ]
+    },
+    {
+      "id": "R-003",
+      "priority": "medium",
+      "action": "迁移 4 个测试文件的 vi.mock 路径",
+      "rationale": "同步测试 mock 与生产 import 路径一致",
+      "target_files": ["desktop/src/components/DocumentEditor.additional.test.tsx", "desktop/src/components/DocumentEditor.branch-gap.additional.test.tsx"],
+      "steps": [
+        "vi.mock('../../../src-ts/analysis/personalized-craft-profile') 改为 vi.mock('../api/analysis')",
+        "运行测试验证 mock 生效"
+      ]
+    },
+    {
+      "id": "R-004",
+      "priority": "medium",
+      "action": "文档化 reader-endpoints.ts 拆分方案",
+      "rationale": "为 M28+ 执行做准备，本次不拆分",
+      "target_files": [".workflow/scratch/20260622-analyze-P2-frontend-integration/reader-endpoints-split-plan.md"],
+      "steps": [
+        "记录 4 个功能组划分（analyze+overlay/personas/feedback/compare+deai）",
+        "记录依赖关系和拆分顺序",
+        "记录测试影响范围"
+      ]
+    },
+    {
+      "id": "R-005",
+      "priority": "low",
+      "action": "文档化 workspace.ts 和 writingSessionTelemetry.ts 桥接模式为已批准模式",
+      "rationale": "明确这两个文件的桥接是设计决策而非缺陷",
+      "target_files": ["desktop/src/types/workspace.ts (注释)", "desktop/src/utils/writingSessionTelemetry.ts (注释)"],
+      "steps": [
+        "添加注释说明桥接模式是已批准的前端-后端边界模式",
+        "grep 验收时排除这两个已批准的桥接点"
+      ]
+    }
+  ],
+  "decision_trail": [
+    {
+      "round": 1,
+      "decision": "识别 4 个跨边界 import 点，按严重程度分级 P0-P2",
+      "reason": "cli-explore-agent 3 层探索发现精确位置和类型"
+    },
+    {
+      "round": 2,
+      "decision": "选择 Option A (api/analysis.ts re-export) 作为 buildPersonalizedCraftProfile 修复方案",
+      "reason": "深入分析 3 选项后，Option A 最轻量、有先例、与 roadmap 一致；Option C 基础设施已存在但属另一个 feature 范围"
+    },
+    {
+      "round": 2,
+      "decision": "workspace.ts 和 writingSessionTelemetry.ts 桥接模式保留现状",
+      "reason": "23+ 消费者依赖，模式成熟，改动收益小于风险"
+    }
+  ],
+  "implementation_scope": [
+    {
+      "objective": "消除 DocumentEditor.tsx 跨边界 import",
+      "rationale": "P0 架构违规，唯一组件层直接调用后端函数",
+      "priority": "high",
+      "target_files": ["desktop/src/api/analysis.ts", "desktop/src/components/DocumentEditor.tsx"],
+      "acceptance_criteria": ["grep 'from.*src-ts' desktop/src/components/DocumentEditor.tsx 返回 0 结果", "TypeScript 编译通过"],
+      "change_summary": "api/analysis.ts: 追加 buildPersonalizedCraftProfile re-export + 注释块；DocumentEditor.tsx: import 改为从 api/analysis"
+    },
+    {
+      "objective": "消除 api/narrative-visualization.ts 跨边界 import",
+      "rationale": "API 层不应直接依赖 src-ts",
+      "priority": "high",
+      "target_files": ["desktop/src/types/narrative-visualization.ts (new)", "desktop/src/api/narrative-visualization.ts"],
+      "acceptance_criteria": ["grep 'from.*src-ts' desktop/src/api/narrative-visualization.ts 返回 0 结果", "9 个下游消费者 import 有效"],
+      "change_summary": "新建 types/narrative-visualization.ts re-export 7 类型；api/narrative-visualization.ts 改为从 types/ 导入"
+    },
+    {
+      "objective": "迁移测试 mock 路径",
+      "rationale": "同步测试与生产 import 路径",
+      "priority": "medium",
+      "target_files": ["desktop/src/components/DocumentEditor.additional.test.tsx", "desktop/src/components/DocumentEditor.branch-gap.additional.test.tsx"],
+      "acceptance_criteria": ["4 个测试文件 vi.mock 路径指向新 api 层", "测试通过"],
+      "change_summary": "vi.mock 路径从 src-ts 改为 ../api/analysis"
+    },
+    {
+      "objective": "文档化 reader-endpoints.ts 拆分方案",
+      "rationale": "为 M28+ 执行做准备",
+      "priority": "medium",
+      "target_files": [".workflow/scratch/20260622-analyze-P2-frontend-integration/reader-endpoints-split-plan.md"],
+      "acceptance_criteria": ["拆分方案文档存在", "4 个功能组划分明确"],
+      "change_summary": "记录 4 个功能组、依赖关系、测试影响"
+    },
+    {
+      "objective": "grep 验收零跨边界 import（排除已批准桥接）",
+      "rationale": "验证 Phase 2 success criteria",
+      "priority": "high",
+      "target_files": [],
+      "acceptance_criteria": ["grep -r 'from.*src-ts' desktop/src/ 返回仅包含 types/workspace.ts + utils/writingSessionTelemetry.ts（已批准桥接）"],
+      "change_summary": "N/A（验证步骤）"
+    }
+  ]
+}

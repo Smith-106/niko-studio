@@ -21,7 +21,7 @@ import {
 import {
   buildPersonalizedCraftProfile,
   type PersonalizedCraftRecommendation,
-} from '../../../src-ts/analysis/personalized-craft-profile'
+} from '../api/analysis'
 
 // Module-level cache: saves editor JSON + text across chapter switches
 const editorStateCache = new Map<string, { json: JSONContent | null; text: string }>()

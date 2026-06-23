@@ -1,3 +1,5 @@
+// 已批准桥接模式：本文件封装 analyzeWritingSessionIntelligenceCore 为 summarizeWritingSessionTelemetry，是已批准的前端-后端边界模式。
+// grep 验收 from.*src-ts 时本文件作为已知例外排除。M27 Phase 2 L-004 决策保留现状；未来重构见 ISS-20260622-012。
 import {
   analyzeWritingSessionIntelligenceCore,
   type WritingSessionIntelligenceResult,

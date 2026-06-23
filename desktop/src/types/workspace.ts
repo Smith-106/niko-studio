@@ -1,3 +1,5 @@
+// 已批准桥接模式：本文件桥接 src-ts/ 类型/值到前端，是已批准的前端-后端边界模式（23+ 消费者通过 @/types/workspace 导入）。
+// grep 验收 from.*src-ts 时本文件作为已知例外排除。M27 Phase 2 L-004 决策保留现状；未来重构见 ISS-20260622-012。
 import {
   PROJECT_WORKSPACE_SCHEMA_VERSION,
   PROJECT_WORKSPACE_MIGRATION_NOTES,

@@ -271,3 +271,9 @@ Milestone: M26
 清理 TODO 注释时，应将有用信息转为 _log.warn/info 保留意图，而非静默删除。console.log 在组件中应移除并更新对应测试断言。清理后的代码仍需 lint/typecheck/test 全链路验证无回归。
 Milestone: M26
 </spec-entry>
+
+<spec-entry category="learning" keywords="cross-boundary-import,re-export,api-layer,types-layer,vi.mock,bridge-pattern" date="2026-06-22" source="execute">
+### 前端跨边界 import 修复：api/ re-export + types/ 真相源 + 语义注释 + vi.mock 路径同步
+纯计算函数跨边界 import 修复：api/analysis.ts 追加 re-export 块（带「纯计算直通，非网络 API」语义注释），types/ 层作为类型真相源下沉 src-ts 引用。vi.mock 路径必须与生产 import 路径一致，且测试文件的 import 路径也需同步迁移（否则 vi.mocked() 获取真实函数而非 mock 函数，导致 mockReturnValue 失败）。桥接模式（workspace.ts / writingSessionTelemetry.ts）作为已批准例外文档化 + grep 验收排除。grep 验收的「已批准桥接点」集合须包含本次新建的 re-export 桥接点（types/ + api/），不能仅列 pre-existing 桥接。
+Milestone: M27 Phase 2
+</spec-entry>

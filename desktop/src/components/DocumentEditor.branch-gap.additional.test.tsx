@@ -144,7 +144,7 @@ vi.mock('../services/versionService', () => ({
   autoSaveSnapshot: vi.fn(),
 }))
 
-vi.mock('../../../src-ts/analysis/personalized-craft-profile', () => ({
+vi.mock('../api/analysis', () => ({
   buildPersonalizedCraftProfile: vi.fn(() => ({
     dominantWeaknesses: [],
     growthTrajectory: { summary: 'steady' },
@@ -158,7 +158,7 @@ import { autoSaveSnapshot } from '../services/versionService'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { DocumentEditor } from './DocumentEditor'
-import { buildPersonalizedCraftProfile } from '../../../src-ts/analysis/personalized-craft-profile'
+import { buildPersonalizedCraftProfile } from '../api/analysis'
 
 const mockedReadChapterContent = vi.mocked(readChapterContent)
 const mockedWriteChapterContent = vi.mocked(writeChapterContent)
