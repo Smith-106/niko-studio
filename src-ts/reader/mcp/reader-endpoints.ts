@@ -25,7 +25,7 @@ import { detectAIFlavor } from '../ai-flavor-detector';
 import type { AIFlavorResult } from '../ai-flavor-detector';
 import { createLogger } from '../../logger';
 import { RevisionServiceImpl } from '../../services/revision-service';
-import { validateStringLength, MAX_NOVEL_ID_LENGTH, MAX_TEXT_LENGTH, MAX_NAME_LENGTH, safeResolveWorkspaceRoot, tryResolveWorkspaceRoot, validateWeight } from '../../mcp/input-validation.js';
+import { validateStringLength, MAX_NOVEL_ID_LENGTH, MAX_TEXT_LENGTH, MAX_NAME_LENGTH, MAX_PERSONA_ID_LENGTH, MAX_FEEDBACK_ID_LENGTH, MAX_DIMENSION_LENGTH, MAX_TARGET_STYLE_LENGTH, MAX_LABEL_LENGTH, safeResolveWorkspaceRoot, tryResolveWorkspaceRoot, validateWeight, validateStringArray } from '../../mcp/input-validation.js';
 
 const _log = createLogger('reader-endpoint');
 
@@ -398,6 +398,8 @@ export async function rsAnalyzeEndpoint(request: HttpRequest): Promise<HttpRespo
       if (typeof id !== 'string') {
         return jsonResponse({ error: 'Each personaId must be a string' }, 400);
       }
+      const idLengthError = validateStringLength(id, MAX_PERSONA_ID_LENGTH, 'personaId');
+      if (idLengthError) return idLengthError;
     }
   }
 
@@ -578,8 +580,9 @@ export async function rsCreateCustomPersonaEndpoint(request: HttpRequest): Promi
   const arrayFields = ['focusAreas', 'biases'];
   for (const field of arrayFields) {
     const value = parameters[field];
-    if (value !== undefined && !Array.isArray(value)) {
-      return jsonResponse({ error: `parameters.${field} must be an array` }, 400);
+    if (value !== undefined) {
+      const arrayError = validateStringArray(value, { label: `parameters.${field}` });
+      if (arrayError) return arrayError;
     }
   }
 
@@ -767,7 +770,7 @@ export async function rsFeedbackEndpoint(request: HttpRequest): Promise<HttpResp
   const novelIdLengthError = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId');
   if (novelIdLengthError) return novelIdLengthError;
 
-  const feedbackIdLengthError = validateStringLength(feedbackId, MAX_NOVEL_ID_LENGTH, 'feedbackId');
+  const feedbackIdLengthError = validateStringLength(feedbackId, MAX_FEEDBACK_ID_LENGTH, 'feedbackId');
   if (feedbackIdLengthError) return feedbackIdLengthError;
 
   _log.info('Reader feedback received', { novelId, personaId, feedbackId, action, dimension });
@@ -783,6 +786,8 @@ export async function rsFeedbackEndpoint(request: HttpRequest): Promise<HttpResp
 
     // Determine effective dimension (fallback to 'general' if not provided)
     const effectiveDimension = dimension && typeof dimension === 'string' ? dimension : 'general';
+    const dimensionLengthError = validateStringLength(effectiveDimension, MAX_DIMENSION_LENGTH, 'dimension');
+    if (dimensionLengthError) return dimensionLengthError;
 
     // Get or create aggregate for this persona + dimension
     let personaAggregates = feedbackAggregateStore.get(personaId);
@@ -962,6 +967,19 @@ export async function rsCompareEndpoint(request: HttpRequest): Promise<HttpRespo
   const textBOverflow = validateStringLength(textB, MAX_TEXT_LENGTH, 'versionB.text');
   if (textBOverflow) return textBOverflow;
 
+  // Validate version labels if provided
+  const labelA = versionA.label as string | undefined;
+  if (labelA !== undefined && typeof labelA === 'string') {
+    const labelAOverflow = validateStringLength(labelA, MAX_LABEL_LENGTH, 'versionA.label');
+    if (labelAOverflow) return labelAOverflow;
+  }
+
+  const labelB = versionB.label as string | undefined;
+  if (labelB !== undefined && typeof labelB === 'string') {
+    const labelBOverflow = validateStringLength(labelB, MAX_LABEL_LENGTH, 'versionB.label');
+    if (labelBOverflow) return labelBOverflow;
+  }
+
   // Validate persona IDs if provided
   if (personaIds !== undefined) {
     if (!Array.isArray(personaIds)) {
@@ -971,6 +989,8 @@ export async function rsCompareEndpoint(request: HttpRequest): Promise<HttpRespo
       if (typeof id !== 'string') {
         return jsonResponse({ error: 'Each personaId must be a string' }, 400);
       }
+      const idLengthError = validateStringLength(id, MAX_PERSONA_ID_LENGTH, 'personaId');
+      if (idLengthError) return idLengthError;
     }
   }
 
@@ -1061,6 +1081,12 @@ export async function rsDeAIEndpoint(request: HttpRequest): Promise<HttpResponse
 
   const novelIdOverflow = validateStringLength(novelId, MAX_NOVEL_ID_LENGTH, 'novelId');
   if (novelIdOverflow) return novelIdOverflow;
+
+  // Validate targetStyle if provided
+  if (targetStyle !== undefined && typeof targetStyle === 'string') {
+    const targetStyleOverflow = validateStringLength(targetStyle, MAX_TARGET_STYLE_LENGTH, 'targetStyle');
+    if (targetStyleOverflow) return targetStyleOverflow;
+  }
 
   const analysisText = text ?? '';
 

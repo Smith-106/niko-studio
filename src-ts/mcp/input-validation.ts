@@ -27,6 +27,27 @@ export const MAX_TEXT_LENGTH = 100_000;
 /** Maximum length for user-provided names */
 export const MAX_NAME_LENGTH = 200;
 
+/** Maximum length for persona identifiers */
+export const MAX_PERSONA_ID_LENGTH = 256;
+
+/** Maximum length for feedback identifiers */
+export const MAX_FEEDBACK_ID_LENGTH = 256;
+
+/** Maximum length for dimension names */
+export const MAX_DIMENSION_LENGTH = 100;
+
+/** Maximum length for target style descriptions */
+export const MAX_TARGET_STYLE_LENGTH = 200;
+
+/** Maximum length for version labels */
+export const MAX_LABEL_LENGTH = 200;
+
+/** Maximum number of items in a string array */
+export const MAX_ARRAY_LENGTH = 64;
+
+/** Maximum length of each item in a string array */
+export const MAX_ARRAY_ITEM_LENGTH = 200;
+
 // ============================================================
 // Validators
 // ============================================================
@@ -162,5 +183,82 @@ export function validateWeight(
     );
   }
 
+  return null;
+}
+
+// ============================================================
+// Array & Enum Validators
+// ============================================================
+
+export interface ValidateStringArrayOpts {
+  maxLength?: number;
+  maxItemLength?: number;
+  label?: string;
+}
+
+/**
+ * Validate that a value is an array of strings, with bounded length and item size.
+ *
+ * Rejects non-array values, arrays exceeding maxLength, non-string elements,
+ * and string elements exceeding maxItemLength.
+ *
+ * @param items - The value to validate
+ * @param opts - Validation options (maxLength, maxItemLength, label)
+ * @returns HttpResponse (400) on validation failure, null on pass
+ */
+export function validateStringArray(
+  items: unknown,
+  opts: ValidateStringArrayOpts = {},
+): HttpResponse | null {
+  const maxLength = opts.maxLength ?? MAX_ARRAY_LENGTH;
+  const maxItemLength = opts.maxItemLength ?? MAX_ARRAY_ITEM_LENGTH;
+  const label = opts.label ?? 'items';
+
+  if (!Array.isArray(items)) {
+    return jsonResponse({ error: `${label} must be an array` }, 400);
+  }
+
+  if (items.length > maxLength) {
+    return jsonResponse(
+      { error: `${label} exceeds maximum length of ${maxLength} items (got ${items.length})` },
+      400,
+    );
+  }
+
+  for (const item of items) {
+    if (typeof item !== 'string') {
+      return jsonResponse({ error: `Each ${label} item must be a string` }, 400);
+    }
+    if (item.length > maxItemLength) {
+      return jsonResponse(
+        { error: `${label} item exceeds maximum length of ${maxItemLength} characters (got ${item.length})` },
+        400,
+      );
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Validate that a value is one of an allowed set of string values.
+ *
+ * @param value - The value to validate
+ * @param allowedSet - Set of allowed string values
+ * @param label - Human-readable label for error messages
+ * @returns HttpResponse (400) on invalid value, null on pass
+ */
+export function validateEnum(
+  value: unknown,
+  allowedSet: Set<string>,
+  label: string,
+): HttpResponse | null {
+  if (typeof value !== 'string' || !allowedSet.has(value)) {
+    const allowed = Array.from(allowedSet).join(', ');
+    return jsonResponse(
+      { error: `${label} must be one of: ${allowed}, got ${JSON.stringify(value)}` },
+      400,
+    );
+  }
   return null;
 }
