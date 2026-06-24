@@ -8,7 +8,7 @@ interface TemplateManagerPanelProps {
   onApplyTemplate?: (template: Template) => void
 }
 
-const CATEGORY_FILTERS: Array<TemplateCategory | 'all'> = ['all', 'structure', 'genre', 'format', 'custom']
+const CATEGORY_FILTERS: Array<TemplateCategory | 'all'> = ['all', 'structure', 'genre', 'format', 'plot', 'custom']
 
 export function TemplateManagerPanel({ onApplyTemplate }: TemplateManagerPanelProps) {
   const { t } = useI18n()
@@ -102,6 +102,7 @@ export function TemplateManagerPanel({ onApplyTemplate }: TemplateManagerPanelPr
       genre: t.templateManagerCategoryGenre,
       format: t.templateManagerCategoryFormat,
       custom: t.templateManagerCategoryCustom,
+      plot: t.templateManagerCategoryPlot,
     }
     return map[cat]
   }
@@ -161,7 +162,9 @@ export function TemplateManagerPanel({ onApplyTemplate }: TemplateManagerPanelPr
                           ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
                           : template.category === 'format'
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                            : 'bg-gray-100 text-gray-600 dark:bg-dark-border dark:text-dark-text-secondary'
+                            : template.category === 'plot'
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                              : 'bg-gray-100 text-gray-600 dark:bg-dark-border dark:text-dark-text-secondary'
                     }`}>
                       {categoryLabel(template.category)}
                     </span>

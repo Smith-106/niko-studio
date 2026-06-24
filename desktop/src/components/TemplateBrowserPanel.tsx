@@ -12,6 +12,7 @@ const CATEGORY_LABELS: Record<TemplateCategory, string> = {
   structure: '结构',
   genre: '类型',
   format: '格式',
+  plot: '剧情',
   custom: '自定义',
 }
 
@@ -105,7 +106,7 @@ export const TemplateBrowserPanel: React.FC<PanelProps> = ({ onClose }) => {
       </div>
 
       <div className="flex gap-1 p-3 border-b border-dark-border flex-shrink-0 overflow-x-auto">
-        {(['all', 'structure', 'genre', 'format', 'custom'] as const).map((cat) => (
+        {(['all', 'structure', 'genre', 'format', 'plot', 'custom'] as const).map((cat) => (
           <button
             key={cat}
             onClick={() => setCategoryFilter(cat)}

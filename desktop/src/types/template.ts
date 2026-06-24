@@ -1,4 +1,4 @@
-export type TemplateCategory = 'structure' | 'genre' | 'format' | 'custom'
+export type TemplateCategory = 'structure' | 'genre' | 'format' | 'custom' | 'plot'
 
 export interface TemplatePlaceholder {
   name: string

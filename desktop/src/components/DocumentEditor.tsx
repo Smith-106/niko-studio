@@ -218,6 +218,20 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
     }
   }, [historyPanelOpen, updateSessionTelemetry])
 
+  // Listen for template:apply events and insert template content into editor
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (!detail?.content) return
+      const handle = getEditorHandle()
+      if (handle?.insertContent) {
+        handle.insertContent(detail.content)
+      }
+    }
+    window.addEventListener('template:apply', handler)
+    return () => window.removeEventListener('template:apply', handler)
+  }, [])
+
   const handleTitleChange = useCallback((value: string) => {
     setTitle(value)
     if (currentConversationId) {

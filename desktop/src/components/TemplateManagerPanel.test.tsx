@@ -18,6 +18,7 @@ const i18nStrings = {
   templateManagerCategoryStructure: '结构',
   templateManagerCategoryGenre: '类型',
   templateManagerCategoryFormat: '格式',
+  templateManagerCategoryPlot: '剧情',
   templateManagerCategoryCustom: '自定义',
   templateManagerBuiltin: '内置',
   templateManagerCustom: '自定义',

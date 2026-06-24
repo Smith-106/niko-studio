@@ -13,6 +13,7 @@ export interface EditorSelectionSnapshot {
 
 export interface EditorHandle {
   insertText: (text: string) => void
+  insertContent: (content: Record<string, unknown>) => void
   getSelectedText: () => string
   getJSON: () => JSONContent
   captureSelectionSnapshot: () => EditorSelectionSnapshot | null

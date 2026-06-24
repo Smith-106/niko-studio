@@ -152,6 +152,7 @@ type SettingsKeys =
   | 'templateManagerCategoryStructure'
   | 'templateManagerCategoryGenre'
   | 'templateManagerCategoryFormat'
+  | 'templateManagerCategoryPlot'
   | 'templateManagerCategoryCustom'
   | 'templateManagerBuiltin'
   | 'templateManagerCustom'
@@ -324,6 +325,7 @@ export const zhSettings: Translations = {
   templateManagerCategoryStructure: '结构',
   templateManagerCategoryGenre: '类型',
   templateManagerCategoryFormat: '格式',
+  templateManagerCategoryPlot: '剧情',
   templateManagerCategoryCustom: '自定义',
   templateManagerBuiltin: '内置',
   templateManagerCustom: '自定义',
@@ -495,6 +497,7 @@ export const enSettings: Translations = {
   templateManagerCategoryStructure: 'Structure',
   templateManagerCategoryGenre: 'Genre',
   templateManagerCategoryFormat: 'Format',
+  templateManagerCategoryPlot: 'Plot',
   templateManagerCategoryCustom: 'Custom',
   templateManagerBuiltin: 'Built-in',
   templateManagerCustom: 'Custom',

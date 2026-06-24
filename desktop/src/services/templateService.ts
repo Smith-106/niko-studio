@@ -1,6 +1,7 @@
 import { exists, mkdir, readDir, readTextFile, remove, writeTextFile } from '@tauri-apps/plugin-fs'
 import type { Template, TemplateCategory } from '../types/template'
 import { ALL_BUILTINS } from './templates/builtins'
+import { PLOT_BUILTINS } from './plotTemplateService'
 
 const TEMPLATES_DIR = 'templates'
 
@@ -19,12 +20,16 @@ export async function listTemplates(category?: TemplateCategory): Promise<Templa
     ? ALL_BUILTINS.filter((t) => t.category === category)
     : ALL_BUILTINS
 
+  const plotBuiltins = category === 'plot' || !category
+    ? PLOT_BUILTINS
+    : []
+
   const userTemplates = await loadUserTemplates()
   const filtered = category
     ? userTemplates.filter((t) => t.category === category)
     : userTemplates
 
-  return [...builtins, ...filtered]
+  return [...builtins, ...plotBuiltins, ...filtered]
 }
 
 async function loadUserTemplates(): Promise<Template[]> {
