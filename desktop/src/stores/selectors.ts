@@ -180,6 +180,7 @@ export function useDocumentEditorState() {
       setPersonalizedCraftSummary: state.setPersonalizedCraftSummary,
       setPersonalizedCraftTrajectory: state.setPersonalizedCraftTrajectory,
       setPersonalizedCraftRecommendations: state.setPersonalizedCraftRecommendations,
+      editorIsDirty: state.editorIsDirty,
       setEditorIsDirty: state.setEditorIsDirty,
     }))
   )

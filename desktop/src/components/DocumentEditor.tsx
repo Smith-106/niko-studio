@@ -52,6 +52,7 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
     setPersonalizedCraftTrajectory,
     setPersonalizedCraftRecommendations,
     setEditorIsDirty,
+    editorIsDirty,
   } = useDocumentEditorState()
   const [chapterContent, setChapterContent] = useState<string>('')
   const [contentLoaded, setContentLoaded] = useState(false)
@@ -285,6 +286,47 @@ export function DocumentEditor({ onOpenWritingHelper, onOpenSettings, onOpenChar
 
     prevChapterIdRef.current = currId
   }, [currentChapterId])
+
+  // beforeunload + Tauri close protection: prevent closing when unsaved
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (editorIsDirty) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    let unlistenClose: (() => void) | null = null
+    try {
+      import('@tauri-apps/api/window').then((mod) => {
+        const getCurrentWindow = (mod as any).getCurrentWindow
+        if (typeof getCurrentWindow !== 'function') return
+        const win = getCurrentWindow()
+        if (!win || typeof win.onCloseRequested !== 'function') return
+        win.onCloseRequested((event: { preventDefault: () => void }) => {
+          if (editorIsDirty) {
+            event.preventDefault()
+          }
+        }).then((unlisten: () => void) => {
+          unlistenClose = unlisten
+        }).catch(() => {
+          // Tauri API not available, silently ignore
+        })
+      }).catch(() => {
+        // Tauri API not available, silently ignore
+      })
+    } catch {
+      // Tauri API not available, silently ignore
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      if (unlistenClose) {
+        unlistenClose()
+      }
+    }
+  }, [editorIsDirty])
 
   return (
     <div className="flex-1 flex min-w-0 min-h-0">
