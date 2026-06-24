@@ -1,0 +1,110 @@
+{
+  "id": "TASK-002",
+  "title": "拆分 reader-endpoints.ts 为 4 子模块并保留兼容性 shim",
+  "description": "将 src-ts/reader/mcp/reader-endpoints.ts 拆分为 reader-types.ts（类型定义）、reader-services.ts（singleton/store/persistence/clearReaderStores）、reader-validation.ts（resolvePersonas/buildOverlayMarkers/adjustPersonaWeights/DIMENSION_TO_PARAM）、reader-routes.ts（8 个 endpoint handler）。保留 reader-endpoints.ts 作为纯 re-export shim，保护 8 个测试文件和 barrel 调用方零修改。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "创建 reader-types.ts 导出 AnalyzeRequest/CreatePersonaRequest/DeAIRequest/DeAIResponse/FeedbackRequest/FeedbackResponse/FeedbackAggregate/CompareRequest/CompareResult/CompareVersionInput/OverlayMarker；创建 reader-services.ts 导出 getRevisionService/getConsensusEngine/getDualEngine/getDimensionAnalyzer/customPersonaStore/analysisResultCache/feedbackAggregateStore/loadCustomPersonas/saveCustomPersonas/deletePersonasFile/clearReaderStores/getCustomPersonaStore/getAnalysisResultCache/getFeedbackAggregateStore/clearFeedbackAggregateStore；创建 reader-validation.ts 导出 resolvePersonas/buildOverlayMarkers/adjustPersonaWeights/extractCurrentWeights/DIMENSION_TO_PARAM；创建 reader-routes.ts 导出 8 个 endpoint handler。reader-endpoints.ts 改写为纯 re-export：export { ... } from './reader-routes'; export type { ... } from './reader-types'; 等。",
+  "scope": "src-ts/reader/mcp/",
+  "focus_paths": ["src-ts/reader/mcp/reader-endpoints.ts", "src-ts/reader/mcp/reader-types.ts", "src-ts/reader/mcp/reader-services.ts", "src-ts/reader/mcp/reader-validation.ts", "src-ts/reader/mcp/reader-routes.ts"],
+  "read_first": [
+    "src-ts/reader/mcp/reader-endpoints.ts",
+    "src-ts/mcp/input-validation.ts",
+    "src-ts/reader/mcp/index.ts",
+    "src-ts/mcp/endpoints/index.ts"
+  ],
+  "depends_on": ["TASK-001"],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "reader-types.ts 存在且包含 export interface AnalyzeRequest",
+      "reader-services.ts 存在且包含 export function getDualEngine",
+      "reader-validation.ts 存在且包含 export const DIMENSION_TO_PARAM",
+      "reader-routes.ts 存在且包含 export async function rsAnalyzeEndpoint",
+      "reader-endpoints.ts 不包含 async function 实现体（grep -c 'async function' 为 0）",
+      "grep 'from ./reader-routes' reader-endpoints.ts 命中",
+      "grep 'from ./reader-types' reader-endpoints.ts 命中",
+      "grep 'from ./reader-services' reader-endpoints.ts 命中",
+      "grep 'from ./reader-validation' reader-endpoints.ts 命中",
+      "npm test -- --grep 'reader' 全部通过",
+      "tsc 无编译错误"
+    ],
+    "verification": "npm run build && npm test -- --grep 'reader'",
+    "definition_of_done": "reader-endpoints.ts 成为纯 re-export shim，4 个子模块职责清晰，既有测试和 barrel 无需修改即可通过。"
+  },
+  "files": [
+    {
+      "path": "src-ts/reader/mcp/reader-types.ts",
+      "action": "create",
+      "target": "Reader request/response types",
+      "change": "从 reader-endpoints.ts 提取所有类型定义和 OverlayMarker 接口"
+    },
+    {
+      "path": "src-ts/reader/mcp/reader-services.ts",
+      "action": "create",
+      "target": "Reader services and stores",
+      "change": "从 reader-endpoints.ts 提取 singleton 函数、mutable store、loadCustomPersonas/saveCustomPersonas/deletePersonasFile/clearReaderStores/getters"
+    },
+    {
+      "path": "src-ts/reader/mcp/reader-validation.ts",
+      "action": "create",
+      "target": "Reader validation helpers",
+      "change": "从 reader-endpoints.ts 提取 resolvePersonas/buildOverlayMarkers/adjustPersonaWeights/extractCurrentWeights/DIMENSION_TO_PARAM"
+    },
+    {
+      "path": "src-ts/reader/mcp/reader-routes.ts",
+      "action": "create",
+      "target": "8 endpoint handlers",
+      "change": "从 reader-endpoints.ts 提取 8 个 async endpoint handler，import 类型/服务/校验子模块"
+    },
+    {
+      "path": "src-ts/reader/mcp/reader-endpoints.ts",
+      "action": "modify",
+      "target": "Compatibility shim",
+      "change": "删除所有实现，改为从 reader-routes.ts / reader-types.ts / reader-services.ts / reader-validation.ts re-export"
+    }
+  ],
+  "implementation": [
+    "创建 reader-types.ts：复制所有 interface/type/export 类型，保持与原文件一致",
+    "创建 reader-services.ts：复制 singleton getter、store 声明、load/save/delete/clear/getters，保留模块顶层 loadCustomPersonas() 调用",
+    "创建 reader-validation.ts：复制 resolvePersonas、buildOverlayMarkers、adjustPersonaWeights、extractCurrentWeights、DIMENSION_TO_PARAM，import 类型和 store 从 reader-services.ts",
+    "创建 reader-routes.ts：复制 8 个 endpoint handler，import 类型从 reader-types.ts，import 服务/getters 从 reader-services.ts，import 校验 helper 从 reader-validation.ts 和 input-validation.ts",
+    "改写 reader-endpoints.ts 为 shim：export { ... } from './reader-routes'; export type { ... } from './reader-types'; export { ... } from './reader-services'; export { ... } from './reader-validation';",
+    "确保无 import cycle：reader-routes → reader-services / reader-validation / reader-types；reader-validation → reader-services / reader-types；reader-services → reader-types（可选）",
+    "运行 reader 测试确认零回归"
+  ],
+  "test": {
+    "commands": ["npm test -- --grep 'reader'", "npm run build"],
+    "unit": ["src-ts/tests/reader/reader-endpoints.test.ts"],
+    "integration": [],
+    "success_metrics": ["所有 reader 测试通过", "tsc 无错误", "shim 文件无实现代码"]
+  },
+  "reference": {
+    "pattern": "按 leaf-group 顺序拆分：validation（无下游依赖）→ services（被 validation/routes 依赖）→ routes（依赖 services/validation/types）→ types（最底层）",
+    "files": ["src-ts/reader/mcp/reader-endpoints.ts"],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "保留 shim 避免 8 个测试文件和 2 个 barrel 文件同时修改，降低风险",
+    "decision_factors": ["CI 保护", "最小改动原则", "逐步迁移"],
+    "tradeoffs": "shim 会短暂存在一层间接引用，但可在后续 issue 中移除"
+  },
+  "risks": [
+    "import cycle 风险：需确保 reader-validation.ts 不反向依赖 reader-routes.ts",
+    "模块顶层 loadCustomPersonas() 在拆分后不能丢失 ready 语义"
+  ],
+  "issue_id": "ISS-20260621-013",
+  "issue_refs": ["ISS-20260622-006"],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "90m",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 2,
+    "execution_group": null,
+    "executor": "agent",
+    "completed_at": "2026-06-24T04:50:00.000Z"
+  }
+}

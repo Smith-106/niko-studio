@@ -357,3 +357,120 @@ reader-endpoints.ts（1173 行）拆分为 types / services / validation / route
 Milestone: M28
 
 </spec-entry>
+
+<spec-entry category="learning" keywords="container-mcp-decoupling,interface-abstraction,dynamic-import,composition-root" date="2026-06-24" source="milestone-complete">
+
+### Container↔MCP 解耦：用接口 + 动态 require + composition-root 斩断静态依赖
+
+M28 Phase 2 斩断 container 与 mcp 之间的双向静态依赖：
+- gateway-bootstrap.ts 的启动依赖从 `../container/gateway-control-plane` 下沉到 `../composition-root/gateway-control-plane`
+- 在 container/types.ts 定义 `IWorkflowEventRelay` 接口（含 broadcast 等运行时必需方法），容器侧只依赖接口类型
+- adapters.ts 通过 `require('../mcp/gateway-ws')` 在同步 initialize 中构造真实实现，保留运行时行为
+关键经验：跨层依赖无法一次性重构 DI 容器时，先抽接口 + 调整 import 方向 + 动态 require 是低风险的渐进解耦路径。
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="fat-interface,ISP,GatewayDeps,role-interfaces,backward-compatible" date="2026-06-24" source="milestone-complete">
+
+### 胖接口拆分：先拆角色接口再逐步迁移，别名保后向兼容
+
+M28 Phase 2 将 GatewayDeps 从单一大接口拆分为 6 个角色接口（IHealthEngineAccess / IServiceRegistryAccess / IRuntimeStateAccess / IObservabilityAccess / IConfigAccess / IGatewayMetadata），同时保留 `type GatewayDeps = I... & ...` 类型别名。所有现有消费者无需修改即可编译通过，未来新消费者可按需收窄依赖。关键经验：ISP 改造不宜一步到位替换所有消费者，先提供角色接口 + 兼容别名，再逐步迁移是安全策略。
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="circular-dependency,type-layer,craft-types,lazy-getter,reloadCatalog" date="2026-06-24" source="milestone-complete">
+
+### 用独立类型层 + lazy getter 打破运行时循环依赖
+
+M28 Phase 2 解决 craft-catalog.ts ↔ catalog-loader.ts 循环依赖：
+- 提取 craft-types.ts 作为纯类型层，catalog-loader 只从类型层 import type
+- craft-catalog.ts 运行时依赖 catalog-loader 的加载函数，但类型层不依赖运行时
+- 将 18 个 eager `export const FOO = getFoo()` 转为 lazy `getFooCatalog()` getter，reloadCatalog 语义正确（清空 cache 后下次 getter 重新加载）
+关键经验：类型层与运行时层分离是消除循环依赖的通用手段；eager const 导出会固化加载时机，lazy getter 更适合可 reload 的数据目录。
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="tiptap-mark,decoration,VoiceConsistency,show-tell-pattern,extension" date="2026-06-24" source="milestone-complete">
+
+### TipTap Mark + Decoration 模式复用实现 voice consistency 可视化
+
+M28 Phase 3 实现 VoiceConsistencyDecorations 时复用现有 ShowTell 的 Mark + Decoration 模式：
+- 新建 `VoiceConsistencyMark.ts` 定义 mark、attributes（severity）、parseHTML/renderHTML、commands（setVoiceConsistency / unsetVoiceConsistency）
+- VoiceConsistencyDecorations.tsx 遍历段落节点，对匹配 warning 的文本调用 editor.commands.setVoiceConsistency(severity)
+- NikoEditor.tsx 注册 mark 与 decoration 组件，并提供 toggle 按钮
+关键经验：同一编辑器框架下新增可视化标注，优先复用既有 Mark/Decoration 抽象而非引入新渲染层，可保持扩展一致性和测试可复用性。
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="template:apply,custom-event,plot-template,insertContent,desktop" date="2026-06-24" source="milestone-complete">
+
+### plot 模板通过 CustomEvent 解耦 TemplateManagerPanel 与 DocumentEditor
+
+M28 Phase 3 新增 plot 模板类别并连接 UI：
+- PlotTemplateService 提供 4 个 plot builtins
+- TemplateCategory 联合类型扩展 `'plot'`，TemplateManagerPanel / TemplateBrowserPanel 同步添加 filter 与 i18n
+- 模板应用通过 `template:apply` CustomEvent 派发，DocumentEditor 监听并调用 editor handle 的 insertContent
+- EditorHandle 接口新增 insertContent(content) 方法，NikoEditor 通过 TipTap chain 实现
+关键经验：panel 与 editor 之间通过 DOM CustomEvent 解耦，避免直接 prop drilling；新增模板类别只需扩展类型、服务、UI filter 三处。
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="dirty-check,beforeunload,Tauri,onCloseRequested,dynamic-import" date="2026-06-24" source="milestone-complete">
+
+### 编辑器 dirty check 同时覆盖 beforeunload 与 Tauri 窗口关闭
+
+M28 Phase 3 为 DocumentEditor 添加未保存保护：
+- 从 useDocumentEditorState selector 暴露 editorIsDirty
+- window.beforeunload 阻止浏览器/常规 web 关闭
+- 条件动态导入 `@tauri-apps/api/window`，注册 onCloseRequested 阻止 Tauri 桌面窗口关闭
+- 保存成功后调用 setEditorIsDirty(false)
+关键经验：桌面 hybrid 应用需同时处理 web 生命周期事件与原生窗口事件；用 try/catch + 动态 import 保护 web 构建不会因缺少 Tauri API 而崩溃。
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="coverage-gap-scanner,regex,route-contract-test,GatewayRoute,zero-dependency" date="2026-06-24" source="milestone-complete">
+
+### coverage-gap-scanner 用零依赖正则扫描 route modules 与 handlers
+
+M28 Phase 4 实现 `scripts/coverage-gap-scanner.ts`，无需 AST 库：
+- 扫描 `src-ts/mcp/routes/*.ts` 正则匹配 `export const {name}Routes: GatewayRoute[] = [...]`
+- 提取每条 route 的 method、pattern、handler 名、paramNames
+- 扫描 `src-ts/tests/**/*.test.ts`，判定 route module 覆盖（变量名或 import 路径出现）与 handler 覆盖（handler 名出现）
+- 输出 JSON 与表格，支持 `--check` 模式 exit 0/1
+关键经验：对于路由数组这种结构化 but 简单的源码，正则扫描足以替代 AST parser，零依赖、启动快、CI 友好；跨目录测试用 handler 名覆盖而非文件名覆盖，避免误报。
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="route-contract-test,GatewayRoute,vitest,handler-shape,method-pattern" date="2026-06-24" source="milestone-complete">
+
+### Route contract tests 用 GatewayRoute 结构断言 method/pattern/handler
+
+M28 Phase 4 为 agents/m10/m11/content 路由与 listTools 添加 contract tests：
+- 直接 import 各 route module的 const 数组（如 agentRoutes / m10Routes）
+- 断言每个元素满足 `{ method: 'GET'|'POST'..., pattern: RegExp, handler: Function }`
+- 断言关键路由（如 /agents/:id, /m10/execute, /reader/analyze）存在且 pattern 可匹配预期路径
+- listTools 测试断言 8 大分类与具体工具名
+关键经验：contract test 不深入 handler 行为，只保证路由注册契约稳定，是 MCP endpoints 快速覆盖的有效方式。
+Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="learning" keywords="integration-audit,near-miss,cross-phase,coupling,low-severity" date="2026-06-24" source="milestone-complete">
+
+### 集成审计应区分 gap 与 near-miss
+
+M28 集成审计报告 verdict PASS，仅记录 3 个 LOW near-miss：
+- P2 MCP endpoints/index.ts 直接 import P1 reader-routes 而非 P1 barrel
+- P4 content-routes-additional.test.ts 硬编码 route count 66
+- P2 GatewayDeps 角色接口尚未被消费者收窄
+关键经验：审计结果不必全是 PASS/FAIL；将「当前工作但脆弱」的点标记为 near-miss 并给出修复建议，比等到破坏后再处理成本更低。所有 HIGH/MEDIUM 缺口必须为 0 才可通过。
+Milestone: M28
+
+</spec-entry>

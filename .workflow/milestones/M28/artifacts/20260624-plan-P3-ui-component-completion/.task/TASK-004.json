@@ -1,0 +1,109 @@
+{
+  "id": "TASK-004",
+  "title": "VoiceConsistencyDecorations + PlotTemplate + Dirty Check 测试补充",
+  "description": "补充 TASK-001~003 新增功能的测试覆盖：VoiceConsistencyDecorations 的 mark 应用逻辑测试、PlotTemplateService 的模板加载测试、template:apply 事件消费测试、beforeunload/Tauri close 保护的 dirty check 测试。",
+  "issue_id": "ISS-20260613-019",
+  "issue_refs": ["ISS-20260613-019", "ISS-20260613-027", "ISS-20260613-029"],
+  "type": "test",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "1) 修改 desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx：添加测试验证 editor.commands.setVoiceConsistency 被正确调用（不同 severity）、组件 unmount 时 unsetVoiceConsistency 被调用、与 ShowTell 同时启用时无冲突。2) 新建 desktop/src/services/plotTemplateService.test.ts：测试 plot 模板数据结构正确（id/title/category/content/placeholders）。3) 修改 desktop/src/components/TemplateManagerPanel.test.tsx：添加测试验证 plot 分类 filter 正确过滤 plot 模板、template:apply 事件 dispatch 后 detail 包含正确内容。4) 新建/修改 desktop/src/components/DocumentEditor.test.tsx：添加测试验证 beforeunload 事件在 editorIsDirty=true 时阻止关闭、template:apply 事件触发后 editor handle 的 insertText 被调用。",
+  "status": "completed",
+  "scope": "desktop/src/components, desktop/src/services",
+  "focus_paths": [
+    "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx",
+    "desktop/src/services/plotTemplateService.test.ts",
+    "desktop/src/components/TemplateManagerPanel.test.tsx",
+    "desktop/src/components/DocumentEditor.test.tsx"
+  ],
+  "read_first": [
+    "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx",
+    "desktop/src/components/TemplateManagerPanel.test.tsx",
+    "desktop/src/components/TemplateBrowserPanel.test.tsx",
+    "desktop/src/components/DocumentEditor.tsx",
+    "desktop/src/services/templateService.ts"
+  ],
+  "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
+  "wave": 3,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "grep -n 'setVoiceConsistency' desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx 返回非空",
+      "grep -n 'unsetVoiceConsistency' desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx 返回非空",
+      "grep -n 'plot' desktop/src/services/plotTemplateService.test.ts 返回非空（plot 模板测试存在）",
+      "grep -n 'template:apply' desktop/src/components/DocumentEditor.test.tsx 返回非空（事件消费测试存在）",
+      "grep -n 'beforeunload' desktop/src/components/DocumentEditor.test.tsx 返回非空（dirty check 测试存在）",
+      "cd desktop && npm test -- --grep 'VoiceConsistency|TemplateManager|DocumentEditor' 全部通过"
+    ],
+    "verification": "cd desktop && npm test -- --grep 'VoiceConsistency|TemplateManager|DocumentEditor|plotTemplate'",
+    "definition_of_done": "所有新增功能有对应的测试覆盖，测试全部通过。"
+  },
+  "files": [
+    {
+      "path": "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx",
+      "action": "modify",
+      "target": "mark 应用逻辑测试",
+      "change": "添加测试：setVoiceConsistency 被正确调用（不同 severity）、unmount 时 unsetVoiceConsistency 被调用"
+    },
+    {
+      "path": "desktop/src/services/plotTemplateService.test.ts",
+      "action": "create",
+      "target": "plot 模板数据验证",
+      "change": "测试 plot 模板数组非空、每个模板有正确 id/title/category='plot'/content/placeholders"
+    },
+    {
+      "path": "desktop/src/components/TemplateManagerPanel.test.tsx",
+      "action": "modify",
+      "target": "plot filter + template:apply 测试",
+      "change": "添加测试：plot 分类 filter 正确过滤、template:apply 事件 detail 正确"
+    },
+    {
+      "path": "desktop/src/components/DocumentEditor.test.tsx",
+      "action": "modify",
+      "target": "beforeunload + template:apply 消费测试",
+      "change": "添加测试：beforeunload 在 dirty 时阻止关闭、template:apply 触发 insertText"
+    }
+  ],
+  "implementation": [
+    "VoiceConsistencyDecorations.test.tsx：mock editor.commands.setVoiceConsistency 和 unsetVoiceConsistency，验证 enabled 时按 warning.severity 调用 setVoiceConsistency，disabled/unmount 时调用 unsetVoiceConsistency",
+    "plotTemplateService.test.ts：import { PLOT_BUILTINS }，测试数组长度 > 0，每个模板的 category === 'plot'，content 有 doc 结构，placeholders 为数组",
+    "TemplateManagerPanel.test.tsx：mock useAppStore 返回含 plot 模板的列表，验证 categoryFilter='plot' 时只显示 plot 模板；验证 handleApply  dispatch 的 CustomEvent detail 包含 templateId 和 content",
+    "DocumentEditor.test.tsx：mock editorIsDirty=true，触发 beforeunload 事件，验证 event.preventDefault 被调用；mock getEditorHandle，触发 template:apply CustomEvent，验证 insertText 被调用"
+  ],
+  "test": {
+    "commands": ["cd desktop && npm test -- --grep 'VoiceConsistency|TemplateManager|DocumentEditor|plotTemplate'"],
+    "unit": [
+      "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx",
+      "desktop/src/services/plotTemplateService.test.ts",
+      "desktop/src/components/TemplateManagerPanel.test.tsx",
+      "desktop/src/components/DocumentEditor.test.tsx"
+    ],
+    "integration": [],
+    "success_metrics": ["所有新增/修改测试通过", "无 TypeScript 错误"]
+  },
+  "reference": {
+    "pattern": "现有测试使用 vitest + @testing-library/react，mock 使用 vi.fn()",
+    "files": [
+      "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx",
+      "desktop/src/components/TemplateManagerPanel.test.tsx",
+      "desktop/src/components/TemplateBrowserPanel.test.tsx"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "在 TASK-001~003 执行完成后补充测试，确保新增功能有覆盖",
+    "decision_factors": ["分析结论指出 mark 应用层未测试", "plot 模板是新增数据层需验证", "beforeunload 和 template:apply 是交互行为需测试"],
+    "tradeoffs": "测试作为独立 task 在 wave 3 执行，依赖前面 task 的输出，但可并行编写测试框架"
+  },
+  "risks": [
+    "DocumentEditor.test.tsx 可能不存在或测试基础设施不完整（mitigation: 检查文件存在性，如不存在则新建）"
+  ],
+  "meta": {
+    "estimated_time": "45m",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

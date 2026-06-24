@@ -1,0 +1,74 @@
+{
+  "summary": "M28 Phase 4 — MCP Endpoint Test Coverage: 补全 route contract tests（agents/m10/m11 + content 剩余分组）、GET /tools 响应契约验证、coverage-gap-scanner 脚本。共 4 个任务，Wave 1 并行执行 3 个测试任务，Wave 2 执行 scanner 脚本（依赖 Wave 1 完成以验证正确性）。",
+  "approach": "复用现有 route contract test 模板（admin-routes.test.ts、workflow-routes.test.ts、platform-routes.test.ts、content-routes-chat.test.ts）的断言模式：route 数量、method、pattern 匹配、param 提取、handler 类型检查。新增 agents-routes.test.ts、m10-routes.test.ts、m11-routes.test.ts；扩展 content-routes-additional.test.ts 覆盖 story-bible/qc/cowriting/reader/learning/analysis/plugins/sync/foreshadow/character/writing-craft 分组；扩展 all-tools.test.ts 断言 listTools 返回体结构；新建 coverage-gap-scanner.ts 零依赖正则解析 route 模块与测试文件，输出缺口清单。",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"],
+  "task_count": 4,
+  "complexity": "medium",
+  "estimated_time": "6h",
+  "recommended_execution": "Agent",
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"]
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-004"]
+    }
+  ],
+  "data_flow": {
+    "diagram": "Wave1[route contract tests + tools/list contract] → Wave2[coverage-gap-scanner 验证 Wave1 补全结果]",
+    "stages": [
+      "解析 route 模块源码，提取 pattern/method/handler 三元组",
+      "按分组编写 contract test 断言",
+      "扩展 all-tools.test.ts 断言 listTools 返回体",
+      "scanner 正则解析 route 与测试文件，交叉验证缺口"
+    ]
+  },
+  "design_decisions": [
+    "沿用现有 route contract test 模式（admin-routes.test.ts / workflow-routes.test.ts），不引入新测试工具",
+    "agents/m10/m11 合并为单个任务（TASK-001），因为模式完全相同，减少 agent 开销",
+    "content 剩余分组合并为单个任务（TASK-002），按功能分组（story-bible/qc/cowriting/reader/learning/analysis/plugins/sync/foreshadow/character/writing-craft）组织 describe 块",
+    "listTools contract 扩展 all-tools.test.ts 而非新建文件，减少文件数量",
+    "scanner 采用零依赖正则解析，避免引入 ts-morph 增加 bundle 体积",
+    "scanner 输出 JSON + 表格双格式，支持 CI 集成",
+    "验收标准以契约稳定性（防止 wiring drift）为主，不以覆盖率数字提升为唯一指标"
+  ],
+  "shared_context": {
+    "patterns": [
+      "route contract test pattern: import route array → assert count → assert method/pattern/handler shape → per-group pattern matching → negative matching → param extraction",
+      "vitest describe/it with per-endpoint looped assertions",
+      "vi.hoisted + vi.mock for ESM module mocking",
+      "afterEach + vi.clearAllMocks / vi.resetAllMocks for cleanup"
+    ],
+    "conventions": [
+      "测试文件命名: {module}-routes.test.ts",
+      "companion pattern: 新增文件而非修改现有（content-routes-additional.test.ts 为 content-routes-chat.test.ts 的 companion）",
+      "所有 route test 使用 GatewayRoute 类型导入",
+      "scanner 脚本使用 Node.js fs + path，零外部依赖"
+    ],
+    "dependencies": [
+      "vitest@3.2.6",
+      "@vitest/coverage-v8",
+      "TypeScript@5.7.2"
+    ]
+  },
+  "confidence": {
+    "overall": 0.88,
+    "dimensions": {
+      "requirements_coverage": 0.92,
+      "task_quality": 0.85,
+      "dependency_correctness": 0.95,
+      "estimation_accuracy": 0.85,
+      "collision_safety": 0.95
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-06-24T00:00:00Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "test-coverage",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

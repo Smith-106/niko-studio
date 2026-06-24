@@ -1,0 +1,118 @@
+{
+  "id": "TASK-001",
+  "title": "新增 agents / m10 / m11 route contract tests",
+  "description": "创建 agents-routes.test.ts、m10-routes.test.ts、m11-routes.test.ts，断言每个路由模块的 route 数量、method、pattern 匹配、param 提取、handler 类型。复用 admin-routes.test.ts 和 workflow-routes.test.ts 的 contract test 模式。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "创建 3 个 route contract test 文件：src-ts/tests/mcp/routes/agents-routes.test.ts（断言 15 条 route：agent/* 4 条、critic/* 3 条、consistency/check 1 条、skills/* 7 条）、src-ts/tests/mcp/routes/m10-routes.test.ts（断言 6 条 route：agent/revise-multi-pass、style/* 4 条、consistency/cross-chapter、suggestions/context-aware，含 paramNames ['projectId'] 提取）、src-ts/tests/mcp/routes/m11-routes.test.ts（断言 2 条 route：worldview/extract POST、worldview/:projectId GET 含 paramNames ['projectId'] 提取）。每个文件包含：route count、method validity、pattern RegExp、handler function、positive pattern matching、negative pattern matching、param extraction、handler distinctness 断言。",
+  "scope": "src-ts/tests/mcp/routes/",
+  "focus_paths": [
+    "src-ts/tests/mcp/routes/agents-routes.test.ts",
+    "src-ts/tests/mcp/routes/m10-routes.test.ts",
+    "src-ts/tests/mcp/routes/m11-routes.test.ts"
+  ],
+  "read_first": [
+    "src-ts/mcp/routes/agents.ts",
+    "src-ts/mcp/routes/m10.ts",
+    "src-ts/mcp/routes/m11.ts",
+    "src-ts/mcp/gateway-route-types.ts",
+    "src-ts/tests/mcp/routes/admin-routes.test.ts",
+    "src-ts/tests/mcp/routes/workflow-routes.test.ts"
+  ],
+  "depends_on": [],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "文件 src-ts/tests/mcp/routes/agents-routes.test.ts 存在且包含 'agentRoutes'、'toHaveLength(15)'、'POST /agent/route'、'GET /skills/list'",
+      "文件 src-ts/tests/mcp/routes/m10-routes.test.ts 存在且包含 'm10Routes'、'toHaveLength(6)'、'POST /style/extract'、'paramNames'、'projectId'",
+      "文件 src-ts/tests/mcp/routes/m11-routes.test.ts 存在且包含 'm11Routes'、'toHaveLength(2)'、'POST /worldview/extract'、'GET /worldview/'、'paramNames'、'projectId'",
+      "cd src-ts && npx vitest run tests/mcp/routes/agents-routes.test.ts tests/mcp/routes/m10-routes.test.ts tests/mcp/routes/m11-routes.test.ts --reporter=verbose 全部通过"
+    ],
+    "verification": "cd src-ts && npx vitest run tests/mcp/routes/agents-routes.test.ts tests/mcp/routes/m10-routes.test.ts tests/mcp/routes/m11-routes.test.ts --reporter=verbose",
+    "definition_of_done": "agents/m10/m11 三个路由模块均有 dedicated route contract test，断言覆盖 route 数量、pattern、method、handler、param 提取，测试全部通过"
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/mcp/routes/agents-routes.test.ts",
+      "action": "create",
+      "target": "agents route contract test",
+      "change": "新建文件，断言 agentRoutes 数组的 15 条 route 的 method、pattern、handler、paramNames"
+    },
+    {
+      "path": "src-ts/tests/mcp/routes/m10-routes.test.ts",
+      "action": "create",
+      "target": "m10 route contract test",
+      "change": "新建文件，断言 m10Routes 数组的 6 条 route 的 method、pattern、handler、paramNames"
+    },
+    {
+      "path": "src-ts/tests/mcp/routes/m11-routes.test.ts",
+      "action": "create",
+      "target": "m11 route contract test",
+      "change": "新建文件，断言 m11Routes 数组的 2 条 route 的 method、pattern、handler、paramNames"
+    }
+  ],
+  "implementation": [
+    "复制 admin-routes.test.ts 的 helper 函数（findRoute、extractParams）到每个新文件",
+    "import agents.ts / m10.ts / m11.ts 的 route 数组",
+    "编写 route count 断言：agents=15, m10=6, m11=2",
+    "编写 method/pattern/handler shape 断言",
+    "按功能分组（agent/critic/consistency/skills；style/consistency/suggestions；worldview）编写 positive pattern matching 断言",
+    "编写 negative pattern matching（错误 method、错误 path、缺少 param）",
+    "编写 param extraction 断言（m10 style/profile/:projectId、m11 worldview/:projectId）",
+    "编写 handler distinctness 断言",
+    "运行测试并修复任何 TypeScript 或断言错误"
+  ],
+  "test": {
+    "commands": [
+      "cd src-ts && npx vitest run tests/mcp/routes/agents-routes.test.ts --reporter=verbose",
+      "cd src-ts && npx vitest run tests/mcp/routes/m10-routes.test.ts --reporter=verbose",
+      "cd src-ts && npx vitest run tests/mcp/routes/m11-routes.test.ts --reporter=verbose"
+    ],
+    "unit": [
+      "src-ts/tests/mcp/routes/agents-routes.test.ts",
+      "src-ts/tests/mcp/routes/m10-routes.test.ts",
+      "src-ts/tests/mcp/routes/m11-routes.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "所有 3 个测试文件通过 vitest",
+      "无 TypeScript 编译错误"
+    ]
+  },
+  "reference": {
+    "pattern": "admin-routes.test.ts: findRoute + extractParams helper + route count + per-route pattern matching + negative matching + param extraction + handler distinctness",
+    "files": [
+      "src-ts/tests/mcp/routes/admin-routes.test.ts",
+      "src-ts/tests/mcp/routes/workflow-routes.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "将 agents/m10/m11 合并为单个任务，因为三者模式完全相同（静态 route 数组，contract test 结构一致），合并可减少 agent 开销并保证风格一致",
+    "decision_factors": [
+      "三个模块均为静态 GatewayRoute[] 数组，无动态生成逻辑",
+      "现有 admin/workflow/platform test 模板可直接复用",
+      "合并后仍符合 15-60 分钟任务规模"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "id": "R01",
+      "description": "ESM vi.doMock 不可靠导致状态泄漏",
+      "severity": "low",
+      "mitigation": "route contract tests 不调用 handler，仅断言静态数据，天然免疫状态泄漏"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "2h",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 1,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}

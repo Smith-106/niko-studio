@@ -1,0 +1,99 @@
+{
+  "id": "TASK-003",
+  "title": "新增 GET /tools (listTools) 响应契约测试",
+  "description": "扩展 src-ts/tests/mcp/all-tools.test.ts，新增 describe 块断言 listTools endpoint 的响应体结构：返回 Record<string, string[]> 类型，包含 memory、graph、search、workflow、critic、agent、skills、writing_helper 八大分类，每个分类包含预期的工具名称数组。",
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "在 src-ts/tests/mcp/all-tools.test.ts 中新增 describe('listTools endpoint') 块，导入 listTools 函数和 jsonResponse，构造 mock HttpRequest，调用 listTools(mockRequest) 获取 HttpResponse，断言：response.status === 200、response.body 为对象、包含 8 个 key（memory、graph、search、workflow、critic、agent、skills、writing_helper）、memory 数组包含 'memory_add' / 'memory_search' / 'memory_get_temporal' / 'memory_get_conflicts' / 'memory_resolve_conflict'、graph 数组包含 'graph_query' / 'graph_get_character' / 'graph_get_relationships' / 'graph_get_foreshadows' / 'graph_add_entity' / 'graph_add_relation'、search 数组包含 'search_hybrid' / 'search_iterative' / 'search_context'、workflow 数组包含 'workflow_route' / 'workflow_plan' / 'workflow_execute' / 'checkpoint_create' / 'checkpoint_restore' / 'checkpoint_list'、critic 数组包含 'evaluate_content' / 'get_improvement_suggestions' / 'compare_versions'、agent 数组包含 'agent_route' / 'agent_write' / 'agent_revise' / 'agent_get_context'、skills 数组包含 'skills_list' / 'skills_match' / 'skills_load' / 'skills_get_chain'、writing_helper 数组包含 'process_writing_helper'。",
+  "scope": "src-ts/tests/mcp/",
+  "focus_paths": [
+    "src-ts/tests/mcp/all-tools.test.ts"
+  ],
+  "read_first": [
+    "src-ts/mcp/endpoints/health.ts:382-403",
+    "src-ts/mcp/all-tools.ts",
+    "src-ts/tests/mcp/all-tools.test.ts",
+    "src-ts/mcp/http-types.ts"
+  ],
+  "depends_on": [],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "src-ts/tests/mcp/all-tools.test.ts 包含 'listTools' 字符串的 describe 或 it 块",
+      "文件包含 'memory_add'、'graph_query'、'search_hybrid'、'workflow_route'、'evaluate_content'、'agent_route'、'skills_list'、'process_writing_helper' 的断言",
+      "文件包含对 8 个工具分类 key 的断言（memory、graph、search、workflow、critic、agent、skills、writing_helper）",
+      "cd src-ts && npx vitest run tests/mcp/all-tools.test.ts --reporter=verbose 通过"
+    ],
+    "verification": "cd src-ts && npx vitest run tests/mcp/all-tools.test.ts --reporter=verbose",
+    "definition_of_done": "all-tools.test.ts 新增 listTools 响应体契约断言，覆盖 8 大分类及每个分类的工具名称，测试通过"
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/mcp/all-tools.test.ts",
+      "action": "modify",
+      "target": "listTools endpoint contract assertions",
+      "change": "在现有 describe('mcp/all-tools') 内或同级新增 describe('listTools endpoint')，断言 listTools 返回的 8 大分类工具数组结构"
+    }
+  ],
+  "implementation": [
+    "导入 listTools 从 ../../mcp/endpoints/health.js",
+    "导入 jsonResponse 和 HttpRequest 从 ../../mcp/http-types.js",
+    "构造 mock HttpRequest（空对象或含 query）",
+    "调用 listTools(mockRequest) 获取 response",
+    "断言 response.status === 200",
+    "解析 response.body 为 JSON 对象",
+    "断言 body 包含 8 个预期 key",
+    "对每个分类断言数组长度和包含特定元素",
+    "运行测试并修复任何错误"
+  ],
+  "test": {
+    "commands": [
+      "cd src-ts && npx vitest run tests/mcp/all-tools.test.ts --reporter=verbose"
+    ],
+    "unit": [
+      "src-ts/tests/mcp/all-tools.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "all-tools.test.ts 全部通过",
+      "新增 listTools 断言覆盖 8 大分类",
+      "无 TypeScript 编译错误"
+    ]
+  },
+  "reference": {
+    "pattern": "直接调用 endpoint handler 函数 + mock request + 断言 response 结构",
+    "files": [
+      "src-ts/mcp/endpoints/health.ts:382-403",
+      "src-ts/tests/mcp/all-tools.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "扩展现有 all-tools.test.ts 而非新建文件，因为 listTools 与 all-tools 模块同属工具清单领域，且减少文件数量",
+    "decision_factors": [
+      "all-tools.test.ts 已存在，且测试的是工具注册机制",
+      "listTools 返回的是工具分类清单，与 all-tools 语义相关",
+      "扩展现有文件比新建文件维护成本更低"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "id": "R03",
+      "description": "listTools 返回的工具列表未来变更导致断言失败",
+      "severity": "low",
+      "mitigation": "契约测试的目的就是捕获这种变更，断言失败是预期行为，提醒开发者同步更新"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "1h",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 1,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}

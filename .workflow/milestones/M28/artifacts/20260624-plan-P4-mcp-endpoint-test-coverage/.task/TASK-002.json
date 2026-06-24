@@ -1,0 +1,96 @@
+{
+  "id": "TASK-002",
+  "title": "扩展 content route contract tests 覆盖剩余分组",
+  "description": "新建 content-routes-additional.test.ts 作为 content-routes-chat.test.ts 的 companion，覆盖 content.ts 中尚未被断言的功能分组：writing-craft、plugins、sync、foreshadow、character、analysis、learning、story-bible、qc、cowriting、reader。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "新建 src-ts/tests/mcp/routes/content-routes-additional.test.ts，导入 contentRoutes 数组，断言 contentRoutes 总数仍为 66（与 content-routes-chat.test.ts 一致），按以下分组添加 describe 块和 pattern matching 断言：writing-craft（6 条：analyze、llm-analyze、emotional-arc、voice-consistency、reader-immersion、pacing-navigator）、plugins（3 条：list、execute、register）、sync（4 条：status、push、pull、full）、foreshadow（2 条：plant、stats）、character（3 条：profile、depth、relationships）、analysis（3 条：patterns、sessions、narrative-visualization）、learning（7 条：import、style-feedback、style-drift、rules、reading-session、reading-extract、status）、story-bible（7 条：entities/list、entity/:id GET、entities POST、entity/:id PUT、entity/:id DELETE、extract、completeness）、qc（2 条：validate、creativity-config）、cowriting（4 条：generate/auto、generate/guided、modes、creativity-presets）、reader（8 条：analyze、personas、personas/custom、overlay、ai-flavor、feedback、compare、de-ai）。每个分组断言 route 存在、method 正确、pattern 匹配。",
+  "scope": "src-ts/tests/mcp/routes/",
+  "focus_paths": [
+    "src-ts/tests/mcp/routes/content-routes-additional.test.ts"
+  ],
+  "read_first": [
+    "src-ts/mcp/routes/content.ts",
+    "src-ts/mcp/gateway-route-types.ts",
+    "src-ts/tests/mcp/routes/content-routes-chat.test.ts",
+    "src-ts/tests/mcp/routes/workflow-routes.test.ts"
+  ],
+  "depends_on": [],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "文件 src-ts/tests/mcp/routes/content-routes-additional.test.ts 存在且包含 'contentRoutes'、'toHaveLength(66)'",
+      "文件包含 'writing-craft'、'plugins'、'sync'、'foreshadow'、'character'、'analysis'、'learning'、'story-bible'、'qc'、'cowriting'、'reader' 分组的 describe 块",
+      "文件包含 '/story-bible/entities/list'、'/story-bible/entity/'、'/qc/validate'、'/cowriting/generate/auto'、'/reader/analyze' 等关键 endpoint 的断言",
+      "cd src-ts && npx vitest run tests/mcp/routes/content-routes-additional.test.ts --reporter=verbose 通过"
+    ],
+    "verification": "cd src-ts && npx vitest run tests/mcp/routes/content-routes-additional.test.ts --reporter=verbose",
+    "definition_of_done": "content route contract tests 覆盖所有 11 个剩余功能分组，测试通过，不降低现有覆盖率"
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/mcp/routes/content-routes-additional.test.ts",
+      "action": "create",
+      "target": "content route contract test companion",
+      "change": "新建 companion 测试文件，覆盖 content.ts 中 chat/memory/graph/wiki/writing/workspace 之外的所有分组"
+    }
+  ],
+  "implementation": [
+    "导入 contentRoutes 和 GatewayRoute 类型",
+    "复制 content-routes-chat.test.ts 的基础断言（count=66、method validity、handler function、RegExp pattern）",
+    "为每个剩余分组编写 describe 块，使用循环断言每个 endpoint 的 method + pattern 匹配",
+    "对含 paramNames 的 route（story-bible entity/:entityId、qc 无 param、cowriting 无 param）添加 param extraction 断言",
+    "添加 negative pattern matching（错误 method、错误 path）",
+    "运行测试并修复断言"
+  ],
+  "test": {
+    "commands": [
+      "cd src-ts && npx vitest run tests/mcp/routes/content-routes-additional.test.ts --reporter=verbose"
+    ],
+    "unit": [
+      "src-ts/tests/mcp/routes/content-routes-additional.test.ts"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "测试文件通过 vitest",
+      "无 TypeScript 编译错误",
+      "content-routes-chat.test.ts 仍通过（不破坏现有测试）"
+    ]
+  },
+  "reference": {
+    "pattern": "content-routes-chat.test.ts 的 per-group describe + looped endpoint assertions + negative matching",
+    "files": [
+      "src-ts/tests/mcp/routes/content-routes-chat.test.ts",
+      "src-ts/tests/mcp/routes/workflow-routes.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "新建 companion 文件而非修改 content-routes-chat.test.ts，遵循 companion pattern，避免修改已有测试文件",
+    "decision_factors": [
+      "content-routes-chat.test.ts 已覆盖 chat/memory/graph/wiki/writing/workspace 分组",
+      "新建 companion 文件降低回归风险",
+      "按功能分组组织 describe 块，与 workflow-routes.test.ts 风格一致"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [
+    {
+      "id": "R02",
+      "description": "content.ts 路由数量未来变更导致 toHaveLength(66) 断言失败",
+      "severity": "low",
+      "mitigation": "route count 断言是契约的一部分，若路由数量变更，测试失败是预期行为，提醒开发者同步更新 contract test"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "2.5h",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 1,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}

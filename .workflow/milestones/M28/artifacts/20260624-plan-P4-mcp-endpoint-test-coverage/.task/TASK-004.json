@@ -1,0 +1,123 @@
+{
+  "id": "TASK-004",
+  "title": "实现 coverage-gap-scanner 脚本与 package.json script",
+  "description": "新建 src-ts/scripts/coverage-gap-scanner.ts，使用零依赖正则解析 src-ts/mcp/routes/*.ts 中的 route 定义和 src-ts/tests/**/*.test.ts 中的测试引用，输出缺少 route contract test 的模块清单和未引用 handler 列表。新增 package.json script 'coverage:gap'。",
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "创建 src-ts/scripts/coverage-gap-scanner.ts，实现以下功能：1) 读取 src-ts/mcp/routes/*.ts（排除 index.ts），用正则提取每个 route 的 pattern、method、handler 名称；2) 读取 src-ts/tests/**/*.test.ts，用正则提取 import 的 route 模块名和测试文件路径；3) 交叉比对：若某个 routes/*.ts 模块未被任何测试文件 import，则标记为缺少 route contract test；4) 对每个 route 的 handler 名称，检查是否在 tests/mcp/ 下的测试文件中被引用（通过 handler 函数名或 endpoint 文件名匹配）；5) 输出 JSON 格式结果（含 uncoveredRoutes、uncoveredHandlers、summary）和可选的表格格式到 stdout；6) 支持 --check 模式：若存在缺口则 exit(1)，否则 exit(0)。新增 src-ts/package.json script 'coverage:gap': 'node --experimental-specifier-resolution=node scripts/coverage-gap-scanner.ts' 或 'ts-node --esm scripts/coverage-gap-scanner.ts'。",
+  "scope": "src-ts/scripts/",
+  "focus_paths": [
+    "src-ts/scripts/coverage-gap-scanner.ts",
+    "src-ts/package.json"
+  ],
+  "read_first": [
+    "src-ts/mcp/routes/agents.ts",
+    "src-ts/mcp/routes/m10.ts",
+    "src-ts/mcp/routes/m11.ts",
+    "src-ts/mcp/routes/content.ts",
+    "src-ts/mcp/routes/platform.ts",
+    "src-ts/mcp/routes/admin.ts",
+    "src-ts/mcp/routes/workflow.ts",
+    "src-ts/tests/mcp/routes/admin-routes.test.ts",
+    "src-ts/tests/mcp/routes/workflow-routes.test.ts",
+    "src-ts/tests/mcp/routes/platform-routes.test.ts",
+    "src-ts/tests/mcp/routes/content-routes-chat.test.ts",
+    "src-ts/package.json"
+  ],
+  "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
+  "parallel_group": null,
+  "convergence": {
+    "criteria": [
+      "文件 src-ts/scripts/coverage-gap-scanner.ts 存在且可执行（node/ts-node 运行不报错）",
+      "src-ts/package.json 的 scripts 字段包含 'coverage:gap' 键",
+      "运行 'cd src-ts && npm run coverage:gap' 后输出包含 agents/m10/m11 为 uncovered（在 TASK-001/002 完成前）或 covered（在 TASK-001/002 完成后）",
+      "运行 'cd src-ts && npm run coverage:gap' 后输出正确识别 story-bible/qc/cowriting 为 covered（已有跨目录测试）",
+      "scanner 支持 --check 模式，无缺口时 exit(0)，有缺口时 exit(1)"
+    ],
+    "verification": "cd src-ts && npm run coverage:gap && npm run coverage:gap -- --check",
+    "definition_of_done": "coverage-gap-scanner 脚本实现并验证，能正确识别 route contract 缺口，不误报已有跨目录测试的 handler，package.json 已注册 coverage:gap script"
+  },
+  "files": [
+    {
+      "path": "src-ts/scripts/coverage-gap-scanner.ts",
+      "action": "create",
+      "target": "coverage gap scanner script",
+      "change": "新建零依赖正则解析脚本，扫描 route 模块和测试文件，输出缺口清单"
+    },
+    {
+      "path": "src-ts/package.json",
+      "action": "modify",
+      "target": "npm scripts",
+      "change": "新增 'coverage:gap' script 指向 scanner"
+    }
+  ],
+  "implementation": [
+    "使用 Node.js fs.readdirSync 和 fs.readFileSync 读取文件",
+    "正则 1：提取 routes/*.ts 中的 export const {name}Routes: GatewayRoute[] = [ ... ] 内容",
+    "正则 2：在 route 数组内容中提取 { method: '...', pattern: /.../, handler: ... } 三元组",
+    "正则 3：提取 tests/**/*.test.ts 中的 import { ... } from '../../mcp/routes/xxx' 语句，建立 route 模块到测试文件的映射",
+    "正则 4：在测试文件中搜索 handler 函数名（如 sbGetEntitiesEndpoint、qcValidateOutputEndpoint），建立 handler 到测试文件的映射",
+    "交叉比对：未出现在任何测试文件 import 中的 route 模块 = uncovered route；未出现在任何测试文件中的 handler = uncovered handler",
+    "输出 JSON 结果到 stdout 或文件",
+    "实现 --check 模式：有缺口则 process.exit(1)",
+    "在 package.json 中新增 'coverage:gap': 'ts-node --esm scripts/coverage-gap-scanner.ts'",
+    "运行 scanner 验证正确性"
+  ],
+  "test": {
+    "commands": [
+      "cd src-ts && npm run coverage:gap",
+      "cd src-ts && npm run coverage:gap -- --check",
+      "cd src-ts && npx vitest run --reporter=verbose"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": [
+      "scanner 运行不报错",
+      "scanner 正确识别已覆盖和未覆盖的 route 模块",
+      "scanner 正确识别已覆盖和未覆盖的 handler（跨目录测试不误报）",
+      "package.json 新增 script 可用"
+    ]
+  },
+  "reference": {
+    "pattern": "零依赖 Node.js 脚本：fs + path + 正则解析",
+    "files": [
+      "src-ts/mcp/routes/*.ts",
+      "src-ts/tests/**/*.test.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "零依赖正则解析而非 ts-morph/AST，因为当前 route 模块为纯静态数组，正则足够且避免引入额外依赖",
+    "decision_factors": [
+      "route 模块结构简单（export const xxxRoutes = [...]），正则解析可靠",
+      "零依赖降低维护成本和 bundle 体积",
+      "若未来引入动态 route 生成，可迁移到 AST 解析"
+    ],
+    "tradeoffs": "正则解析对复杂表达式（如动态生成的 pattern）可能失效，但当前代码库无此场景"
+  },
+  "risks": [
+    {
+      "id": "R04",
+      "description": "Scanner 正则解析误报或漏报",
+      "severity": "low",
+      "mitigation": "以 coverage-final.json 为二次校验；首次运行后人工校准正则模式；scanner 输出包含置信度标记"
+    },
+    {
+      "id": "R05",
+      "description": "跨目录测试（如 tests/knowledge/story-bible-endpoints.test.ts）中的 handler 引用被漏扫",
+      "severity": "medium",
+      "mitigation": "扫描范围包含 src-ts/tests/**/*.test.ts（不限于 tests/mcp/），通过 handler 函数名全局搜索"
+    }
+  ],
+  "meta": {
+    "status": "completed",
+    "estimated_time": "2.5h",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false,
+    "wave": 2,
+    "execution_group": null,
+    "executor": "agent"
+  }
+}
