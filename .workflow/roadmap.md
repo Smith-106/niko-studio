@@ -35,7 +35,7 @@ M28 延续 M27 的安全与集成成果，聚焦四大支柱：
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Reader Endpoints Split + Validation | Not started | — |
-| 2. Architecture Decoupling | Not started | — |
-| 3. UI Component Completion | Not started | — |
-| 4. MCP Test Coverage | Not started | — |
+| 1. Reader Endpoints Split + Validation | Completed | 2026-06-24 |
+| 2. Architecture Decoupling | Completed | 2026-06-24 |
+| 3. UI Component Completion | Completed | 2026-06-24 |
+| 4. MCP Test Coverage | In progress | — |
