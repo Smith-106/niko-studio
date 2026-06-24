@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const analyzeVoiceConsistencyMock = vi.hoisted(() => vi.fn())
@@ -14,19 +14,74 @@ import {
   voiceConsistencyStyles,
 } from './VoiceConsistencyDecorations'
 
-function createEditor() {
-  const textBetween = vi.fn(() => '段落一\n段落二')
-  const editor = {
-    getText: vi.fn(() => '角色对白'),
-    state: {
-      doc: {
-        textBetween,
-        content: { size: 16 },
+type DescendantNode = {
+  type: { name: string }
+  textContent: string
+  nodeSize: number
+}
+
+function createEditor(entries?: Array<{ node: DescendantNode; pos: number }>) {
+  const setTextSelection = vi.fn()
+  const setVoiceConsistency = vi.fn()
+  const unsetVoiceConsistency = vi.fn()
+  const defaultEntries = entries ?? [
+    {
+      node: {
+        type: { name: 'paragraph' },
+        textContent: '沈墨说：你先别急。',
+        nodeSize: 12,
       },
+      pos: 0,
+    },
+    {
+      node: {
+        type: { name: 'heading' },
+        textContent: '忽略标题',
+        nodeSize: 6,
+      },
+      pos: 15,
+    },
+    {
+      node: {
+        type: { name: 'paragraph' },
+        textContent: '   ',
+        nodeSize: 4,
+      },
+      pos: 25,
+    },
+    {
+      node: {
+        type: { name: 'paragraph' },
+        textContent: '林晚说：我知道了。',
+        nodeSize: 12,
+      },
+      pos: 35,
+    },
+  ]
+
+  const editor = {
+    getText: vi.fn(() => '沈墨说：你先别急。\n林晚说：我知道了。'),
+    state: {
+      selection: { from: 90, to: 95 },
+      doc: {
+        descendants: (callback: (node: DescendantNode, pos: number) => void) => {
+          defaultEntries.forEach(({ node, pos }) => callback(node, pos))
+        },
+      },
+    },
+    commands: {
+      setTextSelection,
+      setVoiceConsistency,
+      unsetVoiceConsistency,
     },
   } as unknown as Editor
 
-  return { editor, textBetween }
+  return {
+    editor,
+    setTextSelection,
+    setVoiceConsistency,
+    unsetVoiceConsistency,
+  }
 }
 
 function createDeferred<T>() {
@@ -42,16 +97,17 @@ describe('VoiceConsistencyDecorations', () => {
     analyzeVoiceConsistencyMock.mockReset()
   })
 
-  it('does nothing when disabled', () => {
-    const { editor } = createEditor()
+  it('clears existing marks and returns null when disabled', () => {
+    const { editor, unsetVoiceConsistency } = createEditor()
     const { container } = render(<VoiceConsistencyDecorations editor={editor} enabled={false} />)
 
     expect(container).toBeEmptyDOMElement()
+    expect(unsetVoiceConsistency).toHaveBeenCalledTimes(1)
     expect(analyzeVoiceConsistencyMock).not.toHaveBeenCalled()
   })
 
-  it('runs analysis and reads the document text when a successful result arrives', async () => {
-    const { editor, textBetween } = createEditor()
+  it('analyzes text, applies marks for matching warnings, and restores the prior selection', async () => {
+    const { editor, setTextSelection, setVoiceConsistency, unsetVoiceConsistency } = createEditor()
     analyzeVoiceConsistencyMock.mockResolvedValue({
       success: true,
       data: {
@@ -71,20 +127,46 @@ describe('VoiceConsistencyDecorations', () => {
 
     render(<VoiceConsistencyDecorations editor={editor} enabled />)
 
+    expect(screen.getByText('分析中...')).toBeInTheDocument()
+
     await waitFor(() => {
-      expect(editor.getText).toHaveBeenCalledTimes(1)
-      expect(analyzeVoiceConsistencyMock).toHaveBeenCalledWith('角色对白')
-      expect(textBetween).toHaveBeenCalledWith(0, 16, '\n')
+      expect(analyzeVoiceConsistencyMock).toHaveBeenCalledWith('沈墨说：你先别急。\n林晚说：我知道了。')
     })
+
+    await waitFor(() => {
+      expect(screen.getByText('发现 1 处语气偏离')).toBeInTheDocument()
+    })
+
+    expect(unsetVoiceConsistency).toHaveBeenCalledTimes(1)
+    expect(setTextSelection.mock.calls).toEqual([
+      [{ from: 1, to: 11 }],
+      [{ from: 90, to: 95 }],
+    ])
+    expect(setVoiceConsistency.mock.calls).toEqual([['medium']])
+    expect(screen.queryByText('分析中...')).not.toBeInTheDocument()
   })
 
-  it('falls back to an empty warnings list when the payload omits warnings', async () => {
-    const { editor, textBetween } = createEditor()
+  it('applies multiple warnings across different paragraphs', async () => {
+    const { editor, setTextSelection, setVoiceConsistency, unsetVoiceConsistency } = createEditor()
     analyzeVoiceConsistencyMock.mockResolvedValue({
       success: true,
       data: {
         fingerprints: [],
-        voiceDistinctness: 0.64,
+        voiceDistinctness: 0.85,
+        warnings: [
+          {
+            character: '沈墨',
+            line: '你先别急。',
+            issue: '语气偏离',
+            severity: 'medium',
+          },
+          {
+            character: '林晚',
+            line: '我知道了。',
+            issue: '用词异常',
+            severity: 'high',
+          },
+        ],
         suggestions: [],
       },
     })
@@ -92,11 +174,35 @@ describe('VoiceConsistencyDecorations', () => {
     render(<VoiceConsistencyDecorations editor={editor} enabled />)
 
     await waitFor(() => {
-      expect(textBetween).toHaveBeenCalledWith(0, 16, '\n')
+      expect(screen.getByText('发现 2 处语气偏离')).toBeInTheDocument()
     })
+
+    expect(unsetVoiceConsistency).toHaveBeenCalledTimes(1)
+    expect(setVoiceConsistency.mock.calls).toEqual([['medium'], ['high']])
   })
 
-  it('returns early when the backend response is unsuccessful or has no data', async () => {
+  it('shows "语气一致" when no warnings are found', async () => {
+    const { editor, unsetVoiceConsistency } = createEditor()
+    analyzeVoiceConsistencyMock.mockResolvedValue({
+      success: true,
+      data: {
+        fingerprints: [],
+        voiceDistinctness: 0.95,
+        warnings: [],
+        suggestions: [],
+      },
+    })
+
+    render(<VoiceConsistencyDecorations editor={editor} enabled />)
+
+    await waitFor(() => {
+      expect(screen.getByText('语气一致')).toBeInTheDocument()
+    })
+
+    expect(unsetVoiceConsistency).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the overlay visible but skips marks when analysis fails or returns no data', async () => {
     const first = createEditor()
     analyzeVoiceConsistencyMock.mockResolvedValueOnce({
       success: false,
@@ -106,9 +212,11 @@ describe('VoiceConsistencyDecorations', () => {
     const { unmount } = render(<VoiceConsistencyDecorations editor={first.editor} enabled />)
 
     await waitFor(() => {
-      expect(analyzeVoiceConsistencyMock).toHaveBeenCalledWith('角色对白')
+      expect(analyzeVoiceConsistencyMock).toHaveBeenCalledWith('沈墨说：你先别急。\n林晚说：我知道了。')
     })
-    expect(first.textBetween).not.toHaveBeenCalled()
+    expect(first.setVoiceConsistency).not.toHaveBeenCalled()
+    // After failure, isAnalyzing becomes false; overlay shows legend but no status text
+    expect(screen.queryByText('分析中...')).not.toBeInTheDocument()
 
     unmount()
 
@@ -119,11 +227,11 @@ describe('VoiceConsistencyDecorations', () => {
     await waitFor(() => {
       expect(analyzeVoiceConsistencyMock).toHaveBeenCalledTimes(2)
     })
-    expect(second.textBetween).not.toHaveBeenCalled()
+    expect(second.setVoiceConsistency).not.toHaveBeenCalled()
   })
 
-  it('stops before applying warnings after unmount', async () => {
-    const { editor, textBetween } = createEditor()
+  it('stops before applying marks after unmount', async () => {
+    const { editor, setTextSelection, setVoiceConsistency } = createEditor()
     const deferred = createDeferred<{
       success: boolean
       data: {
@@ -156,7 +264,8 @@ describe('VoiceConsistencyDecorations', () => {
       await Promise.resolve()
     })
 
-    expect(textBetween).not.toHaveBeenCalled()
+    expect(setTextSelection).not.toHaveBeenCalled()
+    expect(setVoiceConsistency).not.toHaveBeenCalled()
   })
 
   it('exports severity styles for downstream renderers', () => {

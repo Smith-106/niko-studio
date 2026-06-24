@@ -23,6 +23,8 @@ import { MathBlock } from './editor/extensions/MathBlock'
 import { Callout } from './editor/extensions/Callout'
 import { ShowTellMark } from './editor/extensions/ShowTellMark'
 import { ShowTellDecorations } from './editor/extensions/ShowTellDecorations'
+import { VoiceConsistencyMark } from './editor/extensions/VoiceConsistencyMark'
+import { VoiceConsistencyDecorations } from './editor/extensions/VoiceConsistencyDecorations'
 import { SlashCommandMenu, type SlashMenuItem } from './editor/SlashCommandMenu'
 import { BubbleToolbar, type RewriteOption } from './editor/BubbleToolbar'
 import { KeyboardShortcutsPanel } from './editor/KeyboardShortcutsPanel'
@@ -83,6 +85,7 @@ export function getEditorFullArticleInstruction(language: Language): string {
 
 export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function NikoEditor({ initialContent, onUpdate, onOpenWritingHelper: _onOpenWritingHelper, onOpenSettings, onSave }, ref) {
   const [showTellEnabled, setShowTellEnabled] = useState(false)
+  const [voiceConsistencyEnabled, setVoiceConsistencyEnabled] = useState(false)
   const [showApiKeyGuide, setShowApiKeyGuide] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const { t, language } = useI18n()
@@ -123,6 +126,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       MathBlock,
       Callout,
       ShowTellMark,
+      VoiceConsistencyMark,
     ],
     content: initialContent ?? '',
     editorProps: {
@@ -232,6 +236,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
   // Mutable handle object — isGenerating updated via effect
   const handleRef = useRef<EditorHandle>({
     insertText: () => {},
+    insertContent: () => {},
     getSelectedText: () => '',
     getJSON: () => ({ type: 'doc', content: [] }),
     captureSelectionSnapshot: () => null,
@@ -276,6 +281,9 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
 
     handleRef.current.insertText = (text: string) => {
       insertPlainText(editor, text)
+    }
+    handleRef.current.insertContent = (content: Record<string, unknown>) => {
+      editor.chain().focus().insertContent(content).run()
     }
     handleRef.current.getSelectedText = () => {
       const { from, to } = editor.state.selection
@@ -507,7 +515,10 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
   return (
     <div ref={editorRef} className="relative">
       {editor && (
-        <ShowTellDecorations editor={editor} enabled={showTellEnabled} />
+        <>
+          <ShowTellDecorations editor={editor} enabled={showTellEnabled} />
+          <VoiceConsistencyDecorations editor={editor} enabled={voiceConsistencyEnabled} />
+        </>
       )}
       <EditorContent editor={editor} />
       <button
@@ -516,6 +527,14 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
         className="absolute top-2 left-2 translate-y-10 px-2 py-1 rounded-md text-[11px] border border-dark-border bg-white/85 dark:bg-dark-surface2/70 backdrop-blur text-dark-text-muted hover:bg-dark-surface-sunken transition-colors"
       >
         {showTellEnabled ? '关闭 Show/Tell' : '开启 Show/Tell'}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setVoiceConsistencyEnabled((v) => !v)}
+        className="absolute top-2 left-2 translate-y-20 px-2 py-1 rounded-md text-[11px] border border-dark-border bg-white/85 dark:bg-dark-surface2/70 backdrop-blur text-dark-text-muted hover:bg-dark-surface-sunken transition-colors"
+      >
+        {voiceConsistencyEnabled ? '关闭 Voice Consistency' : '开启 Voice Consistency'}
       </button>
 
       {/* Slash Command Menu */}
