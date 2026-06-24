@@ -231,6 +231,76 @@ describe('TemplateManagerPanel', () => {
     expect(savedTemplate?.id).toMatch(/^custom-template-1-/)
   })
 
+  it('filters plot templates correctly when plot category is selected', async () => {
+    const user = userEvent.setup()
+
+    const plotTemplate = createTemplate({
+      id: 'plot-1',
+      title: '三幕结构',
+      category: 'plot',
+      description: '经典三幕结构',
+    })
+    const structureTemplate = createTemplate({
+      id: 'struct-1',
+      title: '结构模板',
+      category: 'structure',
+    })
+
+    templateStoreState.templates = [structureTemplate, plotTemplate]
+
+    render(<TemplateManagerPanel />)
+
+    // Click the 'plot' category filter button
+    await user.click(screen.getByRole('button', { name: '剧情' }))
+
+    // Only plot template should be visible
+    expect(screen.getByRole('button', { name: /三幕结构/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /结构模板/ })).not.toBeInTheDocument()
+  })
+
+  it('dispatches template:apply event with correct detail when handleApply is triggered', async () => {
+    const user = userEvent.setup()
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    const plotTemplate = createTemplate({
+      id: 'plot-hero-journey',
+      title: '英雄之旅',
+      category: 'plot',
+      content: {
+        type: 'doc',
+        content: [{ type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: '英雄之旅' }] }],
+      },
+      placeholders: [{ name: 'hero', label: '英雄', defaultValue: '主角', type: 'text' }],
+    })
+
+    templateStoreState.templates = [plotTemplate]
+
+    render(<TemplateManagerPanel />)
+
+    await user.click(screen.getByRole('button', { name: /英雄之旅/ }))
+
+    const heroInput = screen.getByDisplayValue('主角')
+    await user.clear(heroInput)
+    await user.type(heroInput, '阿澜')
+
+    await user.click(screen.getByRole('button', { name: '应用到当前章节' }))
+
+    expect(substitutePlaceholdersMock).toHaveBeenCalledWith(
+      plotTemplate.content,
+      expect.objectContaining({ hero: '阿澜' }),
+    )
+
+    expect(dispatchSpy).toHaveBeenCalledTimes(1)
+    const event = dispatchSpy.mock.calls[0]?.[0] as CustomEvent
+    expect(event.type).toBe('template:apply')
+    expect(event.detail).toMatchObject({
+      templateId: 'plot-hero-journey',
+    })
+    expect(event.detail.content).toBeDefined()
+
+    dispatchSpy.mockRestore()
+  })
+
   it('duplicates custom templates and only deletes them after confirmation', async () => {
     const user = userEvent.setup()
     const customTemplate = createTemplate({

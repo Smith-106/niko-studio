@@ -1,0 +1,46 @@
+[
+  {
+    "perspective": "direct_code_exploration",
+    "method": "Read + Grep + Search",
+    "coverage": "VoiceConsistencyDecorations, TemplateManagerPanel, NikoEditor, DocumentEditor, uiSlice, templateService, ShowTellDecorations, ShowTellMark, VoiceFingerprintPanel, ProjectSidebar",
+    "findings": {
+      "voice_consistency": "applyWarnings 为 void 占位符（第 39-41 行 void docText/warnings/editor）；ShowTell 提供完整 Mark + Decoration 参考模式；VoiceFingerprintPanel 独立显示分析结果",
+      "template_manager": "已连接 templateService（本地文件系统 CRUD）；CustomEvent('template:apply') 分发；PlotTemplateService 在代码库中不存在",
+      "dirty_check": "Ctrl+S 已拦截（NikoEditor:134-138）；auto-save 1.5s 防抖（DocumentEditor:170-197）；dirty state 在 uiSlice 管理；ProjectSidebar 章节切换保护已存在；beforeunload 缺失"
+    },
+    "confidence": "high"
+  },
+  {
+    "perspective": "maestro_search_wiki",
+    "method": "maestro search --code",
+    "coverage": "VoiceConsistencyDecorations, TemplateManagerPanel, PlotTemplateService, NikoEditor, dirty check, Ctrl+S",
+    "findings": {
+      "issues": "ISS-20260613-019 (VoiceConsistencyDecorations 占位), ISS-20260613-027 (TemplateManagerPanel stub), ISS-20260613-029 (缺 Ctrl+S 和 dirty check)",
+      "specs": "ui-conventions-001 (7-section progressive disclosure), coding-conventions-012 (Editor state cache)",
+      "patterns": "Editor state cache 解决 Tiptap 重挂载 (Map<chapterId, {json, text}>); Onboarding localStorage 门控"
+    },
+    "confidence": "high"
+  },
+  {
+    "perspective": "prior_analysis_pattern",
+    "method": "Read M28 P1/P2 analysis artifacts",
+    "coverage": "ANL-20260622-P1-reader-endpoints-split, ANL-20260624-P2-architecture-decoupling",
+    "findings": {
+      "pattern": "6-dimension scoring + GO verdict + implementation_scope + context-package.json",
+      "ui_observable": "P1/P2 未涉及 UI-observable 标准；P3 作为纯 UI phase 需要显式定义 UI-observable 验收标准",
+      "confidence_calibration": "P1 84% (3/5 risk), P2 4.08/5 (architecture); P3 86% (lower risk, higher feasibility)"
+    },
+    "confidence": "high"
+  },
+  {
+    "perspective": "delegate_analysis",
+    "method": "maestro delegate --to gemini (failed auth) / --to claude (running)",
+    "coverage": "Architecture analysis for all three UI targets",
+    "findings": {
+      "gemini": "Failed due to authentication cancellation",
+      "claude": "Background task started but not completed in time",
+      "impact": "Direct code exploration sufficient; no delegate findings incorporated"
+    },
+    "confidence": "n/a"
+  }
+]

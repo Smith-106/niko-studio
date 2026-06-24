@@ -1,0 +1,138 @@
+{
+  "$schema": "context-package/1.0",
+  "source": {
+    "type": "analyze",
+    "artifact_id": "ANL-20260624-P3-ui-component-completion",
+    "session_path": ".workflow/scratch/20260624-analyze-P3-ui-component-completion",
+    "generated_at": "2026-06-24T00:00:00.000Z"
+  },
+  "requirements": [
+    {
+      "id": "S1",
+      "title": "实现 VoiceConsistencyDecorations 的 ProseMirror Mark 标注",
+      "acceptance": [
+        "VoiceConsistencyMark.ts 定义 mark 扩展（name='voiceConsistency', severity 属性）",
+        "applyWarnings 实现段落遍历 + warning.line 匹配 + setVoiceConsistency 调用",
+        "NikoEditor 注册 VoiceConsistencyMark 扩展并挂载 VoiceConsistencyDecorations",
+        "toggle 按钮控制 enabled 状态",
+        "与 ShowTell 同时启用无冲突"
+      ],
+      "ref": "conclusions.json#implementation_scope"
+    },
+    {
+      "id": "S2",
+      "title": "澄清并实施 TemplateManagerPanel 的 PlotTemplateService 连接",
+      "acceptance": [
+        "明确 PlotTemplateService 定义（扩展 templateService 或新建后端）",
+        "TemplateManagerPanel 正确加载 plot 相关模板",
+        "模板应用后内容正确插入编辑器"
+      ],
+      "ref": "conclusions.json#implementation_scope"
+    },
+    {
+      "id": "S3",
+      "title": "完善 dirty check：添加 beforeunload 和 Tauri 关闭保护",
+      "acceptance": [
+        "beforeunload 事件监听：editorIsDirty 时阻止关闭",
+        "Tauri close 事件监听：editorIsDirty 时阻止关闭",
+        "保存成功后允许关闭"
+      ],
+      "ref": "conclusions.json#implementation_scope"
+    }
+  ],
+  "constraints": [
+    {
+      "status": "locked",
+      "title": "VoiceConsistencyDecorations 采用 ProseMirror Mark 模式与 ShowTell 对齐",
+      "rationale": "已有参考模式，用户体验一致，降低实现风险",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "Ctrl+S 快捷键保持现有实现，仅补充 beforeunload 保护",
+      "rationale": "NikoEditor 已拦截 Ctrl+S，DocumentEditor 已实现 handleSave，最小改动原则",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "locked",
+      "title": "dirty state 复用现有 uiSlice 的 editorIsDirty + setEditorIsDirty",
+      "rationale": "状态管理已存在，ProjectSidebar 已使用，只需扩展 beforeunload/Tauri close",
+      "ref": "context.md#Locked"
+    },
+    {
+      "status": "open",
+      "title": "VoiceConsistencyDecorations 视觉样式具体取值",
+      "rationale": "下划线颜色已定义（colorForSeverity），下划线样式和 tooltip 内容可在实现时调整",
+      "ref": "context.md#Free"
+    },
+    {
+      "status": "open",
+      "title": "beforeunload 提示消息文案",
+      "rationale": "由 i18n 模块提供，具体字符串在实现时确定",
+      "ref": "context.md#Free"
+    },
+    {
+      "status": "open",
+      "title": "TemplateManagerPanel 与 TemplateBrowserPanel 的分工",
+      "rationale": "两者功能高度重叠，可在实现时决定是否合并或明确分工",
+      "ref": "context.md#Free"
+    }
+  ],
+  "non_goals": [
+    {
+      "title": "ShowTellDecorations 性能优化（ISS-20260613-039）",
+      "rationale": "逐段 transaction 优化可在 Phase 3 同步进行，但非必须；可 defer 到 Phase 4",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "VoiceConsistencyDecorations 与 VoiceFingerprintPanel 的联动优化",
+      "rationale": "当前两者独立运行，共享分析结果避免重复 API 调用是 future enhancement",
+      "ref": "context.md#Deferred"
+    },
+    {
+      "title": "新建 PlotTemplateService MCP endpoint（如果澄清结果为扩展现有 templateService）",
+      "rationale": "如果 PlotTemplateService 意图是扩展 templateService，则无需新建后端",
+      "ref": "context.md#Deferred"
+    }
+  ],
+  "insights": [
+    {
+      "role": "analyzer",
+      "area": "architecture",
+      "summary": "VoiceConsistencyDecorations 可通过复用 ShowTell 的 Mark + Decoration 模式完成，技术路径清晰"
+    },
+    {
+      "role": "analyzer",
+      "area": "risk",
+      "summary": "PlotTemplateService 定义不明确是唯一显著风险；TemplateManagerPanel 已连接 templateService，可能 ISS-20260613-027 已部分解决"
+    },
+    {
+      "role": "analyzer",
+      "area": "feasibility",
+      "summary": "Ctrl+S 和 dirty state 已有 80% 实现，只需补充 beforeunload 和 Tauri close 事件监听"
+    },
+    {
+      "role": "analyzer",
+      "area": "testing",
+      "summary": "VoiceConsistencyDecorations 现有测试覆盖 API 调用层，mark 应用层需补充测试"
+    }
+  ],
+  "open_questions": [
+    {
+      "area": "requirements",
+      "question": "PlotTemplateService 是扩展现有 templateService 还是新建后端服务？",
+      "options": ["扩展现有 templateService（添加 plot category）", "新建 PlotTemplateService MCP endpoint", "当前实现已满足需求"]
+    },
+    {
+      "area": "implementation",
+      "question": "TemplateManagerPanel 与 TemplateBrowserPanel 是否需要合并？",
+      "options": ["合并为单一组件", "保持分离但明确分工", "保留现状"]
+    }
+  ],
+  "references": [
+    { "type": "analysis", "path": "analysis.md" },
+    { "type": "conclusions", "path": "conclusions.json" },
+    { "type": "discussion", "path": "discussion.md" },
+    { "type": "context", "path": "context.md" }
+  ]
+}

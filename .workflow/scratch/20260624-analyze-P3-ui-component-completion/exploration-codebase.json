@@ -1,0 +1,112 @@
+{
+  "files_explored": [
+    "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.tsx",
+    "desktop/src/components/editor/extensions/ShowTellDecorations.tsx",
+    "desktop/src/components/editor/extensions/ShowTellMark.ts",
+    "desktop/src/components/TemplateManagerPanel.tsx",
+    "desktop/src/components/TemplateBrowserPanel.tsx",
+    "desktop/src/components/NikoEditor.tsx",
+    "desktop/src/components/DocumentEditor.tsx",
+    "desktop/src/components/ProjectSidebar.tsx",
+    "desktop/src/services/templateService.ts",
+    "desktop/src/stores/uiSlice.ts",
+    "desktop/src/stores/selectors.ts",
+    "desktop/src/api/writing-craft.ts",
+    "desktop/src/components/intelligence/VoiceFingerprintPanel.tsx",
+    "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx",
+    "desktop/src/components/TemplateManagerPanel.test.tsx"
+  ],
+  "patterns_identified": [
+    {
+      "pattern": "ShowTell Mark + Decoration 模式",
+      "description": "ProseMirror Mark 扩展定义 + 段落遍历 + selection 设置 + mark 应用 + 组件 overlay 渲染",
+      "reference_files": [
+        "desktop/src/components/editor/extensions/ShowTellMark.ts",
+        "desktop/src/components/editor/extensions/ShowTellDecorations.tsx"
+      ],
+      "applicability": "VoiceConsistencyDecorations 可直接复用"
+    },
+    {
+      "pattern": "CustomEvent 模板应用",
+      "description": "模板内容通过 window.dispatchEvent(new CustomEvent('template:apply', {detail: {...}})) 分发给编辑器",
+      "reference_files": [
+        "desktop/src/components/TemplateManagerPanel.tsx:62-65",
+        "desktop/src/components/TemplateBrowserPanel.tsx:67-70"
+      ],
+      "applicability": "TemplateManagerPanel 已使用，无需变更"
+    },
+    {
+      "pattern": "Zustand slice + selector 状态管理",
+      "description": "uiSlice 定义 editorIsDirty，selectors 提供 batched access，DocumentEditor 和 ProjectSidebar 消费",
+      "reference_files": [
+        "desktop/src/stores/uiSlice.ts:22-55",
+        "desktop/src/stores/selectors.ts:133-157",
+        "desktop/src/components/DocumentEditor.tsx:54-55",
+        "desktop/src/components/ProjectSidebar.tsx:34-36"
+      ],
+      "applicability": "dirty check 已完整，只需扩展 beforeunload"
+    },
+    {
+      "pattern": "useEditor hook + handleKeyDown 拦截",
+      "description": "NikoEditor 使用 useEditor 的 editorProps.handleKeyDown 拦截快捷键（Ctrl+S, Ctrl+/, /, Escape）",
+      "reference_files": [
+        "desktop/src/components/NikoEditor.tsx:103-179"
+      ],
+      "applicability": "Ctrl+S 已实现，无需变更"
+    }
+  ],
+  "gaps_found": [
+    {
+      "gap": "VoiceConsistencyDecorations applyWarnings 为 void 占位符",
+      "severity": "medium",
+      "location": "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.tsx:28-42",
+      "mitigation": "新建 VoiceConsistencyMark.ts，实现段落遍历 + warning.line 匹配 + setVoiceConsistency 调用"
+    },
+    {
+      "gap": "VoiceConsistencyDecorations 未在 NikoEditor 中挂载",
+      "severity": "medium",
+      "location": "desktop/src/components/NikoEditor.tsx:507-519",
+      "mitigation": "在 NikoEditor 中导入并挂载 VoiceConsistencyDecorations，提供 toggle 按钮"
+    },
+    {
+      "gap": "beforeunload 事件监听缺失",
+      "severity": "low",
+      "location": "desktop/src/components/DocumentEditor.tsx",
+      "mitigation": "添加 useEffect 监听 beforeunload，editorIsDirty 时阻止关闭"
+    },
+    {
+      "gap": "Tauri 窗口关闭事件监听缺失",
+      "severity": "low",
+      "location": "desktop/src/components/DocumentEditor.tsx",
+      "mitigation": "添加 Tauri appWindow.onCloseRequested 监听，editorIsDirty 时阻止关闭"
+    },
+    {
+      "gap": "PlotTemplateService 在代码库中不存在",
+      "severity": "medium",
+      "location": "roadmap 描述 vs 代码库实际",
+      "mitigation": "澄清 roadmap 意图：扩展现有 templateService 还是新建后端"
+    }
+  ],
+  "key_files": {
+    "voice_consistency": {
+      "component": "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.tsx",
+      "test": "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.test.tsx",
+      "reference_mark": "desktop/src/components/editor/extensions/ShowTellMark.ts",
+      "reference_decoration": "desktop/src/components/editor/extensions/ShowTellDecorations.tsx",
+      "api": "desktop/src/api/writing-craft.ts:271-277"
+    },
+    "template_manager": {
+      "component": "desktop/src/components/TemplateManagerPanel.tsx",
+      "test": "desktop/src/components/TemplateManagerPanel.test.tsx",
+      "service": "desktop/src/services/templateService.ts",
+      "store_slice": "desktop/src/stores/app/templateSlice.ts",
+      "alternate_panel": "desktop/src/components/TemplateBrowserPanel.tsx"
+    },
+    "dirty_check": {
+      "editor": "desktop/src/components/NikoEditor.tsx",
+      "document_editor": "desktop/src/components/DocumentEditor.tsx",
+      "ui_slice": "desktop/src/stores/uiSlice.ts",
+      "project_sidebar": "desktop/src/components/ProjectSidebar.tsx"
+    }
+  }
+}

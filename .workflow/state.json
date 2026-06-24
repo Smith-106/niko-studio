@@ -284,11 +284,53 @@
       "created_at": "2026-06-24T05:10:00Z",
       "completed_at": "2026-06-24T05:10:00Z",
       "description": "M28 Phase 2 architecture decoupling plan: 4 tasks in 2 waves (Container/MCP bootstrap + GatewayDeps ISP; craft-types extraction + lazy getters). Checker PASS iteration 3, confidence 0.92."
+    },
+    {
+      "id": "EXC-20260624-P2-architecture-decoupling",
+      "type": "execute",
+      "milestone": "M28",
+      "phase": 2,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260624-plan-P2-architecture-decoupling",
+      "status": "completed",
+      "depends_on": "PLN-20260624-P2-architecture-decoupling",
+      "harvested": false,
+      "created_at": "2026-06-24T05:10:00Z",
+      "completed_at": "2026-06-23T22:13:09Z",
+      "description": "Execute: 4/4 tasks completed — Container/MCP bootstrap path decoupled + IWorkflowEventRelay interface (TASK-001); GatewayDeps split into 6 role interfaces with backward-compatible alias (TASK-002); craft-types.ts extracted to break craft-catalog ↔ catalog-loader cycle (TASK-003); 18 eager craft-catalog const exports converted to lazy getters with consumer updates (TASK-004). TypeScript clean; targeted health/gateway/craft/narrative/reader tests pass."
+    },
+    {
+      "id": "PLN-20260624-P3-ui-component-completion",
+      "type": "plan",
+      "milestone": "M28",
+      "phase": 3,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260624-plan-P3-ui-component-completion",
+      "status": "completed",
+      "depends_on": "ANL-20260624-P3-ui-component-completion",
+      "created_at": "2026-06-24T12:00:00Z",
+      "completed_at": "2026-06-24T12:00:00Z",
+      "description": "Plan M28 Phase 3 — 4 tasks in 3 waves: VoiceConsistencyDecorations Mark implementation (TASK-001), PlotTemplateService + template:apply wiring (TASK-002), beforeunload/Tauri dirty protection (TASK-003), test updates (TASK-004). Confidence 88%."
+    },
+    {
+      "id": "ANL-20260624-P3-ui-component-completion",
+      "type": "analyze",
+      "milestone": "M28",
+      "phase": 3,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260624-analyze-P3-ui-component-completion",
+      "status": "completed",
+      "depends_on": null,
+      "harvested": false,
+      "created_at": "2026-06-24T12:00:00Z",
+      "completed_at": "2026-06-24T12:35:00Z",
+      "description": "Analyze M28 Phase 3 — UI Component Completion: VoiceConsistencyDecorations (placeholder→Mark mode), TemplateManagerPanel backend connection (PlotTemplateService clarification needed), NikoEditor Ctrl+S/dirty check (beforeunload + Tauri close protection). GO 86% confidence, 3 implementation scope items, 3 locked / 3 free / 3 deferred decisions.",
+      "context_package": ".workflow/scratch/20260624-analyze-P3-ui-component-completion/context-package.json"
     }
   ],
   "current_milestone": "M28",
   "initialized": true,
-  "last_updated": "2026-06-24T05:05:00.000Z",
+  "last_updated": "2026-06-24T12:00:00Z",
   "milestone_history": [
     {
       "id": "M26",
@@ -874,12 +916,13 @@
         {
           "number": 2,
           "title": "Architecture Decoupling",
-          "status": "pending"
+          "status": "completed",
+          "completed_at": "2026-06-23T22:13:09Z"
         },
         {
           "number": 3,
           "title": "UI Component Completion",
-          "status": "pending"
+          "status": "planned"
         },
         {
           "number": 4,

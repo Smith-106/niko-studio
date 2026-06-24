@@ -29,3 +29,4 @@
 ## Notes
 - `engine.ts` 不在本次 task 范围内，其 `getContainer()` 调用需后续专门 task 处理。
 - 动态 import 使用 `require()` 而非 `await import()`，因为 `initialize()` 是同步方法，无法使用 await。
+- 额外修复：`tests/mcp/gateway-bootstrap.additional.test.ts` 与 `tests/mcp/gateway-bootstrap.test.ts` 中的 mock 路径从 `container/gateway-control-plane` 更新为 `composition-root/gateway-control-plane`，并为 server mock 补全 `on` 方法，使测试与新的 import 路径保持一致。

@@ -1,0 +1,82 @@
+{
+  "id": "TASK-003",
+  "title": "beforeunload + Tauri 窗口关闭 dirty check 保护",
+  "description": "在 DocumentEditor 中添加 beforeunload 事件监听和 Tauri appWindow.onCloseRequested 保护，防止用户在未保存内容时意外关闭页面或窗口。复用现有 uiSlice 的 editorIsDirty 状态。",
+  "issue_id": "ISS-20260613-029",
+  "issue_refs": ["ISS-20260613-029"],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "low",
+  "action": "1) 修改 desktop/src/components/DocumentEditor.tsx：添加 useEffect 监听 window 'beforeunload'，当 editorIsDirty 为 true 时设置 event.returnValue = '' 阻止关闭。2) 在同一 useEffect 中，条件导入 @tauri-apps/api/window 的 appWindow，注册 onCloseRequested 监听，当 editorIsDirty 为 true 时调用 event.preventDefault() 阻止窗口关闭。3) 确保 handleSave 和 auto-save 成功后 setEditorIsDirty(false) 已存在（当前已实现，只需确认）。",
+  "status": "completed",
+  "scope": "desktop/src/components/DocumentEditor.tsx",
+  "focus_paths": [
+    "desktop/src/components/DocumentEditor.tsx"
+  ],
+  "read_first": [
+    "desktop/src/components/DocumentEditor.tsx",
+    "desktop/src/stores/uiSlice.ts",
+    "desktop/src/stores/selectors.ts"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "grep -n 'beforeunload' desktop/src/components/DocumentEditor.tsx 返回非空（事件监听存在）",
+      "grep -n 'onCloseRequested' desktop/src/components/DocumentEditor.tsx 返回非空（Tauri 关闭保护存在）",
+      "grep -n 'editorIsDirty' desktop/src/components/DocumentEditor.tsx 返回非空（dirty 状态检查存在）",
+      "grep -n 'setEditorIsDirty(false)' desktop/src/components/DocumentEditor.tsx 返回非空（保存后清除 dirty 存在）",
+      "[UI-observable] 编辑内容后（未保存）尝试刷新页面，浏览器弹出确认对话框",
+      "[UI-observable] 编辑内容后（未保存）尝试关闭 Tauri 窗口，窗口关闭被阻止或弹出确认提示"
+    ],
+    "verification": "cd desktop && npm run typecheck && npm test -- --grep DocumentEditor",
+    "definition_of_done": "用户在未保存内容时尝试关闭页面或窗口，系统会阻止关闭并提示确认。"
+  },
+  "files": [
+    {
+      "path": "desktop/src/components/DocumentEditor.tsx",
+      "action": "modify",
+      "target": "beforeunload + Tauri close 保护",
+      "change": "添加 useEffect 监听 beforeunload 和 Tauri onCloseRequested，检查 editorIsDirty 状态，阻止未保存关闭"
+    }
+  ],
+  "implementation": [
+    "在 DocumentEditor.tsx 中导入 useDocumentEditorState 的 editorIsDirty（已存在）",
+    "添加 useEffect：window.addEventListener('beforeunload', handler)，handler 中检查 editorIsDirty，为 true 时设置 event.returnValue = '' 并 return ''",
+    "在同一 useEffect 中，使用 try/catch 条件导入 @tauri-apps/api/window，如果存在则注册 appWindow.onCloseRequested(listener)，listener 中检查 editorIsDirty，为 true 时 event.preventDefault()",
+    "useEffect cleanup 中移除 beforeunload 监听和 Tauri onCloseRequested 监听",
+    "确认 handleSave 和 auto-save 成功后 setEditorIsDirty(false) 已正确调用（当前已实现）"
+  ],
+  "test": {
+    "commands": ["cd desktop && npm run typecheck", "cd desktop && npm test -- --grep DocumentEditor"],
+    "unit": ["desktop/src/components/DocumentEditor.test.tsx"],
+    "integration": [],
+    "success_metrics": ["typecheck 通过", "DocumentEditor 相关测试通过"]
+  },
+  "reference": {
+    "pattern": "标准 beforeunload + Tauri onCloseRequested 模式",
+    "files": [
+      "desktop/src/components/DocumentEditor.tsx",
+      "desktop/src/stores/uiSlice.ts"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "在 DocumentEditor 中集中管理 dirty check 保护，复用现有 editorIsDirty 状态",
+    "decision_factors": ["editorIsDirty 状态已在 uiSlice 中管理", "DocumentEditor 是编辑器顶层组件，适合集中处理生命周期事件", "beforeunload 是浏览器标准 API，Tauri onCloseRequested 是桌面端补充"],
+    "tradeoffs": "beforeunload 在部分浏览器中可能不显示自定义消息（仅显示标准提示），但这是标准行为"
+  },
+  "risks": [
+    "Tauri API 可能未安装或版本不兼容（mitigation: 条件导入 + try/catch，失败时静默降级为仅 beforeunload）",
+    "beforeunload 与 auto-save 1.5s 防抖可能冲突（mitigation: auto-save 成功后 setEditorIsDirty(false)，beforeunload 检查同一状态）"
+  ],
+  "meta": {
+    "estimated_time": "30m",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

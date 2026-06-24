@@ -268,6 +268,87 @@ describe('VoiceConsistencyDecorations', () => {
     expect(setVoiceConsistency).not.toHaveBeenCalled()
   })
 
+  it('applies marks with different severity levels (low, medium, high)', async () => {
+    const { editor, setVoiceConsistency, unsetVoiceConsistency } = createEditor()
+    analyzeVoiceConsistencyMock.mockResolvedValue({
+      success: true,
+      data: {
+        fingerprints: [],
+        voiceDistinctness: 0.6,
+        warnings: [
+          { character: '沈墨', line: '你先别急。', issue: '语气偏离', severity: 'low' },
+          { character: '林晚', line: '我知道了。', issue: '用词异常', severity: 'high' },
+        ],
+        suggestions: [],
+      },
+    })
+
+    render(<VoiceConsistencyDecorations editor={editor} enabled />)
+
+    await waitFor(() => {
+      expect(screen.getByText('发现 2 处语气偏离')).toBeInTheDocument()
+    })
+
+    expect(unsetVoiceConsistency).toHaveBeenCalledTimes(1)
+    expect(setVoiceConsistency.mock.calls).toEqual([['low'], ['high']])
+  })
+
+  it('calls unsetVoiceConsistency when disabled prop changes from true to false', async () => {
+    const { editor, unsetVoiceConsistency } = createEditor()
+    analyzeVoiceConsistencyMock.mockResolvedValue({
+      success: true,
+      data: { fingerprints: [], voiceDistinctness: 0.95, warnings: [], suggestions: [] },
+    })
+
+    const { rerender } = render(<VoiceConsistencyDecorations editor={editor} enabled />)
+
+    await waitFor(() => {
+      expect(screen.getByText('语气一致')).toBeInTheDocument()
+    })
+
+    // Reset the mock to clearly count the disable call
+    unsetVoiceConsistency.mockClear()
+    rerender(<VoiceConsistencyDecorations editor={editor} enabled={false} />)
+
+    expect(unsetVoiceConsistency).toHaveBeenCalledTimes(1)
+  })
+
+  it('works alongside ShowTell without conflicts', async () => {
+    const { editor, setVoiceConsistency, unsetVoiceConsistency } = createEditor()
+    analyzeVoiceConsistencyMock.mockResolvedValue({
+      success: true,
+      data: {
+        fingerprints: [],
+        voiceDistinctness: 0.7,
+        warnings: [
+          { character: '沈墨', line: '你先别急。', issue: '语气偏离', severity: 'medium' },
+        ],
+        suggestions: [],
+      },
+    })
+
+    // Simulate ShowTell being active by adding a mock showTell command
+    const editorWithShowTell = {
+      ...editor,
+      commands: {
+        ...editor.commands,
+        setShowTell: vi.fn(),
+        unsetShowTell: vi.fn(),
+      },
+    } as unknown as Editor
+
+    render(<VoiceConsistencyDecorations editor={editorWithShowTell} enabled />)
+
+    await waitFor(() => {
+      expect(screen.getByText('发现 1 处语气偏离')).toBeInTheDocument()
+    })
+
+    expect(unsetVoiceConsistency).toHaveBeenCalledTimes(1)
+    expect(setVoiceConsistency).toHaveBeenCalledWith('medium')
+    // ShowTell commands should not interfere
+    expect((editorWithShowTell.commands as unknown as { setShowTell: ReturnType<typeof vi.fn> }).setShowTell).not.toHaveBeenCalled()
+  })
+
   it('exports severity styles for downstream renderers', () => {
     expect(voiceConsistencyStyles.colorForSeverity('high')).toBe('#dc2626')
     expect(voiceConsistencyStyles.colorForSeverity('medium')).toBe('#d97706')
