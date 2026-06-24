@@ -313,6 +313,19 @@
       "description": "Plan M28 Phase 3 — 4 tasks in 3 waves: VoiceConsistencyDecorations Mark implementation (TASK-001), PlotTemplateService + template:apply wiring (TASK-002), beforeunload/Tauri dirty protection (TASK-003), test updates (TASK-004). Confidence 88%."
     },
     {
+      "id": "EXC-20260624-P3-ui-component-completion",
+      "type": "execute",
+      "milestone": "M28",
+      "phase": 3,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260624-plan-P3-ui-component-completion",
+      "status": "completed",
+      "depends_on": "PLN-20260624-P3-ui-component-completion",
+      "created_at": "2026-06-24T12:00:00Z",
+      "completed_at": "2026-06-24T12:00:00Z",
+      "description": "Execute: 4/4 tasks completed — VoiceConsistencyDecorations Mark implementation + NikoEditor toggle (TASK-001); PlotTemplateService + template:apply wiring (TASK-002); beforeunload + Tauri onCloseRequested dirty protection (TASK-003); test coverage for VoiceConsistency, plot templates, TemplateManagerPanel, DocumentEditor (TASK-004). TypeScript clean; targeted tests pass."
+    },
+    {
       "id": "ANL-20260624-P3-ui-component-completion",
       "type": "analyze",
       "milestone": "M28",
@@ -922,7 +935,8 @@
         {
           "number": 3,
           "title": "UI Component Completion",
-          "status": "planned"
+          "status": "completed",
+          "completed_at": "2026-06-24T12:00:00Z"
         },
         {
           "number": 4,
