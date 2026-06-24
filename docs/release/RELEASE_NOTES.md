@@ -1,5 +1,55 @@
 # RELEASE NOTES
 
+## v11.0.4 — M28 Architecture Hardening + UI Completion + Test Coverage (2026-06-24)
+
+### 概述
+
+v11.0.4 完成 M28 里程碑，聚焦 Reader 端点拆分、架构解耦、UI 组件完成度与 MCP endpoints 测试覆盖率四大支柱，并通过集成审计（PASS）。
+
+### 新功能
+
+**Reader 端点拆分与输入校验 (M28 Phase 1)**
+- 将 `reader-endpoints.ts` 拆分为 `reader-types.ts` / `reader-services.ts` / `reader-validation.ts` / `reader-routes.ts`
+- 保留 `reader-endpoints.ts` 作为纯 re-export shim，所有既有消费者零改动
+- 补齐 SEC-001 剩余字段校验：personaId、feedbackId、dimension、targetStyle、version labels、focusAreas、biases
+- 新增 `validateStringArray` 与 `validateEnum` 共享校验 helper
+- `getCustomPersonaStoreReady()` ready guard 消除模块加载 race condition
+
+**架构解耦 (M28 Phase 2)**
+- Container↔MCP 启动路径解耦：gateway-bootstrap 下沉到 composition-root
+- `IWorkflowEventRelay` 接口抽象 + adapters.ts 动态 require 实现
+- GatewayDeps ISP 拆分：6 个角色接口 + 兼容别名
+- 提取 `craft-types.ts` 打破 craft-catalog ↔ catalog-loader 循环依赖
+- craft-catalog 18 个 eager const 导出转为 lazy getter，`reloadCatalog()` 语义正确
+
+**UI 完成度 (M28 Phase 3)**
+- VoiceConsistency 波浪下划线标注：Mark + Decoration 模式复用，支持 severity 分级与 toggle
+- plot 模板类别：4 个内置 plot 模板，TemplateManagerPanel / BrowserPanel 支持筛选与应用
+- `template:apply` CustomEvent 解耦模板面板与 DocumentEditor
+- `EditorHandle.insertContent` 扩展，NikoEditor 通过 TipTap chain 实现
+- 编辑器未保存保护：`beforeunload` + Tauri `onCloseRequested` dirty check
+
+**MCP Endpoint 测试覆盖 (M28 Phase 4)**
+- agents / m10 / m11 / content 路由契约测试
+- `listTools` 响应分类与工具名断言
+- `coverage-gap-scanner.ts` 零依赖正则扫描：7 route modules / 132 handlers 全覆盖，支持 `--check` 模式
+
+### 质量指标
+
+| 指标 | v11.0.3 | v11.0.4 |
+|------|---------|---------|
+| M28 集成审计 | — | PASS（0 high/medium gaps） |
+| Reader 端点 god module | 1146 行 | 拆分至 4 子模块 + shim |
+| craft-catalog 循环依赖 | 存在 | 已消除 |
+| MCP route handler 覆盖 | 部分 | 132/132（scanner 确认） |
+| TypeScript 编译错误 | 0 | 0 |
+
+### 破坏性变更
+
+无。所有改动保持向后兼容；shim、类型别名与 re-export 链保证既有 import 路径继续工作。
+
+---
+
 ## v11.0.0 — 写作工具新能力 + M26 Reader Simulation + 质量加固 (2026-06-20)
 
 ### 概述

@@ -1,5 +1,49 @@
 # Changelog
 
+## [11.0.4] - 2026-06-24
+
+### Added — M28 Reader Endpoints Split + Input Validation
+
+- `src-ts/reader/mcp/reader-types.ts`、`reader-services.ts`、`reader-validation.ts`、`reader-routes.ts`：从 reader-endpoints.ts 拆分出类型、服务、校验、路由四层
+- `src-ts/reader/mcp/reader-endpoints.ts`：保留为纯 re-export 兼容性 shim（TODO ISS-20260621-013 移除条件）
+- `src-ts/mcp/input-validation.ts`：新增 `MAX_PERSONA_ID_LENGTH`、`MAX_FEEDBACK_ID_LENGTH`、`MAX_DIMENSION_LENGTH`、`MAX_TARGET_STYLE_LENGTH`、`MAX_LABEL_LENGTH`、`MAX_ARRAY_LENGTH`、`MAX_ARRAY_ITEM_LENGTH` 与 `validateStringArray` / `validateEnum` helper
+- Reader 端点接入新增校验：personaIds 元素长度、feedbackId 长度、dimension 长度、targetStyle 长度、version labels 长度、focusAreas / biases 数组边界
+- `getCustomPersonaStoreReady()` ready guard：消除模块顶层 `loadCustomPersonas()` 与 endpoint handler 之间的 race condition
+
+### Added — M28 Architecture Decoupling
+
+- `src-ts/mcp/gateway-bootstrap.ts` import 路径从 `../container/gateway-control-plane` 迁移到 `../composition-root/gateway-control-plane`
+- `src-ts/container/types.ts`：新增 `IWorkflowEventRelay` 接口（initialize / broadcast / close）
+- `src-ts/container/adapters.ts`：静态依赖改为接口类型，运行时通过 `require('../mcp/gateway-ws')` 构造实现
+- `src-ts/mcp/endpoints/health.ts`：GatewayDeps 拆分为 6 个角色接口 + `type GatewayDeps = ...` 兼容别名
+- `src-ts/narrative/writing-craft/craft-types.ts`：独立类型层，打破 craft-catalog ↔ catalog-loader 循环依赖
+- `src-ts/narrative/writing-craft/craft-catalog.ts`：18 个 eager const 导出转为 `getFooCatalog()` lazy getter，`reloadCatalog()` 语义正确
+
+### Added — M28 UI Component Completion
+
+- `VoiceConsistencyMark.ts` + `VoiceConsistencyDecorations.tsx`：为 NikoEditor 提供按 severity（low/medium/high）着色的波浪下划线标注，支持 toggle 开启/关闭
+- `plotTemplateService.ts`：新增 4 个 plot 分类内置模板（三幕结构、英雄之旅、悬疑线索网、冲突升级表）
+- `TemplateCategory` 联合类型扩展 `'plot'`，TemplateManagerPanel / TemplateBrowserPanel 同步支持筛选、应用与 i18n
+- `DocumentEditor.tsx`：监听 `template:apply` CustomEvent，通过 editor handle `insertContent` 插入模板内容
+- `EditorHandle` 接口新增 `insertContent(content)`，NikoEditor 通过 TipTap chain 实现
+- `DocumentEditor.tsx`：未保存 dirty check 同时覆盖 `beforeunload` 与 Tauri `onCloseRequested`，保存后清除 dirty 状态
+
+### Added — M28 MCP Endpoint Test Coverage
+
+- `src-ts/tests/mcp/routes/agents-routes.test.ts`：agents 路由契约测试
+- `src-ts/tests/mcp/routes/m10-routes.test.ts`：m10 路由契约测试
+- `src-ts/tests/mcp/routes/m11-routes.test.ts`：m11 路由契约测试
+- `src-ts/tests/mcp/routes/content-routes-additional.test.ts`：content / reader 路由契约测试
+- `src-ts/tests/mcp/all-tools.test.ts`：扩展 `listTools` 响应分类与工具名断言
+- `src-ts/scripts/coverage-gap-scanner.ts`：零依赖正则扫描器，支持 `--check` 模式；确认 7 route modules / 132 handlers 全覆盖
+
+### Verification
+
+- M28 集成审计 verdict PASS
+- 0 high / 0 medium integration gaps，3 low near-misses 已记录并给出修复建议
+- TypeScript 编译零错误（`tsc --noEmit`）
+- src-ts 与 desktop 测试套件按各自配置通过
+
 ## [10.0.0] - 2026-05-28
 
 ### Added — Phase 1: Quick Wins (8 gaps)

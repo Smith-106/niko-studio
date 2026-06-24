@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 11.0.3 (Platform Edition)
+> **Version**: 11.0.4 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -37,6 +37,17 @@ Deprecated release surface (removed)
 
 ## Current Release Snapshot
 
+### v11.0.4 (2026-06-24)
+
+- Reader 端点拆分：1146 行 god module 拆分为 types / services / validation / routes，保留兼容性 shim
+- 补齐 Reader 端点输入校验：personaId、dimension、targetStyle、focusAreas、biases、version labels 等字段长度与类型边界
+- Container↔MCP 解耦：gateway-bootstrap 下沉到 composition-root，IWorkflowEventRelay 接口 + 动态 require 消除静态循环
+- GatewayDeps ISP 拆分：6 个角色接口 + 兼容别名
+- craft-catalog 循环依赖破除：提取 craft-types.ts，18 个 eager const 转为 lazy getter
+- UI 完成度：VoiceConsistency 波浪下划线标注、plot 模板类别与 TemplateManagerPanel 集成、编辑器未保存 dirty check（beforeunload + Tauri onCloseRequested）
+- MCP endpoints 测试覆盖：新增 agents/m10/m11/content 路由契约测试、listTools 响应契约测试、coverage-gap-scanner 零依赖扫描脚本
+- M28 里程碑完成并通过集成审计（PASS，0 high/medium gaps）
+
 ### v11.0.3 (2026-06-20)
 
 - 修复 smoke 测试 sidecar 进程残留导致 NSIS 安装报 "Error opening file for writing"
@@ -57,8 +68,8 @@ Deprecated release surface (removed)
 
 ---
 
-- Current release tag: `v11.0.3`
-- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v11.0.3`
+- Current release tag: `v11.0.4`
+- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v11.0.4`
 - Current local sign-off status: `GO` on current HEAD
 
 如果你只想下载当前正式发布版，直接进入 GitHub Releases 页面获取 Windows 安装包。
