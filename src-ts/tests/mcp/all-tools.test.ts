@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { listTools } from '../../mcp/endpoints/health.js';
+import type { HttpRequest } from '../../mcp/http-types.js';
+
 const registerNarrativeToolsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../mcp/narrative-tools', () => ({
@@ -128,5 +131,107 @@ describe('mcp/all-tools', () => {
       tools['quality.revision_loop']({ text: 'draft-0', revisions: [] }),
     ).resolves.toEqual({ level: 'standard', next: 'draft-0' });
     expect(qualityGate.revisionLoop).toHaveBeenCalledWith('draft-0', 'standard', expect.any(Function));
+  });
+
+  describe('listTools endpoint', () => {
+    it('returns 200 with the eight tool categories', async () => {
+      const request: HttpRequest = {
+        method: 'GET',
+        url: '/tools',
+        headers: {},
+        body: null,
+        query: {},
+        params: {},
+      };
+
+      const response = await listTools(request);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toBeInstanceOf(Object);
+
+      const tools = response.body as Record<string, string[]>;
+      expect(Object.keys(tools)).toEqual([
+        'memory',
+        'graph',
+        'search',
+        'workflow',
+        'critic',
+        'agent',
+        'skills',
+        'writing_helper',
+      ]);
+    });
+
+    it('memory category contains expected tools', async () => {
+      const response = await listTools({ method: 'GET', url: '/tools', headers: {}, body: null, query: {}, params: {} });
+      const tools = response.body as Record<string, string[]>;
+      expect(tools.memory).toContain('memory_add');
+      expect(tools.memory).toContain('memory_search');
+      expect(tools.memory).toContain('memory_get_temporal');
+      expect(tools.memory).toContain('memory_get_conflicts');
+      expect(tools.memory).toContain('memory_resolve_conflict');
+    });
+
+    it('graph category contains expected tools', async () => {
+      const response = await listTools({ method: 'GET', url: '/tools', headers: {}, body: null, query: {}, params: {} });
+      const tools = response.body as Record<string, string[]>;
+      expect(tools.graph).toContain('graph_query');
+      expect(tools.graph).toContain('graph_get_character');
+      expect(tools.graph).toContain('graph_get_relationships');
+      expect(tools.graph).toContain('graph_get_foreshadows');
+      expect(tools.graph).toContain('graph_add_entity');
+      expect(tools.graph).toContain('graph_add_relation');
+    });
+
+    it('search category contains expected tools', async () => {
+      const response = await listTools({ method: 'GET', url: '/tools', headers: {}, body: null, query: {}, params: {} });
+      const tools = response.body as Record<string, string[]>;
+      expect(tools.search).toContain('search_hybrid');
+      expect(tools.search).toContain('search_iterative');
+      expect(tools.search).toContain('search_context');
+    });
+
+    it('workflow category contains expected tools', async () => {
+      const response = await listTools({ method: 'GET', url: '/tools', headers: {}, body: null, query: {}, params: {} });
+      const tools = response.body as Record<string, string[]>;
+      expect(tools.workflow).toContain('workflow_route');
+      expect(tools.workflow).toContain('workflow_plan');
+      expect(tools.workflow).toContain('workflow_execute');
+      expect(tools.workflow).toContain('checkpoint_create');
+      expect(tools.workflow).toContain('checkpoint_restore');
+      expect(tools.workflow).toContain('checkpoint_list');
+    });
+
+    it('critic category contains expected tools', async () => {
+      const response = await listTools({ method: 'GET', url: '/tools', headers: {}, body: null, query: {}, params: {} });
+      const tools = response.body as Record<string, string[]>;
+      expect(tools.critic).toContain('evaluate_content');
+      expect(tools.critic).toContain('get_improvement_suggestions');
+      expect(tools.critic).toContain('compare_versions');
+    });
+
+    it('agent category contains expected tools', async () => {
+      const response = await listTools({ method: 'GET', url: '/tools', headers: {}, body: null, query: {}, params: {} });
+      const tools = response.body as Record<string, string[]>;
+      expect(tools.agent).toContain('agent_route');
+      expect(tools.agent).toContain('agent_write');
+      expect(tools.agent).toContain('agent_revise');
+      expect(tools.agent).toContain('agent_get_context');
+    });
+
+    it('skills category contains expected tools', async () => {
+      const response = await listTools({ method: 'GET', url: '/tools', headers: {}, body: null, query: {}, params: {} });
+      const tools = response.body as Record<string, string[]>;
+      expect(tools.skills).toContain('skills_list');
+      expect(tools.skills).toContain('skills_match');
+      expect(tools.skills).toContain('skills_load');
+      expect(tools.skills).toContain('skills_get_chain');
+    });
+
+    it('writing_helper category contains expected tool', async () => {
+      const response = await listTools({ method: 'GET', url: '/tools', headers: {}, body: null, query: {}, params: {} });
+      const tools = response.body as Record<string, string[]>;
+      expect(tools.writing_helper).toContain('process_writing_helper');
+    });
   });
 });

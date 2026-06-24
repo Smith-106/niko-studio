@@ -1,3 +1,11 @@
+---
+related:
+  - project-project
+  - roadmap-roadmap
+  - scratch-20260622-analyze-p1-reader-endpoints-split-analysis
+  - scratch-20260622-analyze-p1-reader-endpoints-split-discussion
+---
+
 # Context: Phase 1 — Reader Endpoints Split + Remaining Input Validation
 
 **Date**: 2026-06-24

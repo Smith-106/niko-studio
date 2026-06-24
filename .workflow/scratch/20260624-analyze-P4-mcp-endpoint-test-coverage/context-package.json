@@ -1,0 +1,53 @@
+{
+  "artifact_id": "ANL-20260624-P4-mcp-endpoint-test-coverage",
+  "type": "analyze",
+  "scope": "phase",
+  "milestone": "M28",
+  "phase": 4,
+  "path": ".workflow/scratch/20260624-analyze-P4-mcp-endpoint-test-coverage",
+  "summary": "M28 Phase 4 MCP endpoint 测试覆盖率分析：endpoint handler unit 已成熟（statement 100%, branches 96-100%），真实缺口为 route contract tests（agents/m10/m11/content 扩展）、tools/list contract test、coverage-gap-scanner 脚本。建议 CONDITIONAL GO。",
+  "verdict": "CONDITIONAL",
+  "verdict_condition": "用户接受 Phase 4 范围从 '为 30% endpoints 补 unit tests' 缩小为 'route contract tests + tools/list contract + coverage-gap-scanner'",
+  "confidence": {
+    "overall": 66.1,
+    "with_user_validation": 82
+  },
+  "locked_decisions": [
+    "以 route contract tests + tools/list contract + scanner 为 Phase 4 核心交付；不盲目新增 endpoint handler unit tests",
+    "不将端到端 HTTP/MCP SDK 集成测试纳入 Phase 4（deferred）"
+  ],
+  "free_decisions": [
+    "Scanner 具体实现技术选型：当前推荐零依赖正则解析，未来可升级为 ts-morph / TypeScript compiler API",
+    "是否将 scanner 接入 CI（退出码阻断）—— 建议接入但可 deferred 到 Phase 4 验证后",
+    "content-routes-additional.test.ts 覆盖粒度 —— 可基于时间预算调整分组粒度"
+  ],
+  "deferred_decisions": [
+    "端到端 HTTP/MCP SDK 集成测试 —— 建议 M29 或后续 milestone 考虑",
+    "占位 endpoint 显式 contract 集中文件 —— 已有单元测试覆盖",
+    "覆盖率阈值是否上调 —— 当前已接近 100%",
+    "新增 endpoint handler 单元测试 —— 已覆盖无需重复投入"
+  ],
+  "implementation_scope": [
+    "TASK-P4-001: 新增 agents / m10 / m11 route contract tests（P1, 2-3h）—— agents-routes.test.ts, m10-routes.test.ts, m11-routes.test.ts",
+    "TASK-P4-002: 扩展 content route contract tests 覆盖剩余分组（P1, 3-4h）—— content-routes-additional.test.ts 覆盖 story-bible/qc/cowriting/reader/learning/analysis/plugins/sync/foreshadow/character",
+    "TASK-P4-003: 新增 tools/list contract test（P2, 1-2h）—— 扩展 all-tools.test.ts 断言 GET /tools 返回数组结构",
+    "TASK-P4-004: 实现 coverage-gap-scanner 脚本（P2, 3-4h）—— src-ts/scripts/coverage-gap-scanner.ts + package.json coverage:gap script",
+    "TASK-P4-005: 占位 endpoint 显式 contract test（P3, 1h, optional）",
+    "TASK-P4-006: 端到端 HTTP/MCP SDK 集成测试（P4, deferred）"
+  ],
+  "acceptance_criteria": [
+    "agents-routes.test.ts、m10-routes.test.ts、m11-routes.test.ts 创建并通过",
+    "content-routes-additional.test.ts 扩展并通过，覆盖剩余分组",
+    "tools/list contract test 创建并通过，断言返回数组包含关键工具的 name/method/path",
+    "coverage-gap-scanner 脚本实现并验证正确性（agents/m10/m11 uncovered, story-bible/qc/cowriting covered）",
+    "cd src-ts && npm run test:coverage 通过，现有覆盖率不下降",
+    "新增测试使用现有 mockRequest / logger mock / vi.hoisted 模式"
+  ],
+  "risks": [
+    "R01: ESM vi.doMock 不可靠导致状态泄漏（medium）—— 沿用 afterEach + vi.resetAllMocks 模式",
+    "R02: 模块级 singleton 状态泄漏（medium）—— contract tests 不触发 handler，天然免疫",
+    "R03: 新增 contract 测试被误认为覆盖下降（low）—— 以契约稳定性为验收标准",
+    "R04: Scanner 正则解析误报（low）—— 以 coverage-final.json 二次校验"
+  ],
+  "next_step": "/maestro-plan 4"
+}

@@ -57,6 +57,7 @@ htmlcov/
 .workflow/.scratchpad/
 .workflow/.cache/
 .workflow/evidence/
+.workflow/scratch/_*.json
 src/.task/
 node_modules/
 desktop/node_modules/

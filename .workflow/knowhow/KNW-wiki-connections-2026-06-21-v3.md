@@ -17,7 +17,7 @@ metadata:
 ## Actions Applied
 
 ### 1. Broken Link Cleanup (4 → 0)
-- Removed truncated `[[KNW-...]]` and `[[knowhow-knw-...]]` wikilinks from `KNW-wiki-connections-2026-06-21-v2.md`
+- Removed truncated `KNW-...` and `knowhow-knw-...` placeholder wikilinks from `KNW-wiki-connections-2026-06-21-v2.md`
 - Removed non-existent `spec:project:ui-conventions-005/006/007/008` from ui-conventions.md frontmatter
 
 ### 2. Automated Orphan Rescue (2 rescued)
@@ -31,7 +31,7 @@ metadata:
 - `knowhow-doc-harvest-other-m10-multi-pass` → `architecture-constraints-008`
 
 ### 4. Body Wikilinks (18 added)
-- 16 scratch files: added `## Related` section with `[[wikilinks]]` to spec/knowhow targets
+- 16 scratch files: added `## Related` section with body wikilinks to spec/knowhow targets
 - `roadmap.md`: added wikilinks to M24 scope spec
 - `ui-conventions.md`: added wikilinks to sibling specs
 - `m10-multi-pass.md`: added wikilinks to architecture + learnings

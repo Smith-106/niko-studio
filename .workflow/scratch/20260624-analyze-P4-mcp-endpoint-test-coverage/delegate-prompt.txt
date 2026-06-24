@@ -1,0 +1,24 @@
+PURPOSE: 对 M28 Phase 4 "MCP Endpoint Test Coverage" 的代码库探索结果进行交叉验证与深度分析，输出对制定测试补全计划有直接作用的结论。
+
+TASK:
+1. 基于下方的探索摘要，判断哪些无测试 endpoint 应当优先补测试（考虑业务价值、输入校验风险、依赖复杂度、回归风险）。
+2. 对每个优先 endpoint 组，推荐合适的测试策略：unit（mock service）、integration（真实路由 + mock 依赖）、contract（schema/错误码/状态码断言）。
+3. 识别现有测试模式中可以复用的 fixture/mock 工具（如 gateway 依赖注入、localhost-only guard mock、parseBody helper、input-validation helper）。
+4. 指出补测试过程中最可能踩的坑（ESM vi.doMock 不可靠、异步初始化顺序、DI 注入时机、LLM/文件系统依赖等）。
+5. 给出可度量的验收建议：覆盖率阈值、测试文件命名、运行命令。
+
+CONTEXT:
+- 探索输出位于 C:\Users\niko\Desktop\工作目录\niko-studio\.workflow\scratch\20260624-analyze-P4-mcp-endpoint-test-coverage\exploration-codebase.json
+- 关键覆盖缺口（无专门测试文件）：
+  * story-bible-endpoints.ts：7 个 endpoint（list/get/create/update/delete/extract/completeness），in-memory store，风险 medium
+  * qc-endpoints.ts：2 个 endpoint（validate/creativity-config），heuristic + cache，风险 medium
+  * cowriting-endpoints.ts：4 个 endpoint（auto/guided/modes/presets），placeholder input builder，风险 medium
+  * ui-bridge/workflow/*：9 个 wrapper endpoint，被 uiBridgeEnabled 门控，风险 low
+  * 若干 placeholder endpoint（analysis/sessions, learning/import/style-drift/reading-extract）已有 learning-endpoints.test.ts 覆盖
+- 已覆盖且测试模式成熟的 endpoint 组：health/config/chat/agent/critic/workflow/memory/graph/wiki/skills/mcp-admin/writing/writing-craft/m10/m11/reader
+- 外部参考：MCP endpoint 测试推荐 in-memory transport / SDK Client(server)；unit 层 mock 外部依赖，integration 层用真实协议流；contract 层断言 tools/list、input schema、JSON-RPC error code；常见反模式包括仅测 happy path、过度 mock transport、不测 schema drift、忽略错误返回结构。
+- 项目测试规范：Vitest，backend 覆盖率 lines 80%/branches 70%/functions 80%/statements 80%；测试文件可共用 co-located *.test.ts 与 src-ts/tests/mcp/*.test.ts； Companion pattern 用 .additional.test.ts 扩展。
+
+MODE: analysis
+EXPECTED: 返回结构化 markdown，包含：## Priority Ranking、## Test Strategy Matrix、## Reusable Fixtures/Mocks、## Risk/Pitfalls、## Acceptance Criteria。引用具体文件路径和 endpoint 名称。
+CONSTRAINTS: 只读分析，不要修改代码。不要生成正式报告文件，只返回分析文本。

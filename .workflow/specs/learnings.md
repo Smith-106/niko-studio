@@ -218,9 +218,9 @@ INS-31c776c2 · M26-P1 retrospective · 路由: note
 WS1: workspace-scoped async mutex serializes concurrent restore/rollback per workspace (commit 676fca89). WS2: quickRollback persistence only after successful restore, failure branch preserves consistency. WS3: expanded recovery test matrix with concurrency and failure injection.
 </spec-entry>
 
-<spec-entry category="technique" keywords="wiki-connect,orphan-rescue,body-wikilinks,health-score" date="2026-06-21" title="Wiki orphan rescue 需要 body wikilinks 而非仅 frontmatter related" description="frontmatter related 不被 maestro wiki 算作出度边；body 中的 [[id]] 才被识别为图边" source="wiki-connect">
+<spec-entry category="technique" keywords="wiki-connect,orphan-rescue,body-wikilinks,health-score" date="2026-06-21" title="Wiki orphan rescue 需要 body wikilinks 而非仅 frontmatter related" description="frontmatter related 不被 maestro wiki 算作出度边；body 中的 wikilink 才被识别为图边" source="wiki-connect">
 ### Wiki orphan rescue 需要 body wikilinks 而非仅 frontmatter related
-`maestro wiki update --frontmatter related=[...]` 更新元数据但不贡献出度边。孤立页判定依据 body 中的 `[[wikilinks]]`。救援孤立页必须在文件正文中添加 `[[target-id]]`，frontmatter related 仅为补充交叉引用。
+`maestro wiki update --frontmatter related=[...]` 更新元数据但不贡献出度边。孤立页判定依据 body 中的双括号 wikilink 语法。救援孤立页必须在文件正文中添加指向真实目标 id 的 wikilink，frontmatter related 仅为补充交叉引用。
 来源：wiki-connect 2026-06-21 v3, health 71→100 (+29)
 </spec-entry>
 
@@ -472,5 +472,27 @@ M28 集成审计报告 verdict PASS，仅记录 3 个 LOW near-miss：
 - P2 GatewayDeps 角色接口尚未被消费者收窄
 关键经验：审计结果不必全是 PASS/FAIL；将「当前工作但脆弱」的点标记为 near-miss 并给出修复建议，比等到破坏后再处理成本更低。所有 HIGH/MEDIUM 缺口必须为 0 才可通过。
 Milestone: M28
+
+</spec-entry>
+
+<spec-entry category="technique" keywords="wiki-connect,orphan-rescue,scratch-notes,related-frontmatter,health-score" date="2026-06-24" source="wiki-connect">
+
+### M28 scratch 分析笔记的 orphan rescue 模式
+
+M28 完成后运行 `/manage-wiki connect --fix`，发现 15 个 orphan wiki entries 主要为 `project.md`、`roadmap.md` 与 4 组 analyze scratch 会话的 analysis/context/discussion 文件。修复方式：
+- 为 `project.md` 与 `roadmap.md` 添加 frontmatter `related` 互链
+- 为每组 scratch 会话的 3 个文件互相链接，并统一链接到 project/roadmap
+- design-coverage-gap-scanner 单文件直接链接到 project/roadmap
+结果：orphans 从 15 → 0，wiki health score 从 47 → 62（+15）。
+关键经验：scratch 会话被 wiki 索引后会自然成为孤立节点，milestone 完成后应批量补 `related` 链接；CLI `maestro wiki update` 对非 `.workflow/wiki/` 根目录的文件标记为 not writable，因此直接编辑 frontmatter 是可行回退。
+
+</spec-entry>
+
+<spec-entry category="technique" keywords="wiki-digest,knowledge-cluster,gap-analysis,learnings-fragility,promotion" date="2026-06-24" source="wiki-digest">
+
+### wiki digest 揭示 learnings spec-entries 的复用脆弱性
+
+对 M28 运行 wiki digest 后发现：里程碑沉淀的 11 条 learning spec-entries 集中承载了 5 种高复用解耦手法（叶子组优先拆分 / shim+ready guard / 接口+动态 require / ISP+兼容别名 / 类型层+lazy getter），但它们仅作为 spec:project:learnings 的子条目弱存在，无独立 knowhow 文档、无 architecture-constraints spec 锚点、与 roadmap/project 节点无图边。coverage heatmap 显示 knowhow 行几乎全空。
+关键经验：learnings.md 是「事件流水」而非「复用资产」——digest 应作为 promote 触发器，把高频复用模式从 learnings 提升为 arch spec 或 knowhow，否则跨 milestone 知识会随 learnings 增长被淹没。digest 的 gap 表（Type Missing 列）直接给出 promote 目标。详见 KNW-digest-M28-2026-06-24。
 
 </spec-entry>

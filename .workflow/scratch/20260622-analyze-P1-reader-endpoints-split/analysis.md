@@ -1,3 +1,11 @@
+---
+related:
+  - project-project
+  - roadmap-roadmap
+  - scratch-20260622-analyze-p1-reader-endpoints-split-context
+  - scratch-20260622-analyze-p1-reader-endpoints-split-discussion
+---
+
 # Analysis: M28 Phase 1 — Reader Endpoints Split + Remaining Input Validation
 
 ## Executive Summary

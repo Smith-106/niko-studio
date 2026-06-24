@@ -1,0 +1,173 @@
+{
+  "artifact_id": "ANL-20260624-P4-mcp-endpoint-test-coverage",
+  "type": "analyze",
+  "scope": "phase",
+  "milestone": "M28",
+  "phase": 4,
+  "topic": "MCP endpoints 测试覆盖率补完",
+  "verdict": "CONDITIONAL",
+  "verdict_condition": "用户接受 Phase 4 范围从 '为 30% endpoints 补 unit tests' 缩小为 'route contract tests + tools/list contract + coverage-gap-scanner'",
+  "confidence": {
+    "overall": 66.1,
+    "with_user_validation": 82,
+    "dimensions": {
+      "technical_correctness": 88,
+      "completeness": 82,
+      "feasibility": 90,
+      "risk": 75,
+      "alignment": 85,
+      "maintainability": 88
+    },
+    "factors": {
+      "findings_depth": 83.3,
+      "evidence_strength": 86.0,
+      "coverage_breadth": 77.3,
+      "user_validation": 0,
+      "consistency": 83.7
+    }
+  },
+  "implementation_scope": [
+    {
+      "id": "TASK-P4-001",
+      "title": "新增 agents / m10 / m11 route contract tests",
+      "description": "创建 agents-routes.test.ts、m10-routes.test.ts、m11-routes.test.ts，断言 route 数量、pattern、method、handler 引用、param 提取",
+      "files": [
+        "src-ts/mcp/routes/agents.ts",
+        "src-ts/mcp/routes/m10.ts",
+        "src-ts/mcp/routes/m11.ts",
+        "src-ts/tests/mcp/routes/admin-routes.test.ts",
+        "src-ts/tests/mcp/routes/workflow-routes.test.ts"
+      ],
+      "deliverables": [
+        "src-ts/tests/mcp/routes/agents-routes.test.ts",
+        "src-ts/tests/mcp/routes/m10-routes.test.ts",
+        "src-ts/tests/mcp/routes/m11-routes.test.ts"
+      ],
+      "priority": "P1",
+      "estimate": "2-3h"
+    },
+    {
+      "id": "TASK-P4-002",
+      "title": "扩展 content route contract tests 覆盖剩余分组",
+      "description": "扩展 content-routes-additional.test.ts，覆盖 story-bible/qc/cowriting/reader/learning/analysis/plugins/sync/foreshadow/character 等分组的契约断言",
+      "files": [
+        "src-ts/mcp/routes/content.ts",
+        "src-ts/tests/mcp/routes/content-routes-chat.test.ts"
+      ],
+      "deliverables": [
+        "src-ts/tests/mcp/routes/content-routes-additional.test.ts"
+      ],
+      "priority": "P1",
+      "estimate": "3-4h"
+    },
+    {
+      "id": "TASK-P4-003",
+      "title": "新增 tools/list contract test",
+      "description": "扩展 all-tools.test.ts 或新增 tools-list-contract.test.ts，断言 GET /tools 返回的工具分类数组结构：name/method/path/inputSchema 与 route 注册一致",
+      "files": [
+        "src-ts/mcp/all-tools.ts",
+        "src-ts/tests/mcp/all-tools.test.ts",
+        "src-ts/mcp/routes/platform.ts"
+      ],
+      "deliverables": [
+        "src-ts/tests/mcp/all-tools.test.ts（扩展）或 src-ts/tests/mcp/tools-list-contract.test.ts"
+      ],
+      "priority": "P2",
+      "estimate": "1-2h"
+    },
+    {
+      "id": "TASK-P4-004",
+      "title": "实现 coverage-gap-scanner 脚本",
+      "description": "创建 src-ts/scripts/coverage-gap-scanner.ts，基于正则解析 route 模块和测试文件，输出未覆盖 route 清单；新增 package.json script coverage:gap",
+      "files": [
+        "src-ts/mcp/routes/*.ts",
+        "src-ts/tests/**/*.test.ts"
+      ],
+      "deliverables": [
+        "src-ts/scripts/coverage-gap-scanner.ts",
+        "src-ts/package.json（新增 coverage:gap script）"
+      ],
+      "priority": "P2",
+      "estimate": "3-4h"
+    },
+    {
+      "id": "TASK-P4-005",
+      "title": "占位 endpoint 显式 contract test（可选）",
+      "description": "为 /analysis/sessions 等占位 endpoint 集中断言 placeholder 语义（空数组、status 200、Content-Type）",
+      "files": [
+        "src-ts/tests/analysis/analysis-endpoints.test.ts:93"
+      ],
+      "deliverables": [
+        "src-ts/tests/mcp/placeholder-contracts.test.ts（可选）"
+      ],
+      "priority": "P3",
+      "estimate": "1h",
+      "optional": true
+    },
+    {
+      "id": "TASK-P4-006",
+      "title": "端到端 HTTP/MCP SDK 集成测试（Deferred）",
+      "description": "为 2-3 个高风险 endpoint 补端到端集成测试，经过真实 HTTP 适配层",
+      "files": [
+        "src-ts/mcp/gateway-http-adapter.ts",
+        "src-ts/mcp/gateway-request-handler.ts"
+      ],
+      "deliverables": [
+        "src-ts/tests/mcp/e2e/*.test.ts（deferred）"
+      ],
+      "priority": "P4",
+      "estimate": "4-6h",
+      "deferred": true
+    }
+  ],
+  "recommendations": [
+    "以 route contract tests 为 Phase 4 核心交付，不盲目新增 endpoint handler 单元测试",
+    "coverage-gap-scanner 建议作为一次性投资在 Phase 4 内完成，后续阶段可持续使用",
+    "tools/list contract test 优先级高于端到端集成测试，因为前者成本低且覆盖公共 API 契约",
+    "新增 contract tests 的验收标准应以 '防止 wiring drift' 而非 '覆盖率数字提升' 为准",
+    "建议 scanner 采用零依赖正则解析方案，避免引入 ts-morph 增加 bundle 体积"
+  ],
+  "risks": [
+    {
+      "id": "R01",
+      "title": "ESM vi.doMock 不可靠导致状态泄漏",
+      "severity": "medium",
+      "mitigation": "沿用现有 afterEach + vi.resetAllMocks 模式，新增测试遵循同一清理规范",
+      "evidence": ["src-ts/tests/mcp/writing-craft.branch-gap.additional.test.ts:33"]
+    },
+    {
+      "id": "R02",
+      "title": "模块级 singleton 状态泄漏",
+      "severity": "medium",
+      "mitigation": "新增 route contract tests 不直接调用 singleton，仅断言静态数据，天然免疫",
+      "evidence": ["src-ts/knowledge/mcp/story-bible-endpoints.ts:33-34"]
+    },
+    {
+      "id": "R03",
+      "title": "新增 contract 测试被误认为覆盖下降",
+      "severity": "low",
+      "mitigation": "在验收标准中明确以契约稳定性而非覆盖率数字为验收依据",
+      "description": "Route 模块 statement coverage 已为 100，新增测试对覆盖率数字提升有限"
+    },
+    {
+      "id": "R04",
+      "title": "Scanner 正则解析误报",
+      "severity": "low",
+      "mitigation": "以 coverage-final.json 为二次校验；首次运行后人工校准正则模式",
+      "description": "若 route 模块未来引入动态生成，正则可能失效"
+    }
+  ],
+  "acceptance_criteria": [
+    "agents-routes.test.ts、m10-routes.test.ts、m11-routes.test.ts 创建并通过，断言 route 数量、pattern、method、handler 引用",
+    "content-routes-additional.test.ts 扩展并通过，覆盖 story-bible/qc/cowriting/reader/learning/analysis/plugins/sync/foreshadow/character 分组",
+    "tools/list contract test 创建并通过，断言返回数组包含关键工具的 name/method/path",
+    "coverage-gap-scanner 脚本实现并验证：正确识别 agents/m10/m11 为 uncovered，正确识别 story-bible/qc/cowriting 为 covered",
+    "cd src-ts && npm run test:coverage 通过，现有覆盖率不下降",
+    "新增测试全部使用现有 mockRequest / logger mock / vi.hoisted 模式，不引入新测试工具"
+  ],
+  "deferred": [
+    "端到端 HTTP/MCP SDK 集成测试",
+    "占位 endpoint 显式 contract 集中文件"
+  ],
+  "next_step": "/maestro-plan 4"
+}

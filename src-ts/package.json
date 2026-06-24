@@ -25,6 +25,7 @@
     "dev": "ts-node --esm src/index.ts",
     "consistency-check": "ts-node --esm consistency-check.ts",
     "benchmark": "vitest run tests/benchmark/gateway-benchmark.test.ts",
+    "coverage:gap": "ts-node --esm scripts/coverage-gap-scanner.ts",
     "audit:high": "npm audit --audit-level=high"
   },
   "dependencies": {

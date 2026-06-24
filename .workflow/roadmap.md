@@ -1,3 +1,8 @@
+---
+related:
+  - project-project
+---
+
 # Roadmap: M28 — Architecture Hardening + UI Completion + Test Coverage
 
 ## Overview

@@ -1,0 +1,207 @@
+{
+  "sources": [
+    {
+      "name": "cli-explore-agent",
+      "artifact": ".workflow/scratch/20260624-analyze-P4-mcp-endpoint-test-coverage/exploration-codebase.json",
+      "focus": "Endpoint-to-test-file mapping across 129 MCP endpoints",
+      "limitations": ["Only scanned src-ts/tests/mcp/*.test.ts, missed domain-grouped tests under tests/knowledge/, tests/cowriting/, tests/analysis/"]
+    },
+    {
+      "name": "maestro-delegate-claude",
+      "exec_id": "cld-135611-d4c0",
+      "focus": "Cross-validation of endpoint coverage and route-registration contract gaps",
+      "status": "completed"
+    },
+    {
+      "name": "coverage-scan",
+      "artifact": "src-ts/coverage/coverage-final.json",
+      "focus": "Per-file statement/branch/function coverage for mcp/**, knowledge/mcp/**, cowriting/mcp/**, reader/mcp/**",
+      "method": "Node script parsing Istanbul coverage JSON"
+    }
+  ],
+  "coverage_summary": {
+    "endpoint_handlers": {
+      "total_files": 60,
+      "statement_coverage": "Most handler files at 100%; analysis.ts branches 96.6%, graph.ts branches 98.6%, reader-endpoints.ts branches 97.4%",
+      "key_files": [
+        { "path": "knowledge/mcp/story-bible-endpoints.ts", "statements": 100, "branches": 100, "functions": 100 },
+        { "path": "knowledge/mcp/qc-endpoints.ts", "statements": 100, "branches": 100, "functions": 100 },
+        { "path": "cowriting/mcp/cowriting-endpoints.ts", "statements": 100, "branches": 100, "functions": 100 },
+        { "path": "mcp/endpoints/workflow.ts", "statements": 100, "branches": 100, "functions": 100 },
+        { "path": "mcp/endpoints/analysis.ts", "statements": 100, "branches": 96.6, "functions": 100 },
+        { "path": "mcp/endpoints/graph.ts", "statements": 100, "branches": 98.6, "functions": 100 },
+        { "path": "reader/mcp/reader-endpoints.ts", "statements": 100, "branches": 97.4, "functions": 100 }
+      ]
+    },
+    "route_modules": {
+      "note": "Route modules export static GatewayRoute arrays; statements are executed on import (100%) but branches/functions are 0 because they contain no runtime branches or functions.",
+      "files": [
+        "mcp/routes/admin.ts",
+        "mcp/routes/agents.ts",
+        "mcp/routes/content.ts",
+        "mcp/routes/m10.ts",
+        "mcp/routes/m11.ts",
+        "mcp/routes/platform.ts",
+        "mcp/routes/workflow.ts"
+      ],
+      "existing_route_tests": [
+        "src-ts/tests/mcp/routes/platform-routes.test.ts",
+        "src-ts/tests/mcp/routes/admin-routes.test.ts",
+        "src-ts/tests/mcp/routes/workflow-routes.test.ts",
+        "src-ts/tests/mcp/routes/route-matching.test.ts",
+        "src-ts/tests/mcp/routes/content-routes-chat.test.ts"
+      ],
+      "untested_route_modules": ["agents.ts", "m10.ts", "m11.ts"]
+    }
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "category": "coverage-calibration",
+      "title": "探索摘要的范围偏差：多数被标记为无测试的 endpoint 实际已覆盖",
+      "description": "exploration-codebase.json 将 story-bible(7)、qc(2)、cowriting(4)、ui-bridge(10)、analysis/sessions 标记为 has_test=false，但实际上这些 endpoint 在 tests/knowledge/、tests/cowriting/、tests/analysis/、tests/mcp/*additional.test.ts 中已有成熟测试。根因是探索代理只扫描了 src-ts/tests/mcp/*.test.ts。",
+      "evidence_refs": [
+        "src-ts/tests/knowledge/story-bible-endpoints.test.ts:47",
+        "src-ts/tests/knowledge/qc-endpoints.test.ts:36",
+        "src-ts/tests/cowriting/cowriting-endpoints.test.ts:46",
+        "src-ts/tests/mcp/workflow-endpoints.additional.test.ts:542",
+        "src-ts/tests/analysis/analysis-endpoints.test.ts:93"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "F02",
+      "category": "contract-gap",
+      "title": "路由注册契约测试不完整",
+      "description": "现有 route tests 仅覆盖 platform/admin/workflow 路由与 content 中的 chat/memory/graph/wiki/writing。agents、m10、m11 路由模块完全没有 route contract 测试；content 中的 story-bible/qc/cowriting/reader/learning/analysis/plugins/sync/foreshadow/character 等 route 注册未做契约断言。存在 endpoint 实现存在但路由 wiring 漂移的风险。",
+      "evidence_refs": [
+        "src-ts/mcp/routes/agents.ts:20-36",
+        "src-ts/mcp/routes/m10.ts:11-18",
+        "src-ts/mcp/routes/m11.ts:7-10",
+        "src-ts/mcp/routes/content.ts:70-159",
+        "src-ts/tests/mcp/routes/content-routes-chat.test.ts:29-184"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "F03",
+      "category": "contract-gap",
+      "title": "缺少 tools/list schema / JSON-RPC contract 测试",
+      "description": "项目有 listTools / all-tools 机制，但没有显式测试验证 tools/list 返回的 name、method、path、inputSchema、error code 与 route 注册和 handler 实现一致。",
+      "evidence_refs": [
+        "src-ts/mcp/all-tools.ts",
+        "src-ts/tests/mcp/all-tools.test.ts"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "F04",
+      "category": "integration-gap",
+      "title": "缺少端到端 HTTP/MCP SDK 集成测试",
+      "description": "现有测试全部直接调用 endpoint handler 函数，未经过真实 HTTP 适配层、parseBody、headers、params、CORS 或 MCP SDK Client。建议为 2-3 个高风险 endpoint（如 config、health、mcp-admin）补少量端到端集成测试。",
+      "evidence_refs": [
+        "src-ts/mcp/gateway-http-adapter.ts",
+        "src-ts/mcp/gateway-request-handler.ts",
+        "src-ts/tests/mcp/health-endpoints.test.ts:12-43"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "F05",
+      "category": "process-gap",
+      "title": "缺少自动化的覆盖率盘点脚本",
+      "description": "没有自动化手段对比 mcp/routes/*.ts 注册的 route pattern 与 tests/**/*.test.ts 中是否出现对应 endpoint handler 的导入/调用。Phase 4 应新增或修正一个扫描脚本，避免再次漏扫。",
+      "evidence_refs": [
+        ".workflow/scratch/20260624-analyze-P4-mcp-endpoint-test-coverage/exploration-codebase.json"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "F06",
+      "category": "test-pattern",
+      "title": "现有测试模式已成熟，可直接复用",
+      "description": "项目已建立 mockRequest helper、logger mock、vi.hoisted + vi.mock service 依赖、模块级 clear/reset 函数、afterEach 清理等模式。新增 contract 测试可直接套用。",
+      "evidence_refs": [
+        "src-ts/tests/mcp/learning-endpoints.test.ts:5-46",
+        "src-ts/tests/mcp/graph-endpoints.test.ts:5-30",
+        "src-ts/tests/mcp/workflow-endpoints.additional.test.ts:75-107"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "technical_solutions": [
+    {
+      "round": 1,
+      "solution": "新增/扩展 route contract tests：agents-routes.test.ts、m10-routes.test.ts、m11-routes.test.ts，并扩展 content-routes-additional.test.ts 覆盖 story-bible/qc/cowriting/reader/learning/analysis/plugins/sync/foreshadow/character 等分组",
+      "problem": "路由注册契约测试不完整，无法防止 wiring drift",
+      "rationale": "Route 模块是纯数据数组，测试成本低但防御价值高；可直接复用 platform/admin/workflow route tests 的 pattern/handler/param extraction 模式",
+      "alternatives": ["为每个 endpoint 补端到端 HTTP 测试"],
+      "status": "proposed",
+      "evidence": ["src-ts/tests/mcp/routes/admin-routes.test.ts:1-159", "src-ts/tests/mcp/routes/workflow-routes.test.ts:1-200"],
+      "next_action": "在 maestro-plan 中拆分为具体 TASK"
+    },
+    {
+      "round": 1,
+      "solution": "修正覆盖率扫描口径或新增 coverage-gap-scanner 脚本，扫描 src-ts/tests/**/*.test.ts 中 endpoint handler 的导入/调用",
+      "problem": "探索摘要因扫描范围过窄而误判大量 endpoint 为无测试",
+      "rationale": "一次性脚本投资可避免后续阶段重复误判；扫描可基于 AST 或简单 regex 匹配 handler 函数名",
+      "alternatives": ["手工维护 endpoint 到测试的映射表"],
+      "status": "proposed",
+      "evidence": [".workflow/scratch/20260624-analyze-P4-mcp-endpoint-test-coverage/exploration-codebase.json"],
+      "next_action": "可选任务，优先级低于 route contract tests"
+    },
+    {
+      "round": 1,
+      "solution": "新增 tools/list contract test，断言关键 endpoint 的 name、method、path 与 route 注册一致",
+      "problem": "MCP client 视角的契约稳定性未验证",
+      "rationale": "低成本、高兼容性保障；可复用 all-tools.test.ts 的现有结构",
+      "alternatives": ["端到端 MCP SDK Client 测试"],
+      "status": "proposed",
+      "evidence": ["src-ts/mcp/all-tools.ts", "src-ts/tests/mcp/all-tools.test.ts"],
+      "next_action": "作为 P2 任务纳入 plan"
+    },
+    {
+      "round": 1,
+      "solution": "为 /analysis/sessions 等占位 endpoint 补显式 contract 测试，断言 placeholder 语义（空数组、status 200、Content-Type）",
+      "problem": "占位实现易被误改，缺少显式契约守卫",
+      "rationale": "已有单元测试，但可集中到一个 contract 文件中明确占位语义",
+      "alternatives": ["不新增测试，依赖现有单元测试"],
+      "status": "proposed",
+      "evidence": ["src-ts/tests/analysis/analysis-endpoints.test.ts:93"],
+      "next_action": "可选低优先级任务"
+    }
+  ],
+  "risks": [
+    {
+      "id": "R01",
+      "title": "ESM vi.doMock 不可靠导致状态泄漏",
+      "severity": "medium",
+      "evidence": ["src-ts/tests/mcp/writing-craft.branch-gap.additional.test.ts:33"]
+    },
+    {
+      "id": "R02",
+      "title": "模块级 singleton 状态泄漏",
+      "severity": "medium",
+      "evidence": ["src-ts/knowledge/mcp/story-bible-endpoints.ts:33-34", "src-ts/knowledge/mcp/qc-endpoints.ts:40", "src-ts/cowriting/mcp/cowriting-endpoints.ts:50-51", "src-ts/mcp/endpoints/workflow.ts:296"]
+    },
+    {
+      "id": "R03",
+      "title": "Windows 路径大小写导致 workspace 校验误判",
+      "severity": "low",
+      "evidence": ["src-ts/mcp/input-validation.ts:115"]
+    },
+    {
+      "id": "R04",
+      "title": "新增 contract 测试被误认为覆盖下降",
+      "severity": "low",
+      "description": "Route 模块 statement coverage 已为 100，新增测试对覆盖率数字提升有限，需以契约稳定性而非覆盖率数字作为验收标准"
+    }
+  ],
+  "acceptance_criteria": [
+    "修正覆盖率扫描脚本，覆盖 src-ts/tests/** 全目录（或至少包含 tests/knowledge、tests/cowriting、tests/analysis）",
+    "为 agents/m10/m11 路由模块新增 route contract tests",
+    "扩展 content route contract tests 覆盖 story-bible/qc/cowriting/reader/learning/analysis/plugins/sync/foreshadow/character 等分组",
+    "新增 tools/list contract test，断言关键 endpoint 的 name/method/path 与 route 注册一致",
+    "运行 cd src-ts && npm run test:coverage 通过且不降低现有覆盖率"
+  ]
+}

@@ -1,3 +1,11 @@
+---
+related:
+  - project-project
+  - roadmap-roadmap
+  - scratch-20260624-analyze-p2-architecture-decoupling-analysis
+  - scratch-20260624-analyze-p2-architecture-decoupling-discussion
+---
+
 # Context: M28 Phase 2 — Architecture Decoupling
 
 ## Scope

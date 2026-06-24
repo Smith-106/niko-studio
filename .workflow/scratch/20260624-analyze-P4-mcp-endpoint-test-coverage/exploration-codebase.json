@@ -1,0 +1,2045 @@
+{
+  "relevant_files": [
+    {
+      "path": "src-ts/mcp/routes/index.ts",
+      "role": "route",
+      "description": "Gateway route registry — aggregates all route modules (platform, content, agents, workflow, admin, m10, m11) and provides route matching logic."
+    },
+    {
+      "path": "src-ts/mcp/routes/platform.ts",
+      "role": "route",
+      "description": "Platform routes: health, metrics, tools, models, config (GET/PUT/POST), secrets (GET/PUT/POST), reload."
+    },
+    {
+      "path": "src-ts/mcp/routes/content.ts",
+      "role": "route",
+      "description": "Content routes: chat, memory, workspace, graph, wiki, writing, writing-craft, plugins, sync, foreshadow, character, analysis, learning, story-bible, qc, cowriting, reader simulation."
+    },
+    {
+      "path": "src-ts/mcp/routes/agents.ts",
+      "role": "route",
+      "description": "Agent routes: agent route/write/revise/context, critic evaluate/suggestions/consistency, consistency check, skills list/load/match/chain/create/save/delete."
+    },
+    {
+      "path": "src-ts/mcp/routes/workflow.ts",
+      "role": "route",
+      "description": "Workflow routes: route/plan/execute/lifecycle/rollback, revision session CRUD, scheduler CRUD, checkpoint CRUD, UI bridge wrappers."
+    },
+    {
+      "path": "src-ts/mcp/routes/admin.ts",
+      "role": "route",
+      "description": "Admin routes: MCP service CRUD (list, create, update, delete, enable, probe)."
+    },
+    {
+      "path": "src-ts/mcp/routes/m10.ts",
+      "role": "route",
+      "description": "M10 routes: revise-multi-pass, style extract/apply/profile, cross-chapter consistency, context-aware suggestions."
+    },
+    {
+      "path": "src-ts/mcp/routes/m11.ts",
+      "role": "route",
+      "description": "M11 routes: worldview extract, worldview get by projectId."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/index.ts",
+      "role": "endpoint",
+      "description": "Barrel export for all endpoint handlers — re-exports from 25+ endpoint files and external modules (knowledge/mcp, cowriting/mcp, reader/mcp)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/health.ts",
+      "role": "endpoint",
+      "description": "Health check endpoint with gateway dependency injection, diagnostic classification, engine health probes for 5 core services."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/config.ts",
+      "role": "endpoint",
+      "description": "Config endpoints: getConfig (with secret masking), updateConfig (field whitelist), getSecrets/updateSecrets (localhost guard), reloadConfig."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/chat.ts",
+      "role": "endpoint",
+      "description": "Chat endpoints: chat (workflow-driven with canon context injection), chatStream (SSE streaming with adaptive chunking)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/agent.ts",
+      "role": "endpoint",
+      "description": "Agent endpoints: route, write (with workspace resolution), revise (with feedback object), context. Delegates to mcp/services/agent."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/critic.ts",
+      "role": "endpoint",
+      "description": "Critic endpoints: evaluate, suggestions, consistency (cross-chapter with character/timeline/worldview checkers), workspace scanner CLI."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/workflow.ts",
+      "role": "endpoint",
+      "description": "Workflow endpoints: route/plan/execute/lifecycle/rollback, revision CRUD, scheduler CRUD, checkpoint CRUD, UI bridge wrappers (gate on uiBridgeEnabled)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/memory.ts",
+      "role": "endpoint",
+      "description": "Memory endpoints: search, add, upload (base64 decode + DocumentLoader + chunking), temporal. Resolves workspace scope for entityId/projectId/sessionId."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/graph.ts",
+      "role": "endpoint",
+      "description": "Graph endpoints: query (Cypher with blocked pattern filter), character, foreshadows, foreshadow plant/stats, character profile/depth/relationships."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/wiki.ts",
+      "role": "endpoint",
+      "description": "Wiki endpoints: promote (create canon page), list (with status filter), read page (by slug). Delegates to mcp/services/wiki."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/skills.ts",
+      "role": "endpoint",
+      "description": "Skills endpoints: list (by category), load (by skill_id), match (by task_type/keywords/issue), chain (by task_type), create/save/delete (file-based CRUD in ~/.niko/skills)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/mcp-admin.ts",
+      "role": "endpoint",
+      "description": "MCP Admin endpoints: service list, create, update, delete, enable/disable, probe health. Write endpoints protected by localhost-only guard (ISS-004)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/writing.ts",
+      "role": "endpoint",
+      "description": "Writing endpoints: novel quality check (delegates to critic evaluateContent), writing helper process (local or LLM with skill injection), writing stream (SSE with LLM streaming)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/writing-craft.ts",
+      "role": "endpoint",
+      "description": "Writing craft analysis endpoints: analyze (9 dimensions via keyword-based analyzers), emotional arc, voice consistency, reader immersion, pacing navigator."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/writing-craft-llm.ts",
+      "role": "endpoint",
+      "description": "Writing craft LLM endpoint: LLM-powered deep analysis for 9 dimensions with OpenAI-compatible API calls, JSON response parsing, per-dimension error handling."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/analysis.ts",
+      "role": "endpoint",
+      "description": "Analysis endpoints: patterns (Cypher-based pattern detection with templates), sessions (placeholder), narrative visualization (consistency + graph + bundle builder)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/plugins.ts",
+      "role": "endpoint",
+      "description": "Plugin endpoints: list (from pluginEngine), execute (by pluginId/pluginIds), register (dynamic rule-based plugin creation with regex detection)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/sync.ts",
+      "role": "endpoint",
+      "description": "Sync endpoints: status, push, pull, full. SSRF protection via validateRemoteUrl (rejects private IPs, localhost, link-local). Uses SyncEngine with LocalStorageAdapter and RemoteStorageAdapter."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/learning.ts",
+      "role": "endpoint",
+      "description": "Learning endpoints: import, style feedback, style drift, rules, reading session, reading extract, status. CAP-001/002/003 placeholder implementations."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/m10-style.ts",
+      "role": "endpoint",
+      "description": "M10 style endpoints: extract (text analysis for avg sentence length, vocab richness, dialogue ratio, tense, POV), profile (by projectId), apply (style guidance generation)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/m10-consistency.ts",
+      "role": "endpoint",
+      "description": "M10 consistency endpoints: cross-chapter (name conflicts, timeline issues, unresolved threads, trait drifts with graph enrichment), context-aware suggestions (search-based)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/m10-revision.ts",
+      "role": "endpoint",
+      "description": "M10 revision endpoint: multi-pass revision with RevisionServiceImpl, target score, max iterations, chapter_id. Returns revised content with iteration count and final decision."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/m11-worldview.ts",
+      "role": "endpoint",
+      "description": "M11 worldview endpoints: extract (WorldviewExtractor.quickExtract), get (by projectId, returns empty placeholder)."
+    },
+    {
+      "path": "src-ts/mcp/endpoints/workspace.ts",
+      "role": "endpoint",
+      "description": "Workspace endpoint: context normalization and summary. Resolves workspace root and returns ProjectWorkspaceContext with compatibility info."
+    },
+    {
+      "path": "src-ts/reader/mcp/reader-routes.ts",
+      "role": "endpoint",
+      "description": "Reader simulation endpoints: analyze, personas, custom persona, overlay, ai-flavor, feedback, compare, de-ai. Heavy validation, caching, DualEngine integration."
+    },
+    {
+      "path": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "role": "endpoint",
+      "description": "Story Bible endpoints: entity list/get/create/update/delete, extract from manuscript (placeholder), completeness report. In-memory storage with novel indexing."
+    },
+    {
+      "path": "src-ts/knowledge/mcp/qc-endpoints.ts",
+      "role": "endpoint",
+      "description": "QC endpoints: validate output (heuristic quality checks with cache), creativity config (preset resolution)."
+    },
+    {
+      "path": "src-ts/cowriting/mcp/cowriting-endpoints.ts",
+      "role": "endpoint",
+      "description": "Co-writing endpoints: generate auto (AutoMode), generate guided (GuidedMode), get modes, get creativity presets. Placeholder input builders (ISS-20260620-016)."
+    },
+    {
+      "path": "src-ts/mcp/services/agent.ts",
+      "role": "service",
+      "description": "Agent service: agentRoute, agentWrite, agentRevise, agentGetContext. Called by agent endpoints."
+    },
+    {
+      "path": "src-ts/mcp/services/critic.ts",
+      "role": "service",
+      "description": "Critic service: evaluateContent, getImprovementSuggestions. Called by critic and writing endpoints."
+    },
+    {
+      "path": "src-ts/mcp/services/workflow.ts",
+      "role": "service",
+      "description": "Workflow service: route, plan, execute, lifecycle, rollback, scheduler CRUD, checkpoint CRUD. Called by workflow endpoints."
+    },
+    {
+      "path": "src-ts/mcp/services/memory.ts",
+      "role": "service",
+      "description": "Memory service: search, add, getTemporal. Called by memory endpoints."
+    },
+    {
+      "path": "src-ts/mcp/services/graph.ts",
+      "role": "service",
+      "description": "Graph service: query, getCharacter, getForeshadows, getRelationships, addEntity. Called by graph endpoints."
+    },
+    {
+      "path": "src-ts/mcp/services/wiki.ts",
+      "role": "service",
+      "description": "Wiki service: listProjectWikiCanonPages, promoteProjectWikiCanon, readProjectWikiCanonPage. Called by wiki endpoints."
+    },
+    {
+      "path": "src-ts/mcp/services/skills.ts",
+      "role": "service",
+      "description": "Skills service: list, load, match, getChain. Called by skills endpoints."
+    },
+    {
+      "path": "src-ts/mcp/services/search.ts",
+      "role": "service",
+      "description": "Search service: hybrid search, iterative search, context search. Called by chat and memory endpoints."
+    },
+    {
+      "path": "src-ts/mcp/gateway-route-types.ts",
+      "role": "route",
+      "description": "Type definitions for GatewayRoute, EndpointHandler, HttpMethod, GatewayRouteMatch."
+    },
+    {
+      "path": "src-ts/mcp/http-types.ts",
+      "role": "route",
+      "description": "HTTP type definitions: HttpRequest, HttpResponse, jsonResponse, parseBody, and SSE helpers."
+    },
+    {
+      "path": "src-ts/mcp/input-validation.ts",
+      "role": "service",
+      "description": "Input validation utilities: safeResolveWorkspaceRoot, tryResolveWorkspaceRoot, validateStringLength. Used by most endpoints."
+    },
+    {
+      "path": "src-ts/mcp/config.ts",
+      "role": "config",
+      "description": "MCP configuration: gateway host/port resolution, CORS origins, reload enabled, localhost-only guard."
+    },
+    {
+      "path": "src-ts/mcp/service-config.ts",
+      "role": "config",
+      "description": "MCP service configuration: MCP_SERVICE_CONFIGS, health cache, serializeServiceConfig, updateServiceConfig."
+    },
+    {
+      "path": "src-ts/tests/mcp/health-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for healthCheck and metricsEndpoint."
+    },
+    {
+      "path": "src-ts/tests/mcp/config-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for getConfig, updateConfig, getSecrets, updateSecrets, reloadConfig."
+    },
+    {
+      "path": "src-ts/tests/mcp/chat-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for chatEndpoint and chatStreamEndpoint."
+    },
+    {
+      "path": "src-ts/tests/mcp/agent-service.test.ts",
+      "role": "test",
+      "description": "Tests for agent service functions (agentRoute, agentWrite, agentRevise, agentGetContext)."
+    },
+    {
+      "path": "src-ts/tests/mcp/workflow-service.test.ts",
+      "role": "test",
+      "description": "Tests for workflow service functions."
+    },
+    {
+      "path": "src-ts/tests/mcp/memory-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for memory endpoints (search, add, temporal)."
+    },
+    {
+      "path": "src-ts/tests/mcp/graph-service.test.ts",
+      "role": "test",
+      "description": "Tests for graph service functions."
+    },
+    {
+      "path": "src-ts/tests/mcp/wiki-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for wiki endpoints (promote, list, read)."
+    },
+    {
+      "path": "src-ts/tests/mcp/wiki-service.test.ts",
+      "role": "test",
+      "description": "Tests for wiki service functions."
+    },
+    {
+      "path": "src-ts/tests/mcp/search-service.test.ts",
+      "role": "test",
+      "description": "Tests for search service functions."
+    },
+    {
+      "path": "src-ts/tests/mcp/routes/admin-routes.test.ts",
+      "role": "test",
+      "description": "Tests for admin routes (MCP service CRUD)."
+    },
+    {
+      "path": "src-ts/tests/mcp/routes/platform-routes.test.ts",
+      "role": "test",
+      "description": "Tests for platform routes (health, metrics, config, secrets)."
+    },
+    {
+      "path": "src-ts/tests/mcp/routes/workflow-routes.test.ts",
+      "role": "test",
+      "description": "Tests for workflow routes."
+    },
+    {
+      "path": "src-ts/tests/mcp/routes/route-matching.test.ts",
+      "role": "test",
+      "description": "Tests for gateway route matching logic."
+    },
+    {
+      "path": "src-ts/tests/mcp/routes/content-routes-chat.test.ts",
+      "role": "test",
+      "description": "Tests for content routes (chat-specific)."
+    },
+    {
+      "path": "src-ts/tests/mcp/mcp-admin.test.ts",
+      "role": "test",
+      "description": "Tests for mcp-admin endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/writing-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for writing endpoints (quality check, helper, stream)."
+    },
+    {
+      "path": "src-ts/tests/mcp/writing-craft-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for writing-craft endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/plugin-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for plugin endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/sync-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for sync endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/learning-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for learning endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/m10-style-endpoint.test.ts",
+      "role": "test",
+      "description": "Tests for M10 style endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/m10-revision-endpoint.test.ts",
+      "role": "test",
+      "description": "Tests for M10 revision endpoint."
+    },
+    {
+      "path": "src-ts/tests/mcp/m10-consistency.test.ts",
+      "role": "test",
+      "description": "Tests for M10 consistency endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/m11-worldview-endpoint.test.ts",
+      "role": "test",
+      "description": "Tests for M11 worldview endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/consistency-check.endpoint.test.ts",
+      "role": "test",
+      "description": "Tests for consistency check endpoint (critic.ts)."
+    },
+    {
+      "path": "src-ts/tests/mcp/consistency-check.standalone.test.ts",
+      "role": "test",
+      "description": "Standalone tests for consistency check logic."
+    },
+    {
+      "path": "src-ts/tests/mcp/critic-service.test.ts",
+      "role": "test",
+      "description": "Tests for critic service functions."
+    },
+    {
+      "path": "src-ts/tests/mcp/memory-service.test.ts",
+      "role": "test",
+      "description": "Tests for memory service functions."
+    },
+    {
+      "path": "src-ts/tests/mcp/workflow-revision-session.test.ts",
+      "role": "test",
+      "description": "Tests for workflow revision session."
+    },
+    {
+      "path": "src-ts/tests/mcp/workflow-service-concurrency.test.ts",
+      "role": "test",
+      "description": "Tests for workflow service concurrency."
+    },
+    {
+      "path": "src-ts/tests/mcp/gateway.test.ts",
+      "role": "test",
+      "description": "Tests for gateway bootstrap and server lifecycle."
+    },
+    {
+      "path": "src-ts/tests/mcp/gateway-cors.test.ts",
+      "role": "test",
+      "description": "Tests for gateway CORS handling."
+    },
+    {
+      "path": "src-ts/tests/mcp/gateway-request-handler.test.ts",
+      "role": "test",
+      "description": "Tests for gateway request handler."
+    },
+    {
+      "path": "src-ts/tests/mcp/gateway-http-adapter.test.ts",
+      "role": "test",
+      "description": "Tests for gateway HTTP adapter."
+    },
+    {
+      "path": "src-ts/tests/mcp/contract.test.ts",
+      "role": "test",
+      "description": "Tests for MCP contract definitions."
+    },
+    {
+      "path": "src-ts/tests/mcp/skills-service.test.ts",
+      "role": "test",
+      "description": "Tests for skills service functions."
+    },
+    {
+      "path": "src-ts/tests/mcp/graph-endpoints.test.ts",
+      "role": "test",
+      "description": "Tests for graph endpoints."
+    },
+    {
+      "path": "src-ts/tests/mcp/analysis.branch-gap.additional.test.ts",
+      "role": "test",
+      "description": "Additional tests for analysis endpoints (branch gap coverage)."
+    },
+    {
+      "path": "src-ts/tests/mcp/mcp-admin.mocked-error.additional.test.ts",
+      "role": "test",
+      "description": "Additional mocked error tests for mcp-admin endpoints."
+    }
+  ],
+  "endpoints": [
+    {
+      "name": "healthCheck",
+      "path": "GET /health",
+      "file": "src-ts/mcp/endpoints/health.ts",
+      "line": 234,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/health-endpoints.test.ts"],
+      "dependencies": ["gatewayDeps (IHealthEngineAccess, IServiceRegistryAccess, IRuntimeStateAccess, IObservabilityAccess, IConfigAccess, IGatewayMetadata)", "AGENT_NAMES", "listSkills", "CORE_RUNTIME_SERVICES"],
+      "notes": "Probes 5 core engines (memory, graph, search, workflow, critic). Builds diagnostic with failure classification. Requires gatewayDeps injection via setGatewayDeps."
+    },
+    {
+      "name": "metricsEndpoint",
+      "path": "GET /metrics",
+      "file": "src-ts/mcp/endpoints/health.ts",
+      "line": 359,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/health-endpoints.test.ts", "src-ts/tests/mcp/metrics.additional.test.ts"],
+      "dependencies": ["gatewayDeps", "getMetricsSnapshot"],
+      "notes": "Returns metrics snapshot and runtime state. Gated by gateway.metrics_enabled config."
+    },
+    {
+      "name": "listTools",
+      "path": "GET /tools",
+      "file": "src-ts/mcp/endpoints/health.ts",
+      "line": 382,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/all-tools.test.ts"],
+      "dependencies": [],
+      "notes": "Static tool listing. No external dependencies."
+    },
+    {
+      "name": "listModels",
+      "path": "GET /models",
+      "file": "src-ts/mcp/endpoints/health.ts",
+      "line": 405,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/config-endpoints.test.ts"],
+      "dependencies": ["gatewayDeps", "ServiceConfig.providers", "extractProviderModels"],
+      "notes": "Lists available models from service config providers. Supports provider filter via query param."
+    },
+    {
+      "name": "getConfig",
+      "path": "GET /config",
+      "file": "src-ts/mcp/endpoints/config.ts",
+      "line": 141,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/config-endpoints.test.ts", "src-ts/tests/mcp/config.additional.test.ts"],
+      "dependencies": ["configAccess (getConfig)"],
+      "notes": "Returns masked config with SECRET_FIELDS redacted. Exposes MODIFIABLE_FIELDS whitelist."
+    },
+    {
+      "name": "updateConfig",
+      "path": "PUT/POST /config",
+      "file": "src-ts/mcp/endpoints/config.ts",
+      "line": 161,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/config-endpoints.test.ts", "src-ts/tests/mcp/config.additional.test.ts"],
+      "dependencies": ["configAccess (setConfigValue)"],
+      "notes": "Updates config fields from MODIFIABLE_FIELDS whitelist. Returns updated fields and errors."
+    },
+    {
+      "name": "getSecrets",
+      "path": "GET /config/secrets",
+      "file": "src-ts/mcp/endpoints/config.ts",
+      "line": 201,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/config-endpoints.test.ts"],
+      "dependencies": ["configAccess (getConfigValue)", "resolveLocalhostOnlyEnabled"],
+      "notes": "Protected by localhost-only guard (ISS-002). Returns secret configuration status with masked values."
+    },
+    {
+      "name": "updateSecrets",
+      "path": "PUT/POST /config/secrets",
+      "file": "src-ts/mcp/endpoints/config.ts",
+      "line": 235,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/config-endpoints.test.ts"],
+      "dependencies": ["configAccess (setConfigValue)", "resolveLocalhostOnlyEnabled"],
+      "notes": "Protected by localhost-only guard. Updates SECRET_FIELDS only."
+    },
+    {
+      "name": "reloadConfig",
+      "path": "POST /config/reload",
+      "file": "src-ts/mcp/endpoints/config.ts",
+      "line": 284,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/config-reload.test.ts"],
+      "dependencies": ["configAccess (reloadConfig)"],
+      "notes": "Triggers config reload. Simple delegation."
+    },
+    {
+      "name": "chatEndpoint",
+      "path": "POST /chat",
+      "file": "src-ts/mcp/endpoints/chat.ts",
+      "line": 449,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/chat-endpoints.test.ts", "src-ts/tests/mcp/chat.additional-coverage.test.ts"],
+      "dependencies": ["getWorkflowEngineRuntimeProvider", "normalizeProjectWorkspaceContext", "queryProjectWikiCanon", "createProjectWikiFactPacketBundleFromCanonMatches", "toWorkflowLabel", "toWorkflowSlug"],
+      "notes": "Validates message limits (MAX_MESSAGES=128, MAX_MESSAGE_CHARS=24000, MAX_TOTAL_CHARS=120000). Resolves workspace, queries wiki canon, routes via workflow engine, returns content with writer_metadata."
+    },
+    {
+      "name": "chatStreamEndpoint",
+      "path": "POST /chat/stream",
+      "file": "src-ts/mcp/endpoints/chat.ts",
+      "line": 522,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/chat-endpoints.test.ts", "src-ts/tests/mcp/chat.additional-coverage.test.ts"],
+      "dependencies": ["getWorkflowEngineRuntimeProvider", "normalizeProjectWorkspaceContext", "queryProjectWikiCanon", "adaptiveChunkContent"],
+      "notes": "SSE streaming endpoint. Returns text/event-stream with start/routing/progress/content/evaluation/done events. Uses adaptiveChunkContent for content splitting."
+    },
+    {
+      "name": "agentRouteEndpoint",
+      "path": "POST /agent/route",
+      "file": "src-ts/mcp/endpoints/agent.ts",
+      "line": 71,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/agent-service.test.ts", "src-ts/tests/mcp/agent-endpoints.additional.test.ts"],
+      "dependencies": ["agentRoute (from mcp/services/agent)"],
+      "notes": "Simple delegation to agentRoute service."
+    },
+    {
+      "name": "agentWriteEndpoint",
+      "path": "POST /agent/write",
+      "file": "src-ts/mcp/endpoints/agent.ts",
+      "line": 77,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/agent-service.test.ts", "src-ts/tests/mcp/agent-endpoints.additional.test.ts"],
+      "dependencies": ["agentWrite (from mcp/services/agent)", "normalizeProjectWorkspaceContext", "tryResolveWorkspaceRoot"],
+      "notes": "Resolves workspace from body (workspace_id, project_id, workspace object), delegates to agentWrite with scene_card, skills, word_target, allow_llm_fallback, quality_goals."
+    },
+    {
+      "name": "agentReviseEndpoint",
+      "path": "POST /agent/revise",
+      "file": "src-ts/mcp/endpoints/agent.ts",
+      "line": 96,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/agent-service.test.ts", "src-ts/tests/mcp/agent-endpoints.additional.test.ts"],
+      "dependencies": ["agentRevise (from mcp/services/agent)"],
+      "notes": "Validates feedback object, handles ValueError (400) and LLM errors (503). Delegates to agentRevise service."
+    },
+    {
+      "name": "agentContextEndpoint",
+      "path": "POST /agent/context",
+      "file": "src-ts/mcp/endpoints/agent.ts",
+      "line": 143,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/agent-service.test.ts", "src-ts/tests/mcp/agent-endpoints.additional.test.ts"],
+      "dependencies": ["agentGetContext (from mcp/services/agent)"],
+      "notes": "Simple delegation to agentGetContext with scene_info and context_types."
+    },
+    {
+      "name": "criticEvaluateEndpoint",
+      "path": "POST /critic/evaluate",
+      "file": "src-ts/mcp/endpoints/critic.ts",
+      "line": 34,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/critic-service.test.ts", "src-ts/tests/mcp/critic-service.additional.test.ts"],
+      "dependencies": ["evaluateContent (from mcp/services/critic)"],
+      "notes": "Evaluates content with optional scene_card, dimensions, quality_goals."
+    },
+    {
+      "name": "criticSuggestionsEndpoint",
+      "path": "POST /critic/suggestions",
+      "file": "src-ts/mcp/endpoints/critic.ts",
+      "line": 50,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/critic-service.test.ts", "src-ts/tests/mcp/critic-service.additional.test.ts"],
+      "dependencies": ["getImprovementSuggestions (from mcp/services/critic)"],
+      "notes": "Returns improvement suggestions for content with optional issue filter and max_suggestions."
+    },
+    {
+      "name": "criticConsistencyEndpoint",
+      "path": "POST /critic/consistency",
+      "file": "src-ts/mcp/endpoints/critic.ts",
+      "line": 238,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/consistency-check.endpoint.test.ts", "src-ts/tests/mcp/consistency-check.standalone.test.ts"],
+      "dependencies": ["runConsistencyCheck", "CrossChapterCharacterTracker", "TimelineConsistencyChecker", "WorldviewCoherenceValidator"],
+      "notes": "Cross-chapter consistency check. Runs 3 analyzers in parallel (character, timeline, worldview). Returns combined report with severity-sorted conflicts."
+    },
+    {
+      "name": "consistencyCheckEndpoint",
+      "path": "POST /consistency/check",
+      "file": "src-ts/mcp/endpoints/critic.ts",
+      "line": 244,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/consistency-check.endpoint.test.ts", "src-ts/tests/mcp/consistency-check.standalone.test.ts"],
+      "dependencies": ["runConsistencyCheck", "buildConsistencyInputFromWorkspace"],
+      "notes": "Auto-scans workspace for chapters if none provided. Supports workspace root override."
+    },
+    {
+      "name": "workflowRouteEndpoint",
+      "path": "POST /workflow/route",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 81,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts", "src-ts/tests/mcp/routes/workflow-routes.test.ts"],
+      "dependencies": ["workflowRoute (from mcp/services/workflow)", "normalizeProjectWorkspaceContext", "tryResolveWorkspaceRoot"],
+      "notes": "Routes task through workflow engine. Resolves workspace context."
+    },
+    {
+      "name": "workflowPlanEndpoint",
+      "path": "POST /workflow/plan",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 89,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts", "src-ts/tests/mcp/routes/workflow-routes.test.ts"],
+      "dependencies": ["workflowPlan (from mcp/services/workflow)", "normalizeProjectWorkspaceContext"],
+      "notes": "Creates workflow plan with optional level, recommendations, genre."
+    },
+    {
+      "name": "workflowExecuteEndpoint",
+      "path": "POST /workflow/execute",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 104,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts", "src-ts/tests/mcp/routes/workflow-routes.test.ts"],
+      "dependencies": ["workflowExecute (from mcp/services/workflow)"],
+      "notes": "Executes workflow plan by plan_id with optional step_id and confirm_token."
+    },
+    {
+      "name": "workflowLifecycleEndpoint",
+      "path": "POST /workflow/lifecycle",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 118,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts", "src-ts/tests/mcp/routes/workflow-routes.test.ts"],
+      "dependencies": ["workflowLifecycle (from mcp/services/workflow)"],
+      "notes": "Manages workflow lifecycle (status, pause, resume, cancel)."
+    },
+    {
+      "name": "workflowQuickRollbackEndpoint",
+      "path": "POST /workflow/rollback",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 130,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["workflowQuickRollback (from mcp/services/workflow)"],
+      "notes": "Quick rollback to checkpoint by plan_id and checkpoint_id."
+    },
+    {
+      "name": "workflowRevisionStartSessionEndpoint",
+      "path": "POST /workflow/revision/start-session",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 143,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-revision-session.test.ts", "src-ts/tests/mcp/workflow-revision.additional.test.ts"],
+      "dependencies": ["workflowRevisionStartSession (from mcp/services/workflow-revision)"],
+      "notes": "Starts revision session for a chapter."
+    },
+    {
+      "name": "workflowRevisionAnalyzeEndpoint",
+      "path": "POST /workflow/revision/analyze",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 155,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-revision-session.test.ts", "src-ts/tests/mcp/workflow-revision.additional.test.ts"],
+      "dependencies": ["workflowRevisionAnalyzeWeakPoints (from mcp/services/workflow-revision)"],
+      "notes": "Analyzes weak points in revision session."
+    },
+    {
+      "name": "workflowRevisionSuggestEndpoint",
+      "path": "POST /workflow/revision/suggest",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 167,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-revision-session.test.ts", "src-ts/tests/mcp/workflow-revision.additional.test.ts"],
+      "dependencies": ["workflowRevisionGenerateSuggestions (from mcp/services/workflow-revision)"],
+      "notes": "Generates revision suggestions for weak points."
+    },
+    {
+      "name": "workflowRevisionMarkRevisedEndpoint",
+      "path": "POST /workflow/revision/mark-revised",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 182,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-revision-session.test.ts"],
+      "dependencies": ["workflowRevisionMarkRevised (from mcp/services/workflow-revision)"],
+      "notes": "Marks text as revised in session."
+    },
+    {
+      "name": "workflowRevisionCompareEndpoint",
+      "path": "POST /workflow/revision/compare",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 194,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-revision-session.test.ts"],
+      "dependencies": ["workflowRevisionCompare (from mcp/services/workflow-revision)"],
+      "notes": "Compares original and revised text."
+    },
+    {
+      "name": "workflowRevisionHistoryEndpoint",
+      "path": "POST /workflow/revision/history",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 206,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-revision-session.test.ts"],
+      "dependencies": ["workflowRevisionHistory (from mcp/services/workflow-revision)"],
+      "notes": "Returns revision history for a chapter."
+    },
+    {
+      "name": "workflowSchedulerRegisterEndpoint",
+      "path": "POST /workflow/scheduler/register",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 221,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["workflowSchedulerRegister (from mcp/services/workflow)"],
+      "notes": "Registers scheduled workflow task."
+    },
+    {
+      "name": "workflowSchedulerListEndpoint",
+      "path": "POST /workflow/scheduler/list",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 233,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["workflowSchedulerList (from mcp/services/workflow)"],
+      "notes": "Lists scheduled workflow tasks."
+    },
+    {
+      "name": "workflowSchedulerPauseEndpoint",
+      "path": "POST /workflow/scheduler/pause",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 244,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["workflowSchedulerPause (from mcp/services/workflow)"],
+      "notes": "Pauses scheduled workflow task."
+    },
+    {
+      "name": "workflowSchedulerResumeEndpoint",
+      "path": "POST /workflow/scheduler/resume",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 255,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["workflowSchedulerResume (from mcp/services/workflow)"],
+      "notes": "Resumes scheduled workflow task."
+    },
+    {
+      "name": "workflowSchedulerRunNowEndpoint",
+      "path": "POST /workflow/scheduler/run-now",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 266,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["workflowSchedulerRunNow (from mcp/services/workflow)"],
+      "notes": "Runs scheduled workflow task immediately."
+    },
+    {
+      "name": "workflowSchedulerImportLitePlanEndpoint",
+      "path": "POST /workflow/scheduler/import-lite-plan",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 279,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["workflowSchedulerImportLitePlan (from mcp/services/workflow)"],
+      "notes": "Imports lite plan into scheduler."
+    },
+    {
+      "name": "checkpointCreateEndpoint",
+      "path": "POST /checkpoint/create",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 360,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["checkpointCreate (from mcp/services/workflow)"],
+      "notes": "Creates checkpoint with description and auto_commit flag."
+    },
+    {
+      "name": "checkpointRestoreEndpoint",
+      "path": "POST /checkpoint/restore",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 372,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["checkpointRestore (from mcp/services/workflow)"],
+      "notes": "Restores checkpoint by checkpoint_id with optional confirm_token."
+    },
+    {
+      "name": "checkpointListEndpoint",
+      "path": "POST /checkpoint/list",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 384,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workflow-service.test.ts"],
+      "dependencies": ["checkpointList (from mcp/services/workflow)"],
+      "notes": "Lists checkpoints with limit."
+    },
+    {
+      "name": "uiBridgeWorkflowRouteEndpoint",
+      "path": "POST /ui-bridge/workflow/route",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 306,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowRouteEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for workflowRoute. Gated by uiBridgeEnabled (returns 403 if disabled)."
+    },
+    {
+      "name": "uiBridgeWorkflowPlanEndpoint",
+      "path": "POST /ui-bridge/workflow/plan",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 311,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowPlanEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for workflowPlan. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "uiBridgeWorkflowExecuteEndpoint",
+      "path": "POST /ui-bridge/workflow/execute",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 316,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowExecuteEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for workflowExecute. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "uiBridgeWorkflowLifecycleEndpoint",
+      "path": "POST /ui-bridge/workflow/lifecycle",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 321,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowLifecycleEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for workflowLifecycle. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "uiBridgeWorkflowSchedulerRegisterEndpoint",
+      "path": "POST /ui-bridge/workflow/scheduler/register",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 326,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowSchedulerRegisterEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for schedulerRegister. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "uiBridgeWorkflowSchedulerListEndpoint",
+      "path": "POST /ui-bridge/workflow/scheduler/list",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 331,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowSchedulerListEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for schedulerList. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "uiBridgeWorkflowSchedulerPauseEndpoint",
+      "path": "POST /ui-bridge/workflow/scheduler/pause",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 336,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowSchedulerPauseEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for schedulerPause. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "uiBridgeWorkflowSchedulerResumeEndpoint",
+      "path": "POST /ui-bridge/workflow/scheduler/resume",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 341,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowSchedulerResumeEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for schedulerResume. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "uiBridgeWorkflowSchedulerRunNowEndpoint",
+      "path": "POST /ui-bridge/workflow/scheduler/run-now",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 346,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowSchedulerRunNowEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for schedulerRunNow. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "uiBridgeWorkflowSchedulerImportLitePlanEndpoint",
+      "path": "POST /ui-bridge/workflow/scheduler/import-lite-plan",
+      "file": "src-ts/mcp/endpoints/workflow.ts",
+      "line": 351,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["workflowSchedulerImportLitePlanEndpoint", "uiBridgeEnabled flag"],
+      "notes": "UI Bridge wrapper for schedulerImportLitePlan. Gated by uiBridgeEnabled."
+    },
+    {
+      "name": "memorySearchEndpoint",
+      "path": "POST /memory/search",
+      "file": "src-ts/mcp/endpoints/memory.ts",
+      "line": 49,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/memory-endpoints.test.ts", "src-ts/tests/mcp/memory-endpoints.additional.test.ts"],
+      "dependencies": ["memorySearch (from mcp/services/memory)", "normalizeProjectWorkspaceContext", "projectWorkspaceToMemoryScope"],
+      "notes": "Searches memory with query, layer, dimensions, entityId, userId, projectId, sessionId, atTime, limit. Resolves workspace scope."
+    },
+    {
+      "name": "memoryAddEndpoint",
+      "path": "POST /memory/add",
+      "file": "src-ts/mcp/endpoints/memory.ts",
+      "line": 70,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/memory-endpoints.test.ts", "src-ts/tests/mcp/memory-endpoints.additional.test.ts"],
+      "dependencies": ["memoryAdd (from mcp/services/memory)", "normalizeProjectWorkspaceContext", "projectWorkspaceToMemoryScope"],
+      "notes": "Adds memory with content, layer, dimension, entityId, validFrom/validUntil, userId, projectId, sessionId, importance, tags, source, confidence."
+    },
+    {
+      "name": "memoryUploadEndpoint",
+      "path": "POST /memory/upload",
+      "file": "src-ts/mcp/endpoints/memory.ts",
+      "line": 95,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/memory-endpoints.test.ts", "src-ts/tests/mcp/memory-endpoints.branch-gap.additional.test.ts"],
+      "dependencies": ["memoryAdd (from mcp/services/memory)", "DocumentLoader", "recursiveCharacterSplit", "normalizeProjectWorkspaceContext"],
+      "notes": "Uploads file (base64), decodes, parses via DocumentLoader, chunks via recursiveCharacterSplit, adds each chunk as memory. Validates base64, file_name, session_id."
+    },
+    {
+      "name": "memoryTemporalEndpoint",
+      "path": "POST /memory/temporal",
+      "file": "src-ts/mcp/endpoints/memory.ts",
+      "line": 207,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/memory-endpoints.test.ts"],
+      "dependencies": ["memoryGetTemporal (from mcp/services/memory)", "normalizeProjectWorkspaceContext", "projectWorkspaceToMemoryScope"],
+      "notes": "Gets temporal memory for entityId at optional atTime."
+    },
+    {
+      "name": "graphQueryEndpoint",
+      "path": "POST /graph/query",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 90,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/graph-endpoints.test.ts", "src-ts/tests/mcp/graph-endpoints.branch-gap.additional.test.ts"],
+      "dependencies": ["graphQuery (from mcp/services/graph)", "normalizeProjectWorkspaceContext", "getConfigValue"],
+      "notes": "Executes Cypher query with BLOCKED_CYPHER_PATTERNS safety filter (DETACH DELETE, DROP, CREATE CONSTRAINT/INDEX, REMOVE label). Returns 403 for blocked patterns."
+    },
+    {
+      "name": "graphCharacterEndpoint",
+      "path": "POST /graph/character",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 104,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/graph-endpoints.test.ts"],
+      "dependencies": ["graphGetCharacter (from mcp/services/graph)"],
+      "notes": "Gets character data with optional relations and timeline."
+    },
+    {
+      "name": "graphForeshadowsEndpoint",
+      "path": "POST /graph/foreshadows",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 116,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/graph-endpoints.test.ts", "src-ts/tests/mcp/graph-foreshadow.branch-gap.additional.test.ts"],
+      "dependencies": ["graphGetForeshadows (from mcp/services/graph)"],
+      "notes": "Gets foreshadows by state and chapter."
+    },
+    {
+      "name": "foreshadowPlantEndpoint",
+      "path": "POST /foreshadow/plant",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 132,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/graph-endpoints.test.ts", "src-ts/tests/mcp/graph-foreshadow.branch-gap.additional.test.ts"],
+      "dependencies": ["graphAddEntity (from mcp/services/graph)"],
+      "notes": "Creates foreshadow entity with description, state, planted_at, importance, tags, metadata."
+    },
+    {
+      "name": "foreshadowStatsEndpoint",
+      "path": "GET /foreshadow/stats",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 169,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/graph-endpoints.test.ts"],
+      "dependencies": ["graphGetForeshadows (from mcp/services/graph)"],
+      "notes": "Returns foreshadow statistics by state (planted, hinted, harvested)."
+    },
+    {
+      "name": "characterProfileEndpoint",
+      "path": "POST /character/profile",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 195,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/graph-endpoints.test.ts"],
+      "dependencies": ["graphGetCharacter (from mcp/services/graph)"],
+      "notes": "Returns character profile with name, role, personality, background, motivation, relationships, growth."
+    },
+    {
+      "name": "characterDepthEndpoint",
+      "path": "POST /character/depth",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 220,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/graph-endpoints.test.ts"],
+      "dependencies": ["graphGetCharacter (from mcp/services/graph)"],
+      "notes": "Returns character depth scores (dynamic, competence, eccentricity, contrast, duality)."
+    },
+    {
+      "name": "characterRelationshipsEndpoint",
+      "path": "POST /character/relationships",
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 249,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/graph-endpoints.test.ts"],
+      "dependencies": ["graphGetRelationships (from mcp/services/graph)"],
+      "notes": "Returns character relationship graph as nodes and edges."
+    },
+    {
+      "name": "wikiPromoteEndpoint",
+      "path": "POST /wiki/promote",
+      "file": "src-ts/mcp/endpoints/wiki.ts",
+      "line": 49,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/wiki-endpoints.test.ts", "src-ts/tests/mcp/wiki-endpoints.branch-gap.additional.test.ts"],
+      "dependencies": ["promoteProjectWikiCanon (from mcp/services/wiki)", "normalizeProjectWorkspaceContext"],
+      "notes": "Promotes content to wiki canon with title, body, slug, idSeed, promotedFrom, sourceId, sourceRef, status, rawEvidence, metadata."
+    },
+    {
+      "name": "wikiListEndpoint",
+      "path": "POST /wiki/list",
+      "file": "src-ts/mcp/endpoints/wiki.ts",
+      "line": 75,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/wiki-endpoints.test.ts"],
+      "dependencies": ["listProjectWikiCanonPages (from mcp/services/wiki)", "normalizeProjectWorkspaceContext"],
+      "notes": "Lists wiki canon pages with optional status filter and limit."
+    },
+    {
+      "name": "wikiReadPageEndpoint",
+      "path": "POST /wiki/page",
+      "file": "src-ts/mcp/endpoints/wiki.ts",
+      "line": 87,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/wiki-endpoints.test.ts"],
+      "dependencies": ["readProjectWikiCanonPage (from mcp/services/wiki)", "normalizeProjectWorkspaceContext"],
+      "notes": "Reads wiki canon page by slug."
+    },
+    {
+      "name": "skillsListEndpoint",
+      "path": "GET /skills/list",
+      "file": "src-ts/mcp/endpoints/skills.ts",
+      "line": 31,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/skills-service.test.ts", "src-ts/tests/mcp/skills-service.additional.test.ts"],
+      "dependencies": ["skillsList (from mcp/services/skills)"],
+      "notes": "Lists skills with optional category filter."
+    },
+    {
+      "name": "skillsLoadEndpoint",
+      "path": "POST /skills/load",
+      "file": "src-ts/mcp/endpoints/skills.ts",
+      "line": 37,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/skills-service.test.ts", "src-ts/tests/mcp/skills-service.additional.test.ts"],
+      "dependencies": ["skillsLoad (from mcp/services/skills)"],
+      "notes": "Loads skill content by skill_id."
+    },
+    {
+      "name": "skillsMatchEndpoint",
+      "path": "POST /skills/match",
+      "file": "src-ts/mcp/endpoints/skills.ts",
+      "line": 43,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/skills-service.test.ts", "src-ts/tests/mcp/skills-service.additional.test.ts"],
+      "dependencies": ["skillsMatch (from mcp/services/skills)"],
+      "notes": "Matches skills by taskType, keywords, issue."
+    },
+    {
+      "name": "skillsChainEndpoint",
+      "path": "POST /skills/chain",
+      "file": "src-ts/mcp/endpoints/skills.ts",
+      "line": 53,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/skills-service.test.ts", "src-ts/tests/mcp/skills-service.additional.test.ts"],
+      "dependencies": ["skillsGetChain (from mcp/services/skills)"],
+      "notes": "Gets skill chain by task_type."
+    },
+    {
+      "name": "skillsCreateEndpoint",
+      "path": "POST /skills/create",
+      "file": "src-ts/mcp/endpoints/skills.ts",
+      "line": 59,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/skills-service.test.ts"],
+      "dependencies": ["fs (writeFileSync, existsSync, mkdirSync)", "os (homedir)"],
+      "notes": "Creates new skill file in ~/.niko/skills/. Validates name uniqueness. Writes frontmatter + content."
+    },
+    {
+      "name": "skillsSaveEndpoint",
+      "path": "POST /skills/save",
+      "file": "src-ts/mcp/endpoints/skills.ts",
+      "line": 76,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/skills-service.test.ts"],
+      "dependencies": ["fs (readFileSync, writeFileSync, existsSync)"],
+      "notes": "Updates skill content preserving frontmatter. Returns 404 if skill not found."
+    },
+    {
+      "name": "skillsDeleteEndpoint",
+      "path": "POST /skills/delete",
+      "file": "src-ts/mcp/endpoints/skills.ts",
+      "line": 92,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/skills-service.test.ts"],
+      "dependencies": ["fs (existsSync, unlinkSync)"],
+      "notes": "Deletes skill file. Returns 404 if skill not found."
+    },
+    {
+      "name": "listMcpServices",
+      "path": "GET /admin/mcp/services",
+      "file": "src-ts/mcp/endpoints/mcp-admin.ts",
+      "line": 89,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/mcp-admin.test.ts", "src-ts/tests/mcp/routes/admin-routes.test.ts"],
+      "dependencies": ["mcpServiceConfigs Map", "serializeRuntimeServiceConfig", "MCP_SERVICE_CONFIGS"],
+      "notes": "Lists all MCP service configs with optional runtime services filter."
+    },
+    {
+      "name": "createMcpService",
+      "path": "POST /admin/mcp/services",
+      "file": "src-ts/mcp/endpoints/mcp-admin.ts",
+      "line": 110,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/mcp-admin.test.ts", "src-ts/tests/mcp/mcp-admin.mocked-error.additional.test.ts"],
+      "dependencies": ["updateServiceConfig", "resolveLocalhostOnlyEnabled"],
+      "notes": "Protected by localhost-only guard (ISS-004). Creates new MCP service config. Returns 409 if exists."
+    },
+    {
+      "name": "updateMcpService",
+      "path": "PUT /admin/mcp/services/:service_id",
+      "file": "src-ts/mcp/endpoints/mcp-admin.ts",
+      "line": 141,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/mcp-admin.test.ts", "src-ts/tests/mcp/mcp-admin.mocked-error.additional.test.ts"],
+      "dependencies": ["updateServiceConfig", "resolveLocalhostOnlyEnabled"],
+      "notes": "Protected by localhost-only guard. Updates existing service. Returns 404 if not found."
+    },
+    {
+      "name": "deleteMcpService",
+      "path": "DELETE /admin/mcp/services/:service_id",
+      "file": "src-ts/mcp/endpoints/mcp-admin.ts",
+      "line": 173,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/mcp-admin.test.ts"],
+      "dependencies": ["resolveLocalhostOnlyEnabled", "MCP_SERVICE_CONFIGS", "MCP_SERVICE_HEALTH_CACHE"],
+      "notes": "Protected by localhost-only guard. Deletes non-builtin service. Returns 400 for builtin services."
+    },
+    {
+      "name": "setMcpServiceEnabled",
+      "path": "POST /admin/mcp/services/:service_id/enabled",
+      "file": "src-ts/mcp/endpoints/mcp-admin.ts",
+      "line": 206,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/mcp-admin.test.ts"],
+      "dependencies": ["setServiceEnabled", "resolveLocalhostOnlyEnabled"],
+      "notes": "Protected by localhost-only guard. Enables/disables service by boolean body.enabled."
+    },
+    {
+      "name": "probeMcpServiceHealth",
+      "path": "POST /admin/mcp/services/:service_id/probe",
+      "file": "src-ts/mcp/endpoints/mcp-admin.ts",
+      "line": 242,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/mcp-admin.test.ts"],
+      "dependencies": ["getServiceConfig", "mcpServiceHealthCache", "MCP_SERVICE_HEALTH_CACHE"],
+      "notes": "Probes service health. Returns status based on config.enabled. Updates health cache."
+    },
+    {
+      "name": "novelQualityCheckEndpoint",
+      "path": "POST /writing/quality",
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "line": 284,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/writing-endpoints.test.ts", "src-ts/tests/mcp/writing-endpoints.additional.test.ts"],
+      "dependencies": ["evaluateContent (from mcp/services/critic)", "processWritingHelper (from services/writing-helper)"],
+      "notes": "Evaluates novel quality using critic engine. Returns total_score, lock_score, style_score, logic_score, actionable_feedback, suggestions, decision."
+    },
+    {
+      "name": "writingHelperProcessEndpoint",
+      "path": "POST /writing-helper/process, POST /writing/helper",
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "line": 330,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/writing-endpoints.test.ts", "src-ts/tests/mcp/writing-endpoints.additional.test.ts", "src-ts/tests/mcp/writing-endpoints.tail-additional.test.ts"],
+      "dependencies": ["processWritingHelper (from services/writing-helper)", "skillsLoad (from mcp/services/skills)", "callLLM", "resolveProviderConfig"],
+      "notes": "Processes writing helper with mode (polish/rewrite/expand/summarize/outline/generate). Supports local processing or LLM via provider config (header or body). Skill injection supported."
+    },
+    {
+      "name": "writingStreamEndpoint",
+      "path": "POST /writing/stream",
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "line": 422,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/writing-endpoints.test.ts", "src-ts/tests/mcp/writing-stream-buffer.additional.test.ts"],
+      "dependencies": ["streamLLM", "resolveProviderConfig", "skillsLoad"],
+      "notes": "SSE streaming for writing AI. Returns text/event-stream with start/content/done events. 5MB buffer cap with warning at 1MB."
+    },
+    {
+      "name": "writingCraftAnalyzeEndpoint",
+      "path": "POST /writing-craft/analyze",
+      "file": "src-ts/mcp/endpoints/writing-craft.ts",
+      "line": 65,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/writing-craft-endpoints.test.ts", "src-ts/tests/mcp/writing-craft.additional.test.ts", "src-ts/tests/mcp/writing-craft.branch-gap.additional.test.ts"],
+      "dependencies": ["SuspenseAnalyzer", "CharacterDepthSystem", "ReaderSatisfactionAnalyzer", "DialogueAnalyzer", "analyzeEmotionCraft", "analyzeHookCliffhanger", "extractVoiceFingerprints", "analyzeShowTell", "analyzeReaderImmersion", "navigatePacing", "assessOutlineQuality", "SceneCoherenceDetector"],
+      "notes": "Multi-dimensional writing analysis (9 dimensions: structure, character, suspense, emotion, dialogue, webnovel, hook, cliffhanger, show_tell). Keyword-based analyzers."
+    },
+    {
+      "name": "writingCraftLLMEndpoint",
+      "path": "POST /writing-craft/llm-analyze",
+      "file": "src-ts/mcp/endpoints/writing-craft-llm.ts",
+      "line": 114,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/writing-craft-llm.additional.test.ts", "src-ts/tests/mcp/writing-craft-llm.header-config.additional.test.ts"],
+      "dependencies": ["callLLM (OpenAI-compatible fetch)", "resolveProviderConfig"],
+      "notes": "LLM-powered deep analysis for 9 dimensions. Requires api_key, base_url, model. Parses JSON response from LLM. Per-dimension error handling."
+    },
+    {
+      "name": "analysisPatternsEndpoint",
+      "path": "POST /analysis/patterns",
+      "file": "src-ts/mcp/endpoints/analysis.ts",
+      "line": 21,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/analysis.branch-gap.additional.test.ts"],
+      "dependencies": ["graphQuery (from mcp/services/graph)", "escapeCypherString"],
+      "notes": "Pattern detection via Cypher query on Scene/Chapter/Event nodes. 6 built-in templates (three-act-rise, foreshadow-payoff, character-arc, foil-pair, recurring-motif, tension-curve)."
+    },
+    {
+      "name": "analysisSessionsEndpoint",
+      "path": "POST /analysis/sessions",
+      "file": "src-ts/mcp/endpoints/analysis.ts",
+      "line": 35,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": [],
+      "notes": "Placeholder endpoint. Returns empty array. No implementation."
+    },
+    {
+      "name": "analysisNarrativeVisualizationEndpoint",
+      "path": "POST /analysis/narrative-visualization",
+      "file": "src-ts/mcp/endpoints/analysis.ts",
+      "line": 39,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/analysis.branch-gap.additional.test.ts"],
+      "dependencies": ["runConsistencyCheck (from critic.ts)", "graphGetRelationships (from mcp/services/graph)", "buildNarrativeVisualizationBundle"],
+      "notes": "Builds narrative visualization bundle from chapters, consistency result, and relationship graph."
+    },
+    {
+      "name": "pluginListEndpoint",
+      "path": "GET /plugins/list",
+      "file": "src-ts/mcp/endpoints/plugins.ts",
+      "line": 11,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/plugin-endpoints.test.ts"],
+      "dependencies": ["pluginEngine (from plugins/plugin-engine)"],
+      "notes": "Lists registered plugins with id, name, version, description, dimension."
+    },
+    {
+      "name": "pluginExecuteEndpoint",
+      "path": "POST /plugins/execute",
+      "file": "src-ts/mcp/endpoints/plugins.ts",
+      "line": 23,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/plugin-endpoints.test.ts"],
+      "dependencies": ["pluginEngine (from plugins/plugin-engine)"],
+      "notes": "Executes plugin(s) on text. Supports single pluginId or pluginIds array."
+    },
+    {
+      "name": "pluginRegisterEndpoint",
+      "path": "POST /plugins/register",
+      "file": "src-ts/mcp/endpoints/plugins.ts",
+      "line": 51,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/plugin-endpoints.test.ts"],
+      "dependencies": ["pluginEngine (from plugins/plugin-engine)"],
+      "notes": "Registers dynamic plugin with regex-based rules. Creates WritingPlugin with detect() method."
+    },
+    {
+      "name": "syncStatusEndpoint",
+      "path": "GET /sync/status",
+      "file": "src-ts/mcp/endpoints/sync.ts",
+      "line": 97,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/sync-endpoints.test.ts", "src-ts/tests/mcp/sync-endpoints.branch-gap.additional.test.ts"],
+      "dependencies": [],
+      "notes": "Returns sync status (lastSyncAt, isConfigured). In-memory state only."
+    },
+    {
+      "name": "syncPushEndpoint",
+      "path": "POST /sync/push",
+      "file": "src-ts/mcp/endpoints/sync.ts",
+      "line": 104,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/sync-endpoints.test.ts", "src-ts/tests/mcp/sync-endpoints.branch-gap.additional.test.ts"],
+      "dependencies": ["SyncEngine (from sync/sync-engine)", "LocalStorageAdapter", "RemoteStorageAdapter"],
+      "notes": "Pushes data to remote. SSRF protection via validateRemoteUrl. Requires remoteUrl."
+    },
+    {
+      "name": "syncPullEndpoint",
+      "path": "POST /sync/pull",
+      "file": "src-ts/mcp/endpoints/sync.ts",
+      "line": 141,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/sync-endpoints.test.ts", "src-ts/tests/mcp/sync-endpoints.branch-gap.additional.test.ts"],
+      "dependencies": ["SyncEngine", "LocalStorageAdapter", "RemoteStorageAdapter"],
+      "notes": "Pulls data from remote. SSRF protection."
+    },
+    {
+      "name": "syncFullEndpoint",
+      "path": "POST /sync/full",
+      "file": "src-ts/mcp/endpoints/sync.ts",
+      "line": 178,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/sync-endpoints.test.ts"],
+      "dependencies": ["SyncEngine", "LocalStorageAdapter", "RemoteStorageAdapter"],
+      "notes": "Full bidirectional sync. SSRF protection."
+    },
+    {
+      "name": "learningImportEndpoint",
+      "path": "POST /learning/import",
+      "file": "src-ts/mcp/endpoints/learning.ts",
+      "line": 21,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/learning-endpoints.test.ts"],
+      "dependencies": ["LearningCapability (from learning/learning-types)"],
+      "notes": "CAP-001: Import learning pipeline. Placeholder — returns input metadata only."
+    },
+    {
+      "name": "learningStyleFeedbackEndpoint",
+      "path": "POST /learning/style-feedback",
+      "file": "src-ts/mcp/endpoints/learning.ts",
+      "line": 49,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/learning-endpoints.test.ts"],
+      "dependencies": ["FeedbackEvidence (from learning/learning-types)"],
+      "notes": "CAP-002: Self-evolving writing style feedback. Records evidence with dimension/action/value."
+    },
+    {
+      "name": "learningStyleDriftEndpoint",
+      "path": "POST /learning/style-drift",
+      "file": "src-ts/mcp/endpoints/learning.ts",
+      "line": 80,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/learning-endpoints.test.ts"],
+      "dependencies": [],
+      "notes": "CAP-002: Style drift detection. Placeholder — returns dimension count only."
+    },
+    {
+      "name": "learningRulesEndpoint",
+      "path": "GET /learning/rules",
+      "file": "src-ts/mcp/endpoints/learning.ts",
+      "line": 96,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/learning-endpoints.test.ts"],
+      "dependencies": [],
+      "notes": "Returns active style rules (empty placeholder)."
+    },
+    {
+      "name": "learningReadingSessionEndpoint",
+      "path": "POST /learning/reading-session",
+      "file": "src-ts/mcp/endpoints/learning.ts",
+      "line": 107,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/learning-endpoints.test.ts"],
+      "dependencies": ["ReadingSession (from learning/learning-types)"],
+      "notes": "CAP-003: Reading session tracking. Validates bookId and totalChapters."
+    },
+    {
+      "name": "learningReadingExtractEndpoint",
+      "path": "POST /learning/reading-extract",
+      "file": "src-ts/mcp/endpoints/learning.ts",
+      "line": 138,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/learning-endpoints.test.ts"],
+      "dependencies": ["PipelineInput (from learning/learning-types)"],
+      "notes": "CAP-003: Reading extraction pipeline. Placeholder — returns input metadata."
+    },
+    {
+      "name": "learningStatusEndpoint",
+      "path": "GET /learning/status",
+      "file": "src-ts/mcp/endpoints/learning.ts",
+      "line": 176,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/learning-endpoints.test.ts"],
+      "dependencies": ["LearningCapability (from learning/learning-types)"],
+      "notes": "Returns learning capability status (import, self-evolving, reading)."
+    },
+    {
+      "name": "styleExtractEndpoint",
+      "path": "POST /style/extract",
+      "file": "src-ts/mcp/endpoints/m10-style.ts",
+      "line": 98,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/m10-style-endpoint.test.ts"],
+      "dependencies": [],
+      "notes": "Extracts style profile from text: avg sentence length, vocab richness, dialogue ratio, tense, POV, paragraph length, sentence distribution."
+    },
+    {
+      "name": "styleProfileEndpoint",
+      "path": "GET /style/profile/:projectId",
+      "file": "src-ts/mcp/endpoints/m10-style.ts",
+      "line": 111,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/m10-style-endpoint.test.ts"],
+      "dependencies": [],
+      "notes": "Returns style profile by projectId (placeholder — returns null)."
+    },
+    {
+      "name": "styleApplyEndpoint",
+      "path": "POST /style/apply",
+      "file": "src-ts/mcp/endpoints/m10-style.ts",
+      "line": 120,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/m10-style-endpoint.test.ts"],
+      "dependencies": [],
+      "notes": "Generates style guidance from style_profile. Returns context string with style parameters."
+    },
+    {
+      "name": "crossChapterConsistencyEndpoint",
+      "path": "POST /consistency/cross-chapter",
+      "file": "src-ts/mcp/endpoints/m10-consistency.ts",
+      "line": 282,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/m10-consistency.test.ts", "src-ts/tests/mcp/m10-consistency.additional.test.ts"],
+      "dependencies": ["getContainer (from container/ServiceContainer)", "graph.getNode"],
+      "notes": "Cross-chapter consistency check: name conflicts, timeline issues, unresolved threads, trait drifts. Optional graph enrichment."
+    },
+    {
+      "name": "contextAwareSuggestionsEndpoint",
+      "path": "POST /suggestions/context-aware",
+      "file": "src-ts/mcp/endpoints/m10-consistency.ts",
+      "line": 313,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/m10-consistency.test.ts"],
+      "dependencies": ["getContainer (from container/ServiceContainer)", "search.search"],
+      "notes": "Context-aware suggestions via search. Returns related passages and suggestion count."
+    },
+    {
+      "name": "reviseMultiPassEndpoint",
+      "path": "POST /agent/revise-multi-pass",
+      "file": "src-ts/mcp/endpoints/m10-revision.ts",
+      "line": 33,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/m10-revision-endpoint.test.ts"],
+      "dependencies": ["RevisionServiceImpl (from services/revision-service)", "IRevisionService (from protocols/revision)"],
+      "notes": "Multi-pass revision with target score and max iterations. Returns revised content, iteration count, final decision, learning insights, comparison."
+    },
+    {
+      "name": "worldviewExtractEndpoint",
+      "path": "POST /worldview/extract",
+      "file": "src-ts/mcp/endpoints/m11-worldview.ts",
+      "line": 17,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/m11-worldview-endpoint.test.ts"],
+      "dependencies": ["WorldviewExtractor (from narrative/worldview-extractor)"],
+      "notes": "Extracts worldview settings from chapter array. Uses WorldviewExtractor.quickExtract."
+    },
+    {
+      "name": "worldviewGetEndpoint",
+      "path": "GET /worldview/:projectId",
+      "file": "src-ts/mcp/endpoints/m11-worldview.ts",
+      "line": 43,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/m11-worldview-endpoint.test.ts"],
+      "dependencies": [],
+      "notes": "Returns worldview settings by projectId (placeholder — returns empty array)."
+    },
+    {
+      "name": "workspaceContextEndpoint",
+      "path": "POST /workspace/context",
+      "file": "src-ts/mcp/endpoints/workspace.ts",
+      "line": 14,
+      "has_test": true,
+      "test_files": ["src-ts/tests/mcp/workspace-endpoints.test.ts"],
+      "dependencies": ["normalizeProjectWorkspaceContext", "summarizeProjectWorkspaceContext", "tryResolveWorkspaceRoot"],
+      "notes": "Normalizes workspace context from body and returns with summary and compatibility info."
+    },
+    {
+      "name": "rsAnalyzeEndpoint",
+      "path": "POST /reader/analyze",
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 78,
+      "has_test": true,
+      "test_files": ["src-ts/reader/mcp/reader-endpoints.test.ts"],
+      "dependencies": ["getDualEngine", "getConsensusEngine", "getDimensionAnalyzer", "resolvePersonas", "validateStringLength", "analysisResultCache"],
+      "notes": "Reader simulation analysis. Validates novelId and personaIds. Runs DualEngine.analyze with personas. Caches result for overlay. Returns dimension scores, reader reactions, editorial analysis, consensus."
+    },
+    {
+      "name": "rsGetPersonasEndpoint",
+      "path": "GET /reader/personas",
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 228,
+      "has_test": true,
+      "test_files": ["src-ts/reader/mcp/reader-endpoints.test.ts"],
+      "dependencies": ["listPresetPersonas", "getPresetPersona", "customPersonaStore", "getCustomPersonaStoreReady"],
+      "notes": "Returns preset and custom personas."
+    },
+    {
+      "name": "rsCreateCustomPersonaEndpoint",
+      "path": "POST /reader/personas/custom",
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 250,
+      "has_test": true,
+      "test_files": ["src-ts/reader/mcp/reader-endpoints.test.ts"],
+      "dependencies": ["createCustomPersona", "customPersonaStore", "saveCustomPersonas", "validateStringLength", "validateWeight", "validateStringArray"],
+      "notes": "Creates custom persona with validated parameters. Persists to file."
+    },
+    {
+      "name": "rsGetOverlayEndpoint",
+      "path": "POST /reader/overlay",
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 327,
+      "has_test": true,
+      "test_files": ["src-ts/reader/mcp/reader-endpoints.test.ts"],
+      "dependencies": ["analysisResultCache", "buildOverlayMarkers", "validateStringLength"],
+      "notes": "Returns overlay markers from cached analysis result. Requires prior /reader/analyze call."
+    },
+    {
+      "name": "rsAIFlavorEndpoint",
+      "path": "POST /reader/ai-flavor",
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 368,
+      "has_test": true,
+      "test_files": ["src-ts/reader/mcp/reader-endpoints.test.ts"],
+      "dependencies": ["detectAIFlavor", "validateStringLength"],
+      "notes": "Detects AI-generated prose patterns. Returns score, indicators, confidence, evidence, suggestions."
+    },
+    {
+      "name": "rsFeedbackEndpoint",
+      "path": "POST /reader/feedback",
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 427,
+      "has_test": true,
+      "test_files": ["src-ts/reader/mcp/reader-endpoints.test.ts"],
+      "dependencies": ["resolvePersonas", "customPersonaStore", "saveCustomPersonas", "adjustPersonaWeights", "feedbackAggregateStore", "FEEDBACK_THRESHOLD", "validateStringLength"],
+      "notes": "Submits feedback on reader simulation. Aggregates per persona+dimension. Triggers weight adjustment at FEEDBACK_THRESHOLD. Persists custom persona updates."
+    },
+    {
+      "name": "rsCompareEndpoint",
+      "path": "POST /reader/compare",
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 555,
+      "has_test": true,
+      "test_files": ["src-ts/reader/mcp/reader-endpoints.test.ts"],
+      "dependencies": ["getDualEngine", "getConsensusEngine", "resolvePersonas", "validateStringLength", "validateStringArray"],
+      "notes": "A/B comparison of two text versions. Runs DualEngine.analyze on both concurrently. Builds consensus reports and compares."
+    },
+    {
+      "name": "rsDeAIEndpoint",
+      "path": "POST /reader/de-ai",
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 695,
+      "has_test": true,
+      "test_files": ["src-ts/reader/mcp/reader-endpoints.test.ts"],
+      "dependencies": ["detectAIFlavor", "getRevisionService", "validateStringLength"],
+      "notes": "De-AI rewrite. Detects AI flavor, builds quality goals, calls RevisionService.revise with de-ai mode. Returns original, revised text, AI flavor score, improvements, suggestions."
+    },
+    {
+      "name": "sbGetEntitiesEndpoint",
+      "path": "POST /story-bible/entities/list",
+      "file": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "line": 124,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["entityStore", "novelEntityIndex", "SB_ENTITY_TYPES", "validateEntityType"],
+      "notes": "Lists Story Bible entities for a novel. Supports type filter. In-memory storage."
+    },
+    {
+      "name": "sbGetEntityEndpoint",
+      "path": "GET /story-bible/entity/:entityId",
+      "file": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "line": 164,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["entityStore"],
+      "notes": "Gets single Story Bible entity by ID. Returns 404 if not found."
+    },
+    {
+      "name": "sbCreateEntityEndpoint",
+      "path": "POST /story-bible/entities",
+      "file": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "line": 181,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["entityStore", "novelEntityIndex", "createEntityFromPartial", "SB_ENTITY_TYPES"],
+      "notes": "Creates Story Bible entity (character, world-rule, plot-thread, timeline-event). Validates type. Removes workspace from body to prevent leakage."
+    },
+    {
+      "name": "sbUpdateEntityEndpoint",
+      "path": "PUT /story-bible/entity/:entityId",
+      "file": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "line": 223,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["entityStore"],
+      "notes": "Updates Story Bible entity. Protects immutable fields (id, novelId, type, createdAt)."
+    },
+    {
+      "name": "sbDeleteEntityEndpoint",
+      "path": "DELETE /story-bible/entity/:entityId",
+      "file": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "line": 259,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["entityStore", "novelEntityIndex", "removeFromNovelIndex"],
+      "notes": "Deletes Story Bible entity and removes from novel index."
+    },
+    {
+      "name": "sbExtractFromManuscriptEndpoint",
+      "path": "POST /story-bible/extract",
+      "file": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "line": 281,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": [],
+      "notes": "Placeholder — extraction from manuscript not yet implemented. Returns empty result with warning."
+    },
+    {
+      "name": "sbGetCompletenessEndpoint",
+      "path": "POST /story-bible/completeness",
+      "file": "src-ts/knowledge/mcp/story-bible-endpoints.ts",
+      "line": 308,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["entityStore", "novelEntityIndex"],
+      "notes": "Returns completeness report for novel by type (character, world-rule, plot-thread, timeline-event)."
+    },
+    {
+      "name": "qcValidateOutputEndpoint",
+      "path": "POST /qc/validate",
+      "file": "src-ts/knowledge/mcp/qc-endpoints.ts",
+      "line": 186,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["validationCache", "runQualityCheck", "resolveEnforcementMode", "createDefaultCreativityConfig", "ConstraintSeverity", "QCEforcementMode"],
+      "notes": "Validates text output against quality constraints. Uses cache (30s TTL, 100 max). Heuristic-based checks (sentence length, plot coherence, character consistency, style, pacing)."
+    },
+    {
+      "name": "qcGetCreativityConfigEndpoint",
+      "path": "POST /qc/creativity-config",
+      "file": "src-ts/knowledge/mcp/qc-endpoints.ts",
+      "line": 253,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["resolveCreativityConfig", "createDefaultCreativityConfig", "CreativityPreset"],
+      "notes": "Returns creativity spectrum configuration for mode. Supports preset override."
+    },
+    {
+      "name": "cwGenerateAutoEndpoint",
+      "path": "POST /cowriting/generate/auto",
+      "file": "src-ts/cowriting/mcp/cowriting-endpoints.ts",
+      "line": 179,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["AutoMode (from cowriting/AutoMode)", "resolveCreativityConfig", "buildAutoModeInput"],
+      "notes": "Auto mode generation. Placeholder input builder (ISS-20260620-016). Returns generated text with metadata."
+    },
+    {
+      "name": "cwGenerateGuidedEndpoint",
+      "path": "POST /cowriting/generate/guided",
+      "file": "src-ts/cowriting/mcp/cowriting-endpoints.ts",
+      "line": 220,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["GuidedMode (from cowriting/GuidedMode)", "resolveCreativityConfig", "buildGuidedModeInput"],
+      "notes": "Guided mode generation. Returns 3 scored options. Placeholder input builder."
+    },
+    {
+      "name": "cwGetModesEndpoint",
+      "path": "GET /cowriting/modes",
+      "file": "src-ts/cowriting/mcp/cowriting-endpoints.ts",
+      "line": 261,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["CreativityPresetEnum", "MODE_BALANCED_DEFAULTS"],
+      "notes": "Returns available co-writing modes (auto, guided, directed) with configs."
+    },
+    {
+      "name": "cwGetCreativityPresetsEndpoint",
+      "path": "GET /cowriting/creativity-presets",
+      "file": "src-ts/cowriting/mcp/cowriting-endpoints.ts",
+      "line": 295,
+      "has_test": false,
+      "test_files": [],
+      "dependencies": ["CreativityPresetEnum", "CREATIVITY_PRESET_VALUES", "resolveCreativityConfig", "createDefaultCreativityConfig"],
+      "notes": "Returns creativity presets (conservative, balanced, creative, experimental) with descriptions and mode defaults."
+    }
+  ],
+  "call_chains": [
+    {
+      "endpoint": "POST /chat",
+      "chain": [
+        "src-ts/mcp/endpoints/chat.ts:chatEndpoint -> parseBody, validateChatMessagesLimits",
+        "src-ts/mcp/endpoints/chat.ts:chatEndpoint -> resolveWorkspaceContext -> normalizeProjectWorkspaceContext",
+        "src-ts/mcp/endpoints/chat.ts:chatEndpoint -> resolveChatCanonContext -> queryProjectWikiCanon",
+        "src-ts/mcp/endpoints/chat.ts:chatEndpoint -> createWorkflowEngine -> getWorkflowEngineRuntimeProvider",
+        "src-ts/mcp/endpoints/chat.ts:chatEndpoint -> engine.route -> engine.runWithExecutionContext",
+        "src-ts/mcp/endpoints/chat.ts:chatEndpoint -> extractPrimaryContent, extractEvaluation",
+        "src-ts/mcp/endpoints/chat.ts:chatEndpoint -> buildWriterMetadata -> projectWorkspaceToNarrativeAuthority, createProjectWikiFactPacketBundleFromCanonMatches"
+      ]
+    },
+    {
+      "endpoint": "POST /chat/stream",
+      "chain": [
+        "src-ts/mcp/endpoints/chat.ts:chatStreamEndpoint -> parseBody, validateChatMessagesLimits",
+        "src-ts/mcp/endpoints/chat.ts:chatStreamEndpoint -> resolveWorkspaceContext -> normalizeProjectWorkspaceContext",
+        "src-ts/mcp/endpoints/chat.ts:chatStreamEndpoint -> resolveChatCanonContext -> queryProjectWikiCanon",
+        "src-ts/mcp/endpoints/chat.ts:chatStreamEndpoint -> createWorkflowEngine -> getWorkflowEngineRuntimeProvider",
+        "src-ts/mcp/endpoints/chat.ts:chatStreamEndpoint -> engine.runStreamWithExecutionContext -> AsyncGenerator<WorkflowStreamEvent>",
+        "src-ts/mcp/endpoints/chat.ts:chatStreamEndpoint -> formatSseEvent -> adaptiveChunkContent",
+        "src-ts/mcp/endpoints/chat.ts:chatStreamEndpoint -> extractPrimaryContent, extractEvaluation"
+      ]
+    },
+    {
+      "endpoint": "POST /agent/write",
+      "chain": [
+        "src-ts/mcp/endpoints/agent.ts:agentWriteEndpoint -> parseBody",
+        "src-ts/mcp/endpoints/agent.ts:agentWriteEndpoint -> resolveAgentWriteWorkspace -> normalizeProjectWorkspaceContext, tryResolveWorkspaceRoot",
+        "src-ts/mcp/endpoints/agent.ts:agentWriteEndpoint -> agentWrite (mcp/services/agent) -> workflow engine"
+      ]
+    },
+    {
+      "endpoint": "POST /critic/consistency",
+      "chain": [
+        "src-ts/mcp/endpoints/critic.ts:criticConsistencyEndpoint -> parseBody",
+        "src-ts/mcp/endpoints/critic.ts:criticConsistencyEndpoint -> runConsistencyCheck -> normalizeProjectWorkspaceContext",
+        "src-ts/mcp/endpoints/critic.ts:runConsistencyCheck -> CrossChapterCharacterTracker.analyze",
+        "src-ts/mcp/endpoints/critic.ts:runConsistencyCheck -> TimelineConsistencyChecker.analyze",
+        "src-ts/mcp/endpoints/critic.ts:runConsistencyCheck -> runWorldviewCheck -> WorldviewCoherenceValidator.analyze",
+        "src-ts/mcp/endpoints/critic.ts:runConsistencyCheck -> normalizeProjectNarrativeRecordSetId",
+        "src-ts/mcp/endpoints/critic.ts:runConsistencyCheck -> projectWorkspaceToNarrativeAuthority"
+      ]
+    },
+    {
+      "endpoint": "POST /memory/upload",
+      "chain": [
+        "src-ts/mcp/endpoints/memory.ts:memoryUploadEndpoint -> parseBody",
+        "src-ts/mcp/endpoints/memory.ts:memoryUploadEndpoint -> resolveMemoryScope -> normalizeProjectWorkspaceContext, projectWorkspaceToMemoryScope",
+        "src-ts/mcp/endpoints/memory.ts:memoryUploadEndpoint -> base64 validation (regex, Buffer.from)",
+        "src-ts/mcp/endpoints/memory.ts:memoryUploadEndpoint -> DocumentLoader.loadFileAsync -> DocumentLoadError handling",
+        "src-ts/mcp/endpoints/memory.ts:memoryUploadEndpoint -> recursiveCharacterSplit -> chunking",
+        "src-ts/mcp/endpoints/memory.ts:memoryUploadEndpoint -> memoryAdd (mcp/services/memory) -> per chunk"
+      ]
+    },
+    {
+      "endpoint": "POST /graph/query",
+      "chain": [
+        "src-ts/mcp/endpoints/graph.ts:graphQueryEndpoint -> parseBody",
+        "src-ts/mcp/endpoints/graph.ts:graphQueryEndpoint -> isCypherSafe (BLOCKED_CYPHER_PATTERNS)",
+        "src-ts/mcp/endpoints/graph.ts:graphQueryEndpoint -> resolveGraphScope -> normalizeProjectWorkspaceContext, getConfigValue",
+        "src-ts/mcp/endpoints/graph.ts:graphQueryEndpoint -> graphQuery (mcp/services/graph) -> graph engine"
+      ]
+    },
+    {
+      "endpoint": "POST /writing/helper",
+      "chain": [
+        "src-ts/mcp/endpoints/writing.ts:writingHelperProcessEndpoint -> parseBody",
+        "src-ts/mcp/endpoints/writing.ts:writingHelperProcessEndpoint -> resolveSkillInstruction -> skillsLoad (mcp/services/skills)",
+        "src-ts/mcp/endpoints/writing.ts:writingHelperProcessEndpoint -> resolveProviderConfig (headers or body)",
+        "src-ts/mcp/endpoints/writing.ts:writingHelperProcessEndpoint -> [no config] -> processLocalWritingHelper (services/writing-helper)",
+        "src-ts/mcp/endpoints/writing.ts:writingHelperProcessEndpoint -> [with config] -> buildModePrompt -> callLLM -> fetch OpenAI API"
+      ]
+    },
+    {
+      "endpoint": "POST /writing-craft/analyze",
+      "chain": [
+        "src-ts/mcp/endpoints/writing-craft.ts:writingCraftAnalyzeEndpoint -> parseBody",
+        "src-ts/mcp/endpoints/writing-craft.ts:writingCraftAnalyzeEndpoint -> analyzeDimension -> switch on 9 dimensions",
+        "src-ts/mcp/endpoints/writing-craft.ts:analyzeStructure -> SuspenseAnalyzer.analyzeEdsonSequence, detectAntiPatterns, analyzeThreeActStructure",
+        "src-ts/mcp/endpoints/writing-craft.ts:analyzeCharacter -> CharacterDepthSystem.assessCharacterCreation, evaluatePlotCharacterBalance",
+        "src-ts/mcp/endpoints/writing-craft.ts:analyzeEmotion -> analyzeEmotionCraft, analyzeEmotionLayers, assessDescriptionQuality"
+      ]
+    }
+  ],
+  "data_flows": [
+    {
+      "endpoint": "POST /chat",
+      "request_shape": "{ messages: Array<{role: 'system'|'user'|'assistant', content: string}>, workflowLevel?: string|number, skills?: string[], context?: Record, workspace?: Record, allowLlmFallback?: boolean, comparison?: {enabled?: boolean, controlModel?: string, primaryModel?: string}, qualityGoals?: Record, knowledge_retrieval?: boolean, search_mode?: string, profile?: string, min_score?: number, budget_tokens?: number, rerank?: boolean, max_iterations?: number, confidence_threshold?: number }",
+      "response_shape": "{ content: string, skills_used: string[], comparison: object|null, writer_metadata: {workspace_context, canon_context, narrative_authority, retrieval_packet}, workflow_info: {level, level_slug, scene_type, steps_completed, total_steps}, workflow_level, workflow_level_slug, evaluation: {score, feedback}, context: Record, workspace: Record, _contract: {version, timestamp} }",
+      "key_dependencies": ["getWorkflowEngineRuntimeProvider", "queryProjectWikiCanon", "normalizeProjectWorkspaceContext"]
+    },
+    {
+      "endpoint": "POST /chat/stream",
+      "request_shape": "Same as /chat",
+      "response_shape": "SSE text/event-stream: event:start (status, diagnostics), event:routing (level, skills), event:progress (step, total, message), event:content (chunk, index), event:evaluation (score, feedback), event:done (status, terminal, decision, skills_used, diagnostics, workflow_level, writer_metadata, workspace)",
+      "key_dependencies": ["getWorkflowEngineRuntimeProvider", "queryProjectWikiCanon", "adaptiveChunkContent"]
+    },
+    {
+      "endpoint": "POST /agent/write",
+      "request_shape": "{ scene_card: Record, skills?: string[], word_target?: number, allow_llm_fallback?: boolean, quality_goals?: Record, workspace?: Record, workspace_id?: string, project_id?: string, workspaceId?: string, projectId?: string }",
+      "response_shape": "Agent write result (delegated to mcp/services/agent)",
+      "key_dependencies": ["agentWrite (mcp/services/agent)", "normalizeProjectWorkspaceContext"]
+    },
+    {
+      "endpoint": "POST /critic/consistency",
+      "request_shape": "{ chapters: string[], chapterMeta: Array<{chapterNumber, title}>, worldRules?: Array<{id, category, name, description, constraints, establishedIn}>, workspace?: Record }",
+      "response_shape": "{ character: CrossChapterCharacterReport, timeline: TimelineReport, worldview: WorldviewReport, combined: {totalConflicts, criticalCount, majorCount, minorCount, infoCount, conflicts: SeverityConflict[], overallScore, summary}, analyzedAt, runId, workspace, narrativeAuthority }",
+      "key_dependencies": ["CrossChapterCharacterTracker", "TimelineConsistencyChecker", "WorldviewCoherenceValidator", "normalizeProjectWorkspaceContext"]
+    },
+    {
+      "endpoint": "POST /memory/upload",
+      "request_shape": "{ file_name: string, file_content_base64: string, session_id?: string, chunk_size?: number, chunk_overlap?: number, source?: string, confidence?: number }",
+      "response_shape": "{ status: 'created', file_name, session_id, chunks: number, memory_ids: string[] }",
+      "key_dependencies": ["DocumentLoader", "recursiveCharacterSplit", "memoryAdd (mcp/services/memory)", "normalizeProjectWorkspaceContext"]
+    },
+    {
+      "endpoint": "POST /graph/query",
+      "request_shape": "{ cypher: string, workspace?: Record }",
+      "response_shape": "Graph query result (array of records)",
+      "key_dependencies": ["graphQuery (mcp/services/graph)", "normalizeProjectWorkspaceContext", "getConfigValue"]
+    },
+    {
+      "endpoint": "POST /writing/helper",
+      "request_shape": "{ content: string, mode?: string, instruction?: string, skill_ids?: string[], detection_evasion_guard_enabled?: boolean, max_sentences?: number, max_items?: number, api_key?: string, base_url?: string, model?: string, provider?: string } + headers: X-LLM-API-Key, X-LLM-Base-Url",
+      "response_shape": "{ mode, processed_text, status: 'ok', skills_used: string[], provider: 'local'|'openai' } | { outline: string[], processed_text, status: 'ok' } (for outline mode)",
+      "key_dependencies": ["processWritingHelper (services/writing-helper)", "skillsLoad (mcp/services/skills)", "callLLM (OpenAI fetch)"]
+    },
+    {
+      "endpoint": "POST /writing-craft/analyze",
+      "request_shape": "{ text: string, dimensions?: WritingCraftDimension[] }",
+      "response_shape": "{ overallScore: number, dimensions: DimensionResult[], textLength: number } where DimensionResult = { dimension, label, score, maxScore, evidence, suggestions, details }",
+      "key_dependencies": ["SuspenseAnalyzer", "CharacterDepthSystem", "ReaderSatisfactionAnalyzer", "DialogueAnalyzer", "analyzeEmotionCraft", "analyzeHookCliffhanger", "extractVoiceFingerprints", "analyzeShowTell", "analyzeReaderImmersion", "navigatePacing"]
+    }
+  ],
+  "code_anchors": [
+    {
+      "file": "src-ts/mcp/endpoints/health.ts",
+      "line": 234,
+      "snippet": "export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> {\n  const gw = gatewayDeps;\n  if (!gw) {\n    return jsonResponse({ status: 'degraded', error: 'Gateway not initialized' }, 503);\n  }\n\n  const engineHealth: Record<string, Record<string, unknown>> = {};\n  const dependencyGetters: Array<[string, () => EngineGetter | null]> = [\n    ['memory', () => gw.getEngine('memory')],\n    ['graph', () => gw.getEngine('graph')],\n    ['search', () => gw.getEngine('search')],\n    ['workflow', () => gw.getEngine('workflow')],\n    ['critic', () => gw.getEngine('critic')],\n  ];\n\n  for (const [name, getter] of dependencyGetters) {\n    try {\n      const engine = getter();\n      if (engine && typeof engine.healthCheck === 'function') {\n        const health = await engine.healthCheck();\n        ...\n      }\n    } catch (exc) {\n      engineHealth[name] = { status: 'error', error: String(exc) };\n    }\n  }",
+      "finding": "Health check probes 5 core engines via gatewayDeps injection. Missing gatewayDeps returns 503. Each engine health check is wrapped in try/catch. Diagnostic classification uses regex patterns to categorize failures (parser_missing, embedding_authority_unavailable, packaged_prerequisite_missing, integration_degraded, runtime_unavailable)."
+    },
+    {
+      "file": "src-ts/mcp/endpoints/config.ts",
+      "line": 201,
+      "snippet": "export async function getSecrets(request: HttpRequest): Promise<HttpResponse> {\n  // ISS-002: secrets endpoint requires localhost-only when guard is enabled\n  if (resolveLocalhostOnlyEnabled()) {\n    const remoteAddr = request.remoteAddress ?? '';\n    const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';\n    if (!isLocal) {\n      return jsonResponse({ error: 'Access denied: localhost only' }, 403);\n    }\n  }\n  if (!configAccess) {\n    return jsonResponse({ error: 'Config access not initialized' }, 500);\n  }",
+      "finding": "Secrets endpoint protected by localhost-only guard (ISS-002). Checks remoteAddress against 127.0.0.1, ::1, ::ffff:127.0.0.1. No remoteAddress = internal/test call, allowed by default. Requires configAccess injection."
+    },
+    {
+      "file": "src-ts/mcp/endpoints/chat.ts",
+      "line": 54,
+      "snippet": "function validateChatMessagesLimits(messages: unknown[]): HttpResponse | null {\n  if (!Array.isArray(messages)) {\n    return jsonResponse({ error: 'Invalid messages. Expected array' }, 400);\n  }\n\n  if (messages.length > MAX_MESSAGES) {\n    return jsonResponse({ error: `Too many messages. Max ${MAX_MESSAGES}` }, 400);\n  }\n\n  for (let idx = 0; idx < messages.length; idx++) {\n    const m = messages[idx];\n    if (typeof m !== 'object' || m === null) {\n      return jsonResponse({ error: `Invalid message at index ${idx}. Expected object` }, 400);\n    }\n    const record = m as Record<string, unknown>;\n    const role = record.role;\n    const content = record.content;\n    if (!['system', 'user', 'assistant'].includes(role as string)) {\n      return jsonResponse({ error: `Invalid message.role at index ${idx}` }, 400);\n    }\n    if (typeof content !== 'string') {\n      return jsonResponse({ error: `Invalid message.content at index ${idx}. Expected string` }, 400);\n    }\n    const lengthErr = validateStringLength(content, MAX_MESSAGE_CHARS, `message.content at index ${idx}`);\n    if (lengthErr) return lengthErr;\n  }\n\n  if (countTotalChars(messages) > MAX_TOTAL_CHARS) {\n    return jsonResponse({ error: `Context too long. Max ${MAX_TOTAL_CHARS} chars` }, 400);\n  }\n  return null;\n}",
+      "finding": "Chat input validation: MAX_MESSAGES=128, MAX_MESSAGE_CHARS=24000, MAX_TOTAL_CHARS=120000. Validates message array, role enum, content type and length, total character count. Returns 400 for any validation failure."
+    },
+    {
+      "file": "src-ts/mcp/endpoints/graph.ts",
+      "line": 79,
+      "snippet": "const BLOCKED_CYPHER_PATTERNS = [\n  /\\bDETACH\\s+DELETE\\b/i,\n  /\\bDROP\\b/i,\n  /\\bCREATE\\s+(?:CONSTRAINT|INDEX)/i,\n  /\\bREMOVE\\s+[a-zA-Z_]+:/i,\n] as const;\n\nfunction isCypherSafe(cypher: string): boolean {\n  return !BLOCKED_CYPHER_PATTERNS.some(p => p.test(cypher));\n}\n\nexport async function graphQueryEndpoint(request: HttpRequest): Promise<HttpResponse> {\n  const body = parseBody(request) as Record<string, unknown>;\n  const cypher = (body.cypher as string) ?? '';\n  if (cypher.trim() && !isCypherSafe(cypher)) {\n    return jsonResponse(\n      { error: 'Cypher query contains blocked patterns (DETACH DELETE, DROP, CREATE CONSTRAINT/INDEX, REMOVE label). Only read-only queries are allowed.' },\n      403,\n    );\n  }",
+      "finding": "Graph query endpoint blocks destructive Cypher operations via regex patterns: DETACH DELETE, DROP, CREATE CONSTRAINT/INDEX, REMOVE label. Returns 403 for blocked patterns. Only read-only queries allowed."
+    },
+    {
+      "file": "src-ts/mcp/endpoints/memory.ts",
+      "line": 95,
+      "snippet": "export async function memoryUploadEndpoint(request: HttpRequest): Promise<HttpResponse> {\n  const body = parseBody(request) as Record<string, unknown>;\n  const scope = resolveMemoryScope(body);\n\n  const fileName = readOptionalString(body.file_name);\n  const fileContentBase64 = readOptionalString(body.file_content_base64);\n  ...\n  if (!fileName || !fileName.trim()) {\n    return jsonResponse({ error: 'file_name is required' }, 400);\n  }\n  if (!fileContentBase64 || !fileContentBase64.trim()) {\n    return jsonResponse({ error: 'file_content_base64 is required' }, 400);\n  }\n  if (!sessionId || !sessionId.trim()) {\n    return jsonResponse({ error: 'session_id is required' }, 400);\n  }\n\n  let fileBuffer: Buffer;\n  try {\n    const normalized = fileContentBase64.includes(',')\n      ? fileContentBase64.split(',', 2)[1]\n      : fileContentBase64;\n    const compact = normalized.replace(/\\s+/g, '');\n    const base64Pattern = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;\n    if (!compact || compact.length % 4 !== 0 || !base64Pattern.test(compact)) {\n      return jsonResponse({ error: 'invalid file_content_base64' }, 400);\n    }\n    fileBuffer = Buffer.from(normalized, 'base64');\n    ...\n  } catch {\n    return jsonResponse({ error: 'invalid file_content_base64' }, 400);\n  }\n\n  let text: string;\n  try {\n    text = await DocumentLoader.loadFileAsync(fileBuffer, fileName);\n  } catch (error) {\n    if (error instanceof DocumentLoadError) {\n      return jsonResponse(error.toResponseBody(fileName), 400);\n    }\n    return jsonResponse({ error: `failed to parse file: ${String(error)}` }, 400);\n  }",
+      "finding": "Memory upload validates file_name, file_content_base64, session_id. Base64 validation includes regex pattern check, length divisibility by 4, and round-trip verification. DocumentLoader parses file (supports multiple formats). Errors wrapped in DocumentLoadError for structured response."
+    },
+    {
+      "file": "src-ts/mcp/endpoints/writing.ts",
+      "line": 330,
+      "snippet": "export async function writingHelperProcessEndpoint(\n  request: HttpRequest\n): Promise<HttpResponse> {\n  ...\n  const config = resolveProviderConfig(body, request.headers)\n  if (!config) {\n    const normalizedMode = mode.trim().toLowerCase()\n    if (normalizedMode === 'generate') {\n      return jsonResponse({ error: 'No LLM provider configured' }, 400)\n    }\n    try {\n      const localResult = processLocalWritingHelper({\n        content,\n        mode: normalizedMode,\n        instruction: combinedInstruction,\n        maxSentences,\n        maxItems,\n      })\n      return jsonResponse({\n        ...localResult,\n        status: 'ok',\n        provider: 'local',\n        skills_used: skillIds,\n      })\n    } catch (exc) {\n      ...\n    }\n  }\n\n  try {\n    const prompt = buildModePrompt(mode, content, combinedInstruction)\n    const systemPrompt = detectionEvasion\n      ? '你是一位专业的写作助手。请确保输出文本具有人类写作的自然特征，避免AI生成的典型模式。'\n      : '你是一位专业的写作助手。'\n    const result = await callLLM(config, prompt, systemPrompt)\n    ...\n  } catch (exc) {\n    const rawMessage = exc instanceof Error ? exc.message : String(exc)\n    const safeMessage = scrubErrorMessage(rawMessage)\n    _log.error('LLM call failed', { error: safeMessage })\n    return jsonResponse({ error: safeMessage }, 500)\n  }\n}",
+      "finding": "Writing helper has dual path: local processing (no LLM config) or LLM call. Local mode does not support 'generate'. LLM config resolved from headers (X-LLM-API-Key, X-LLM-Base-Url) or body fields. Error messages scrubbed for credentials before logging/returning. Detection evasion guard adds system prompt for natural prose."
+    },
+    {
+      "file": "src-ts/mcp/endpoints/sync.ts",
+      "line": 14,
+      "snippet": "function validateRemoteUrl(remoteUrl: string): string | null {\n  let url: URL;\n  try {\n    url = new URL(remoteUrl);\n  } catch {\n    return 'Invalid URL format';\n  }\n\n  const scheme = url.protocol.toLowerCase();\n  if (scheme !== 'http:' && scheme !== 'https:') {\n    return 'URL must use http or https scheme';\n  }\n\n  const host = url.hostname.toLowerCase();\n  const normalizedHost = host.replace(/^\\[(.*)\\]$/, '$1');\n\n  if (normalizedHost === 'localhost' || normalizedHost === '::1' ...) {\n    return 'Localhost URLs are not allowed';\n  }\n\n  const ipv4Regex = /^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$/;\n  const match = normalizedHost.match(ipv4Regex);\n  if (match) {\n    const octets = [...];\n    if (octets.some(o => o > 255)) {\n      return 'Invalid IP address';\n    }\n    const [a, b] = octets;\n    if (a === 127) return 'Loopback addresses are not allowed';\n    if (a === 10) return 'Private IP addresses (10.0.0.0/8) are not allowed';\n    if (a === 172 && b >= 16 && b <= 31) return 'Private IP addresses (172.16.0.0/12) are not allowed';\n    if (a === 192 && b === 168) return 'Private IP addresses (192.168.0.0/16) are not allowed';\n    ...\n  }\n  ...\n  return null;\n}",
+      "finding": "SSRF protection in sync endpoints. validateRemoteUrl rejects: non-http(s) schemes, localhost, loopback (127.x.x.x), private IPs (10/8, 172.16/12, 192.168/16), link-local (169.254), multicast (224-239), reserved (240+), IPv6 ULA (fc/fd), IPv6 link-local (fe80:)."
+    },
+    {
+      "file": "src-ts/mcp/endpoints/mcp-admin.ts",
+      "line": 110,
+      "snippet": "export async function createMcpService(request: HttpRequest): Promise<HttpResponse> {\n  // ISS-004: admin write endpoints require localhost-only when guard is enabled\n  if (resolveLocalhostOnlyEnabled()) {\n    const remoteAddr = request.remoteAddress ?? '';\n    const isLocal = !remoteAddr || remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';\n    if (!isLocal) {\n      return jsonResponse({ error: 'Access denied: localhost only' }, 403);\n    }\n  }\n  const body = parseBody(request) as Record<string, unknown>;\n  const rawServiceId = String(body.id ?? body.service_id ?? '').trim().toLowerCase();\n\n  if (!rawServiceId) {\n    return jsonResponse({ error: 'id is required' }, 400);\n  }\n  if (mcpServiceConfigs.has(rawServiceId)) {\n    return jsonResponse({ error: `service '${rawServiceId}' already exists` }, 409);\n  }\n\n  let config: McpServiceConfig;\n  try {\n    config = updateServiceConfig(rawServiceId, body, true);\n  } catch (exc) {\n    return jsonResponse({ error: errorMessage(exc) }, 400);\n  }\n\n  return jsonResponse({ service: serializeRuntimeServiceConfig(config) }, 201);\n}",
+      "finding": "MCP admin create endpoint: localhost-only guard (ISS-004), validates service_id, checks uniqueness (409), delegates to updateServiceConfig with createIfMissing=true. Returns 201 on success."
+    },
+    {
+      "file": "src-ts/reader/mcp/reader-routes.ts",
+      "line": 695,
+      "snippet": "export async function rsDeAIEndpoint(request: HttpRequest): Promise<HttpResponse> {\n  const body = parseBody(request) as Record<string, unknown>;\n  const novelId = body.novelId as string | undefined;\n  const text = body.text as string | undefined;\n  const mode = (body.mode as 'de-ai' | 'style-shift' | undefined) ?? 'de-ai';\n  const targetStyle = body.targetStyle as string | undefined;\n\n  if (!novelId || typeof novelId !== 'string') {\n    return jsonResponse({ error: 'novelId is required and must be a string' }, 400);\n  }\n  ...\n  // SEC-001: cap text length before detection/rewrite to prevent DoS\n  const textOverflow = validateStringLength(analysisText, MAX_TEXT_LENGTH, 'text');\n  if (textOverflow) return textOverflow;\n\n  try {\n    const aiFlavorResult: AIFlavorResult = detectAIFlavor(analysisText);\n    const qualityGoals: string[] = [\n      ...aiFlavorResult.suggestions,\n      `AI flavor score: ${aiFlavorResult.aiFlavorScore} (confidence: ${aiFlavorResult.confidence})`,\n    ];\n    if (mode === 'style-shift' && targetStyle) {\n      qualityGoals.push(`Shift writing style to: ${targetStyle}`);\n    } else {\n      qualityGoals.push('Remove AI-generated template expressions and make prose sound natural and human-written');\n    }\n    const revisionService = getRevisionService();\n    await revisionService.initialize();\n    const revisionResult = await revisionService.revise(analysisText, {\n      quality_goals: qualityGoals,\n      target_style: targetStyle,\n      revision_mode: mode,\n      max_revisions: 2,\n      pass_score: 7.0,\n    });\n    ...\n  }\n}",
+      "finding": "De-AI endpoint: SEC-001 text length cap (MAX_TEXT_LENGTH). Two-step pipeline: detectAIFlavor -> build quality goals -> RevisionService.revise. Supports de-ai and style-shift modes. Returns original, revised text, AI flavor score, improvements, suggestions."
+    }
+  ],
+  "coverage_gaps": [
+    {
+      "endpoint": "POST /analysis/sessions",
+      "reason": "Placeholder endpoint — returns empty array with no implementation logic. No dedicated test file exists.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /story-bible/entities/list",
+      "reason": "No dedicated test file for story-bible endpoints. 7 endpoints in knowledge/mcp/story-bible-endpoints.ts have zero test coverage.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "GET /story-bible/entity/:entityId",
+      "reason": "No test coverage. Part of story-bible endpoint group.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "POST /story-bible/entities",
+      "reason": "No test coverage. Entity creation with type validation.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "PUT /story-bible/entity/:entityId",
+      "reason": "No test coverage. Entity update with immutable field protection.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "DELETE /story-bible/entity/:entityId",
+      "reason": "No test coverage. Entity deletion with index cleanup.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "POST /story-bible/extract",
+      "reason": "No test coverage. Placeholder endpoint (extraction not implemented).",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /story-bible/completeness",
+      "reason": "No test coverage. Completeness report generation.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "POST /qc/validate",
+      "reason": "No dedicated test file for QC endpoints. Heuristic quality check with cache logic.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "POST /qc/creativity-config",
+      "reason": "No test coverage. Creativity preset resolution.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /cowriting/generate/auto",
+      "reason": "No dedicated test file for cowriting endpoints. 4 endpoints in cowriting/mcp/cowriting-endpoints.ts have zero test coverage.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "POST /cowriting/generate/guided",
+      "reason": "No test coverage. Guided mode generation with 3 options.",
+      "risk": "medium"
+    },
+    {
+      "endpoint": "GET /cowriting/modes",
+      "reason": "No test coverage. Static mode listing.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "GET /cowriting/creativity-presets",
+      "reason": "No test coverage. Static preset listing with config resolution.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /ui-bridge/workflow/* (9 endpoints)",
+      "reason": "UI Bridge wrappers for workflow endpoints. Gated by uiBridgeEnabled flag. No dedicated tests. Covered indirectly by workflow endpoint tests if flag enabled.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /writing-craft/emotional-arc",
+      "reason": "Dedicated endpoint in writing-craft.ts but no specific test file found. May be covered by writing-craft-endpoints.test.ts.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /writing-craft/voice-consistency",
+      "reason": "Dedicated endpoint in writing-craft.ts. May be covered by writing-craft-endpoints.test.ts.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /writing-craft/reader-immersion",
+      "reason": "Dedicated endpoint in writing-craft.ts. May be covered by writing-craft-endpoints.test.ts.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /writing-craft/pacing-navigator",
+      "reason": "Dedicated endpoint in writing-craft.ts. May be covered by writing-craft-endpoints.test.ts.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /learning/import",
+      "reason": "Placeholder implementation. Returns input metadata only. Covered by learning-endpoints.test.ts.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /learning/style-drift",
+      "reason": "Placeholder implementation. Returns dimension count only. Covered by learning-endpoints.test.ts.",
+      "risk": "low"
+    },
+    {
+      "endpoint": "POST /learning/reading-extract",
+      "reason": "Placeholder implementation. Returns input metadata. Covered by learning-endpoints.test.ts.",
+      "risk": "low"
+    }
+  ]
+}

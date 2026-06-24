@@ -1,3 +1,11 @@
+---
+related:
+  - project-project
+  - roadmap-roadmap
+  - scratch-20260624-analyze-p3-ui-component-completion-context
+  - scratch-20260624-analyze-p3-ui-component-completion-discussion
+---
+
 # Analysis: M28 Phase 3 — UI Component Completion
 
 ## Executive Summary
