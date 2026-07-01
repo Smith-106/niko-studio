@@ -1,7 +1,7 @@
 # Niko-Studio V8 Dependencies
 
 # === Core Framework ===
-fastapi>=0.115.0
+fastapi>=0.138.2
 starlette>=0.37.0
 uvicorn>=0.29.0
 mcp>=1.0.0
