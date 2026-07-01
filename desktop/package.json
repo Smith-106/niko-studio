@@ -80,7 +80,7 @@
     "@tiptap/extension-typography": "^3.22.5",
     "@tiptap/extension-underline": "^3.22.0",
     "@tiptap/pm": "^3.22.0",
-    "@tiptap/react": "^3.22.0",
+    "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.22.0",
     "clsx": "^2.1.0",
     "cytoscape": "^3.33.4",
