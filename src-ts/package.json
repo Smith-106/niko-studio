@@ -34,7 +34,7 @@
     "async-lock": "^1.4.1",
     "better-sqlite3": "^12.9.0",
     "fastembed": "^2.1.0",
-    "inversify": "^6.0.2",
+    "inversify": "^8.1.1",
     "inversify-binding-decorators": "^4.0.0",
     "mammoth": "^1.12.0",
     "pdf-parse": "^2.4.5",
