@@ -43,7 +43,7 @@ jobs:
         working-directory: docs-site
         env:
           VITE_BASE_URL: /niko-studio/
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: docs-site/dist
       - id: deployment
